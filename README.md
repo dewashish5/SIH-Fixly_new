@@ -25,10 +25,10 @@ SIH-2026-Ai-Ml/
 | Feature | Status | Owner |
 |---|---|---|
 | Worker-Customer Matching | Done, tested | Nikhil |
-| Service Discovery Helper | Not started | Nikhil |
+| Service Discovery Helper | Not started | - |
 | Support Chatbot | Done, tested | Meenakshi |
-| Worker Reliability Score | Not started | Nikhil |
-| Fair Price Estimation | Not started | Nikhil |
+| Worker Reliability Score | Not started | - |
+| Fair Price Estimation | Not started | - |
 
 ---
 
