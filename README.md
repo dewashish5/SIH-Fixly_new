@@ -7,7 +7,7 @@ can call these directly once deployed.
 
 ## Team
 
-- Nikhil Kumar — Worker-Customer Matching, Service Discovery Helper
+- Nikhil  — Worker-Customer Matching, Service Discovery Helper
 - Meenakshi — Support Chatbot
 
 ## Folder Structure
