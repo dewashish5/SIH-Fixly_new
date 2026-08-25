@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+  <meta charset=\"UTF-8\" />
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
+  <title>Customer App Simulation - GigCommunity</title>
+  <link rel=\"stylesheet\" href=\"../gig_support_chatbot/widget/gig-chatbot.css\" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+    .mobile-frame {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      border-radius: 32px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      border: 8px solid #0f172a;
+      display: flex;
+      flex-direction: column;
+      height: 820px;
+      position: relative;
+    }
+    .top-bar {
+      background: #2563eb;
+      color: white;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .top-bar h2 { font-size: 16px; font-weight: 700; }
+    .location-tag { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .banner {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: white;
+      padding: 16px;
+      border-radius: 16px;
+    }
+    .banner h3 { font-size: 16px; margin-bottom: 4px; }
+    .banner p { font-size: 12px; opacity: 0.9; }
+
+    .search-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 12px;
+      border-radius: 12px;
+      color: #94a3b8;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .grid-services {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .service-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 12px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .service-card:hover { transform: translateY(-2px); }
+    .service-card .icon { font-size: 26px; margin-bottom: 6px; }
+    .service-card .title { font-size: 12px; font-weight: 600; }
+
+    .active-order-card {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .active-order-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: #1d4ed8;
+      margin-bottom: 6px;
+    }
+    .active-order-card h4 { font-size: 14px; margin-bottom: 4px; }
+    .active-order-card p { font-size: 12px; color: #64748b; }
+
+    .bottom-nav {
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-around;
+      padding: 12px;
+      background: #ffffff;
+    }
+    .nav-item {
+      text-align: center;
+      font-size: 11px;
+      color: #64748b;
+    }
+    .nav-item.active { color: #2563eb; font-weight: 700; }
+    .nav-item .icon { font-size: 18px; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+
+  <div class=\"mobile-frame\">
+    <div class=\"top-bar\">
+      <div>
+        <h2>GigCommunity</h2>
+        <div class=\"location-tag\">📍 Indiranagar, Bengaluru</div>
+      </div>
+      <div style=\"font-size: 18px;\">🔔</div>
+    </div>
+
+    <div class=\"content\">
+      <div class=\"search-box\">🔍 Search 'Electrician', 'Plumber'...</div>
+
+      <div class=\"banner\">
+        <h3>🎉 Flat ₹100 OFF</h3>
+        <p>Use code <strong>FIRSTGIG</strong> on your first home cleaning booking.</p>
+      </div>
+
+      <div class=\"active-order-card\">
+        <div class=\"active-order-header\">
+          <span>ACTIVE BOOKING</span>
+          <span>#BK1001</span>
+        </div>
+        <h4>Deep Home Cleaning (2 BHK)</h4>
+        <p>🚗 Ramesh Kumar is on the way (12 mins away)</p>
+      </div>
+
+      <div>
+        <h4 style=\"font-size: 14px; margin-bottom: 10px;\">Popular Services</h4>
+        <div class=\"grid-services\">
+          <div class=\"service-card\"><div class=\"icon\">🚰</div><div class=\"title\">Plumber</div></div>
+          <div class=\"service-card\"><div class=\"icon\">⚡</div><div class=\"title\">Electrician</div></div>
+          <div class=\"service-card\"><div class=\"icon\">🧹</div><div class=\"title\">Cleaning</div></div>
+          <div class=\"service-card\"><div class=\"icon\">❄️</div><div class=\"title\">AC Repair</div></div>
+          <div class=\"service-card\"><div class=\"icon\">🔨</div><div class=\"title\">Carpenter</div></div>
+          <div class=\"service-card\"><div class=\"icon\">📦</div><div class=\"title\">Packers</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class=\"bottom-nav\">
+      <div class=\"nav-item active\"><div class=\"icon\">🏠</div>Home</div>
+      <div class=\"nav-item\"><div class=\"icon\">📅</div>Bookings</div>
+      <div class=\"nav-item\"><div class=\"icon\">👛</div>Wallet</div>
+      <div class=\"nav-item\"><div class=\"icon\">👤</div>Profile</div>
+    </div>
+  </div>
+
+  <!-- Chatbot Module Widget Include -->
+  <script src=\"../gig_support_chatbot/widget/gig-chatbot.js\"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.GigSupportChatbot.init({
+        role: 'customer',
+        language: 'en',
+        apiBaseUrl: window.location.origin
+      });
+    });
+  </script>
+</body>
+</html>
