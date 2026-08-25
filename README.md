@@ -1,58 +1,135 @@
-# For Teammate — How to Add Your Chatbot Work
+# SIH26089 — AI/ML Layer
+Cooperative Gig Services Platform for Household & Community Services
 
-This repo has one feature per folder. Follow the same pattern for the
-chatbot so everything stays organized and the backend team can
-understand it easily.
+This repo contains all AI/ML features for the project. Each feature has
+its own folder, built as an independent microservice. The backend team
+can call these directly once deployed.
 
-## Current Repo Structure
+## Team
+
+- Nikhil Kumar — Worker-Customer Matching, Service Discovery Helper
+- [Teammate name] — Support Chatbot
+
+## Folder Structure
 
 ```
 SIH-2026-Ai-Ml/
-├── service_discovery/   (Nikhil - done)
-├── worker_matching/     (Nikhil - done)
-├── chatbot/              (you - add this)
+├── service_discovery/     - identifies which service a customer needs from free text
+├── worker_matching/       - ranks the best available worker for a job
+├── support_chatbot/       - FAQ-style support chatbot (Hindi + English)
 └── README.md
 ```
 
-## Steps to Add Your Work
+## Status
 
-1. **Create a new folder in the repo root** named exactly `chatbot`
-   (lowercase, no spaces). Do NOT put it inside any other folder.
+| Feature | Status | Owner |
+|---|---|---|
+| Worker-Customer Matching | Done, tested | Nikhil |
+| Service Discovery Helper | Done, tested | Nikhil |
+| Support Chatbot | Done, tested | [Teammate name] |
+| Worker Reliability Score | Not started | Nikhil |
+| Fair Price Estimation | Not started | Nikhil |
 
-2. **Put all your chatbot files inside it** — your training data, your
-   model/script, and your FastAPI file (if you're exposing it as an API
-   like the other two features).
+---
 
-3. **Add a small `README.md` inside your `chatbot/` folder** explaining:
-   - What it does (one or two lines)
-   - How it works (what technique/library you used)
-   - How to run it (exact commands, like `pip install ...` then `python3 ...`)
-   - Which port it runs on
+## 1. service_discovery/
 
-   You can copy the style from `service_discovery/` or `worker_matching/`
-   if you check inside them — same pattern, just your content.
+**What it does:** Customer types their problem in plain words (e.g.
+"fridge nahi chal raha") and the model predicts which service category
+they need (Electrician, Plumber, Carpenter, Painter, Cleaning, Caregiving).
 
-4. **Push it to the same repo** (same branch, `main`), so it shows up
-   next to the other two folders — not as a separate zip or repo.
+**How it works:** TF-IDF + a trained classifier (Naive Bayes / Linear SVM).
 
-## Example: What Your Folder Should Look Like
+**Files:**
+- `training_data.csv` — example customer complaints labeled by category
+- `train_classifier.py` — trains the model, run this first
+- `service_classifier.pkl`, `vectorizer.pkl` — saved trained model
+- `discovery_api.py` — FastAPI endpoint (`POST /discover`)
 
+**Run it:**
+```bash
+cd service_discovery
+pip install pandas scikit-learn joblib fastapi uvicorn --break-system-packages
+python3 train_classifier.py
+python3 -m uvicorn discovery_api:app --reload --port 8002
 ```
-chatbot/
-├── faq_data.csv          (or however you store your Q&A pairs)
-├── chatbot_engine.py       (your core logic)
-├── chatbot_api.py          (FastAPI endpoint, if you're making one)
-└── README.md               (explains your part)
+Test at `http://localhost:8002/docs`
+
+**Tested result:** 78.95% accuracy on held-out data, correctly classified
+6/6 new unseen test messages.
+
+---
+
+## 2. worker_matching/
+
+**What it does:** Given a customer's location and required skill, ranks
+the best available workers — not just the nearest one. Considers skill
+match, distance, rating, completion rate, and response time.
+
+**Files:**
+- `sample_workers.py` — fake worker data for testing (replace with real DB data later)
+- `matching_engine.py` — core scoring logic, run this to test
+- `matching_api.py` — FastAPI endpoint (`POST /match`)
+
+**Run it:**
+```bash
+cd worker_matching
+pip install fastapi uvicorn --break-system-packages
+python3 matching_engine.py
+python3 -m uvicorn matching_api:app --reload --port 8003
 ```
+Test at `http://localhost:8003/docs`
 
-## Quick Checklist Before You Push
+**Tested result:** Verified with 3 test cases — health check, successful
+match with correct ranking, and clean 404 when no worker is available.
 
-- [ ] Folder is named `chatbot`, sitting directly in the repo root
-- [ ] No personal name used as a folder name
-- [ ] Your code runs without errors when tested fresh
-- [ ] You've added a short README inside your folder
-- [ ] You've told Nikhil once it's pushed, so the main README status
-      table can be updated (Support Chatbot: In progress -> Done)
+---
 
-If anything is unclear, ask Nikhil before pushing — better to check once
-than to restructure later.
+## 3. support_chatbot/
+
+**What it does:** FAQ-style support chatbot for both customer and worker
+apps. Supports Hindi and English. Helps with common questions — booking
+help, order status, raising complaints, profile setup, and general app
+usage.
+
+**Structure:**
+- `gig_support_chatbot/` — core chatbot logic
+- `demo/` — interactive demo pages to test the chatbot in a browser
+- `tests/` — test cases
+- `run_server.py` — starts the chatbot server
+- `pyproject.toml`, `setup.py` — project/package configuration
+
+**Run it:**
+```bash
+cd support_chatbot
+python3 run_server.py
+```
+Server runs at `http://127.0.0.1:8080/`
+
+**Demo pages (open in browser once server is running):**
+- Interactive playground: `http://127.0.0.1:8080/demo/index.html`
+- Customer app demo: `http://127.0.0.1:8080/demo/customer_app_demo.html`
+- Worker app demo: `http://127.0.0.1:8080/demo/worker_app_demo.html`
+
+**Tested result:** Server runs successfully, all three demo pages load
+and respond.
+
+---
+
+## Notes for the Backend Team
+
+- Each feature currently runs on its own local port during development
+  (service_discovery: 8002, worker_matching: 8003, support_chatbot: 8080).
+  Before final integration, these will be combined into one deployed
+  service with a single public URL.
+- Every folder is self-contained — its own dependencies, its own README
+  section above. You can run and test any feature independently.
+- Once deployed (Render/Railway), only one base URL will be shared —
+  no need to track multiple ports or files.
+
+## Next Steps
+
+- [ ] Build Worker Reliability Score (Nikhil)
+- [ ] Build Fair Price Estimation (Nikhil)
+- [ ] Combine all services into a single deployable app
+- [ ] Deploy to Render/Railway and share one public URL with backend team
