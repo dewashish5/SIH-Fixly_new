@@ -1,4 +1,4 @@
- # SIH26089 — AI/ML Layer
+# SIH26089 — AI/ML Layer
 Cooperative Gig Services Platform for Household & Community Services
 
 This repo contains all AI/ML features for the project. Each feature has
