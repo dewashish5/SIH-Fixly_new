@@ -7,8 +7,8 @@ can call these directly once deployed.
 
 ## Team
 
-- Nikhil Kumar — Worker-Customer Matching, Service Discovery Helper
-- [Teammate name] — Support Chatbot
+- Nikhil  — Worker-Customer Matching, Service Discovery Helper
+- Meenakshi — Support Chatbot
 
 ## Folder Structure
 
@@ -25,10 +25,10 @@ SIH-2026-Ai-Ml/
 | Feature | Status | Owner |
 |---|---|---|
 | Worker-Customer Matching | Done, tested | Nikhil |
-| Service Discovery Helper | Done, tested | Nikhil |
-| Support Chatbot | Done, tested | [Teammate name] |
-| Worker Reliability Score | Not started | Nikhil |
-| Fair Price Estimation | Not started | Nikhil |
+| Service Discovery Helper | Not started | - |
+| Support Chatbot | Done, tested | Meenakshi |
+| Worker Reliability Score | Not started | - |
+| Fair Price Estimation | Not started | - |
 
 ---
 
