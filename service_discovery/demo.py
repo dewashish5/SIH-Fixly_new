@@ -25,9 +25,6 @@ def predict(text, top_n=3):
         scores = model.predict_proba(text_vec)[0]
     else:
         raw = model.decision_function(text_vec)[0]
-        # Softmax: turns raw SVM scores into realistic-looking confidence
-        # percentages that sum to 100%, instead of always showing the top
-        # answer as 100% (which min-max scaling would incorrectly do).
         exp_scores = np.exp(raw - np.max(raw))
         scores = exp_scores / exp_scores.sum()
 
@@ -36,16 +33,16 @@ def predict(text, top_n=3):
 
 
 def print_banner():
-    print("=" * 64)
+    print("=" * 66)
     print("   SIH26089 | AI SERVICE DISCOVERY ENGINE - LIVE DEMO")
     print("   Cooperative Gig Services Platform")
-    print("=" * 64)
+    print("=" * 66)
     print()
 
 
 def print_result(customer_text, results):
     print(f"  Customer Input : \"{customer_text}\"")
-    print(f"  {'-' * 58}")
+    print(f"  {'-' * 60}")
     top_category, top_score = results[0]
     print(f"  >> Recommended Service : {top_category}   (confidence: {top_score*100:.1f}%)")
     print(f"  Other possible matches :")
@@ -57,24 +54,26 @@ def print_result(customer_text, results):
 if __name__ == "__main__":
     print_banner()
 
+    # All demo inputs in English for a clean, professional SIH presentation
     demo_cases = [
-        "mera fridge kaam nahi kar raha kya koi aa sakta hai",
-        "ghar ki paint ukhad rahi hai",
-        "bathroom ka tap tapak raha hai",
-        "sofa bahut ganda ho gaya hai saaf karwana hai",
-        "papa ki dekhbhal ke liye koi chahiye kuch dino ke liye",
-        "almirah ka darwaza nahi khul raha",
-        "garden me ghaas kaatni hai",
-        "office jaane ke liye roz driver chahiye",
-        "AC thanda nahi kar raha check karwana hai",
-        "ghar ke roz ke kaam ke liye maid chahiye",
+        "My refrigerator suddenly stopped working, can someone come check it?",
+        "The paint on my living room wall is peeling off badly",
+        "There is a tap in the bathroom that keeps leaking water",
+        "My sofa is very dirty and needs a deep clean",
+        "I need someone to take care of my father for a few days",
+        "The wardrobe door in my room won't open properly",
+        "The grass in my garden needs to be cut and trimmed",
+        "I need a driver to take me to office every day",
+        "My air conditioner is not cooling the room at all",
+        "I need help with daily household cleaning and cooking",
     ]
 
     for text in demo_cases:
         results = predict(text)
         print_result(text, results)
 
-    print("=" * 64)
-    print(f"   Model tested across all 10 official service categories")
-    print(f"   Technique: TF-IDF + Linear SVM (scikit-learn)")
-    print("=" * 64)
+    print("=" * 66)
+    print("   Model tested across all 10 official service categories")
+    print("   Technique: TF-IDF + Linear SVM (scikit-learn)")
+    print("   Supports both English and Hindi (Roman script) input")
+    print("=" * 66)
