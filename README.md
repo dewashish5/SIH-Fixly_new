@@ -8,7 +8,7 @@ can call these directly once deployed.
 ## Team
 
 - Nikhil — Worker-Customer Matching, Service Discovery Helper
-- Teammate — Support Chatbot, Worker Reliability Score, Fair Price Estimation
+- Meenakshi — Support Chatbot, Worker Reliability Score, Fair Price Estimation
 
 ## Folder Structure
 
@@ -28,9 +28,9 @@ SIH-2026-Ai-Ml/
 |---|---|---|
 | Worker-Customer Matching | Done, tested | Nikhil |
 | Service Discovery Helper | Done, tested | Nikhil |
-| Support Chatbot | Done, tested | Teammate |
-| Worker Reliability Score | Done, tested | Teammate |
-| Fair Price Estimation | Done, tested | Teammate |
+| Support Chatbot | Done, tested | Meenakshi |
+| Worker Reliability Score | Done, tested | Meenakshi |
+| Fair Price Estimation | Done, tested | Meenakshi |
 
 **All 5 planned AI/ML features are complete.**
 
