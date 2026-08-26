@@ -8,7 +8,7 @@ individually.
 ## Team
 
 - Nikhil — Worker-Customer Matching, Service Discovery Helper
-- Teammate — Support Chatbot, Worker Reliability Score, Fair Price Estimation
+- Meenakshi — Support Chatbot, Worker Reliability Score, Fair Price Estimation
 
 ## Quick Start (Run Everything At Once)
 
@@ -52,9 +52,9 @@ ai_ml/
 ├── start_all.py                     - run this to start EVERYTHING
 ├── service_discovery/               - Nikhil (FastAPI, port 8002)
 ├── worker_matching/                  - Nikhil (FastAPI, port 8003)
-├── worker_Reliability_Score/         - Teammate (port 8082)
-├── fairPriceEstimation_AI_model/     - Teammate (port 8081)
-├── support_chatbot/                   - Teammate (port 8080)
+├── worker_Reliability_Score/         - Meenakshi (port 8082)
+├── fairPriceEstimation_AI_model/     - Meenakshi (port 8081)
+├── support_chatbot/                   - Meenakshi (port 8080)
 └── README.md
 ```
 
