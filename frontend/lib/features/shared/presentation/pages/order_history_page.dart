@@ -56,7 +56,7 @@ class OrderHistoryPage extends StatelessWidget {
                 Text(
                   '₹${order.estimatedPrice.toStringAsFixed(0)}',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColors.secondary,
+                        color: AppColors.primary,
                       ),
                 ),
               ],

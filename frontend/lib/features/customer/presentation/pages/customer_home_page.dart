@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/l10n/locale_scope.dart';
@@ -39,10 +39,12 @@ class _CustomerHomeView extends StatelessWidget {
 
     return AppScaffold(
       titleWidget: GreetingAppBarTitle(userName: userName),
+      showBack: false,
       padding: EdgeInsets.zero,
       actions: [
         IconButton(
           icon: const Icon(Icons.notifications_outlined),
+          tooltip: l10n.notifications,
           onPressed: () => context.push(RouteNames.sharedNotifications),
         ),
       ],
@@ -57,7 +59,7 @@ class _CustomerHomeView extends StatelessWidget {
               _SearchBar(
                 hint: l10n.searchHint,
                 onTap: () => context.go(RouteNames.customerSearch),
-              ).animate().fadeIn().slideY(begin: -0.1),
+              ),
               const SizedBox(height: 20),
               Text(
                 l10n.categories,
@@ -91,7 +93,10 @@ class _CustomerHomeView extends StatelessWidget {
                   ),
                   TextButton(
                     onPressed: () => context.go(RouteNames.customerAiHelper),
-                    child: Text(l10n.aiHelper),
+                    child: Text(
+                    l10n.aiHelper,
+                    style: const TextStyle(color: AppColors.accent),
+                  ),
                   ),
                 ],
               ),
@@ -134,20 +139,21 @@ class _SearchBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.surfaceContainer,
-              AppColors.surfaceContainerHigh,
-            ],
-          ),
+          color: context.scheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.outlineVariant),
+          border: Border.all(color: context.hairline),
         ),
         child: Row(
           children: [
-            const Icon(Icons.search_rounded, color: AppColors.primary),
+            Icon(Icons.search_rounded, color: context.scheme.primary),
             const SizedBox(width: 12),
-            Text(hint, style: const TextStyle(color: AppColors.outline)),
+            Text(hint, style: TextStyle(color: context.muted)),
+            const Spacer(),
+            Icon(
+              Icons.auto_awesome_rounded,
+              size: 18,
+              color: AppColors.accent.withValues(alpha: 0.9),
+            ),
           ],
         ),
       ),
@@ -183,7 +189,6 @@ class _CategoryGrid extends StatelessWidget {
         return CategoryIconTile(
           category: cat,
           locale: locale,
-          animationIndex: index,
           onTap: () => onCategoryTap(cat.id),
         );
       },
@@ -217,7 +222,7 @@ class _ServiceTile extends StatelessWidget {
               height: 56,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF2563EB), Color(0xFF60A5FA)],
+                  colors: AppColors.primaryGradient,
                 ),
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
@@ -250,9 +255,34 @@ class _ServiceTile extends StatelessWidget {
                   Row(
                     children: [
                       const Icon(Icons.star_rounded,
-                          size: 14, color: AppColors.tertiary),
+                          size: 14, color: AppColors.accent),
                       const SizedBox(width: 4),
                       Text('${service.rating}'),
+                      if (index == 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: context.isDark
+                                ? AppColors.accent900
+                                : AppColors.accent50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Recommended',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: context.isDark
+                                  ? AppColors.accent100
+                                  : AppColors.accentDark,
+                            ),
+                          ),
+                        ),
+                      ],
                       const Spacer(),
                       Text(
                         '₹${service.priceFrom.toInt()}+',
@@ -266,10 +296,10 @@ class _ServiceTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.outline),
+            Icon(Icons.chevron_right_rounded, color: context.muted),
           ],
         ),
       ),
-    ).animate(delay: (index * 80).ms).fadeIn().slideX(begin: 0.05);
+    );
   }
 }

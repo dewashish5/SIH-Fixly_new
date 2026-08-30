@@ -1,23 +1,56 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/preferences/app_preferences.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 
 part 'app_session_state.dart';
 
 class AppSessionCubit extends Cubit<AppSessionState> {
-  AppSessionCubit({MockRepository? repository})
-      : _repo = repository ?? MockRepository.instance,
-        super(AppSessionState(locale: (repository ?? MockRepository.instance).locale));
+  AppSessionCubit({
+    MockRepository? repository,
+    AppPreferences? preferences,
+  })  : _repo = repository ?? MockRepository.instance,
+        _prefs = preferences ?? AppPreferences.instance,
+        super(
+          AppSessionState(
+            locale: (preferences ?? AppPreferences.instance).locale,
+            themeMode: (preferences ?? AppPreferences.instance).themeMode,
+            languageSelected:
+                (preferences ?? AppPreferences.instance).languageSelected,
+            notificationsEnabled:
+                (preferences ?? AppPreferences.instance).notificationsEnabled,
+          ),
+        ) {
+    _repo.locale = state.locale;
+  }
 
   final MockRepository _repo;
+  final AppPreferences _prefs;
 
-  void setLocale(String locale) {
+  Future<void> setLocale(String locale) async {
+    await _prefs.setLocale(locale);
     _repo.locale = locale;
     emit(state.copyWith(locale: locale));
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    await _prefs.setThemeMode(mode);
+    emit(state.copyWith(themeMode: mode));
+  }
+
+  Future<void> setNotificationsEnabled(bool enabled) async {
+    await _prefs.setNotificationsEnabled(enabled);
+    emit(state.copyWith(notificationsEnabled: enabled));
+  }
+
+  Future<void> completeLanguageSelection() async {
+    await _prefs.setLanguageSelected(true);
+    emit(state.copyWith(languageSelected: true));
   }
 
   void setRole(String role) {
@@ -83,9 +116,20 @@ class AppSessionCubit extends Cubit<AppSessionState> {
 
   String postAuthRoute() {
     if (state.role == 'worker') {
-      return RouteNames.workerOnboardingPersonal;
+      return RouteNames.workerOnboardingIdentity;
     }
     return RouteNames.customerHome;
+  }
+
+  void signOut() {
+    _repo.currentUser = null;
+    emit(
+      state.copyWith(
+        status: AppSessionStatus.initial,
+        email: '',
+        phone: '',
+      ),
+    );
   }
 
   Future<bool> _completeMockAuth({required String provider}) async {

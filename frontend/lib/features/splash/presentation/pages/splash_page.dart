@@ -1,83 +1,127 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:transit_kit/transit_kit.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/map_constants.dart';
+import '../../../../core/constants/map_token_loader.dart';
+import '../../../auth/presentation/cubit/app_session_cubit.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
+
+  static const wordmarkAsset = 'assets/splash_wordmark.png';
+  static const _animDuration = Duration(milliseconds: 500);
+  static const _minVisible = Duration(milliseconds: 1200);
+  static const _maxWait = Duration(milliseconds: 2000);
 
   @override
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> {
+class _SplashPageState extends State<SplashPage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fade;
+  late final Animation<double> _scale;
+
   @override
   void initState() {
     super.initState();
-    // Eager-init fade transition builder for first navigation.
     TransitRegistry.of(TransitType.fade);
-    Future<void>.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) context.go(RouteNames.language);
-    });
+    _controller = AnimationController(
+      vsync: this,
+      duration: SplashPage._animDuration,
+    );
+    final fadeFromZero = defaultTargetPlatform == TargetPlatform.android;
+    _fade = Tween<double>(begin: fadeFromZero ? 0 : 1, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
+    _scale = Tween<double>(begin: 0.96, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _boot());
+  }
+
+  Future<void> _boot() async {
+    if (!mounted) return;
+
+    await precacheImage(
+      const AssetImage(SplashPage.wordmarkAsset),
+      context,
+    );
+    if (!mounted) return;
+
+    FlutterNativeSplash.remove();
+    _controller.forward();
+
+    final maps = _initMaps();
+
+    await Future.any([
+      Future.wait([
+        Future<void>.delayed(SplashPage._minVisible),
+        maps,
+      ]),
+      Future<void>.delayed(SplashPage._maxWait),
+    ]);
+
+    if (mounted) {
+      final session = context.read<AppSessionCubit>().state;
+      context.go(
+        session.languageSelected ? RouteNames.login : RouteNames.language,
+      );
+    }
+  }
+
+  Future<void> _initMaps() async {
+    try {
+      await MapTokenLoader.configure();
+      if (MapConstants.hasToken) {
+        MapboxOptions.setAccessToken(MapConstants.accessToken);
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.handshake_outlined,
-                size: 48,
-                color: Colors.white,
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final decodeWidth = (width * 0.86 * dpr).round().clamp(400, 1000);
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: AppColors.splashBackground,
+        body: SafeArea(
+          child: Center(
+            child: FadeTransition(
+              opacity: _fade,
+              child: ScaleTransition(
+                scale: _scale,
+                child: Image.asset(
+                  SplashPage.wordmarkAsset,
+                  width: width * 0.82,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.medium,
+                  cacheWidth: decodeWidth,
+                  gaplessPlayback: true,
+                ),
               ),
             ),
-            const SizedBox(height: 24),
-            Text(
-              AppConstants.appName,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Cooperative Gig Services',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        )
-            .animate()
-            .fadeIn(duration: 600.ms, curve: Curves.easeOut)
-            .scale(
-              begin: const Offset(0.92, 0.92),
-              end: const Offset(1, 1),
-              duration: 600.ms,
-              curve: Curves.easeOut,
-            ),
+          ),
+        ),
       ),
     );
   }

@@ -8,6 +8,7 @@ class WorkerOnboardingState extends Equatable {
     required this.formData,
     this.status = WorkerOnboardingStatus.initial,
     this.kycStatus = KycReviewStatus.submitted,
+    this.verifyingPayout = false,
     this.errorMessage,
   });
 
@@ -15,6 +16,7 @@ class WorkerOnboardingState extends Equatable {
   final OnboardingFormData formData;
   final WorkerOnboardingStatus status;
   final KycReviewStatus kycStatus;
+  final bool verifyingPayout;
   final String? errorMessage;
 
   WorkerOnboardingState copyWith({
@@ -22,6 +24,7 @@ class WorkerOnboardingState extends Equatable {
     OnboardingFormData? formData,
     WorkerOnboardingStatus? status,
     KycReviewStatus? kycStatus,
+    bool? verifyingPayout,
     String? errorMessage,
   }) {
     return WorkerOnboardingState(
@@ -29,11 +32,18 @@ class WorkerOnboardingState extends Equatable {
       formData: formData ?? this.formData,
       status: status ?? this.status,
       kycStatus: kycStatus ?? this.kycStatus,
+      verifyingPayout: verifyingPayout ?? this.verifyingPayout,
       errorMessage: errorMessage,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [currentStep, formData, status, kycStatus, errorMessage];
+  List<Object?> get props => [
+        currentStep,
+        formData,
+        status,
+        kycStatus,
+        verifyingPayout,
+        errorMessage,
+      ];
 }

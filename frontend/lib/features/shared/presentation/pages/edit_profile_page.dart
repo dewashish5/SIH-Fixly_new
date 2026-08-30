@@ -44,7 +44,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
           phone: _phoneController.text.trim(),
         );
     if (mounted) {
-      context.push('/system/profileUpdated');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.profileSaved)),
+      );
+      context.pop();
     }
   }
 

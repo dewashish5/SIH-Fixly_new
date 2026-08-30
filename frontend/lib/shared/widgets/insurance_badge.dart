@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/theme_x.dart';
 
 class InsuranceBadge extends StatelessWidget {
   const InsuranceBadge({
@@ -14,6 +15,9 @@ class InsuranceBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = context.scheme;
+    final isDark = context.isDark;
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 8 : 10,
@@ -21,14 +25,13 @@ class InsuranceBadge extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppColors.secondary.withValues(alpha: 0.15),
-            AppColors.primary.withValues(alpha: 0.1),
-          ],
+          colors: isDark
+              ? [scheme.primaryContainer, scheme.surfaceContainerHigh]
+              : [AppColors.primary50, AppColors.primary100],
         ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: AppColors.secondary.withValues(alpha: 0.4),
+          color: scheme.primary.withValues(alpha: isDark ? 0.4 : 0.25),
         ),
       ),
       child: Row(
@@ -37,14 +40,14 @@ class InsuranceBadge extends StatelessWidget {
           Icon(
             Icons.health_and_safety_outlined,
             size: compact ? 14 : 16,
-            color: AppColors.secondary,
+            color: isDark ? scheme.onPrimaryContainer : AppColors.primary,
           ),
           if (showLabel) ...[
             const SizedBox(width: 6),
             Text(
               'PMSBY',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: AppColors.secondary,
+                    color: isDark ? scheme.onPrimaryContainer : AppColors.primary,
                     fontWeight: FontWeight.w700,
                     fontSize: compact ? 10 : 12,
                     letterSpacing: 0.5,
@@ -55,7 +58,7 @@ class InsuranceBadge extends StatelessWidget {
               Text(
                 'Insured',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                      color: scheme.onSurfaceVariant,
                       fontSize: 11,
                     ),
               ),

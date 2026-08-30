@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/booking_flow_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -126,8 +127,8 @@ class _StatusRow extends StatelessWidget {
           Icon(
             done ? Icons.check_circle : Icons.radio_button_unchecked,
             color: done
-                ? (active ? AppColors.tertiary : AppColors.secondary)
-                : AppColors.outlineVariant,
+                ? (active ? AppColors.accent : AppColors.primary)
+                : context.hairline,
             size: 22,
           ),
           const SizedBox(width: 12),
@@ -135,7 +136,7 @@ class _StatusRow extends StatelessWidget {
             label,
             style: TextStyle(
               fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-              color: active ? AppColors.onSurface : AppColors.onSurfaceVariant,
+              color: active ? context.ink : context.muted,
             ),
           ),
         ],

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -60,6 +59,7 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
     final locale = l10n.locale;
     return AppScaffold(
       title: l10n.search,
+      showBack: false,
       body: Column(
         children: [
           AppTextField(
@@ -92,7 +92,6 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                     return _SearchResultTile(
                       service: service,
                       locale: locale,
-                      index: index,
                       onTap: () =>
                           context.push('/customer/service/${service.id}'),
                     );
@@ -111,13 +110,11 @@ class _SearchResultTile extends StatelessWidget {
   const _SearchResultTile({
     required this.service,
     required this.locale,
-    required this.index,
     required this.onTap,
   });
 
   final ServiceItem service;
   final String locale;
-  final int index;
   final VoidCallback onTap;
 
   @override
@@ -159,6 +156,6 @@ class _SearchResultTile extends StatelessWidget {
           ],
         ),
       ),
-    ).animate(delay: (index * 60).ms).fadeIn().slideX(begin: 0.05);
+    );
   }
 }

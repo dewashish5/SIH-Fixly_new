@@ -43,7 +43,7 @@ class CustomerMainShell extends StatelessWidget {
               ),
               NavBarItem(
                 icon: Icons.auto_awesome_outlined,
-                activeIcon: Icons.auto_awesome_rounded,
+                activeIcon: Icons.auto_awesome,
                 label: l10n.navAi,
                 isAccent: true,
               ),

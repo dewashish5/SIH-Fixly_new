@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/core_widgets.dart';
+import '../../../../shared/data/mock/mock_repository.dart';
+import '../../../../shared/models/models.dart';
 import '../system_state_type.dart';
 import '../../../../core/constants/app_strings.dart';
 
@@ -51,7 +53,7 @@ class SystemStatePage extends StatelessWidget {
               Text(
                 type.message,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                      color: context.muted,
                     ),
                 textAlign: TextAlign.center,
               ),
@@ -78,7 +80,7 @@ class SystemStatePage extends StatelessWidget {
       case SystemStateType.noEarnings:
         context.go(RouteNames.workerDashboard);
       case SystemStateType.noWorkersNearby:
-        context.go(RouteNames.workerOnboardingArea);
+        context.go(RouteNames.workerOnboardingWork);
       case SystemStateType.noNotifications:
       case SystemStateType.ratingSubmitted:
         context.go(RouteNames.customerHome);
@@ -96,7 +98,7 @@ class SystemStatePage extends StatelessWidget {
           const SnackBar(content: Text('Open device settings (mock)')),
         );
       case SystemStateType.kycFailed:
-        context.go(RouteNames.workerOnboardingPersonal);
+        context.go(RouteNames.workerOnboardingIdentity);
       case SystemStateType.sessionExpired:
         context.go(RouteNames.login);
       case SystemStateType.timeoutError:
@@ -109,7 +111,11 @@ class SystemStatePage extends StatelessWidget {
       case SystemStateType.kycSubmitted:
         context.go(RouteNames.workerOnboardingStatus);
       case SystemStateType.profileUpdated:
-        context.go(RouteNames.sharedProfile);
+        context.go(
+          MockRepository.instance.selectedRole == UserRole.worker
+              ? RouteNames.workerProfileTab
+              : RouteNames.customerProfileTab,
+        );
       case SystemStateType.complaintSubmitted:
         context.go(RouteNames.sharedSupportChat);
     }

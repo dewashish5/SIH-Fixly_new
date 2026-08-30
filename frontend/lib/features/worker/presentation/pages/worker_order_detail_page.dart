@@ -49,7 +49,7 @@ class WorkerOrderDetailPage extends StatelessWidget {
                 _DetailRow(
                   icon: Icons.currency_rupee,
                   text: '₹${job.pay.toStringAsFixed(0)} payout',
-                  valueColor: AppColors.secondary,
+                  valueColor: AppColors.accent,
                 ),
               ],
             ),

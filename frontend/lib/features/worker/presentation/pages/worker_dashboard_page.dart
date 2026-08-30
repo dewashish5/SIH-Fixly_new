@@ -34,9 +34,11 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
       builder: (context, state) {
         return AppScaffold(
           titleWidget: GreetingAppBarTitle(userName: userName),
+          showBack: false,
           actions: [
             IconButton(
               icon: const Icon(Icons.notifications_outlined),
+              tooltip: l10n.notifications,
               onPressed: () => context.push(RouteNames.sharedNotifications),
             ),
           ],
@@ -92,10 +94,10 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
                         state.isAvailable ? 'You are online' : 'You are offline',
                       ),
                       value: state.isAvailable,
-                      activeTrackColor: AppColors.secondary.withValues(alpha: 0.4),
+                      activeTrackColor: AppColors.success.withValues(alpha: 0.4),
                       thumbColor: WidgetStateProperty.resolveWith(
                         (states) => states.contains(WidgetState.selected)
-                            ? AppColors.secondary
+                            ? AppColors.success
                             : null,
                       ),
                       onChanged: (_) =>

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../app/router/route_names.dart';
-import '../../../../../app/theme/app_colors.dart';
+import '../../../../../app/theme/theme_x.dart';
 import '../../../../../core/widgets/core_widgets.dart';
 import '../../../../../core/constants/app_strings.dart';
 
@@ -39,7 +39,7 @@ class WorkerAvailabilityPage extends StatelessWidget {
           Text(
             'You can change availability anytime from the dashboard.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.onSurfaceVariant,
+                  color: context.muted,
                 ),
           ),
           const Spacer(),

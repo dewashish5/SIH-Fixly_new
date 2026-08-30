@@ -28,6 +28,7 @@ class _WorkerJobFeedPageState extends State<WorkerJobFeedPage> {
       builder: (context, state) {
         return AppScaffold(
           title: context.l10n.jobFeed,
+          showBack: false,
           body: state.status == JobFeedStatus.loading
               ? const Center(child: CircularProgressIndicator())
               : Column(

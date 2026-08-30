@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
@@ -83,13 +82,14 @@ class _CustomerAddPartsPageState extends State<CustomerAddPartsPage> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.remove_circle_outline),
+                          tooltip: 'Remove part',
                           onPressed: _parts.length > 1
                               ? () => setState(() => _parts.removeAt(index))
                               : null,
                         ),
                       ],
                     ),
-                  ).animate(delay: (index * 60).ms).fadeIn(),
+                  ),
                 );
               },
             ),

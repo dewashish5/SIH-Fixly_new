@@ -31,15 +31,9 @@ abstract final class RouteNames {
   static const customerAddParts = '/customer/add-parts';
   static const customerBookingConfirmation = '/customer/booking-confirmation';
 
-  static const workerOnboardingPersonal = '/worker/onboarding/personal';
-  static const workerOnboardingAadhaar = '/worker/onboarding/aadhaar';
-  static const workerOnboardingPan = '/worker/onboarding/pan';
-  static const workerOnboardingSelfie = '/worker/onboarding/selfie';
-  static const workerOnboardingCertificate = '/worker/onboarding/certificate';
-  static const workerOnboardingSkills = '/worker/onboarding/skills';
-  static const workerOnboardingArea = '/worker/onboarding/area';
-  static const workerOnboardingWelfare = '/worker/onboarding/welfare';
-  static const workerOnboardingBank = '/worker/onboarding/bank';
+  static const workerOnboardingIdentity = '/worker/onboarding/identity';
+  static const workerOnboardingWork = '/worker/onboarding/work';
+  static const workerOnboardingPayout = '/worker/onboarding/payout';
   static const workerOnboardingStatus = '/worker/onboarding/status';
   static const workerOnboardingAvailability = '/worker/onboarding/availability';
 

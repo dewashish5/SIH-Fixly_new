@@ -57,6 +57,7 @@ class _CustomerRatingPageState extends State<CustomerRatingPage> {
                 final star = index + 1;
                 return IconButton(
                   iconSize: 44,
+                  tooltip: '$star',
                   onPressed: () => setState(() => _rating = star),
                   icon: Icon(
                     star <= _rating ? Icons.star : Icons.star_border,

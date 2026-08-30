@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -25,7 +24,6 @@ class CustomerAiWorkersPage extends StatelessWidget {
           return _AiWorkerTile(
             worker: worker,
             matchScore: matchScore,
-            index: index,
             onTap: () => context.push('/customer/worker/${worker.id}'),
           );
         },
@@ -38,13 +36,11 @@ class _AiWorkerTile extends StatelessWidget {
   const _AiWorkerTile({
     required this.worker,
     required this.matchScore,
-    required this.index,
     required this.onTap,
   });
 
   final WorkerProfile worker;
   final int matchScore;
-  final int index;
   final VoidCallback onTap;
 
   @override
@@ -76,7 +72,7 @@ class _AiWorkerTile extends StatelessWidget {
                     child: Icon(
                       Icons.verified,
                       size: 16,
-                      color: AppColors.secondary,
+                      color: AppColors.accent,
                     ),
                   ),
               ],
@@ -127,6 +123,6 @@ class _AiWorkerTile extends StatelessWidget {
           ],
         ),
       ),
-    ).animate(delay: (index * 80).ms).fadeIn().slideX(begin: 0.05);
+    );
   }
 }

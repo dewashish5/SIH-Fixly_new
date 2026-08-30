@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
@@ -29,7 +28,7 @@ class CustomerAiDiscoveryPage extends StatelessWidget {
                 gradient: LinearGradient(
                   colors: [
                     AppColors.primary.withValues(alpha: 0.15),
-                    AppColors.secondary.withValues(alpha: 0.1),
+                    AppColors.aiBackground,
                   ],
                 ),
                 borderRadius: BorderRadius.circular(16),
@@ -54,7 +53,7 @@ class CustomerAiDiscoveryPage extends StatelessWidget {
                   ),
                 ],
               ),
-            ).animate().fadeIn().slideY(begin: -0.05),
+            ),
             const SizedBox(height: 24),
             ...services.asMap().entries.map(
                   (entry) => _DiscoveryCard(
@@ -110,13 +109,13 @@ class _DiscoveryCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.secondary.withValues(alpha: 0.15),
+                    color: AppColors.accent50,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '#$rank Match',
                     style: const TextStyle(
-                      color: AppColors.secondary,
+                      color: AppColors.accent,
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),
@@ -158,6 +157,6 @@ class _DiscoveryCard extends StatelessWidget {
           ],
         ),
       ),
-    ).animate(delay: (rank * 100).ms).fadeIn().slideX(begin: 0.05);
+    );
   }
 }

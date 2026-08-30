@@ -65,7 +65,7 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleLarge
-                                    ?.copyWith(color: AppColors.secondary),
+                                    ?.copyWith(color: AppColors.accent),
                               ),
                             ],
                           ),

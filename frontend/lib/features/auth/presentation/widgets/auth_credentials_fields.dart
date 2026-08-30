@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
+import '../../../../core/constants/app_strings.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import 'auth_screen_layout.dart';
@@ -134,6 +135,9 @@ class _EmailFields extends StatelessWidget {
           validator: (value) =>
               Validators.requiredField(value, label: passwordLabel),
           suffixIcon: IconButton(
+            tooltip: obscurePassword
+                ? context.l10n.showPassword
+                : context.l10n.hidePassword,
             icon: Icon(
               obscurePassword
                   ? Icons.visibility_outlined
@@ -168,8 +172,8 @@ class _PhoneField extends StatelessWidget {
       keyboardType: TextInputType.phone,
       maxLength: 10,
       validator: Validators.phone,
-      prefixIcon: const Padding(
-        padding: EdgeInsets.only(left: 16, right: 8),
+      prefixIcon: Padding(
+        padding: const EdgeInsets.only(left: 16, right: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -177,11 +181,11 @@ class _PhoneField extends StatelessWidget {
               '+91',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: AppColors.onSurface,
+                color: context.ink,
               ),
             ),
-            SizedBox(width: 8),
-            Icon(Icons.phone_outlined, size: 20),
+            const SizedBox(width: 8),
+            const Icon(Icons.phone_outlined, size: 20),
           ],
         ),
       ),

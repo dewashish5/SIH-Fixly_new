@@ -1,30 +1,29 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../../app/theme/app_colors.dart';
+import '../../app/theme/theme_x.dart';
 
 class CategoryChip extends StatelessWidget {
   const CategoryChip({
     required this.label,
     super.key,
-    this.imageUrl,
-    this.fallbackIcon,
+    this.icon,
     this.selected = false,
     this.onTap,
   });
 
   final String label;
-  final String? imageUrl;
-  final IconData? fallbackIcon;
+  final IconData? icon;
   final bool selected;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final bgColor =
-        selected ? AppColors.primary.withValues(alpha: 0.12) : Colors.white;
-    final borderColor = selected ? AppColors.primary : AppColors.outlineVariant;
-    final textColor = selected ? AppColors.primary : AppColors.onSurface;
+    final scheme = context.scheme;
+    final bgColor = selected
+        ? scheme.primary.withValues(alpha: context.isDark ? 0.22 : 0.12)
+        : scheme.surface;
+    final borderColor = selected ? scheme.primary : scheme.outline;
+    final textColor = selected ? scheme.primary : scheme.onSurface;
 
     return Material(
       color: bgColor,
@@ -41,23 +40,8 @@ class CategoryChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (imageUrl != null)
-                SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrl!,
-                    fit: BoxFit.contain,
-                    errorWidget: (_, _, _) => Icon(
-                      fallbackIcon ?? Icons.category_rounded,
-                      size: 18,
-                      color: textColor,
-                    ),
-                  ),
-                )
-              else if (fallbackIcon != null)
-                Icon(fallbackIcon, size: 18, color: textColor),
-              const SizedBox(width: 8),
+              if (icon != null) Icon(icon, size: 18, color: textColor),
+              if (icon != null) const SizedBox(width: 8),
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(

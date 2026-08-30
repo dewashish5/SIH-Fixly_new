@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/core_widgets.dart';
@@ -64,10 +65,9 @@ class _OtpPageState extends State<OtpPage> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    tooltip: strings.goBack,
                     onPressed: () => context.pop(),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -81,7 +81,7 @@ class _OtpPageState extends State<OtpPage> {
                       ? 'Code sent to +91 $phone'
                       : 'Enter the 6-digit code sent to your phone',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.onSurfaceVariant,
+                        color: context.muted,
                       ),
                 ),
                 const SizedBox(height: 32),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/theme_x.dart';
 import '../constants/app_strings.dart';
 
 class AppScaffold extends StatelessWidget {
@@ -16,6 +18,7 @@ class AppScaffold extends StatelessWidget {
     this.bottom,
     this.floatingActionButton,
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
+    this.showBack,
   });
 
   final String? title;
@@ -27,9 +30,17 @@ class AppScaffold extends StatelessWidget {
   final Widget? floatingActionButton;
   final EdgeInsets padding;
 
+  /// When null, back shows only if *this* route can pop (not the root stack).
+  final bool? showBack;
+
+  bool _canPopThisRoute(BuildContext context) {
+    if (showBack != null) return showBack!;
+    return ModalRoute.of(context)?.canPop ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final canPop = GoRouter.of(context).canPop();
+    final canPop = _canPopThisRoute(context);
 
     return Scaffold(
       appBar: title == null && titleWidget == null
@@ -41,7 +52,10 @@ class AppScaffold extends StatelessWidget {
                   (canPop
                       ? IconButton(
                           icon: const Icon(Icons.arrow_back_rounded),
-                          onPressed: () => context.pop(),
+                          tooltip: context.l10n.goBack,
+                          onPressed: () {
+                            if (context.canPop()) context.pop();
+                          },
                         )
                       : null),
               automaticallyImplyLeading: false,
@@ -73,18 +87,26 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Semantics(
+      button: true,
+      enabled: !loading && onPressed != null,
+      label: label,
+      child: SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: loading ? null : onPressed,
         child: loading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 20,
                 width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
               )
             : Text(label),
       ),
+    ),
     );
   }
 }
@@ -105,15 +127,50 @@ class SecondaryButton extends StatelessWidget {
       width: double.infinity,
       child: OutlinedButton(
         onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
+        child: Text(label),
+      ),
+    );
+  }
+}
+
+class AccentButton extends StatelessWidget {
+  const AccentButton({
+    required this.label,
+    required this.onPressed,
+    super.key,
+    this.loading = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: loading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.accent,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: AppColors.accent.withValues(alpha: 0.4),
           minimumSize: const Size.fromHeight(52),
-          side: const BorderSide(color: AppColors.primary),
-          foregroundColor: AppColors.primary,
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: Text(label),
+        child: loading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(label),
       ),
     );
   }
@@ -126,20 +183,30 @@ class AppTextField extends StatelessWidget {
     this.label,
     this.hint,
     this.keyboardType,
+    this.textCapitalization = TextCapitalization.none,
+    this.inputFormatters,
     this.obscureText = false,
     this.maxLength,
+    this.focusNode,
+    this.textInputAction,
     this.validator,
     this.prefixIcon,
     this.suffixIcon,
     this.onChanged,
+    this.onSubmitted,
   });
 
   final TextEditingController controller;
   final String? label;
   final String? hint;
   final TextInputType? keyboardType;
+  final TextCapitalization textCapitalization;
+  final List<TextInputFormatter>? inputFormatters;
   final bool obscureText;
   final int? maxLength;
+  final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
   final String? Function(String?)? validator;
   final Widget? prefixIcon;
   final Widget? suffixIcon;
@@ -159,16 +226,22 @@ class AppTextField extends StatelessWidget {
         ],
         TextFormField(
           controller: controller,
+          focusNode: focusNode,
           keyboardType: keyboardType,
+          textCapitalization: textCapitalization,
+          textInputAction: textInputAction,
+          inputFormatters: inputFormatters,
           obscureText: obscureText,
           maxLength: maxLength,
           validator: validator,
           onChanged: onChanged,
+          onFieldSubmitted: onSubmitted,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
             counterText: '',
+            semanticCounterText: '',
           ),
         ),
       ],
@@ -208,7 +281,7 @@ class StepProgressHeader extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 6,
-            backgroundColor: AppColors.surfaceContainer,
+            backgroundColor: context.scheme.surfaceContainerHighest,
           ),
         ),
         const SizedBox(height: 16),
@@ -231,10 +304,14 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final card = Card(
+      child: Padding(padding: padding, child: child),
+    );
+    if (onTap == null) return card;
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
         child: Padding(padding: padding, child: child),
       ),
     );
@@ -261,7 +338,7 @@ class GreetingAppBarTitle extends StatelessWidget {
         Text(
           l10n.timeGreeting(DateTime.now().hour),
           style: theme.textTheme.labelMedium?.copyWith(
-            color: AppColors.onSurfaceVariant,
+            color: context.muted,
             fontWeight: FontWeight.w500,
           ),
         ),
