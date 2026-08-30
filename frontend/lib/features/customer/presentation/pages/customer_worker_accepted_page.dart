@@ -36,13 +36,13 @@ class CustomerWorkerAcceptedPage extends StatelessWidget {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppColors.secondary.withValues(alpha: 0.15),
+                    color: AppColors.accent50,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.check_circle,
                     size: 56,
-                    color: AppColors.secondary,
+                    color: AppColors.accent,
                   ),
                 ).animate().scale(
                       begin: const Offset(0.5, 0.5),
@@ -107,6 +107,7 @@ class CustomerWorkerAcceptedPage extends StatelessWidget {
                         ),
                         IconButton(
                           icon: const Icon(Icons.info_outline),
+                          tooltip: context.l10n.workerProfile,
                           onPressed: () =>
                               context.push('/customer/worker/${worker.id}'),
                         ),

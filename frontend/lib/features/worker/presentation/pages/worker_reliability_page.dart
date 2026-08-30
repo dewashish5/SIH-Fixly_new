@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -30,8 +31,8 @@ class WorkerReliabilityPage extends StatelessWidget {
                     child: CircularProgressIndicator(
                       value: score / 100,
                       strokeWidth: 12,
-                      backgroundColor: AppColors.surfaceContainer,
-                      color: AppColors.secondary,
+                      backgroundColor: context.scheme.surfaceContainerHighest,
+                      color: AppColors.primary,
                     ),
                   ),
                   Text(

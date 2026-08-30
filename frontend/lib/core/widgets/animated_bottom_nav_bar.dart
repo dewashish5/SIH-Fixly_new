@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/theme_x.dart';
 
 class NavBarItem {
   const NavBarItem({
@@ -26,6 +28,7 @@ class AnimatedBottomNavBar extends StatelessWidget {
 
   static const _barHeight = 66.0;
   static const _horizontalPadding = 20.0;
+  static const _anim = Duration(milliseconds: 280);
 
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -34,6 +37,7 @@ class AnimatedBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final scheme = context.scheme;
 
     return Material(
       color: Colors.transparent,
@@ -48,57 +52,41 @@ class AnimatedBottomNavBar extends StatelessWidget {
         child: Container(
           height: _barHeight,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: scheme.surface,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppColors.outlineVariant.withValues(alpha: 0.35),
+              color: scheme.outline.withValues(alpha: 0.9),
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.onSurface.withValues(alpha: 0.07),
+                color: scheme.shadow.withValues(alpha: context.isDark ? 0.35 : 0.06),
                 blurRadius: 20,
                 offset: const Offset(0, 6),
               ),
             ],
           ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final slotWidth = constraints.maxWidth / items.length;
-
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 280),
-                    curve: Curves.easeOutCubic,
-                    left: currentIndex * slotWidth + (slotWidth - 44) / 2,
-                    top: 8,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: items[currentIndex].isAccent
-                            ? AppColors.primary.withValues(alpha: 0.14)
-                            : AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
+          child: Row(
+            children: List.generate(items.length, (index) {
+              final item = items[index];
+              final selected = index == currentIndex;
+              return Expanded(
+                child: Semantics(
+                  button: true,
+                  selected: selected,
+                  label: item.label,
+                  child: _NavSlot(
+                    item: item,
+                    selected: selected,
+                    onTap: () {
+                      if (index != currentIndex) {
+                        HapticFeedback.selectionClick();
+                      }
+                      onTap(index);
+                    },
                   ),
-                  Row(
-                    children: List.generate(items.length, (index) {
-                      return SizedBox(
-                        width: slotWidth,
-                        child: _NavSlot(
-                          item: items[index],
-                          selected: index == currentIndex,
-                          onTap: () => onTap(index),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
+                ),
               );
-            },
+            }),
           ),
         ),
       ),
@@ -119,106 +107,48 @@ class _NavSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = item.isAccent ? AppColors.primary : AppColors.primary;
-    final inactiveColor = AppColors.onSurfaceVariant;
+    final scheme = context.scheme;
+    final target = selected
+        ? (item.isAccent ? AppColors.accent : scheme.primary)
+        : scheme.onSurfaceVariant;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        splashColor: AppColors.primary.withValues(alpha: 0.08),
-        highlightColor: AppColors.primary.withValues(alpha: 0.04),
-        child: SizedBox(
-          height: AnimatedBottomNavBar._barHeight,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _NavIcon(
-                item: item,
-                selected: selected,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        height: AnimatedBottomNavBar._barHeight,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedScale(
+              scale: selected ? 1.12 : 1.0,
+              duration: AnimatedBottomNavBar._anim,
+              curve: Curves.easeOutCubic,
+              child: Icon(
+                selected ? item.activeIcon : item.icon,
+                size: 24,
+                color: target,
               ),
-              const SizedBox(height: 5),
-              Text(
+            ),
+            const SizedBox(height: 5),
+            AnimatedDefaultTextStyle(
+              duration: AnimatedBottomNavBar._anim,
+              curve: Curves.easeOutCubic,
+              style: TextStyle(
+                fontSize: selected ? 11 : 10.5,
+                height: 1,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: target,
+              ),
+              child: Text(
                 item.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  height: 1,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? activeColor : inactiveColor,
-                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ),
-    );
-  }
-}
-
-class _NavIcon extends StatelessWidget {
-  const _NavIcon({
-    required this.item,
-    required this.selected,
-    required this.activeColor,
-    required this.inactiveColor,
-  });
-
-  final NavBarItem item;
-  final bool selected;
-  final Color activeColor;
-  final Color inactiveColor;
-
-  @override
-  Widget build(BuildContext context) {
-    if (item.isAccent) {
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: selected
-              ? const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF6366F1), Color(0xFF2563EB)],
-                )
-              : null,
-          color: selected ? null : AppColors.surfaceContainer,
-          shape: BoxShape.circle,
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.28),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: Icon(
-          selected ? item.activeIcon : item.icon,
-          size: 20,
-          color: selected ? Colors.white : AppColors.primary,
-        ),
-      );
-    }
-
-    return AnimatedScale(
-      scale: selected ? 1.05 : 1,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutCubic,
-      child: Icon(
-        selected ? item.activeIcon : item.icon,
-        size: 23,
-        color: selected ? activeColor : inactiveColor,
       ),
     );
   }

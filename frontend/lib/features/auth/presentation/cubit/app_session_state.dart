@@ -7,6 +7,9 @@ enum AuthFlow { login, signup }
 class AppSessionState extends Equatable {
   const AppSessionState({
     this.locale = 'en',
+    this.themeMode = ThemeMode.system,
+    this.languageSelected = false,
+    this.notificationsEnabled = true,
     this.role = 'customer',
     this.phone,
     this.email,
@@ -15,6 +18,9 @@ class AppSessionState extends Equatable {
   });
 
   final String locale;
+  final ThemeMode themeMode;
+  final bool languageSelected;
+  final bool notificationsEnabled;
   final String role;
   final String? phone;
   final String? email;
@@ -23,6 +29,9 @@ class AppSessionState extends Equatable {
 
   AppSessionState copyWith({
     String? locale,
+    ThemeMode? themeMode,
+    bool? languageSelected,
+    bool? notificationsEnabled,
     String? role,
     String? phone,
     String? email,
@@ -31,6 +40,10 @@ class AppSessionState extends Equatable {
   }) {
     return AppSessionState(
       locale: locale ?? this.locale,
+      themeMode: themeMode ?? this.themeMode,
+      languageSelected: languageSelected ?? this.languageSelected,
+      notificationsEnabled:
+          notificationsEnabled ?? this.notificationsEnabled,
       role: role ?? this.role,
       phone: phone ?? this.phone,
       email: email ?? this.email,
@@ -40,5 +53,15 @@ class AppSessionState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [locale, role, phone, email, status, authFlow];
+  List<Object?> get props => [
+        locale,
+        themeMode,
+        languageSelected,
+        notificationsEnabled,
+        role,
+        phone,
+        email,
+        status,
+        authFlow,
+      ];
 }

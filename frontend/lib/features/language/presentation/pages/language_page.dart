@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
@@ -30,7 +31,7 @@ class LanguagePage extends StatelessWidget {
               Text(
                 strings.choosePreferredLanguage,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                      color: context.muted,
                     ),
               ),
               const SizedBox(height: 28),
@@ -52,7 +53,14 @@ class LanguagePage extends StatelessWidget {
               const Spacer(),
               PrimaryButton(
                 label: strings.continueLabel,
-                onPressed: () => context.go(RouteNames.login),
+                onPressed: () async {
+                  await context
+                      .read<AppSessionCubit>()
+                      .completeLanguageSelection();
+                  if (context.mounted) {
+                    context.go(RouteNames.login);
+                  }
+                },
               ),
               const SizedBox(height: 16),
             ],
@@ -108,7 +116,7 @@ class _LanguageCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.onSurfaceVariant,
+                    color: context.muted,
                   ),
                 ),
               ],
@@ -116,7 +124,7 @@ class _LanguageCard extends StatelessWidget {
           ),
           Icon(
             selected ? Icons.check_circle : Icons.circle_outlined,
-            color: selected ? AppColors.primary : AppColors.outline,
+            color: selected ? AppColors.primary : context.hairline,
           ),
         ],
       ),

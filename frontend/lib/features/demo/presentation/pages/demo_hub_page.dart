@@ -42,15 +42,9 @@ class DemoHubPage extends StatelessWidget {
     _DemoPhase(
       title: 'Worker Onboarding',
       routes: [
-        _DemoRoute('Personal', RouteNames.workerOnboardingPersonal),
-        _DemoRoute('Aadhaar', RouteNames.workerOnboardingAadhaar),
-        _DemoRoute('PAN', RouteNames.workerOnboardingPan),
-        _DemoRoute('Selfie', RouteNames.workerOnboardingSelfie),
-        _DemoRoute('Certificate', RouteNames.workerOnboardingCertificate),
-        _DemoRoute('Skills', RouteNames.workerOnboardingSkills),
-        _DemoRoute('Area', RouteNames.workerOnboardingArea),
-        _DemoRoute('Welfare', RouteNames.workerOnboardingWelfare),
-        _DemoRoute('Bank', RouteNames.workerOnboardingBank),
+        _DemoRoute('Identity & KYC', RouteNames.workerOnboardingIdentity),
+        _DemoRoute('Skills & area', RouteNames.workerOnboardingWork),
+        _DemoRoute('Payout & welfare', RouteNames.workerOnboardingPayout),
         _DemoRoute('Status', RouteNames.workerOnboardingStatus),
       ],
     ),

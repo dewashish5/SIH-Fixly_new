@@ -64,7 +64,7 @@ class CustomerServiceDetailPage extends StatelessWidget {
               const SizedBox(height: 20),
               Row(
                 children: [
-                  const Icon(Icons.star, color: AppColors.tertiary, size: 20),
+                  const Icon(Icons.star, color: AppColors.accent, size: 20),
                   const SizedBox(width: 4),
                   Text(
                     '${service.rating}',
@@ -91,10 +91,14 @@ class CustomerServiceDetailPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               _FeatureRow(icon: Icons.verified, text: 'Verified workers'),
-              _FeatureRow(icon: Icons.schedule, text: 'Same-day availability'),
+              _FeatureRow(
+                icon: Icons.schedule,
+                text: 'Same-day availability',
+                color: AppColors.accent,
+              ),
               _FeatureRow(icon: Icons.shield, text: 'Insurance covered'),
               const SizedBox(height: 32),
-              PrimaryButton(
+              AccentButton(
                 label: 'Book Now',
                 onPressed: () => context.push(RouteNames.customerBooking),
               ),
@@ -113,10 +117,15 @@ class CustomerServiceDetailPage extends StatelessWidget {
 }
 
 class _FeatureRow extends StatelessWidget {
-  const _FeatureRow({required this.icon, required this.text});
+  const _FeatureRow({
+    required this.icon,
+    required this.text,
+    this.color = AppColors.primary,
+  });
 
   final IconData icon;
   final String text;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +133,7 @@ class _FeatureRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.secondary, size: 20),
+          Icon(icon, color: color, size: 20),
           const SizedBox(width: 12),
           Text(text, style: Theme.of(context).textTheme.bodyMedium),
         ],

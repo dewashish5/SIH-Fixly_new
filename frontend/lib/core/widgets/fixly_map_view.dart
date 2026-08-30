@@ -157,7 +157,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
         geometry: Point(coordinates: Position(destination.lng, destination.lat)),
         iconImage: 'marker-15',
         iconSize: 1.35,
-        iconColor: AppColors.secondary.toARGB32(),
+        iconColor: AppColors.accent.toARGB32(),
         iconAnchor: IconAnchor.BOTTOM,
         textField: destination.label ?? 'Destination',
         textSize: 12,
@@ -339,7 +339,7 @@ class _MapLegend extends StatelessWidget {
           children: const [
             _LegendRow(color: AppColors.primary, label: 'Worker'),
             SizedBox(height: 6),
-            _LegendRow(color: AppColors.secondary, label: 'Destination'),
+            _LegendRow(color: AppColors.accent, label: 'Destination'),
           ],
         ),
       ),
@@ -395,7 +395,7 @@ class _MapPreviewFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFE8EEF2),
+      color: AppColors.background,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -451,7 +451,7 @@ class _MapGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = const Color(0xFFD5DEE6)
+      ..color = AppColors.border
       ..strokeWidth = 1;
     for (var x = 0.0; x < size.width; x += 28) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
@@ -501,7 +501,7 @@ class _MapGridPainter extends CustomPainter {
     }
 
     if (showDestinationPin) {
-      _drawPin(canvas, dest, AppColors.secondary);
+      _drawPin(canvas, dest, AppColors.accent);
     }
   }
 

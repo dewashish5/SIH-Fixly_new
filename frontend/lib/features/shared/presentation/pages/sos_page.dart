@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/core_widgets.dart';
 
 class SosPage extends StatelessWidget {
@@ -20,7 +21,7 @@ class SosPage extends StatelessWidget {
           Align(
             alignment: Alignment.bottomCenter,
             child: Material(
-              color: AppColors.surface,
+              color: context.card,
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(20)),
               child: Padding(
@@ -34,7 +35,7 @@ class SosPage extends StatelessWidget {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: AppColors.outlineVariant,
+                          color: context.hairline,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_strings.dart';
 
 enum AuthInputMethod { email, phone }
@@ -25,10 +27,11 @@ class AuthScreenLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canPop = showBack && GoRouter.of(context).canPop();
+    final canPop =
+        showBack && (ModalRoute.of(context)?.canPop ?? false);
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.canvas,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -40,6 +43,7 @@ class AuthScreenLayout extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: IconButton(
                     icon: const Icon(Icons.arrow_back_rounded),
+                    tooltip: context.l10n.goBack,
                     onPressed: () => context.pop(),
                   ),
                 ),
@@ -64,7 +68,7 @@ class AuthScreenLayout extends StatelessWidget {
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.onSurfaceVariant,
+                            color: context.muted,
                             height: 1.4,
                           ),
                     ).animate().fadeIn(delay: 60.ms, duration: 280.ms),
@@ -72,12 +76,16 @@ class AuthScreenLayout extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: context.card,
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.6)),
+                        border: Border.all(
+                          color: context.hairline.withValues(alpha: 0.6),
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.06),
+                            color: context.scheme.primary.withValues(
+                              alpha: context.isDark ? 0.12 : 0.06,
+                            ),
                             blurRadius: 32,
                             offset: const Offset(0, 12),
                           ),
@@ -105,15 +113,11 @@ class AuthScreenLayout extends StatelessWidget {
 
 class AuthSocialRow extends StatelessWidget {
   const AuthSocialRow({
-    required this.googleLabel,
-    required this.facebookLabel,
     required this.onGoogle,
     required this.onFacebook,
     super.key,
   });
 
-  final String googleLabel;
-  final String facebookLabel;
   final VoidCallback? onGoogle;
   final VoidCallback? onFacebook;
 
@@ -122,19 +126,17 @@ class AuthSocialRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _SocialButton(
-            label: googleLabel,
-            icon: Icons.g_mobiledata_rounded,
-            iconColor: const Color(0xFF4285F4),
+          child: _SocialTag(
+            asset: 'assets/icons/google.svg',
+            semanticLabel: 'Google',
             onPressed: onGoogle,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _SocialButton(
-            label: facebookLabel,
-            icon: Icons.facebook_rounded,
-            iconColor: const Color(0xFF1877F2),
+          child: _SocialTag(
+            asset: 'assets/icons/facebook.svg',
+            semanticLabel: 'Facebook',
             onPressed: onFacebook,
           ),
         ),
@@ -143,48 +145,41 @@ class AuthSocialRow extends StatelessWidget {
   }
 }
 
-class _SocialButton extends StatelessWidget {
-  const _SocialButton({
-    required this.label,
-    required this.icon,
-    required this.iconColor,
+class _SocialTag extends StatelessWidget {
+  const _SocialTag({
+    required this.asset,
+    required this.semanticLabel,
     required this.onPressed,
   });
 
-  final String label;
-  final IconData icon;
-  final Color iconColor;
+  final String asset;
+  final String semanticLabel;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          height: 52,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.outlineVariant),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: iconColor, size: 26),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label.split(' ').last,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: Material(
+        color: context.canvas,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Ink(
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.hairline),
+            ),
+            child: Center(
+              child: SvgPicture.asset(
+                asset,
+                width: 24,
+                height: 24,
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -222,7 +217,7 @@ class AuthMethodSwitcher extends StatelessWidget {
           height: 48,
           padding: const EdgeInsets.all(padding),
           decoration: BoxDecoration(
-            color: AppColors.surfaceContainer,
+            color: context.scheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Stack(
@@ -235,11 +230,11 @@ class AuthMethodSwitcher extends StatelessWidget {
                   width: segmentWidth,
                   height: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: context.card,
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color: context.scheme.primary.withValues(alpha: 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -293,7 +288,7 @@ class _MethodTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.primary : AppColors.onSurfaceVariant;
+    final color = selected ? context.scheme.primary : context.muted;
 
     return Material(
       color: Colors.transparent,
@@ -425,10 +420,12 @@ class _RoleTile extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        color: selected ? AppColors.primary.withValues(alpha: 0.06) : AppColors.surface,
+        color: selected
+            ? context.scheme.primary.withValues(alpha: context.isDark ? 0.18 : 0.06)
+            : context.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: selected ? AppColors.primary : AppColors.outlineVariant,
+          color: selected ? context.scheme.primary : context.hairline,
           width: selected ? 1.5 : 1,
         ),
       ),
@@ -447,14 +444,14 @@ class _RoleTile extends StatelessWidget {
                   height: 36,
                   decoration: BoxDecoration(
                     color: selected
-                        ? AppColors.primary.withValues(alpha: 0.12)
-                        : AppColors.surfaceContainer,
+                        ? context.scheme.primary.withValues(alpha: 0.16)
+                        : context.scheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     icon,
                     size: 20,
-                    color: selected ? AppColors.primary : AppColors.onSurfaceVariant,
+                    color: selected ? context.scheme.primary : context.muted,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -470,7 +467,7 @@ class _RoleTile extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.onSurfaceVariant,
+                        color: context.muted,
                         height: 1.3,
                       ),
                 ),
@@ -492,17 +489,17 @@ class AuthDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Expanded(child: Divider(color: AppColors.outlineVariant)),
+        const Expanded(child: Divider()),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.onSurfaceVariant,
+                  color: context.muted,
                 ),
           ),
         ),
-        const Expanded(child: Divider(color: AppColors.outlineVariant)),
+        const Expanded(child: Divider()),
       ],
     );
   }
@@ -528,7 +525,7 @@ class AuthLinkRow extends StatelessWidget {
         Text(
           prompt,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.onSurfaceVariant,
+                color: context.muted,
               ),
         ),
         TextButton(
@@ -559,7 +556,9 @@ class AuthWorkerChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: active ? AppColors.secondary.withValues(alpha: 0.1) : Colors.white,
+      color: active
+          ? AppColors.success.withValues(alpha: context.isDark ? 0.18 : 0.1)
+          : context.card,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -569,14 +568,14 @@ class AuthWorkerChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: active ? AppColors.secondary : AppColors.outlineVariant,
+              color: active ? AppColors.success : context.hairline,
             ),
           ),
           child: Row(
             children: [
               Icon(
                 Icons.engineering_outlined,
-                color: active ? AppColors.secondary : AppColors.onSurfaceVariant,
+                color: active ? AppColors.success : context.muted,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -584,13 +583,13 @@ class AuthWorkerChip extends StatelessWidget {
                   label,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: active ? AppColors.secondary : AppColors.onSurface,
+                        color: active ? AppColors.success : context.ink,
                       ),
                 ),
               ),
               Icon(
                 active ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
-                color: active ? AppColors.secondary : AppColors.outline,
+                color: active ? AppColors.success : context.muted,
               ),
             ],
           ),

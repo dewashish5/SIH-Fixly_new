@@ -3,7 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/constants/app_strings.dart';
 
@@ -48,6 +48,7 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: context.l10n.aiHelper,
+      showBack: false,
       body: Column(
         children: [
           Expanded(
@@ -68,8 +69,10 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
                     ),
                     decoration: BoxDecoration(
                       color: msg.isBot
-                          ? AppColors.surfaceContainer
-                          : AppColors.primary.withValues(alpha: 0.15),
+                          ? context.scheme.surfaceContainerHighest
+                          : context.scheme.primary.withValues(
+                              alpha: context.isDark ? 0.28 : 0.15,
+                            ),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(msg.text),
@@ -83,7 +86,8 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
               Expanded(
                 child: TextField(
                   controller: _queryController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
+                    labelText: 'Your request',
                     hintText: 'Describe your problem...',
                   ),
                   onSubmitted: (_) => _sendMessage(),
@@ -91,7 +95,8 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
               ),
               IconButton(
                 onPressed: _sendMessage,
-                icon: const Icon(Icons.send, color: AppColors.primary),
+                tooltip: context.l10n.sendMessage,
+                icon: Icon(Icons.send, color: context.scheme.primary),
               ),
             ],
           ),

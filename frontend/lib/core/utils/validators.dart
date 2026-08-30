@@ -59,8 +59,36 @@ abstract final class Validators {
   }
 
   static String? upi(String? value) {
-    if (value == null || !value.contains('@')) {
-      return 'Enter valid UPI ID';
+    if (value == null || value.trim().isEmpty) {
+      return 'UPI ID is required';
+    }
+    final upi = value.trim().toLowerCase();
+    if (!RegExp(r'^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$').hasMatch(upi)) {
+      return 'Enter valid UPI ID (e.g. name@upi)';
+    }
+    return null;
+  }
+
+  static String? bankAccount(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Account number is required';
+    }
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 9 || digits.length > 18) {
+      return 'Enter a valid account number (9–18 digits)';
+    }
+    return null;
+  }
+
+  static final _ifscRegex = RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$');
+
+  static String? ifsc(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'IFSC code is required';
+    }
+    final code = value.trim().toUpperCase();
+    if (!_ifscRegex.hasMatch(code)) {
+      return 'Invalid IFSC (e.g. HDFC0001234)';
     }
     return null;
   }

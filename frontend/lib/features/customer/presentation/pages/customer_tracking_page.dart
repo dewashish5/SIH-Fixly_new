@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/map_constants.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/widgets/fixly_map_view.dart';
@@ -72,7 +73,7 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                   child: LinearProgressIndicator(
                     value: state.progress,
                     minHeight: 8,
-                    backgroundColor: AppColors.surfaceContainer,
+                    backgroundColor: context.scheme.surfaceContainerHighest,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -102,7 +103,7 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                 AppCard(
                   child: Row(
                     children: [
-                      const Icon(Icons.location_on, color: AppColors.secondary),
+                      const Icon(Icons.location_on, color: AppColors.accent),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(

@@ -1,10 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
@@ -50,7 +49,7 @@ class _CustomerHomeBookingPageState extends State<CustomerHomeBookingPage> {
             Text(
               'Select category and describe your need',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.outline,
+                    color: context.muted,
                   ),
             ),
             const SizedBox(height: 24),
@@ -69,47 +68,54 @@ class _CustomerHomeBookingPageState extends State<CustomerHomeBookingPage> {
                   final selected = cat.id == _selectedCategory;
                   return Padding(
                     padding: const EdgeInsets.only(right: 12),
-                    child: GestureDetector(
-                      onTap: () =>
-                          setState(() => _selectedCategory = cat.id),
-                      child: Container(
-                        width: 80,
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? AppColors.primary.withValues(alpha: 0.15)
-                              : AppColors.surfaceContainer,
+                    child: Semantics(
+                      button: true,
+                      selected: selected,
+                      label: cat.nameEn,
+                      child: Material(
+                        color: selected
+                            ? AppColors.primary.withValues(
+                                alpha: context.isDark ? 0.22 : 0.15,
+                              )
+                            : context.scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          onTap: () =>
+                              setState(() => _selectedCategory = cat.id),
                           borderRadius: BorderRadius.circular(12),
-                          border: selected
-                              ? Border.all(color: AppColors.primary, width: 2)
-                              : null,
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 36,
-                              height: 36,
-                              child: CachedNetworkImage(
-                                imageUrl: cat.imageUrl,
-                                fit: BoxFit.contain,
-                                errorWidget: (_, _, _) => Icon(
-                                  cat.fallbackIcon,
+                          child: Container(
+                            width: 80,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: selected
+                                  ? Border.all(
+                                      color: AppColors.primary,
+                                      width: 2,
+                                    )
+                                  : Border.all(color: context.hairline),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  cat.icon,
                                   color: AppColors.primary,
+                                  size: 32,
                                 ),
-                              ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  cat.nameEn,
+                                  style: Theme.of(context).textTheme.labelSmall,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              cat.nameEn,
-                              style: Theme.of(context).textTheme.labelSmall,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    ).animate(delay: (index * 40).ms).fadeIn(),
+                    ),
                   );
                 },
               ),
@@ -151,7 +157,7 @@ class _CustomerHomeBookingPageState extends State<CustomerHomeBookingPage> {
               ),
             ],
             const SizedBox(height: 24),
-            PrimaryButton(
+            AccentButton(
               label: 'Find Best Match',
               onPressed: () => context.push(RouteNames.customerAiDiscovery),
             ),

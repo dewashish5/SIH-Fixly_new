@@ -205,8 +205,12 @@ class OnboardingFormData extends Equatable {
     this.serviceRadiusKm = 5,
     this.hasEshram = false,
     this.eshramUan = '',
+    this.payoutMethod = PayoutMethod.bank,
     this.bankAccount = '',
+    this.ifscCode = '',
     this.upiId = '',
+    this.bankVerified = false,
+    this.upiVerified = false,
     this.certificateUploaded = false,
     this.selfieVerified = false,
     this.selfieImageUrl,
@@ -219,8 +223,12 @@ class OnboardingFormData extends Equatable {
   final double serviceRadiusKm;
   final bool hasEshram;
   final String eshramUan;
+  final PayoutMethod payoutMethod;
   final String bankAccount;
+  final String ifscCode;
   final String upiId;
+  final bool bankVerified;
+  final bool upiVerified;
   final bool certificateUploaded;
   final bool selfieVerified;
   final String? selfieImageUrl;
@@ -233,8 +241,12 @@ class OnboardingFormData extends Equatable {
     double? serviceRadiusKm,
     bool? hasEshram,
     String? eshramUan,
+    PayoutMethod? payoutMethod,
     String? bankAccount,
+    String? ifscCode,
     String? upiId,
+    bool? bankVerified,
+    bool? upiVerified,
     bool? certificateUploaded,
     bool? selfieVerified,
     Object? selfieImageUrl = _unset,
@@ -247,8 +259,12 @@ class OnboardingFormData extends Equatable {
       serviceRadiusKm: serviceRadiusKm ?? this.serviceRadiusKm,
       hasEshram: hasEshram ?? this.hasEshram,
       eshramUan: eshramUan ?? this.eshramUan,
+      payoutMethod: payoutMethod ?? this.payoutMethod,
       bankAccount: bankAccount ?? this.bankAccount,
+      ifscCode: ifscCode ?? this.ifscCode,
       upiId: upiId ?? this.upiId,
+      bankVerified: bankVerified ?? this.bankVerified,
+      upiVerified: upiVerified ?? this.upiVerified,
       certificateUploaded: certificateUploaded ?? this.certificateUploaded,
       selfieVerified: selfieVerified ?? this.selfieVerified,
       selfieImageUrl: identical(selfieImageUrl, _unset)
@@ -266,10 +282,16 @@ class OnboardingFormData extends Equatable {
         serviceRadiusKm,
         hasEshram,
         eshramUan,
+        payoutMethod,
         bankAccount,
+        ifscCode,
         upiId,
+        bankVerified,
+        upiVerified,
         certificateUploaded,
         selfieVerified,
         selfieImageUrl,
       ];
 }
+
+enum PayoutMethod { bank, upi }

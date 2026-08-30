@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/theme_x.dart';
 
 enum BadgeTone { primary, success, warning, error, neutral }
 
@@ -18,7 +19,7 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (bg, fg) = _colorsForTone(tone);
+    final (bg, fg) = _colorsForTone(context, tone);
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -40,7 +41,7 @@ class StatusBadge extends StatelessWidget {
     );
   }
 
-  (Color, Color) _colorsForTone(BadgeTone tone) {
+  (Color, Color) _colorsForTone(BuildContext context, BadgeTone tone) {
     switch (tone) {
       case BadgeTone.primary:
         return (AppColors.primary.withValues(alpha: 0.12), AppColors.primary);
@@ -51,7 +52,7 @@ class StatusBadge extends StatelessWidget {
       case BadgeTone.error:
         return (AppColors.error.withValues(alpha: 0.12), AppColors.error);
       case BadgeTone.neutral:
-        return (AppColors.surfaceContainer, AppColors.onSurfaceVariant);
+        return (context.scheme.surfaceContainerHighest, context.muted);
     }
   }
 }

@@ -1,27 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/l10n/locale_scope.dart';
 import '../features/auth/presentation/cubit/app_session_cubit.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 
-class App extends StatelessWidget {
-  App({super.key});
+class App extends StatefulWidget {
+  const App({super.key});
 
-  final _router = createAppRouter();
+  @override
+  State<App> createState() => _AppState();
+}
+
+class _AppState extends State<App> {
+  late final GoRouter _router = createAppRouter();
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => AppSessionCubit(),
       child: BlocBuilder<AppSessionCubit, AppSessionState>(
+        buildWhen: (prev, curr) =>
+            prev.locale != curr.locale || prev.themeMode != curr.themeMode,
         builder: (context, session) {
           return MaterialApp.router(
             title: 'Fixly',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: session.themeMode,
             locale: Locale(session.locale),
             supportedLocales: const [
               Locale('en'),

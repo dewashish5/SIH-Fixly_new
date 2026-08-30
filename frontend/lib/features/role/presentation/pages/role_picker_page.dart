@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
@@ -30,7 +31,7 @@ class RolePickerPage extends StatelessWidget {
               Text(
                 strings.howUseFixly,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.onSurfaceVariant,
+                  color: context.muted,
                 ),
               ),
               const SizedBox(height: 32),
@@ -49,7 +50,7 @@ class RolePickerPage extends StatelessWidget {
                 title: strings.worker,
                 subtitle: strings.workerRoleSubtitle,
                 selected: state.role == 'worker',
-                accentColor: AppColors.secondary,
+                accentColor: AppColors.primaryDark,
                 onTap: () => context.read<AppSessionCubit>().setRole('worker'),
               ),
               const Spacer(),
@@ -112,7 +113,7 @@ class _RoleCard extends StatelessWidget {
           ),
           Icon(
             selected ? Icons.check_circle : Icons.circle_outlined,
-            color: selected ? AppColors.primary : AppColors.outlineVariant,
+            color: selected ? AppColors.primary : context.hairline,
           ),
         ],
       ),

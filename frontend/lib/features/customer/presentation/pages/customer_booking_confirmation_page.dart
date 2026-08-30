@@ -27,13 +27,13 @@ class CustomerBookingConfirmationPage extends StatelessWidget {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: AppColors.secondary.withValues(alpha: 0.15),
+                color: AppColors.accent50,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.check_circle,
                 size: 64,
-                color: AppColors.secondary,
+                color: AppColors.accent,
               ),
             ).animate().scale(
                   begin: const Offset(0.3, 0.3),
@@ -76,7 +76,7 @@ class CustomerBookingConfirmationPage extends StatelessWidget {
                   _DetailRow(
                     label: 'Status',
                     value: 'Completed & Paid',
-                    valueColor: AppColors.secondary,
+                    valueColor: AppColors.accent,
                   ),
                 ],
               ),

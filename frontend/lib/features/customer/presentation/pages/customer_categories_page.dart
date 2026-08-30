@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
@@ -34,15 +33,12 @@ class CustomerCategoriesPage extends StatelessWidget {
             child: CategoryIconTile(
               category: cat,
               locale: locale,
-              animationIndex: index,
               onTap: () => context.push(
                 RouteNames.customerSearch,
                 extra: cat.id,
               ),
             ),
-          ).animate(delay: (index * 50).ms).fadeIn().scale(
-                begin: const Offset(0.92, 0.92),
-              );
+          );
         },
       ),
     );

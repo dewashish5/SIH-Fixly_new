@@ -62,7 +62,7 @@ class CustomerWorkerProfilePage extends StatelessWidget {
                 ),
                 if (worker.insured) ...[
                   const SizedBox(width: 8),
-                  const Icon(Icons.verified, color: AppColors.secondary),
+                  const Icon(Icons.verified, color: AppColors.primary),
                 ],
               ],
             ),
@@ -134,7 +134,7 @@ class CustomerWorkerProfilePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            PrimaryButton(
+            AccentButton(
               label: 'Book This Worker',
               onPressed: () => context.push(RouteNames.customerBooking),
             ),

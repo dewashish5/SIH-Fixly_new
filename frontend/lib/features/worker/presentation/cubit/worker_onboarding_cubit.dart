@@ -65,6 +65,21 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
     _emitForm(state.formData.copyWith(skills: skills));
   }
 
+  void addCustomSkill(String raw) {
+    final skill = raw.trim();
+    if (skill.isEmpty) return;
+    final skills = List<String>.from(state.formData.skills);
+    final exists = skills.any((s) => s.toLowerCase() == skill.toLowerCase());
+    if (exists) return;
+    skills.add(skill);
+    _emitForm(state.formData.copyWith(skills: skills));
+  }
+
+  void removeSkill(String skill) {
+    final skills = List<String>.from(state.formData.skills)..remove(skill);
+    _emitForm(state.formData.copyWith(skills: skills));
+  }
+
   void updateServiceRadius(double km) {
     _emitForm(state.formData.copyWith(serviceRadiusKm: km));
   }
@@ -77,12 +92,68 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
     _emitForm(state.formData.copyWith(eshramUan: value));
   }
 
+  void setPayoutMethod(PayoutMethod method) {
+    _emitForm(state.formData.copyWith(payoutMethod: method));
+  }
+
   void updateBankAccount(String value) {
-    _emitForm(state.formData.copyWith(bankAccount: value));
+    _emitForm(
+      state.formData.copyWith(
+        bankAccount: value,
+        bankVerified: false,
+      ),
+    );
+  }
+
+  void updateIfscCode(String value) {
+    _emitForm(
+      state.formData.copyWith(
+        ifscCode: value.toUpperCase(),
+        bankVerified: false,
+      ),
+    );
   }
 
   void updateUpiId(String value) {
-    _emitForm(state.formData.copyWith(upiId: value));
+    _emitForm(
+      state.formData.copyWith(
+        upiId: value.trim(),
+        upiVerified: false,
+      ),
+    );
+  }
+
+  Future<String?> verifyBankAccount() async {
+    final data = state.formData;
+    final error = Validators.bankAccount(data.bankAccount) ??
+        Validators.ifsc(data.ifscCode);
+    if (error != null) return error;
+
+    emit(state.copyWith(verifyingPayout: true));
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    // Mock: reject obviously fake accounts.
+    if (data.bankAccount.replaceAll(RegExp(r'\D'), '').startsWith('000')) {
+      emit(state.copyWith(verifyingPayout: false));
+      return 'Could not verify this account. Check details and try again.';
+    }
+    _emitForm(state.formData.copyWith(bankVerified: true));
+    emit(state.copyWith(verifyingPayout: false));
+    return null;
+  }
+
+  Future<String?> verifyUpiId() async {
+    final error = Validators.upi(state.formData.upiId);
+    if (error != null) return error;
+
+    emit(state.copyWith(verifyingPayout: true));
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (state.formData.upiId.toLowerCase().contains('invalid')) {
+      emit(state.copyWith(verifyingPayout: false));
+      return 'UPI ID not found. Please check and try again.';
+    }
+    _emitForm(state.formData.copyWith(upiVerified: true));
+    emit(state.copyWith(verifyingPayout: false));
+    return null;
   }
 
   void setStep(int step) {
@@ -93,31 +164,25 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
     final data = state.formData;
     switch (step) {
       case 1:
-        return Validators.requiredField(data.fullName, label: 'Full name');
+        return Validators.requiredField(data.fullName, label: 'Full name') ??
+            Validators.aadhaar(data.aadhaar) ??
+            Validators.pan(data.pan) ??
+            (data.selfieVerified ? null : 'Please capture a selfie');
       case 2:
-        return Validators.aadhaar(data.aadhaar);
+        if (!data.certificateUploaded) {
+          return 'Please upload your certificate';
+        }
+        if (data.skills.isEmpty) return 'Select at least one skill';
+        if (data.serviceRadiusKm < 1) return 'Set a service radius';
+        return null;
       case 3:
-        return Validators.pan(data.pan);
-      case 4:
-        return data.selfieVerified ? null : 'Please capture a selfie';
-      case 5:
-        return data.certificateUploaded
-            ? null
-            : 'Please upload your certificate';
-      case 6:
-        return data.skills.isEmpty ? 'Select at least one skill' : null;
-      case 7:
-        return data.serviceRadiusKm < 1 ? 'Set a service radius' : null;
-      case 8:
-        return null;
-      case 9:
-        if (data.bankAccount.trim().isEmpty && data.upiId.trim().isEmpty) {
-          return 'Enter bank account or UPI ID';
+        if (data.payoutMethod == PayoutMethod.bank) {
+          return Validators.bankAccount(data.bankAccount) ??
+              Validators.ifsc(data.ifscCode) ??
+              (data.bankVerified ? null : 'Please verify your bank account');
         }
-        if (data.upiId.isNotEmpty) {
-          return Validators.upi(data.upiId);
-        }
-        return null;
+        return Validators.upi(data.upiId) ??
+            (data.upiVerified ? null : 'Please verify your UPI ID');
       default:
         return null;
     }

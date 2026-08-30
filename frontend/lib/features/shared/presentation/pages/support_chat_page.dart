@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/support_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -65,8 +65,10 @@ class _SupportChatPageState extends State<SupportChatPage> {
                               ),
                               decoration: BoxDecoration(
                                 color: msg.isAgent
-                                    ? AppColors.surfaceContainer
-                                    : AppColors.primary.withValues(alpha: 0.12),
+                                    ? context.scheme.surfaceContainerHighest
+                                    : context.scheme.primary.withValues(
+                                        alpha: context.isDark ? 0.28 : 0.12,
+                                      ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Column(
@@ -92,6 +94,7 @@ class _SupportChatPageState extends State<SupportChatPage> {
                     child: TextField(
                       controller: _controller,
                       decoration: const InputDecoration(
+                        labelText: 'Message',
                         hintText: 'Type a message...',
                       ),
                       onSubmitted: (_) => _send(),
@@ -99,7 +102,8 @@ class _SupportChatPageState extends State<SupportChatPage> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.send),
-                    color: AppColors.primary,
+                    tooltip: context.l10n.sendMessage,
+                    color: context.scheme.primary,
                     onPressed: _send,
                   ),
                 ],

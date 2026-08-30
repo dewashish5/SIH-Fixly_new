@@ -64,10 +64,10 @@ class _WorkerAvailabilityStatusPageState
                     ),
                     Switch(
                       value: state.isAvailable,
-                      activeTrackColor: AppColors.secondary.withValues(alpha: 0.4),
+                      activeTrackColor: AppColors.success.withValues(alpha: 0.4),
                       thumbColor: WidgetStateProperty.resolveWith(
                         (states) => states.contains(WidgetState.selected)
-                            ? AppColors.secondary
+                            ? AppColors.success
                             : null,
                       ),
                       onChanged: (_) => context

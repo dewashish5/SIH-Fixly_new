@@ -36,10 +36,9 @@ class AppStrings {
   String get passwordHint => isHi ? 'अपना पासवर्ड दर्ज करें' : 'Enter your password';
   String get phoneNumber => isHi ? 'फ़ोन नंबर' : 'Phone number';
   String get phoneHint => isHi ? '10 अंकों का मोबाइल नंबर' : '10-digit mobile number';
-  String get continueWithGoogle => isHi ? 'Google से जारी रखें' : 'Continue with Google';
-  String get continueWithFacebook =>
-      isHi ? 'Facebook से जारी रखें' : 'Continue with Facebook';
-  String get orContinueWith => isHi ? 'या इससे जारी रखें' : 'Or continue with';
+  String get continueWithGoogle => isHi ? 'Google' : 'Google';
+  String get continueWithFacebook => isHi ? 'Facebook' : 'Facebook';
+  String get orContinueWith => isHi ? 'या ईमेल / फ़ोन' : 'Or email / phone';
   String get dontHaveAccount =>
       isHi ? 'खाता नहीं है?' : "Don't have an account?";
   String get alreadyHaveAccount =>
@@ -50,11 +49,11 @@ class AppStrings {
       ? 'कार्यकर्ता के रूप में लॉगिन — कोई भी विकल्प चुनें'
       : 'Signing in as worker — use any option below';
   String get loginSubtitle => isHi
-      ? 'Google, Facebook, ईमेल या फ़ोन से लॉगिन करें'
-      : 'Log in with Google, Facebook, email, or phone';
+      ? 'जारी रखने के लिए लॉगिन करें'
+      : 'Log in to continue';
   String get signUpSubtitle => isHi
-      ? 'Google, Facebook, ईमेल या फ़ोन से खाता बनाएं'
-      : 'Create an account with Google, Facebook, email, or phone';
+      ? 'शुरू करने के लिए खाता बनाएं'
+      : 'Create an account to get started';
   String get authEmailTab => isHi ? 'ईमेल' : 'Email';
   String get authPhoneTab => isHi ? 'फ़ोन' : 'Phone';
   String get customer => isHi ? 'ग्राहक' : 'Customer';
@@ -109,6 +108,11 @@ class AppStrings {
   // Shared / profile
   String get settings => isHi ? 'सेटिंग्स' : 'Settings';
   String get hindiLanguage => isHi ? 'हिन्दी भाषा' : 'Hindi language';
+  String get appearance => isHi ? 'दिखावट' : 'Appearance';
+  String get themeSystem => isHi ? 'सिस्टम' : 'System';
+  String get themeLight => isHi ? 'लाइट' : 'Light';
+  String get themeDark => isHi ? 'डार्क' : 'Dark';
+  String get pushNotifications => isHi ? 'पुश सूचनाएं' : 'Push notifications';
   String get notificationPreferences =>
       isHi ? 'सूचना प्राथमिकताएं' : 'Notification preferences';
   String get privacySecurity => isHi ? 'गोपनीयता और सुरक्षा' : 'Privacy & security';
@@ -119,6 +123,22 @@ class AppStrings {
   String get languageEnglish => isHi ? 'भाषा: English' : 'Language: English';
   String get profile => isHi ? 'प्रोफ़ाइल' : 'Profile';
   String get editProfile => isHi ? 'प्रोफ़ाइल संपादित करें' : 'Edit profile';
+  String get signOut => isHi ? 'साइन आउट' : 'Sign out';
+  String get signOutConfirm => isHi
+      ? 'क्या आप साइन आउट करना चाहते हैं?'
+      : 'Sign out of this account?';
+  String get cancel => isHi ? 'रद्द करें' : 'Cancel';
+  String get preferences => isHi ? 'प्राथमिकताएं' : 'Preferences';
+  String get account => isHi ? 'खाता' : 'Account';
+  String get language => isHi ? 'भाषा' : 'Language';
+  String get english => isHi ? 'English' : 'English';
+  String get hindi => isHi ? 'हिन्दी' : 'Hindi';
+  String get appVersion => isHi ? 'फिक्सली v0.1.0' : 'Fixly v0.1.0';
+  String get profileSaved => isHi ? 'प्रोफ़ाइल सहेजी गई' : 'Profile saved';
+  String get insuredMember => isHi ? 'बीमा सदस्य' : 'Insured member';
+  String get customerMember => isHi ? 'ग्राहक सदस्य' : 'Customer member';
+  String get workerMember => isHi ? 'कार्यकर्ता सदस्य' : 'Worker member';
+  String get helpSafety => isHi ? 'सहायता और सुरक्षा' : 'Help & safety';
   String get whyFixly => isHi ? 'फिक्सली क्यों?' : 'Why Fixly?';
   String get fairWagesBenefit => isHi
       ? 'कार्यकर्ता 85–90% कमाई रखते हैं — कोई शोषण नहीं।'
@@ -185,6 +205,9 @@ class AppStrings {
   String get reliabilityScore => isHi ? 'विश्वसनीयता स्कोर' : 'Reliability score';
 
   // Worker onboarding
+  String get identityKyc => isHi ? 'पहचान और KYC' : 'Identity & KYC';
+  String get workProfile => isHi ? 'कौशल और क्षेत्र' : 'Skills & area';
+  String get payoutWelfare => isHi ? 'भुगतान और कल्याण' : 'Payout & welfare';
   String get personalDetails => isHi ? 'व्यक्तिगत विवरण' : 'Personal details';
   String get aadhaarVerification =>
       isHi ? 'आधार सत्यापन' : 'Aadhaar verification';
@@ -193,6 +216,10 @@ class AppStrings {
       isHi ? 'सेल्फी सत्यापन' : 'Selfie verification';
   String get skillCertificate => isHi ? 'कौशल प्रमाणपत्र' : 'Skill certificate';
   String get selectSkills => isHi ? 'कौशल चुनें' : 'Select skills';
+  String get otherSkills => isHi ? 'अन्य' : 'Others';
+  String get otherSkillsHint => isHi
+      ? 'कौशल लिखें, कॉमा से अलग करें'
+      : 'Type a skill, then comma to add more';
   String get serviceArea => isHi ? 'सेवा क्षेत्र' : 'Service area';
   String get serviceAreaHint => isHi
       ? 'नौकरियों के लिए आप कितनी दूर जा सकते हैं, सेट करें।'
@@ -216,6 +243,9 @@ class AppStrings {
 
   // Common
   String get goBack => isHi ? 'वापस जाएं' : 'Go back';
+  String get showPassword => isHi ? 'पासवर्ड दिखाएं' : 'Show password';
+  String get hidePassword => isHi ? 'पासवर्ड छिपाएं' : 'Hide password';
+  String get sendMessage => isHi ? 'भेजें' : 'Send';
   String get unknownState => isHi ? 'अज्ञात स्थिति' : 'Unknown state';
   String get etaFormat => isHi ? 'ETA: %s मिनट' : 'ETA: %s min';
   String get arrived => isHi ? 'पहुंच गए' : 'Arrived';

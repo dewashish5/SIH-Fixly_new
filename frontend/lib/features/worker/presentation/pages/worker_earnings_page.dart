@@ -25,7 +25,7 @@ class WorkerEarningsPage extends StatelessWidget {
                 Text(
                   '₹${repo.todayEarnings.toStringAsFixed(0)}',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: AppColors.secondary,
+                        color: AppColors.primary,
                       ),
                 ),
               ],
@@ -63,7 +63,7 @@ class WorkerEarningsPage extends StatelessWidget {
                         Text(
                           '+₹${tx.amount.toStringAsFixed(0)}',
                           style: const TextStyle(
-                            color: AppColors.secondary,
+                            color: AppColors.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),

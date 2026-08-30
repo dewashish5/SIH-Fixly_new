@@ -29,6 +29,7 @@ class _WorkerWalletPageState extends State<WorkerWalletPage> {
       builder: (context, state) {
         return AppScaffold(
           title: context.l10n.wallet,
+          showBack: false,
           body: state.status == WalletStatus.loading
               ? const Center(child: CircularProgressIndicator())
               : Column(
@@ -63,7 +64,7 @@ class _WorkerWalletPageState extends State<WorkerWalletPage> {
                           final tx = state.transactions[index];
                           final sign = tx.isCredit ? '+' : '-';
                           final color =
-                              tx.isCredit ? AppColors.secondary : AppColors.error;
+                              tx.isCredit ? AppColors.success : AppColors.error;
 
                           return AppCard(
                             child: Row(

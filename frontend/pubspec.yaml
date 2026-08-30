@@ -26,13 +26,45 @@ dependencies:
   mapbox_maps_flutter: ^2.29.1
   shared_preferences: ^2.5.5
   transit_kit: ^1.0.0
+  flutter_native_splash: ^2.4.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/app_icon.png
+  min_sdk_android: 21
+  remove_alpha_ios: true
+
+flutter_native_splash:
+  color: "#F8FAFB"
+  image: assets/splash_wordmark.png
+  color_dark: "#F8FAFB"
+  image_dark: assets/splash_wordmark.png
+  android_gravity: center
+  ios_content_mode: scaleAspectFit
+  android_12:
+    color: "#F8FAFB"
+    image: assets/app_icon.png
+    icon_background_color: "#F8FAFB"
+    color_dark: "#F8FAFB"
+    image_dark: assets/app_icon.png
+    icon_background_color_dark: "#F8FAFB"
+  android: true
+  ios: true
+  web: false
 
 flutter:
   uses-material-design: true
   assets:
     - assets/config/mapbox.json
+    - assets/app_icon.png
+    - assets/app_name.png
+    - assets/splash_wordmark.png
+    - assets/icons/google.svg
+    - assets/icons/facebook.svg

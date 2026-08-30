@@ -98,11 +98,11 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 22),
                 AuthSocialRow(
-                  googleLabel: l10n.continueWithGoogle,
-                  facebookLabel: l10n.continueWithFacebook,
-                  onGoogle: loading ? null : () => _handleSocial(_cubit.signInWithGoogle),
-                  onFacebook:
-                      loading ? null : () => _handleSocial(_cubit.signInWithFacebook),
+                  onGoogle:
+                      loading ? null : () => _handleSocial(_cubit.signInWithGoogle),
+                  onFacebook: loading
+                      ? null
+                      : () => _handleSocial(_cubit.signInWithFacebook),
                 ),
                 const SizedBox(height: 20),
                 AuthDivider(label: l10n.orContinueWith),
