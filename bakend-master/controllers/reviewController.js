@@ -4,6 +4,8 @@ import Booking from '../models/Booking.js';
 
 // Screen: Rating & Review Submission
 export const submitReview = async (req, res) => {
+    // #swagger.tags = ['Reviews']
+    // #swagger.parameters['body'] = { in: 'body', description: 'Submit Review Input', required: true, schema: { $ref: '#/definitions/SubmitReviewInput' } }
     try {
         const { bookingId, workerId, rating, comment, traits } = req.body;
 
@@ -12,8 +14,8 @@ export const submitReview = async (req, res) => {
             customer: req.user.id,
             worker: workerId,
             rating,
-            comment,
-            traits // e.g., ['Professional', 'On Time']
+            feedback: comment,
+            badgesGiven: traits // e.g., ['Professional', 'On Time']
         });
 
         // MongoDB Aggregation to dynamically update worker's average rating

@@ -1,7 +1,13 @@
 import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import redis from './redis.js';
+import { registerSocketHandlers } from '../sockets/tracking.js';
 
+/**
+ * Initializes the Socket.io server and configures Redis Pub/Sub adapters
+ * @param {object} httpServer - The native node HTTP server instance
+ * @returns {object} - The initialized socket.io server instance
+ */
 export const initSocket = (httpServer) => {
     const io = new Server(httpServer, {
         cors: { origin: '*' }
@@ -13,28 +19,8 @@ export const initSocket = (httpServer) => {
 
     io.adapter(createAdapter(pubClient, subClient));
 
-    io.on('connection', (socket) => {
-        console.log(`User Connected: ${socket.id}`);
-
-        // Customer & Worker join the specific booking room
-        socket.on('join_booking_room', (bookingId) => {
-            socket.join(`booking_${bookingId}`);
-        });
-
-        // Worker emits location -> Server broadcasts to Customer in that room
-        socket.on('worker_location_update', (data) => {
-            const { bookingId, lat, lng, heading } = data;
-
-            // Broadcast location to specific booking room
-            io.to(`booking_${bookingId}`).emit('live_tracking', {
-                lat, lng, heading, timestamp: Date.now()
-            });
-        });
-
-        socket.on('disconnect', () => {
-            console.log(`User Disconnected: ${socket.id}`);
-        });
-    });
+    // Delegate tracking and real-time business logic to sockets handler
+    registerSocketHandlers(io);
 
     return io;
 };

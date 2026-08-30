@@ -3,7 +3,7 @@ import redis from '../config/redis.js';
 import { generateOtpEmailHtml } from '../utils/emailTemplate.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import emailQueue from '../queues/queue.js';
+import { emailQueue } from '../queues/queue.js';
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 const REDIS_VERIFIED_TTL = 86400; // 24 Hours Cache TTL
@@ -14,16 +14,22 @@ const REDIS_VERIFIED_TTL = 86400; // 24 Hours Cache TTL
 const createSession = async (user, deviceId) => {
     const userIdStr = user._id ? user._id.toString() : user.id;
 
-    const accessToken = jwt.sign(
-        { id: userIdStr, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: '15m' }
-    );
-    const refreshToken = jwt.sign(
-        { id: userIdStr },
-        process.env.REFRESH_SECRET,
-        { expiresIn: '7d' }
-    );
+    // Use User schema helper methods if the object is a Mongoose instance, else fallback
+    const accessToken = typeof user.generateAccessToken === 'function'
+        ? user.generateAccessToken()
+        : jwt.sign(
+            { id: userIdStr, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
+        );
+
+    const refreshToken = typeof user.generateRefreshToken === 'function'
+        ? user.generateRefreshToken()
+        : jwt.sign(
+            { id: userIdStr },
+            process.env.REFRESH_SECRET,
+            { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' }
+        );
 
     if (deviceId) {
         const activeDeviceKey = `user:active-device:${userIdStr}`;
@@ -33,10 +39,17 @@ const createSession = async (user, deviceId) => {
             await redis.del(`session:${userIdStr}:${oldDeviceId}`);
         }
 
+        const sessionTtl = parseInt(process.env.REDIS_SESSION_TTL_SEC, 10) || 7 * 24 * 60 * 60;
         const pipeline = redis.pipeline();
-        pipeline.set(activeDeviceKey, deviceId, 'EX', 7 * 24 * 60 * 60);
-        pipeline.set(`session:${userIdStr}:${deviceId}`, refreshToken, 'EX', 7 * 24 * 60 * 60);
+        pipeline.set(activeDeviceKey, deviceId, 'EX', sessionTtl);
+        pipeline.set(`session:${userIdStr}:${deviceId}`, refreshToken, 'EX', sessionTtl);
         await pipeline.exec();
+
+        // Sync the activeDeviceId to MongoDB
+        await User.findByIdAndUpdate(userIdStr, { activeDeviceId: deviceId });
+
+        // Update local object reference in-place
+        user.activeDeviceId = deviceId;
     }
 
     return { accessToken, refreshToken };
@@ -85,28 +98,28 @@ export const getMe = async (req, res) => {
 };
 
 
-// 1. REGISTER (FIXED: Explicit Bcrypt Password Hashing)
+// 1. REGISTER (Uses User schema pre-save hook for password hashing)
 export const registerUser = async (req, res) => {
+    // #swagger.tags = ['Auth']
+    // #swagger.parameters['body'] = { in: 'body', description: 'User registration details', required: true, schema: { $ref: '#/definitions/RegisterInput' } }
     try {
         const { name, email, password, role, phone, location, workerProfile } = req.body;
+        if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
 
-        const existingUser = await getUserCache(email);
+        const emailNormalized = email.toLowerCase().trim();
+        const existingUser = await getUserCache(emailNormalized);
         if (existingUser && existingUser.isVerified) {
             return res.status(400).json({ success: false, message: 'User already exists' });
         }
 
-        // Fix: Explicitly Hash Password before saving
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
         const userPayload = {
             name,
-            email,
-            password: hashedPassword,
+            email: emailNormalized,
+            password, // Hashed automatically by User model's pre-save hook
             role: role || 'customer',
             authProvider: 'local',
             phone: phone || null,
-            location: location || undefined,
+            location: location || null, // Default to null if off
             workerProfile: role === 'worker' ? workerProfile || {} : null
         };
 
@@ -114,19 +127,20 @@ export const registerUser = async (req, res) => {
         if (!existingUser) {
             userDoc = await User.create(userPayload);
         } else {
-            userDoc = await User.findOne({ email });
+            userDoc = await User.findOne({ email: emailNormalized });
             Object.assign(userDoc, userPayload);
             await userDoc.save();
         }
 
         const otp = generateOTP();
+        const otpExpiry = parseInt(process.env.OTP_EXPIRY_SEC, 10) || 300;
         const pipeline = redis.pipeline();
-        pipeline.del(`user:email:${email}`);
-        pipeline.set(`otp:${email}`, otp, 'EX', 300);
+        pipeline.del(`user:email:${emailNormalized}`);
+        pipeline.set(`otp:${emailNormalized}`, otp, 'EX', otpExpiry);
         await pipeline.exec();
 
         await emailQueue.add('sendOtpEmail', {
-            to: email,
+            to: emailNormalized,
             subject: 'Your Verification Code',
             html: generateOtpEmailHtml(otp)
         });
@@ -144,15 +158,21 @@ export const registerUser = async (req, res) => {
 
 // 2. VERIFY REGISTRATION OTP
 export const verifyOTP = async (req, res) => {
+    // #swagger.tags = ['Auth']
+    // #swagger.parameters['body'] = { in: 'body', description: 'OTP verification details', required: true, schema: { $ref: '#/definitions/VerifyOtpInput' } }
     try {
         const { email, otp, deviceId } = req.body;
+        if (!email || !otp) {
+            return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+        }
 
-        const cachedOtp = await redis.get(`otp:${email}`);
-        if (!cachedOtp || cachedOtp !== otp) {
+        const emailNormalized = email.toLowerCase().trim();
+        const cachedOtp = await redis.get(`otp:${emailNormalized}`);
+        if (!cachedOtp || cachedOtp !== otp.toString()) {
             return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: emailNormalized });
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         user.isVerified = true;
@@ -162,11 +182,11 @@ export const verifyOTP = async (req, res) => {
         delete userObj.password;
 
         const pipeline = redis.pipeline();
-        pipeline.del(`otp:${email}`);
+        pipeline.del(`otp:${emailNormalized}`);
         await pipeline.exec();
 
-        await syncUserCache(email, userObj);
         const tokens = await createSession(userObj, deviceId);
+        await syncUserCache(emailNormalized, userObj);
 
         return res.status(200).json({
             success: true,
@@ -182,17 +202,23 @@ export const verifyOTP = async (req, res) => {
 
 // 3. LOGIN
 export const loginUser = async (req, res) => {
+    // #swagger.tags = ['Auth']
+    // #swagger.parameters['body'] = { in: 'body', description: 'User login credentials', required: true, schema: { $ref: '#/definitions/LoginInput' } }
     try {
         const { email, password, deviceId, location, phone } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: 'Email and password are required' });
+        }
 
-        const user = await User.findOne({ email }).select('+password');
+        const emailNormalized = email.toLowerCase().trim();
+        const user = await User.findOne({ email: emailNormalized }).select('+password');
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
         if (user.authProvider === 'google') {
             return res.status(400).json({ success: false, message: 'Please login using Google' });
         }
 
-        const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await user.comparePassword(password);
         if (!isMatch) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
@@ -218,8 +244,8 @@ export const loginUser = async (req, res) => {
         const userObj = user.toObject();
         delete userObj.password;
 
-        await syncUserCache(email, userObj);
         const tokens = await createSession(userObj, deviceId);
+        await syncUserCache(emailNormalized, userObj);
 
         return res.status(200).json({
             success: true,
@@ -284,8 +310,8 @@ export const googleLogin = async (req, res) => {
         const user = userDoc.toObject ? userDoc.toObject() : userDoc;
         delete user.password;
 
-        await syncUserCache(email, user);
         const tokens = await createSession(user, deviceId);
+        await syncUserCache(email, user);
 
         return res.status(200).json({ success: true, user, ...tokens });
     } catch (error) {
@@ -294,8 +320,10 @@ export const googleLogin = async (req, res) => {
     }
 };
 
-// 6. REFRESH TOKEN (FIXED: Includes user role in new access token)
+// 6. REFRESH TOKEN (WITH ROTATION: Returns new access and refresh tokens, updates session in Redis)
 export const refreshToken = async (req, res) => {
+    // #swagger.tags = ['Auth']
+    // #swagger.parameters['body'] = { in: 'body', description: 'Refresh token session credentials', required: true, schema: { $ref: '#/definitions/RefreshTokenInput' } }
     try {
         const { userId, deviceId, refreshToken } = req.body;
 
@@ -312,13 +340,29 @@ export const refreshToken = async (req, res) => {
         const user = await User.findById(decoded.id).select('role').lean();
         if (!user) return res.status(404).json({ success: false, message: 'User no longer exists' });
 
+        // Generate new Access Token (Dynamic Expiry)
         const newAccessToken = jwt.sign(
             { id: decoded.id, role: user.role },
             process.env.JWT_SECRET,
-            { expiresIn: '15m' }
+            { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
         );
 
-        return res.status(200).json({ success: true, accessToken: newAccessToken });
+        // Generate new Refresh Token (Dynamic Expiry)
+        const newRefreshToken = jwt.sign(
+            { id: decoded.id },
+            process.env.REFRESH_SECRET,
+            { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' }
+        );
+
+        // Save new refresh token in Redis to rotate the old one (Dynamic TTL)
+        const sessionTtl = parseInt(process.env.REDIS_SESSION_TTL_SEC, 10) || 7 * 24 * 60 * 60;
+        await redis.set(`session:${userId}:${deviceId}`, newRefreshToken, 'EX', sessionTtl);
+
+        return res.status(200).json({
+            success: true,
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken
+        });
     } catch (error) {
         console.error('Refresh Token Error:', error);
         return res.status(403).json({ success: false, message: 'Invalid session' });
@@ -329,16 +373,20 @@ export const refreshToken = async (req, res) => {
 export const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
-        const user = await User.findOne({ email });
+        if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+        
+        const emailNormalized = email.toLowerCase().trim();
+        const user = await User.findOne({ email: emailNormalized });
 
         if (!user) return res.status(404).json({ success: false, message: 'Is email se koi account nahi milaa' });
         if (user.authProvider === 'google') return res.status(400).json({ success: false, message: 'Google accounts cannot reset password here' });
 
         const otp = generateOTP();
-        await redis.set(`reset_otp:${email}`, otp, 'EX', 300);
+        const resetOtpExpiry = parseInt(process.env.RESET_OTP_EXPIRY_SEC, 10) || 300;
+        await redis.set(`reset_otp:${emailNormalized}`, otp, 'EX', resetOtpExpiry);
 
         await emailQueue.add('sendOtpEmail', {
-            to: email,
+            to: emailNormalized,
             subject: 'Password Reset Verification Code',
             html: generateOtpEmailHtml(otp)
         });
@@ -359,21 +407,23 @@ export const resetPassword = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Email, OTP aur Naya Password required hain' });
         }
 
-        const cachedOtp = await redis.get(`reset_otp:${email}`);
-        if (!cachedOtp || cachedOtp !== otp) {
-            return res.status(400).json({ success: false, message: 'Invalid ya expired OTP' });
+        const emailNormalized = email.toLowerCase().trim();
+        const cachedOtp = await redis.get(`reset_otp:${emailNormalized}`);
+        console.log(`Redis OTP for ${emailNormalized}:`, cachedOtp);
+        
+        if (!cachedOtp || cachedOtp !== otp.toString()) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: emailNormalized });
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(newPassword, salt);
+        user.password = newPassword; // Hashed automatically by pre-save hook
         await user.save();
 
         const pipeline = redis.pipeline();
-        pipeline.del(`reset_otp:${email}`);
-        pipeline.del(`user:email:${email}`);
+        pipeline.del(`reset_otp:${emailNormalized}`);
+        pipeline.del(`user:email:${emailNormalized}`);
         await pipeline.exec();
 
         return res.status(200).json({ success: true, message: 'Password reset successful. Please login.' });
@@ -385,6 +435,8 @@ export const resetPassword = async (req, res) => {
 
 // 9. LOGOUT
 export const logoutUser = async (req, res) => {
+    // #swagger.tags = ['Auth']
+    // #swagger.parameters['body'] = { in: 'body', description: 'Logout session details', required: true, schema: { $ref: '#/definitions/LogoutInput' } }
     try {
         const { userId, deviceId } = req.body;
 
@@ -392,6 +444,9 @@ export const logoutUser = async (req, res) => {
         pipeline.del(`session:${userId}:${deviceId}`);
         pipeline.del(`user:active-device:${userId}`);
         await pipeline.exec();
+
+        // Also reset activeDeviceId in MongoDB upon logout
+        await User.findByIdAndUpdate(userId, { activeDeviceId: null });
 
         return res.status(200).json({ success: true, message: 'Logged out successfully' });
     } catch (error) {
@@ -736,7 +791,7 @@ export const logoutUser = async (req, res) => {
 //         // Redis se OTP compare karein
 //         const cachedOtp = await redis.get(`reset_otp:${email}`);
 //         if (!cachedOtp || cachedOtp !== otp) {
-//             return res.status(400).json({ success: false, message: 'Invalid ya expired OTP' });
+//             return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
 //         }
 
 //         const user = await User.findOne({ email });

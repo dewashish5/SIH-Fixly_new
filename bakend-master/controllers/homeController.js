@@ -3,6 +3,7 @@ dotenv.config();
 
 import redis from '../config/redis.js';
 import Service from '../models/Service.js';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
 
 // Screen 1: Home Dashboard Data (Redis Cached)
 export const getHomeData = async (req, res) => {
@@ -98,5 +99,56 @@ export const getExtraPartsCatalog = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// POST: Create New Category (Accepts all schema fields from frontend)
+export const createCategory = async (req, res) => {
+    try {
+        const { title, category, basePrice, estimatedTime, whatsIncluded } = req.body;
+
+        if (!title || !category || !basePrice) {
+            return res.status(400).json({ success: false, message: 'Title, category aur basePrice required hain' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'Category image file required hai' });
+        }
+
+        // Upload image buffer to Cloudinary
+        const uploadResult = await uploadToCloudinary(req.file.buffer);
+        const imageUrl = uploadResult.secure_url;
+
+        // Parse whatsIncluded list
+        let whatsIncludedArray = [];
+        if (whatsIncluded) {
+            if (Array.isArray(whatsIncluded)) {
+                whatsIncludedArray = whatsIncluded;
+            } else {
+                whatsIncludedArray = whatsIncluded.split(',').map(item => item.trim());
+            }
+        }
+
+        // Create a service entry matching the schema
+        const newService = await Service.create({
+            title,
+            category: category.toLowerCase().trim(),
+            image: imageUrl,
+            basePrice: parseFloat(basePrice),
+            estimatedTime: estimatedTime || '1 Hour',
+            whatsIncluded: whatsIncludedArray
+        });
+
+        // Clear Redis cache to show new category instantly
+        await redis.del('app:home:dashboard');
+        await redis.del('app:services:categories');
+
+        return res.status(201).json({
+            success: true,
+            message: 'Category created successfully',
+            service: newService
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
     }
 };

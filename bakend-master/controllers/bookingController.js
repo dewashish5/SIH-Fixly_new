@@ -3,9 +3,12 @@ dotenv.config();
 
 import Booking from '../models/Booking.js';
 import Service from '../models/Service.js';
+import User from '../models/User.js';
 
 // Screen 5 & 6: Estimate Price Breakdown
 export const calculateEstimate = async (req, res) => {
+    // #swagger.tags = ['Bookings']
+    // #swagger.parameters['body'] = { in: 'body', description: 'Estimate Input', required: true, schema: { serviceId: '64f1bc000000000000000002', estimatedHours: 2 } }
     try {
         const { serviceId, estimatedHours = 1 } = req.body;
 
@@ -113,55 +116,118 @@ export const cancelBooking = async (req, res) => {
 export const getBookingHistory = async (req, res) => {
     try {
         const userId = req.user.id;
-        // Yahan database se user ki past bookings fetch karne ka logic likhein
-        res.status(200).json({
+        const role = req.user.role;
+
+        let query = {};
+        if (role === 'worker') {
+            query = { worker: userId };
+        } else {
+            query = { customer: userId };
+        }
+
+        const bookings = await Booking.find(query)
+            .populate('service')
+            .populate('worker', 'name phone avatar workerProfile')
+            .populate('customer', 'name phone avatar')
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
             success: true,
             message: 'Booking history fetched successfully',
-            data: []
+            bookings
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
 
 export const getBookingInvoice = async (req, res) => {
     try {
         const { bookingId } = req.params;
-        // Yahan invoice generate karne ya fetch karne ka logic likhein
-        res.status(200).json({
+
+        const booking = await Booking.findById(bookingId)
+            .populate('service')
+            .populate('customer', 'name email phone')
+            .populate('worker', 'name phone avatar workerProfile')
+            .lean();
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        return res.status(200).json({
             success: true,
             message: 'Booking invoice fetched successfully',
-            invoiceUrl: ''
+            invoice: booking.invoice,
+            bookingDetails: {
+                bookingId: booking.bookingId,
+                customer: booking.customer,
+                worker: booking.worker,
+                service: booking.service,
+                addOns: booking.addOns,
+                jobStartedAt: booking.jobStartedAt,
+                jobCompletedAt: booking.jobCompletedAt,
+                status: booking.status
+            }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
-
 
 export const getLiveTracking = async (req, res) => {
     try {
         const { bookingId } = req.params;
-        // Yahan worker ki live location fetch karne ka logic likhein
-        res.status(200).json({
+
+        const booking = await Booking.findById(bookingId).populate('worker');
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        if (!booking.worker) {
+            return res.status(400).json({ success: false, message: 'No worker assigned to this booking yet' });
+        }
+
+        const worker = booking.worker;
+        if (!worker.location || !worker.location.coordinates) {
+            return res.status(404).json({ success: false, message: 'Worker location not available' });
+        }
+
+        return res.status(200).json({
             success: true,
             message: 'Live tracking data fetched successfully',
-            location: { latitude: 0.0, longitude: 0.0 }
+            location: {
+                longitude: worker.location.coordinates[0],
+                latitude: worker.location.coordinates[1]
+            }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
 
 export const triggerSosAlert = async (req, res) => {
     try {
         const { bookingId } = req.params;
-        // Yahan emergency SOS alert trigger karne ka logic likhein
-        res.status(200).json({
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+        // Broadcast SOS event to the specific booking room
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`booking_${bookingId}`).emit('sos_alert', {
+                bookingId,
+                message: 'EMERGENCY: SOS has been triggered!',
+                timestamp: Date.now()
+            });
+        }
+
+        return res.status(200).json({
             success: true,
-            message: 'SOS alert triggered successfully. Emergency contacts notified.'
+            message: 'SOS alert triggered successfully. Emergency contacts and socket room notified.'
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 };

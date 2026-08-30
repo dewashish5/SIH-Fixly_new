@@ -10,7 +10,7 @@ const addressSchema = new mongoose.Schema({
     pincode: { type: String },
     location: {
         type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: { type: [Number], required: true } // [longitude, latitude]
+        coordinates: { type: [Number], required: true, default: null } // [longitude, latitude]
     }
 });
 
@@ -23,7 +23,9 @@ const workerProfileSchema = new mongoose.Schema({
     rating: { type: Number, default: 5.0 },
     totalJobs: { type: Number, default: 0 },
     recentWorkPhotos: [{ type: String }],
-    badges: [{ type: String }] // e.g., 'Background Checked', 'Top Rated'
+    badges: [{ type: String }], // e.g., 'Background Checked', 'Top Rated'
+    skills: [{ type: String }],
+    certifications: [{ type: String }]
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({
@@ -37,7 +39,8 @@ const userSchema = new mongoose.Schema({
         required: true,
         unique: true,
         lowercase: true,
-        trim: true
+        trim: true,
+        match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address']
     },
     phone: {
         type: String,
@@ -68,16 +71,14 @@ const userSchema = new mongoose.Schema({
         default: false
     },
 
-    // GeoJSON Live Location (Location default undefined rakhi hai taaki dummy [0,0] coords na jayein)
+    // GeoJSON Live Location (Optional, without defaults to prevent index errors when location is off)
     location: {
         type: {
             type: String,
-            enum: ['Point'],
-            default: 'Point'
+            enum: ['Point']
         },
         coordinates: {
-            type: [Number],
-            default: undefined // Frontend check: if (!user.location?.coordinates) -> Redirect to Location Permission
+            type: [Number]
         }
     },
 
@@ -120,21 +121,21 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// METHOD: Generate Access Token (15 mins)
+// METHOD: Generate Access Token (Dynamic Expiry)
 userSchema.methods.generateAccessToken = function () {
     return jwt.sign(
         { id: this._id, role: this.role },
         process.env.JWT_SECRET,
-        { expiresIn: '15m' }
+        { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
     );
 };
 
-// METHOD: Generate Refresh Token (7 days)
+// METHOD: Generate Refresh Token (Dynamic Expiry)
 userSchema.methods.generateRefreshToken = function () {
     return jwt.sign(
         { id: this._id },
         process.env.REFRESH_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' }
     );
 };
 

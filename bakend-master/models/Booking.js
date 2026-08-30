@@ -47,6 +47,8 @@ const bookingSchema = new mongoose.Schema({
     jobStartedAt: { type: Date, default: null },
     jobCompletedAt: { type: Date, default: null },
 
+    isReviewed: { type: Boolean, default: false },
+
     invoice: {
         baseServiceFee: { type: Number, default: 0 },
         extraPartsTotal: { type: Number, default: 0 },

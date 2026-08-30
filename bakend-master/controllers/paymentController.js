@@ -10,9 +10,11 @@ const razorpay = new Razorpay({
 
 // 1. Create Razorpay Order
 export const createOrder = async (req, res) => {
+    // #swagger.tags = ['Payments']
+    // #swagger.parameters['body'] = { in: 'body', description: 'Create Payment Order Input', required: true, schema: { $ref: '#/definitions/CreatePaymentOrderInput' } }
     try {
         const { bookingId, amount } = req.body;
-        const customerId = req.user._id;
+        const customerId = req.user.id; // Fix: req.user.id instead of req.user._id
 
         const booking = await Booking.findById(bookingId);
         if (!booking) {
@@ -29,7 +31,7 @@ export const createOrder = async (req, res) => {
 
         await Transaction.create({
             customerId,
-            workerId: booking.workerId,
+            workerId: booking.worker, // Fix: booking.worker instead of booking.workerId
             bookingId,
             orderId: order.id,
             amount,
@@ -50,6 +52,8 @@ export const createOrder = async (req, res) => {
 
 // 2. Verify Payment (Success / Failure Transition & Worker Mapping)
 export const verifyPayment = async (req, res) => {
+    // #swagger.tags = ['Payments']
+    // #swagger.parameters['body'] = { in: 'body', description: 'Verify Payment Input', required: true, schema: { $ref: '#/definitions/VerifyPaymentInput' } }
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingId } = req.body;
 
@@ -71,7 +75,11 @@ export const verifyPayment = async (req, res) => {
             transaction.status = 'success';
             await transaction.save();
 
-            await Booking.findByIdAndUpdate(bookingId, { paymentStatus: 'Paid', status: 'Completed' });
+            // Fix: update nested invoice fields and use correct uppercase enum value
+            await Booking.findByIdAndUpdate(bookingId, { 
+                "invoice.paymentStatus": 'PAID', 
+                status: 'COMPLETED' 
+            });
 
             return res.status(200).json({
                 success: true,
@@ -93,7 +101,7 @@ export const verifyPayment = async (req, res) => {
 // 3. Fake Wallet & Transaction History for Customer
 export const getCustomerWalletAndHistory = async (req, res) => {
     try {
-        const customerId = req.user._id;
+        const customerId = req.user.id; // Fix: req.user.id instead of req.user._id
         const transactions = await Transaction.find({ customerId })
             .populate('workerId', 'name phone')
             .sort({ createdAt: -1 });

@@ -10,6 +10,7 @@ import events from 'events';
 
 import connectDB from './config/db.js';
 import "./worker/emailWorker.js";
+import "./worker/uploadWorker.js";
 
 // Middlewares
 import { initSocket } from './config/socket.js';
@@ -77,7 +78,7 @@ app.get('/', (req, res) => {
 });
 
 // API Routes Mounting with Rate Limiters where appropriate
-app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/bookings', apiLimiter, bookingRoutes);
 app.use('/api/workers', apiLimiter, workerRoutes);
 app.use('/api/services', serviceRoutes);

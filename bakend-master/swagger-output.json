@@ -6,7 +6,7 @@
     "version": "1.0.0"
   },
   "host": "localhost:8000",
-  "basePath": "/api",
+  "basePath": "/",
   "schemes": [
     "http",
     "https"
@@ -20,38 +20,61 @@
     }
   },
   "paths": {
-    "/auth/register": {
+    "/": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
       "post": {
-        "description": "Register a new user",
+        "tags": [
+          "Auth"
+        ],
+        "description": "",
         "parameters": [
           {
             "name": "body",
             "in": "body",
+            "description": "User registration details",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "email": {
-                  "example": "any"
-                },
-                "password": {
-                  "example": "any"
-                },
-                "role": {
-                  "example": "any"
-                },
-                "phone": {
-                  "example": "any"
-                },
-                "location": {
-                  "example": "any"
-                },
-                "workerProfile": {
-                  "example": "any"
-                }
-              }
+              "$ref": "#/definitions/RegisterInput"
             }
           }
         ],
@@ -68,26 +91,20 @@
         }
       }
     },
-    "/auth/verify-otp": {
+    "/api/auth/verify-otp": {
       "post": {
-        "description": "Verify OTP",
+        "tags": [
+          "Auth"
+        ],
+        "description": "",
         "parameters": [
           {
             "name": "body",
             "in": "body",
+            "description": "OTP verification details",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "email": {
-                  "example": "any"
-                },
-                "otp": {
-                  "example": "any"
-                },
-                "deviceId": {
-                  "example": "any"
-                }
-              }
+              "$ref": "#/definitions/VerifyOtpInput"
             }
           }
         ],
@@ -107,32 +124,20 @@
         }
       }
     },
-    "/auth/login": {
+    "/api/auth/login": {
       "post": {
-        "description": "User login",
+        "tags": [
+          "Auth"
+        ],
+        "description": "",
         "parameters": [
           {
             "name": "body",
             "in": "body",
+            "description": "User login credentials",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "email": {
-                  "example": "any"
-                },
-                "password": {
-                  "example": "any"
-                },
-                "deviceId": {
-                  "example": "any"
-                },
-                "location": {
-                  "example": "any"
-                },
-                "phone": {
-                  "example": "any"
-                }
-              }
+              "$ref": "#/definitions/LoginInput"
             }
           }
         ],
@@ -155,26 +160,20 @@
         }
       }
     },
-    "/auth/refresh-token": {
+    "/api/auth/refresh-token": {
       "post": {
-        "description": "Refresh token",
+        "tags": [
+          "Auth"
+        ],
+        "description": "",
         "parameters": [
           {
             "name": "body",
             "in": "body",
+            "description": "Refresh token session credentials",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "userId": {
-                  "example": "any"
-                },
-                "deviceId": {
-                  "example": "any"
-                },
-                "refreshToken": {
-                  "example": "any"
-                }
-              }
+              "$ref": "#/definitions/RefreshTokenInput"
             }
           }
         ],
@@ -194,9 +193,9 @@
         }
       }
     },
-    "/auth/google": {
+    "/api/auth/google": {
       "post": {
-        "description": "Google auth",
+        "description": "",
         "parameters": [
           {
             "name": "body",
@@ -236,9 +235,9 @@
         }
       }
     },
-    "/auth/forgot-password": {
+    "/api/auth/forgot-password": {
       "post": {
-        "description": "Forgot password",
+        "description": "",
         "parameters": [
           {
             "name": "body",
@@ -269,9 +268,9 @@
         }
       }
     },
-    "/auth/reset-password": {
+    "/api/auth/reset-password": {
       "post": {
-        "description": "Reset password",
+        "description": "",
         "parameters": [
           {
             "name": "body",
@@ -308,23 +307,20 @@
         }
       }
     },
-    "/auth/logout": {
+    "/api/auth/logout": {
       "post": {
-        "description": "Logout",
+        "tags": [
+          "Auth"
+        ],
+        "description": "",
         "parameters": [
           {
             "name": "body",
             "in": "body",
+            "description": "Logout session details",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "userId": {
-                  "example": "any"
-                },
-                "deviceId": {
-                  "example": "any"
-                }
-              }
+              "$ref": "#/definitions/LogoutInput"
             }
           }
         ],
@@ -338,9 +334,9 @@
         }
       }
     },
-    "/bookings/history": {
+    "/api/bookings/history": {
       "get": {
-        "description": "Get booking history",
+        "description": "",
         "parameters": [
           {
             "name": "authorization",
@@ -366,9 +362,12 @@
         }
       }
     },
-    "/bookings/estimate": {
+    "/api/bookings/estimate": {
       "post": {
-        "description": "Get estimate",
+        "tags": [
+          "Bookings"
+        ],
+        "description": "",
         "parameters": [
           {
             "name": "authorization",
@@ -383,14 +382,18 @@
           {
             "name": "body",
             "in": "body",
+            "description": "Estimate Input",
+            "required": true,
             "schema": {
               "type": "object",
               "properties": {
                 "serviceId": {
-                  "example": "any"
+                  "type": "string",
+                  "example": "64f1bc000000000000000002"
                 },
                 "estimatedHours": {
-                  "example": "any"
+                  "type": "number",
+                  "example": 2
                 }
               }
             }
@@ -409,9 +412,9 @@
         }
       }
     },
-    "/bookings": {
+    "/api/bookings/": {
       "post": {
-        "description": "Create booking",
+        "description": "",
         "parameters": [
           {
             "name": "authorization",
@@ -468,9 +471,420 @@
             "description": "Internal Server Error"
           }
         }
-      },
+      }
+    },
+    "/api/bookings/{bookingId}": {
       "get": {
-        "description": "Get bookings list",
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}/cancel": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}/track": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}/accept": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}/verify-otp": {
+      "post": {
+        "tags": [
+          "Active Jobs"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Verify OTP Input",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VerifyArrivalOtpInput"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}/start-job": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}/add-parts": {
+      "patch": {
+        "tags": [
+          "Active Jobs"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Add Extra Parts Input",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AddExtraPartsInput"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}/complete": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}/sos": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/bookings/{bookingId}/invoice": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/workers/": {
+      "get": {
+        "description": "",
         "parameters": [
           {
             "name": "authorization",
@@ -524,379 +938,9 @@
         }
       }
     },
-    "/bookings/{bookingId}": {
+    "/api/workers/{workerId}": {
       "get": {
-        "description": "Get booking by ID",
-        "parameters": [
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "x-device-id",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "post": {
-        "description": "Add review for booking",
-        "parameters": [
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "x-device-id",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "bookingId": {
-                  "example": "any"
-                },
-                "workerId": {
-                  "example": "any"
-                },
-                "rating": {
-                  "example": "any"
-                },
-                "comment": {
-                  "example": "any"
-                },
-                "traits": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/bookings/{bookingId}/cancel": {
-      "patch": {
-        "description": "Cancel booking",
-        "parameters": [
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "x-device-id",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/bookings/{bookingId}/track": {
-      "get": {
-        "description": "Track booking",
-        "parameters": [
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "x-device-id",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/bookings/{bookingId}/verify-otp": {
-      "post": {
-        "description": "Verify booking OTP",
-        "parameters": [
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "x-device-id",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "otp": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/bookings/{bookingId}/add-parts": {
-      "patch": {
-        "description": "Add parts to booking",
-        "parameters": [
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "x-device-id",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "extraItems": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/bookings/{bookingId}/complete": {
-      "post": {
-        "description": "Complete booking",
-        "parameters": [
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "x-device-id",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/bookings/{bookingId}/sos": {
-      "post": {
-        "description": "SOS trigger",
-        "parameters": [
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "x-device-id",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/bookings/{bookingId}/invoice": {
-      "get": {
-        "description": "Get invoice",
-        "parameters": [
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "x-device-id",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/workers/{workerId}": {
-      "get": {
-        "description": "Get worker profile",
+        "description": "",
         "parameters": [
           {
             "name": "workerId",
@@ -931,19 +975,35 @@
         }
       }
     },
-    "/services/search": {
+    "/api/services/search": {
       "get": {
-        "description": "Search services",
+        "description": "",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "type": "string"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
     },
-    "/services/categories": {
+    "/api/services/categories": {
       "get": {
-        "description": "Get categories",
+        "tags": [
+          "Services"
+        ],
+        "description": "",
         "responses": {
           "200": {
             "description": "OK"
@@ -954,9 +1014,9 @@
         }
       }
     },
-    "/services/extra-parts": {
+    "/api/services/extra-parts": {
       "get": {
-        "description": "Get extra parts",
+        "description": "",
         "parameters": [
           {
             "name": "authorization",
@@ -982,9 +1042,12 @@
         }
       }
     },
-    "/services/{serviceId}": {
+    "/api/services/{serviceId}": {
       "get": {
-        "description": "Get service details",
+        "tags": [
+          "Services"
+        ],
+        "description": "",
         "parameters": [
           {
             "name": "serviceId",
@@ -1006,9 +1069,54 @@
         }
       }
     },
-    "/payments/create-order": {
+    "/api/services/": {
       "post": {
-        "description": "Create payment order",
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "example": "any"
+                },
+                "category": {
+                  "example": "any"
+                },
+                "basePrice": {
+                  "example": "any"
+                },
+                "estimatedTime": {
+                  "example": "any"
+                },
+                "whatsIncluded": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/payments/create-order": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "description": "",
         "parameters": [
           {
             "name": "authorization",
@@ -1023,16 +1131,10 @@
           {
             "name": "body",
             "in": "body",
+            "description": "Create Payment Order Input",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "bookingId": {
-                  "example": "any"
-                },
-                "amount": {
-                  "example": "any"
-                }
-              }
+              "$ref": "#/definitions/CreatePaymentOrderInput"
             }
           }
         ],
@@ -1052,9 +1154,12 @@
         }
       }
     },
-    "/payments/verify": {
+    "/api/payments/verify": {
       "post": {
-        "description": "Verify payment",
+        "tags": [
+          "Payments"
+        ],
+        "description": "",
         "parameters": [
           {
             "name": "authorization",
@@ -1069,22 +1174,10 @@
           {
             "name": "body",
             "in": "body",
+            "description": "Verify Payment Input",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "razorpay_order_id": {
-                  "example": "any"
-                },
-                "razorpay_payment_id": {
-                  "example": "any"
-                },
-                "razorpay_signature": {
-                  "example": "any"
-                },
-                "bookingId": {
-                  "example": "any"
-                }
-              }
+              "$ref": "#/definitions/VerifyPaymentInput"
             }
           }
         ],
@@ -1107,9 +1200,9 @@
         }
       }
     },
-    "/payments/wallet-history": {
+    "/api/payments/wallet-history": {
       "get": {
-        "description": "Get wallet & transaction history",
+        "description": "",
         "parameters": [
           {
             "name": "authorization",
@@ -1135,37 +1228,188 @@
         }
       }
     },
-    "/home": {
-      "get": {
-        "description": "Get home dashboard",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "x-device-id",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/ai/analyze-issue": {
+    "/api/reviews/{bookingId}": {
       "post": {
-        "description": "Analyze issue with AI",
+        "tags": [
+          "Reviews"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Submit Review Input",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SubmitReviewInput"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/home/home": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/home/categories": {
+      "get": {
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "example": "any"
+                },
+                "category": {
+                  "example": "any"
+                },
+                "basePrice": {
+                  "example": "any"
+                },
+                "estimatedTime": {
+                  "example": "any"
+                },
+                "whatsIncluded": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/home/services/{serviceId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/home/extra-parts": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/ai/analyze-issue": {
+      "post": {
+        "description": "",
         "parameters": [
           {
             "name": "authorization",
@@ -1203,6 +1447,292 @@
           "500": {
             "description": "Internal Server Error"
           }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "RegisterInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "John Doe"
+        },
+        "email": {
+          "type": "string",
+          "example": "john.doe@example.com"
+        },
+        "password": {
+          "type": "string",
+          "example": "SecurePassword123"
+        },
+        "role": {
+          "type": "string",
+          "example": "customer"
+        },
+        "phone": {
+          "type": "string",
+          "example": "+1234567890"
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "example": "Point"
+            },
+            "coordinates": {
+              "type": "array",
+              "example": [
+                77.209,
+                28.6139
+              ],
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "LoginInput": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "example": "john.doe@example.com"
+        },
+        "password": {
+          "type": "string",
+          "example": "SecurePassword123"
+        },
+        "deviceId": {
+          "type": "string",
+          "example": "device-uuid-12345"
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "example": "Point"
+            },
+            "coordinates": {
+              "type": "array",
+              "example": [
+                77.209,
+                28.6139
+              ],
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "VerifyOtpInput": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "example": "john.doe@example.com"
+        },
+        "otp": {
+          "type": "string",
+          "example": "123456"
+        },
+        "deviceId": {
+          "type": "string",
+          "example": "device-uuid-12345"
+        }
+      }
+    },
+    "RefreshTokenInput": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "example": "64f1bc000000000000000001"
+        },
+        "deviceId": {
+          "type": "string",
+          "example": "device-uuid-12345"
+        },
+        "refreshToken": {
+          "type": "string",
+          "example": "eyJhbGciOi..."
+        }
+      }
+    },
+    "LogoutInput": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "example": "64f1bc000000000000000001"
+        },
+        "deviceId": {
+          "type": "string",
+          "example": "device-uuid-12345"
+        }
+      }
+    },
+    "CreateBookingInput": {
+      "type": "object",
+      "properties": {
+        "serviceId": {
+          "type": "string",
+          "example": "64f1bc000000000000000002"
+        },
+        "workerId": {
+          "type": "string",
+          "example": "64f1bd000000000000000003"
+        },
+        "problemDescription": {
+          "type": "string",
+          "example": "Kitchen sink is leaking from the main drain pipe."
+        },
+        "problemPhotos": {
+          "type": "array",
+          "example": [
+            "https://example.com/photo1.jpg"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "addressLine": {
+          "type": "string",
+          "example": "123 Main Street, Apt 4B, New Delhi"
+        },
+        "coordinates": {
+          "type": "array",
+          "example": [
+            77.209,
+            28.6139
+          ],
+          "items": {
+            "type": "number"
+          }
+        },
+        "scheduledTime": {
+          "type": "string",
+          "example": "2026-08-30T10:00:00.000Z"
+        },
+        "invoice": {
+          "type": "object",
+          "properties": {
+            "baseServiceFee": {
+              "type": "number",
+              "example": 85
+            },
+            "platformFee": {
+              "type": "number",
+              "example": 15
+            },
+            "totalAmount": {
+              "type": "number",
+              "example": 100
+            }
+          }
+        }
+      }
+    },
+    "VerifyArrivalOtpInput": {
+      "type": "object",
+      "properties": {
+        "otp": {
+          "type": "string",
+          "example": "8492"
+        }
+      }
+    },
+    "AddExtraPartsInput": {
+      "type": "object",
+      "properties": {
+        "extraItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "example": "Rubber Gasket"
+              },
+              "price": {
+                "type": "number",
+                "example": 5
+              }
+            }
+          }
+        }
+      }
+    },
+    "SubmitReviewInput": {
+      "type": "object",
+      "properties": {
+        "bookingId": {
+          "type": "string",
+          "example": "64f1be000000000000000004"
+        },
+        "workerId": {
+          "type": "string",
+          "example": "64f1bd000000000000000003"
+        },
+        "rating": {
+          "type": "number",
+          "example": 5
+        },
+        "comment": {
+          "type": "string",
+          "example": "Excellent work! He resolved the leak quickly."
+        },
+        "traits": {
+          "type": "array",
+          "example": [
+            "Professional",
+            "On Time",
+            "Clean Workspace"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CreatePaymentOrderInput": {
+      "type": "object",
+      "properties": {
+        "bookingId": {
+          "type": "string",
+          "example": "64f1be000000000000000004"
+        },
+        "amount": {
+          "type": "number",
+          "example": 130
+        }
+      }
+    },
+    "VerifyPaymentInput": {
+      "type": "object",
+      "properties": {
+        "razorpay_order_id": {
+          "type": "string",
+          "example": "order_Kz..."
+        },
+        "razorpay_payment_id": {
+          "type": "string",
+          "example": "pay_Kz..."
+        },
+        "razorpay_signature": {
+          "type": "string",
+          "example": "abc123xyz..."
+        },
+        "bookingId": {
+          "type": "string",
+          "example": "64f1be000000000000000004"
         }
       }
     }

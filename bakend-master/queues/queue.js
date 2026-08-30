@@ -9,6 +9,5 @@ const connectionRedis = new Redis(process.env.REDIS_URL, {
 });
 
 // Pass it using the "connection" key
-const emailQueue = new Queue("emailQueue", { connection: connectionRedis });
-
-export default emailQueue;
+export const emailQueue = new Queue("emailQueue", { connection: connectionRedis });
+export const uploadQueue = new Queue("uploadQueue", { connection: connectionRedis });
