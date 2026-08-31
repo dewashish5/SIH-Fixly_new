@@ -6,6 +6,7 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../ai/data/ai_api_repository.dart';
 
 class CustomerAiHelperPage extends StatefulWidget {
   const CustomerAiHelperPage({super.key});
@@ -23,6 +24,7 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
           'Hi! I\'m your AI helper. Describe your home service need and I\'ll find the best match.',
     ),
   ];
+  bool _awaitingReply = false;
 
   @override
   void dispose() {
@@ -30,18 +32,40 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
     super.dispose();
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _queryController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _awaitingReply) return;
+
     setState(() {
       _messages.add(_ChatMessage(isBot: false, text: text));
-      _messages.add(const _ChatMessage(
-        isBot: true,
-        text:
-            'Based on your description, I recommend an electrician for switch/socket repair. Let me find workers for you.',
-      ));
+      _messages.add(const _ChatMessage(isBot: true, text: '...', loading: true));
+      _awaitingReply = true;
       _queryController.clear();
     });
+
+    try {
+      final analysis = await AiApiRepository().analyzeIssue(text);
+      final reply = analysis.aiNote.trim().isNotEmpty
+          ? analysis.aiNote
+          : 'Based on your description, I recommend ${analysis.category} '
+              '(~${analysis.estimatedHours}h). Let me find workers for you.';
+      if (!mounted) return;
+      setState(() {
+        _messages.removeLast();
+        _messages.add(_ChatMessage(isBot: true, text: reply));
+        _awaitingReply = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages.removeLast();
+        _messages.add(_ChatMessage(
+          isBot: true,
+          text: 'Sorry, I could not analyze that. Please try again.',
+        ));
+        _awaitingReply = false;
+      });
+    }
   }
 
   @override
@@ -75,7 +99,16 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
                             ),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Text(msg.text),
+                    child: msg.loading
+                        ? SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: context.scheme.primary,
+                            ),
+                          )
+                        : Text(msg.text),
                   ),
                 ).animate().fadeIn().slideY(begin: 0.1);
               },
@@ -94,7 +127,7 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
                 ),
               ),
               IconButton(
-                onPressed: _sendMessage,
+                onPressed: _awaitingReply ? null : _sendMessage,
                 tooltip: context.l10n.sendMessage,
                 icon: Icon(Icons.send, color: context.scheme.primary),
               ),
@@ -112,8 +145,13 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
 }
 
 class _ChatMessage {
-  const _ChatMessage({required this.isBot, required this.text});
+  const _ChatMessage({
+    required this.isBot,
+    required this.text,
+    this.loading = false,
+  });
 
   final bool isBot;
   final String text;
+  final bool loading;
 }

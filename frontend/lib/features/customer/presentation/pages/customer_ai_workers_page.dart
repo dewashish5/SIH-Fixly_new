@@ -3,28 +3,58 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
-import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../workers/data/workers_api_repository.dart';
 
-class CustomerAiWorkersPage extends StatelessWidget {
+class CustomerAiWorkersPage extends StatefulWidget {
   const CustomerAiWorkersPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final workers = MockRepository.instance.workers;
+  State<CustomerAiWorkersPage> createState() => _CustomerAiWorkersPageState();
+}
 
+class _CustomerAiWorkersPageState extends State<CustomerAiWorkersPage> {
+  late final Future<List<WorkerProfile>> _future =
+      WorkersApiRepository().fetchNearby();
+
+  @override
+  Widget build(BuildContext context) {
     return AppScaffold(
       title: context.l10n.aiMatchedWorkers,
-      body: ListView.builder(
-        itemCount: workers.length,
-        itemBuilder: (context, index) {
-          final worker = workers[index];
-          final matchScore = 98 - (index * 4);
-          return _AiWorkerTile(
-            worker: worker,
-            matchScore: matchScore,
-            onTap: () => context.push('/customer/worker/${worker.id}'),
+      body: FutureBuilder<List<WorkerProfile>>(
+        future: _future,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snap.hasError) {
+            return Center(
+              child: Text(snap.error.toString()),
+            );
+          }
+          final workers = snap.data ?? const [];
+          if (workers.isEmpty) {
+            return Center(
+              child: Text(
+                'No workers nearby yet',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.outline,
+                    ),
+              ),
+            );
+          }
+          return ListView.builder(
+            itemCount: workers.length,
+            itemBuilder: (context, index) {
+              final worker = workers[index];
+              final matchScore = 98 - (index * 4);
+              return _AiWorkerTile(
+                worker: worker,
+                matchScore: matchScore,
+                onTap: () => context.push('/customer/worker/${worker.id}'),
+              );
+            },
           );
         },
       ),
@@ -57,7 +87,7 @@ class _AiWorkerTile extends StatelessWidget {
                   radius: 28,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                   child: Text(
-                    worker.name[0],
+                    worker.name.isNotEmpty ? worker.name[0] : 'W',
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -86,7 +116,11 @@ class _AiWorkerTile extends StatelessWidget {
                     worker.name,
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
-                  Text(worker.skills.join(' • ')),
+                  Text(
+                    worker.skills.isEmpty
+                        ? 'Skilled worker'
+                        : worker.skills.join(' • '),
+                  ),
                   Row(
                     children: [
                       const Icon(Icons.star,

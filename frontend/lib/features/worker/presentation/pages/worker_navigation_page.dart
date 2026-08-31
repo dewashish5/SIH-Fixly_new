@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/map_constants.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/location/app_location.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/widgets/fixly_map_view.dart';
 
@@ -12,6 +13,9 @@ class WorkerNavigationPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final dest = MapConstants.current;
+    final address =
+        AppLocation.instance.addressLabel ?? 'Current customer location';
     return AppScaffold(
       title: l10n.navigation,
       padding: EdgeInsets.zero,
@@ -24,9 +28,10 @@ class WorkerNavigationPage extends StatelessWidget {
               child: FixlyMapView(
                 expand: true,
                 borderRadius: BorderRadius.circular(20),
-                center: MapConstants.noidaSector12,
+                center: dest,
                 zoom: MapConstants.navigationZoom,
-                routeEnd: MapConstants.noidaSector12,
+                routeEnd: dest,
+                routeStart: MapConstants.workerApproachStart,
                 routeProgress: 0.35,
               ),
             ),
@@ -46,11 +51,13 @@ class WorkerNavigationPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Sector 12, Noida',
+                              address,
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                             Text(
-                              'ETA 12 min · 3.2 km',
+                              dest == null
+                                  ? 'Waiting for GPS…'
+                                  : 'Live route to customer',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],

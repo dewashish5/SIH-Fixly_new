@@ -54,8 +54,17 @@ class _SignupPageState extends State<SignupPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      if (!mounted || !success) return;
-      context.go(_cubit.postAuthRoute());
+      if (!mounted) return;
+      if (!success) {
+        final msg = _cubit.state.errorMessage;
+        if (msg != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        }
+        return;
+      }
+      if (_cubit.state.status == AppSessionStatus.otpSent) {
+        context.push(RouteNames.otp);
+      }
       return;
     }
 

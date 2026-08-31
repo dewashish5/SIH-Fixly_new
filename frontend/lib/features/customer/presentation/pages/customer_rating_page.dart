@@ -8,6 +8,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/booking_flow_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../reviews/data/reviews_api_repository.dart';
 
 class CustomerRatingPage extends StatefulWidget {
   const CustomerRatingPage({super.key});
@@ -19,11 +20,46 @@ class CustomerRatingPage extends StatefulWidget {
 class _CustomerRatingPageState extends State<CustomerRatingPage> {
   int _rating = 5;
   final _feedbackController = TextEditingController();
+  bool _submitting = false;
 
   @override
   void dispose() {
     _feedbackController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) return;
+    final booking = context.read<BookingFlowCubit>().state.booking;
+    final workerId = booking?.workerId;
+    final bookingId = booking?.id;
+
+    if (bookingId != null &&
+        bookingId.isNotEmpty &&
+        workerId != null &&
+        workerId.isNotEmpty) {
+      setState(() => _submitting = true);
+      try {
+        await ReviewsApiRepository().submit(
+          bookingId: bookingId,
+          workerId: workerId,
+          rating: _rating,
+          comment: _feedbackController.text.trim(),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+        return;
+      }
+      if (!mounted) return;
+      setState(() => _submitting = false);
+    }
+
+    if (!mounted) return;
+    context.push(RouteNames.customerBookingConfirmation);
   }
 
   @override
@@ -100,8 +136,7 @@ class _CustomerRatingPageState extends State<CustomerRatingPage> {
             const SizedBox(height: 32),
             PrimaryButton(
               label: 'Submit Rating',
-              onPressed: () =>
-                  context.push(RouteNames.customerBookingConfirmation),
+              onPressed: _submitting ? null : _submit,
             ),
             const SizedBox(height: 12),
             TextButton(

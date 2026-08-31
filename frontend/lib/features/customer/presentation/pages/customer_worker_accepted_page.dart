@@ -5,24 +5,22 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/widgets/core_widgets.dart';
-import '../../../../shared/data/mock/mock_repository.dart';
-import '../cubit/booking_flow_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/widgets/core_widgets.dart';
+import '../cubit/booking_flow_cubit.dart';
 
 class CustomerWorkerAcceptedPage extends StatelessWidget {
   const CustomerWorkerAcceptedPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final worker = MockRepository.instance.workerById('w1');
-
     return AppScaffold(
       title: context.l10n.workerAssigned,
       body: BlocBuilder<BookingFlowCubit, BookingFlowState>(
         builder: (context, state) {
           final workerName =
-              state.booking?.workerName ?? worker?.name ?? 'Rajesh Kumar';
+              state.booking?.workerName ?? 'Assigned worker';
+          final workerId = state.booking?.workerId;
 
           return SingleChildScrollView(
             child: Column(
@@ -35,7 +33,7 @@ class CustomerWorkerAcceptedPage extends StatelessWidget {
                 Container(
                   width: 100,
                   height: 100,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.accent50,
                     shape: BoxShape.circle,
                   ),
@@ -64,56 +62,46 @@ class CustomerWorkerAcceptedPage extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
-                if (worker != null)
-                  AppCard(
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor:
-                              AppColors.primary.withValues(alpha: 0.1),
-                          child: Text(
-                            worker.name[0],
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
+                AppCard(
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor:
+                            AppColors.primary.withValues(alpha: 0.1),
+                        child: Text(
+                          workerName.isNotEmpty ? workerName[0] : 'W',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              workerName,
+                              style: Theme.of(context).textTheme.titleMedium,
                             ),
-                          ),
+                            const SizedBox(height: 4),
+                            const Text('Verified Fixly worker'),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                worker.name,
-                                style:
-                                    Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(worker.skills.join(' • ')),
-                              Row(
-                                children: [
-                                  const Icon(Icons.star,
-                                      size: 16, color: AppColors.tertiary),
-                                  Text(' ${worker.rating}'),
-                                  const SizedBox(width: 12),
-                                  Text('${worker.jobsCompleted} jobs'),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
+                      ),
+                      if (workerId != null && workerId.isNotEmpty)
                         IconButton(
                           icon: const Icon(Icons.info_outline),
                           tooltip: context.l10n.workerProfile,
                           onPressed: () =>
-                              context.push('/customer/worker/${worker.id}'),
+                              context.push('/customer/worker/$workerId'),
                         ),
-                      ],
-                    ),
-                  ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
+                    ],
+                  ),
+                ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
                 const SizedBox(height: 32),
                 PrimaryButton(
                   label: 'Track Worker',

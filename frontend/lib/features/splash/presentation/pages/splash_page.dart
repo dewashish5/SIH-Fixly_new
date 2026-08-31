@@ -11,6 +11,7 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/map_constants.dart';
 import '../../../../core/constants/map_token_loader.dart';
+import '../../../../core/location/location_service.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
 
 class SplashPage extends StatefulWidget {
@@ -63,13 +64,14 @@ class _SplashPageState extends State<SplashPage>
 
     final maps = _initMaps();
 
-    await Future.any([
-      Future.wait([
-        Future<void>.delayed(SplashPage._minVisible),
-        maps,
-      ]),
-      Future<void>.delayed(SplashPage._maxWait),
+    await Future.wait([
+      Future<void>.delayed(SplashPage._minVisible),
+      maps.timeout(SplashPage._maxWait, onTimeout: () {}),
     ]);
+
+    if (mounted) {
+      await LocationService.instance.ensureOnAppOpen(context);
+    }
 
     if (mounted) {
       final session = context.read<AppSessionCubit>().state;

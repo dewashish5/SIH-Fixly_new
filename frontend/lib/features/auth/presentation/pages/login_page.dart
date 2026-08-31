@@ -57,7 +57,14 @@ class _LoginPageState extends State<LoginPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      if (!mounted || !success) return;
+      if (!mounted) return;
+      if (!success) {
+        final msg = _cubit.state.errorMessage;
+        if (msg != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        }
+        return;
+      }
       context.go(_cubit.postAuthRoute());
       return;
     }
@@ -65,6 +72,11 @@ class _LoginPageState extends State<LoginPage> {
     final phone = _phoneController.text.replaceAll(RegExp(r'\D'), '');
     await _cubit.sendOtp(phone);
     if (!mounted) return;
+    final msg = _cubit.state.errorMessage;
+    if (msg != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      return;
+    }
     if (_cubit.state.status == AppSessionStatus.otpSent) {
       context.push(RouteNames.otp);
     }

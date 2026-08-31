@@ -15,6 +15,7 @@ class AppSessionState extends Equatable {
     this.email,
     this.status = AppSessionStatus.initial,
     this.authFlow = AuthFlow.login,
+    this.errorMessage,
   });
 
   final String locale;
@@ -26,6 +27,7 @@ class AppSessionState extends Equatable {
   final String? email;
   final AppSessionStatus status;
   final AuthFlow authFlow;
+  final String? errorMessage;
 
   AppSessionState copyWith({
     String? locale,
@@ -37,6 +39,8 @@ class AppSessionState extends Equatable {
     String? email,
     AppSessionStatus? status,
     AuthFlow? authFlow,
+    String? errorMessage,
+    bool clearError = false,
   }) {
     return AppSessionState(
       locale: locale ?? this.locale,
@@ -49,6 +53,7 @@ class AppSessionState extends Equatable {
       email: email ?? this.email,
       status: status ?? this.status,
       authFlow: authFlow ?? this.authFlow,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
 
@@ -63,5 +68,6 @@ class AppSessionState extends Equatable {
         email,
         status,
         authFlow,
+        errorMessage,
       ];
 }

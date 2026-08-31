@@ -10,6 +10,8 @@ class AppUser extends Equatable {
     required this.name,
     required this.phone,
     required this.role,
+    this.email = '',
+    this.avatar,
     this.eshramUan,
     this.insured = false,
   });
@@ -17,12 +19,15 @@ class AppUser extends Equatable {
   final String id;
   final String name;
   final String phone;
+  final String email;
   final UserRole role;
+  final String? avatar;
   final String? eshramUan;
   final bool insured;
 
   @override
-  List<Object?> get props => [id, name, phone, role, eshramUan, insured];
+  List<Object?> get props =>
+      [id, name, phone, email, role, avatar, eshramUan, insured];
 }
 
 class WorkerProfile extends Equatable {

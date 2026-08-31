@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../core/constants/app_constants.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/preferences/app_preferences.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
+import '../../data/auth_api_repository.dart';
 
 part 'app_session_state.dart';
 
@@ -14,8 +16,10 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   AppSessionCubit({
     MockRepository? repository,
     AppPreferences? preferences,
+    AuthApiRepository? authRepository,
   })  : _repo = repository ?? MockRepository.instance,
         _prefs = preferences ?? AppPreferences.instance,
+        _auth = authRepository ?? AuthApiRepository(),
         super(
           AppSessionState(
             locale: (preferences ?? AppPreferences.instance).locale,
@@ -31,6 +35,22 @@ class AppSessionCubit extends Cubit<AppSessionState> {
 
   final MockRepository _repo;
   final AppPreferences _prefs;
+  final AuthApiRepository _auth;
+
+  Future<void> restoreSession() async {
+    final session = await _auth.restoreSession();
+    if (session == null) return;
+    _repo.currentUser = session.user;
+    _repo.selectedRole = session.user.role;
+    emit(
+      state.copyWith(
+        role: session.user.role == UserRole.worker ? 'worker' : 'customer',
+        email: session.user.email,
+        status: AppSessionStatus.authenticated,
+        clearError: true,
+      ),
+    );
+  }
 
   Future<void> setLocale(String locale) async {
     await _prefs.setLocale(locale);
@@ -63,55 +83,149 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     emit(state.copyWith(authFlow: flow));
   }
 
-  Future<bool> signInWithGoogle() => _completeMockAuth(provider: 'Google');
+  Future<bool> signInWithGoogle() async {
+    emit(state.copyWith(status: AppSessionStatus.loading, clearError: true));
+    try {
+      // No Firebase idToken on FE yet — stable device-scoped identity for /api/auth/google.
+      final device = await ApiServices.deviceId.getOrCreate();
+      final email = 'google_$device@fixly.local';
+      final session = await _auth.googleLogin(
+        email: email,
+        name: 'Google User',
+        role: state.role,
+      );
+      _applySession(session);
+      return true;
+    } on ApiException catch (e) {
+      emit(state.copyWith(
+        status: AppSessionStatus.initial,
+        errorMessage: e.message,
+      ));
+      return false;
+    } catch (e) {
+      emit(state.copyWith(
+        status: AppSessionStatus.initial,
+        errorMessage: e.toString(),
+      ));
+      return false;
+    }
+  }
 
-  Future<bool> signInWithFacebook() => _completeMockAuth(provider: 'Facebook');
+  Future<bool> signInWithFacebook() async {
+    emit(state.copyWith(
+      status: AppSessionStatus.initial,
+      errorMessage: 'Facebook sign-in not available on server',
+    ));
+    return false;
+  }
 
   Future<bool> signInWithEmail({
     required String email,
     required String password,
   }) async {
-    emit(state.copyWith(email: email, status: AppSessionStatus.loading));
-    await _repo.mockDelay();
-    _finishAuthSession(
-      name: _nameFromEmail(email),
+    emit(state.copyWith(
       email: email,
-    );
-    return true;
+      status: AppSessionStatus.loading,
+      clearError: true,
+    ));
+    try {
+      final session = await _auth.login(email: email, password: password);
+      _applySession(session);
+      return true;
+    } on ApiException catch (e) {
+      emit(state.copyWith(
+        status: AppSessionStatus.initial,
+        errorMessage: e.message,
+      ));
+      return false;
+    } catch (e) {
+      emit(state.copyWith(
+        status: AppSessionStatus.initial,
+        errorMessage: e.toString(),
+      ));
+      return false;
+    }
   }
 
+  /// Register then expect OTP verify (email).
   Future<bool> signUpWithEmail({
     required String email,
     required String password,
   }) async {
-    emit(state.copyWith(email: email, status: AppSessionStatus.loading));
-    await _repo.mockDelay();
-    _finishAuthSession(
-      name: _nameFromEmail(email),
+    emit(state.copyWith(
       email: email,
-    );
-    return true;
+      status: AppSessionStatus.loading,
+      clearError: true,
+    ));
+    try {
+      final name = _nameFromEmail(email);
+      await _auth.register(
+        name: name,
+        email: email,
+        password: password,
+        role: state.role,
+      );
+      emit(state.copyWith(
+        email: email,
+        status: AppSessionStatus.otpSent,
+        clearError: true,
+      ));
+      return true;
+    } on ApiException catch (e) {
+      emit(state.copyWith(
+        status: AppSessionStatus.initial,
+        errorMessage: e.message,
+      ));
+      return false;
+    } catch (e) {
+      emit(state.copyWith(
+        status: AppSessionStatus.initial,
+        errorMessage: e.toString(),
+      ));
+      return false;
+    }
   }
 
   Future<void> sendOtp(String phone) async {
-    emit(state.copyWith(phone: phone, status: AppSessionStatus.loading));
-    await _repo.mockDelay();
-    emit(state.copyWith(status: AppSessionStatus.otpSent));
+    // Phone OTP not on backend — keep UX path but mark unsupported.
+    emit(state.copyWith(
+      phone: phone,
+      status: AppSessionStatus.initial,
+      errorMessage: 'Use email sign-up; phone OTP not supported by API',
+    ));
   }
 
   Future<bool> verifyOtp(String otp) async {
-    emit(state.copyWith(status: AppSessionStatus.loading));
-    await _repo.mockDelay();
-    if (otp == AppConstants.mockOtp) {
-      _finishAuthSession(phone: state.phone);
-      return true;
+    final email = state.email;
+    if (email == null || email.isEmpty) {
+      emit(state.copyWith(
+        status: AppSessionStatus.otpFailed,
+        errorMessage: 'Missing email for OTP',
+      ));
+      return false;
     }
-    emit(state.copyWith(status: AppSessionStatus.otpFailed));
-    return false;
+    emit(state.copyWith(status: AppSessionStatus.loading, clearError: true));
+    try {
+      final session = await _auth.verifyOtp(email: email, otp: otp);
+      _applySession(session);
+      return true;
+    } on ApiException catch (e) {
+      emit(state.copyWith(
+        status: AppSessionStatus.otpFailed,
+        errorMessage: e.message,
+      ));
+      return false;
+    } catch (e) {
+      emit(state.copyWith(
+        status: AppSessionStatus.otpFailed,
+        errorMessage: e.toString(),
+      ));
+      return false;
+    }
   }
 
   void resetOtpStatus() {
-    emit(state.copyWith(status: AppSessionStatus.otpSent));
+    emit(state.copyWith(status: AppSessionStatus.otpSent, clearError: true));
   }
 
   String postAuthRoute() {
@@ -121,41 +235,29 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     return RouteNames.customerHome;
   }
 
-  void signOut() {
+  Future<void> signOut() async {
+    await _auth.logout();
     _repo.currentUser = null;
     emit(
       state.copyWith(
         status: AppSessionStatus.initial,
         email: '',
         phone: '',
+        clearError: true,
       ),
     );
   }
 
-  Future<bool> _completeMockAuth({required String provider}) async {
-    emit(state.copyWith(status: AppSessionStatus.loading));
-    await _repo.mockDelay();
-    _finishAuthSession(name: '$provider User');
-    return true;
-  }
-
-  void _finishAuthSession({
-    String? name,
-    String? email,
-    String? phone,
-  }) {
-    final role = _repo.selectedRole ?? UserRole.customer;
-    _repo.currentUser = AppUser(
-      id: 'u1',
-      name: name ?? 'Priya Sharma',
-      phone: phone ?? state.phone ?? '',
-      role: role,
-    );
+  void _applySession(AuthSession session) {
+    _repo.currentUser = session.user;
+    _repo.selectedRole = session.user.role;
     emit(
       state.copyWith(
-        email: email ?? state.email,
-        phone: phone ?? state.phone,
+        email: session.user.email,
+        phone: session.user.phone,
+        role: session.user.role == UserRole.worker ? 'worker' : 'customer',
         status: AppSessionStatus.authenticated,
+        clearError: true,
       ),
     );
   }

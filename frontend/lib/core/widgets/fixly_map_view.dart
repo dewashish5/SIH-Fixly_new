@@ -12,23 +12,26 @@ class FixlyMapView extends StatefulWidget {
     this.height = 260,
     this.expand = false,
     this.borderRadius = const BorderRadius.all(Radius.circular(16)),
-    this.center = MapConstants.noidaSector12,
+    this.center,
     this.zoom = MapConstants.defaultZoom,
     this.routeEnd,
     this.routeProgress,
     this.serviceRadiusKm,
     this.showDestinationPin = true,
+    this.routeStart,
   });
 
   final double height;
   final bool expand;
   final BorderRadius borderRadius;
-  final MapCoordinate center;
+  final MapCoordinate? center;
   final double zoom;
   final MapCoordinate? routeEnd;
   final double? routeProgress;
   final double? serviceRadiusKm;
   final bool showDestinationPin;
+  /// Worker / route start. Defaults to [MapConstants.workerApproachStart].
+  final MapCoordinate? routeStart;
 
   @override
   State<FixlyMapView> createState() => _FixlyMapViewState();
@@ -53,8 +56,10 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     final changed = oldWidget.routeProgress != widget.routeProgress ||
         oldWidget.serviceRadiusKm != widget.serviceRadiusKm ||
         oldWidget.routeEnd != widget.routeEnd ||
-        oldWidget.center.lat != widget.center.lat ||
-        oldWidget.center.lng != widget.center.lng ||
+        oldWidget.routeStart?.lat != widget.routeStart?.lat ||
+        oldWidget.routeStart?.lng != widget.routeStart?.lng ||
+        oldWidget.center?.lat != widget.center?.lat ||
+        oldWidget.center?.lng != widget.center?.lng ||
         oldWidget.showDestinationPin != widget.showDestinationPin;
 
     if (changed) {
@@ -86,11 +91,15 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       return;
     }
 
-    final destination = widget.center;
-    final worker = widget.routeEnd == null
+    final destination = widget.center ?? MapConstants.current;
+    if (destination == null) {
+      return;
+    }
+    final start = widget.routeStart ?? MapConstants.workerApproachStart;
+    final worker = widget.routeEnd == null || start == null
         ? null
         : MapConstants.lerpRoute(
-            MapConstants.workerStart,
+            start,
             widget.routeEnd!,
             widget.routeProgress ?? 0,
           );
@@ -122,10 +131,10 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       _areaPolygon = null;
     }
 
-    if (widget.routeEnd != null) {
+    if (widget.routeEnd != null && start != null) {
       final route = LineString(
         coordinates: [
-          Position(MapConstants.workerStart.lng, MapConstants.workerStart.lat),
+          Position(start.lng, start.lat),
           Position(widget.routeEnd!.lng, widget.routeEnd!.lat),
         ],
       );
@@ -187,7 +196,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
         iconSize: 1.25,
         iconColor: AppColors.primary.toARGB32(),
         iconAnchor: IconAnchor.CENTER,
-        textField: MapConstants.workerStart.label ?? 'Worker',
+        textField: start?.label ?? 'Worker',
         textSize: 12,
         textColor: AppColors.primary.toARGB32(),
         textHaloColor: Colors.white.toARGB32(),
@@ -215,8 +224,12 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     final mapboxMap = _mapboxMap;
     if (mapboxMap == null) return;
 
+    final center = widget.center ?? MapConstants.current;
+    if (center == null) return;
+
     final points = MapGeoUtils.cameraPoints(
-      center: widget.center,
+      center: center,
+      routeStart: widget.routeStart ?? MapConstants.workerApproachStart,
       routeEnd: widget.routeEnd,
       routeProgress: widget.routeProgress,
       serviceRadiusKm: widget.serviceRadiusKm,
@@ -226,7 +239,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       await mapboxMap.setCamera(
         CameraOptions(
           center: Point(
-            coordinates: Position(widget.center.lng, widget.center.lat),
+            coordinates: Position(center.lng, center.lat),
           ),
           zoom: widget.zoom,
         ),
@@ -246,14 +259,38 @@ class _FixlyMapViewState extends State<FixlyMapView> {
 
   @override
   Widget build(BuildContext context) {
+    final center = widget.center ?? MapConstants.current;
+    if (center == null) {
+      final placeholder = DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: widget.borderRadius,
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.location_searching, color: AppColors.primary),
+              SizedBox(height: 8),
+              Text('Waiting for location…'),
+            ],
+          ),
+        ),
+      );
+      if (widget.expand) {
+        return placeholder;
+      }
+      return SizedBox(height: widget.height, child: placeholder);
+    }
+
     final mapCore = MapConstants.hasToken && _mapError == null
         ? MapWidget(
-            key: const ValueKey('fixly-map'),
+            key: ValueKey('fixly-map-${center.lat}-${center.lng}'),
             styleUri: MapboxStyles.MAPBOX_STREETS,
             textureView: true,
             viewport: CameraViewportState(
               center: Point(
-                coordinates: Position(widget.center.lng, widget.center.lat),
+                coordinates: Position(center.lng, center.lat),
               ),
               zoom: widget.zoom,
             ),
@@ -264,7 +301,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
             },
           )
         : _MapPreviewFallback(
-            center: widget.center,
+            center: center,
             routeEnd: widget.routeEnd,
             routeProgress: widget.routeProgress,
             serviceRadiusKm: widget.serviceRadiusKm,

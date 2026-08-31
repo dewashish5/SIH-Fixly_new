@@ -9,6 +9,7 @@ class BookingFlowState extends Equatable {
     this.scheduledAt,
     this.isLoading = false,
     this.estimatedPrice,
+    this.errorMessage,
   });
 
   final ServiceItem? service;
@@ -18,6 +19,7 @@ class BookingFlowState extends Equatable {
   final DateTime? scheduledAt;
   final bool isLoading;
   final double? estimatedPrice;
+  final String? errorMessage;
 
   double get displayPrice =>
       estimatedPrice ?? booking?.estimatedPrice ?? service?.priceFrom ?? 0;
@@ -30,6 +32,8 @@ class BookingFlowState extends Equatable {
     DateTime? scheduledAt,
     bool? isLoading,
     double? estimatedPrice,
+    String? errorMessage,
+    bool clearError = false,
   }) {
     return BookingFlowState(
       service: service ?? this.service,
@@ -39,10 +43,19 @@ class BookingFlowState extends Equatable {
       scheduledAt: scheduledAt ?? this.scheduledAt,
       isLoading: isLoading ?? this.isLoading,
       estimatedPrice: estimatedPrice ?? this.estimatedPrice,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
 
   @override
-  List<Object?> get props =>
-      [service, booking, step, address, scheduledAt, isLoading, estimatedPrice];
+  List<Object?> get props => [
+        service,
+        booking,
+        step,
+        address,
+        scheduledAt,
+        isLoading,
+        estimatedPrice,
+        errorMessage,
+      ];
 }

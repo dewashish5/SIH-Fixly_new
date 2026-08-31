@@ -40,8 +40,8 @@ class _OtpPageState extends State<OtpPage> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Invalid OTP. Please try again.'),
+      SnackBar(
+        content: Text(cubit.state.errorMessage ?? 'Invalid OTP. Please try again.'),
         backgroundColor: AppColors.error,
       ),
     );
@@ -77,9 +77,11 @@ class _OtpPageState extends State<OtpPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  phone.isNotEmpty
-                      ? 'Code sent to +91 $phone'
-                      : 'Enter the 6-digit code sent to your phone',
+                  (state.email != null && state.email!.isNotEmpty)
+                      ? 'Code sent to ${state.email}'
+                      : phone.isNotEmpty
+                          ? 'Code sent to +91 $phone'
+                          : 'Enter the 6-digit code from your email',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: context.muted,
                       ),

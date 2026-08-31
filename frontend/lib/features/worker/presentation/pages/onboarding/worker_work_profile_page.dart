@@ -248,7 +248,7 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
                     FixlyMapView(
                       height: 220,
                       borderRadius: BorderRadius.circular(16),
-                      center: MapConstants.noidaSector12,
+                      center: MapConstants.current,
                       zoom: MapConstants.serviceAreaZoom,
                       serviceRadiusKm: radius,
                       showDestinationPin: true,

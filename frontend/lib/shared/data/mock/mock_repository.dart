@@ -3,6 +3,10 @@ import 'package:equatable/equatable.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../models/models.dart';
 
+/// Local fallbacks for surfaces **without** backend APIs yet:
+/// support chat, notifications list, worker KYC/onboarding uploads,
+/// reliability score, worker job feed. Prefer API repos for auth/home/
+/// workers/bookings/payments/reviews/ai.
 class MockRepository {
   MockRepository._();
   static final MockRepository instance = MockRepository._();
@@ -23,7 +27,7 @@ class MockRepository {
       status: BookingStatus.completed,
       estimatedPrice: 450,
       workerName: 'You',
-      address: 'Sector 12, Noida',
+      address: 'Previous job',
       scheduledAt: DateTime.now().subtract(const Duration(days: 3)),
     ),
     Booking(
@@ -33,7 +37,7 @@ class MockRepository {
       status: BookingStatus.paid,
       estimatedPrice: 650,
       workerName: 'You',
-      address: 'Indirapuram, Ghaziabad',
+      address: 'Completed order',
       scheduledAt: DateTime.now().subtract(const Duration(days: 7)),
     ),
   ];
@@ -69,7 +73,7 @@ class MockRepository {
       id: 'job1',
       title: 'Electrical wiring repair',
       customerName: 'Priya Sharma',
-      address: 'Sector 12, Noida',
+      address: 'Previous job',
       pay: 850,
       status: JobStatus.incoming,
       distanceKm: 2.3,
@@ -78,7 +82,7 @@ class MockRepository {
       id: 'job2',
       title: 'Plumbing leak fix',
       customerName: 'Rahul Verma',
-      address: 'Indirapuram, Ghaziabad',
+      address: 'Nearby job',
       pay: 650,
       status: JobStatus.incoming,
       distanceKm: 4.1,
@@ -87,7 +91,7 @@ class MockRepository {
       id: 'job3',
       title: 'AC servicing',
       customerName: 'Anita Das',
-      address: 'Vaishali, Ghaziabad',
+      address: 'Active job',
       pay: 1200,
       status: JobStatus.active,
       distanceKm: 1.8,
@@ -241,7 +245,7 @@ class MockRepository {
       serviceTitle: service.title,
       status: BookingStatus.draft,
       estimatedPrice: service.priceFrom,
-      address: address ?? 'Sector 12, Noida',
+      address: address ?? 'Current location',
       scheduledAt: DateTime.now().add(const Duration(hours: 2)),
     );
     activeBooking = booking;
