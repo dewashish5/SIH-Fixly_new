@@ -1,12 +1,10 @@
-import React, { createContext, useContext, useState } from 'react';
-import { initialWorkers } from '../data/workers';
-import { initialBookings } from '../data/bookings';
-import { initialCustomers } from '../data/customers';
-import { initialServices } from '../data/services';
-import { initialPayments, paymentStats } from '../data/payments';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { initialPayments } from '../data/payments';
 import { initialInsurancePolicies, initialWelfareClaims } from '../data/insurance';
 import { initialReviews } from '../data/reviews';
 import { initialNotifications } from '../data/notifications';
+import * as adminApi from '../api/adminApi';
+import { isLoggedIn } from '../api/client';
 import { useToast } from './ToastContext';
 
 const AppContext = createContext(null);
@@ -14,21 +12,23 @@ const AppContext = createContext(null);
 export function AppProvider({ children }) {
   const { showToast } = useToast();
 
-  // State entities
-  const [workers, setWorkers] = useState(initialWorkers);
-  const [bookings, setBookings] = useState(initialBookings);
-  const [customers, setCustomers] = useState(initialCustomers);
-  const [services, setServices] = useState(initialServices);
+  // Primary lists — API-backed (empty until fetch; never seed mocks)
+  const [workers, setWorkers] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [services, setServices] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loadingData, setLoadingData] = useState(false);
+
+  // Secondary entities still local/mock for now
   const [payments, setPayments] = useState(initialPayments);
   const [insurancePolicies, setInsurancePolicies] = useState(initialInsurancePolicies);
   const [welfareClaims, setWelfareClaims] = useState(initialWelfareClaims);
   const [reviews, setReviews] = useState(initialReviews);
   const [notifications, setNotifications] = useState(initialNotifications);
-  
-  // Date & Filter states
+
   const [selectedDateRange, setSelectedDateRange] = useState('Today (26 May, 2025)');
 
-  // Settings State
   const [settings, setSettings] = useState({
     platformName: 'Cooperative Gig Services Platform',
     cooperativeWelfarePercent: 5,
@@ -40,6 +40,42 @@ export function AppProvider({ children }) {
     escrowHoldingHours: 24,
     theme: 'light',
   });
+
+  const refreshFromApi = useCallback(async () => {
+    if (!isLoggedIn()) return;
+
+    setLoadingData(true);
+    const failures = [];
+
+    const settle = async (label, fn, onOk, fallback) => {
+      try {
+        const result = await fn();
+        onOk(result);
+      } catch (err) {
+        failures.push(label);
+        onOk(fallback);
+        console.error(`[AppContext] ${label} fetch failed:`, err);
+      }
+    };
+
+    await Promise.all([
+      settle('workers', () => adminApi.listWorkers('all'), setWorkers, []),
+      settle('customers', () => adminApi.listCustomers(), setCustomers, []),
+      settle('bookings', () => adminApi.listBookings(), setBookings, []),
+      settle('services', () => adminApi.listServices(), setServices, []),
+      settle('stats', () => adminApi.stats(), setStats, null),
+    ]);
+
+    if (failures.length) {
+      showToast('error', `API failed (${failures.join(', ')}) — showing empty lists`);
+    }
+
+    setLoadingData(false);
+  }, [showToast]);
+
+  useEffect(() => {
+    refreshFromApi();
+  }, [refreshFromApi]);
 
   // --- WORKER ACTIONS ---
   const addWorker = (workerData) => {
@@ -67,18 +103,24 @@ export function AppProvider({ children }) {
     showToast('success', `Worker profile updated successfully.`);
   };
 
-  const verifyWorker = (id) => {
-    setWorkers((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, verification: 'Verified', insuranceStatus: 'Active (₹5L Policy)' } : w))
-    );
-    showToast('success', `Worker #${id} verified and insurance activated!`);
+  const verifyWorker = async (id) => {
+    try {
+      await adminApi.verifyWorker(id, 'approved');
+      showToast('success', `Worker #${id} verified and insurance activated!`);
+      await refreshFromApi();
+    } catch (err) {
+      showToast('error', err.message || `Failed to verify worker #${id}`);
+    }
   };
 
-  const rejectWorker = (id) => {
-    setWorkers((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, verification: 'Rejected' } : w))
-    );
-    showToast('error', `Worker application #${id} rejected.`);
+  const rejectWorker = async (id) => {
+    try {
+      await adminApi.verifyWorker(id, 'rejected');
+      showToast('error', `Worker application #${id} rejected.`);
+      await refreshFromApi();
+    } catch (err) {
+      showToast('error', err.message || `Failed to reject worker #${id}`);
+    }
   };
 
   const suspendWorker = (id) => {
@@ -234,6 +276,8 @@ export function AppProvider({ children }) {
         bookings,
         customers,
         services,
+        stats,
+        loadingData,
         payments,
         insurancePolicies,
         welfareClaims,
@@ -242,32 +286,32 @@ export function AppProvider({ children }) {
         settings,
         selectedDateRange,
         setSelectedDateRange,
-        
-        // Actions
+        refreshFromApi,
+
         addWorker,
         updateWorker,
         verifyWorker,
         rejectWorker,
         suspendWorker,
-        
+
         addBooking,
         updateBookingStatus,
         assignWorkerToBooking,
         rescheduleBooking,
         cancelBooking,
-        
+
         toggleCustomerBlock,
-        
+
         addService,
         updateService,
         deleteService,
-        
+
         deleteReview,
-        
+
         addNotification,
         markAllNotificationsRead,
         deleteNotification,
-        
+
         updateSettings,
       }}
     >

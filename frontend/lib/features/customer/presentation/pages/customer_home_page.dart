@@ -8,6 +8,8 @@ import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/l10n/locale_scope.dart';
+import '../../../../core/location/app_location.dart';
+import '../../../../core/location/location_service.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
@@ -26,8 +28,42 @@ class CustomerHomePage extends StatelessWidget {
   }
 }
 
-class _CustomerHomeView extends StatelessWidget {
+class _CustomerHomeView extends StatefulWidget {
   const _CustomerHomeView();
+
+  @override
+  State<_CustomerHomeView> createState() => _CustomerHomeViewState();
+}
+
+class _CustomerHomeViewState extends State<_CustomerHomeView> {
+  bool _locating = false;
+
+  String get _locationLabel {
+    final label = AppLocation.instance.addressLabel?.trim();
+    if (label != null && label.isNotEmpty) return label;
+    if (AppLocation.instance.hasFix) {
+      return '${AppLocation.instance.lat!.toStringAsFixed(4)}, '
+          '${AppLocation.instance.lng!.toStringAsFixed(4)}';
+    }
+    return 'Location not set';
+  }
+
+  Future<void> _refreshLocation() async {
+    if (_locating) return;
+    setState(() => _locating = true);
+    try {
+      final ok = await LocationService.instance.ensureOnAppOpen(context);
+      if (!mounted) return;
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not get current location')),
+        );
+      }
+      setState(() {});
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,9 +92,10 @@ class _CustomerHomeView extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              _SearchBar(
-                hint: l10n.searchHint,
-                onTap: () => context.go(RouteNames.customerSearch),
+              _LocationBar(
+                label: _locationLabel,
+                loading: _locating,
+                onRefresh: _refreshLocation,
               ),
               const SizedBox(height: 20),
               Text(
@@ -94,9 +131,9 @@ class _CustomerHomeView extends StatelessWidget {
                   TextButton(
                     onPressed: () => context.go(RouteNames.customerAiHelper),
                     child: Text(
-                    l10n.aiHelper,
-                    style: const TextStyle(color: AppColors.accent),
-                  ),
+                      l10n.aiHelper,
+                      style: const TextStyle(color: AppColors.accent),
+                    ),
                   ),
                 ],
               ),
@@ -126,33 +163,74 @@ class _CustomerHomeView extends StatelessWidget {
   }
 }
 
-class _SearchBar extends StatelessWidget {
-  const _SearchBar({required this.hint, required this.onTap});
+class _LocationBar extends StatelessWidget {
+  const _LocationBar({
+    required this.label,
+    required this.loading,
+    required this.onRefresh,
+  });
 
-  final String hint;
-  final VoidCallback onTap;
+  final String label;
+  final bool loading;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: context.scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: context.hairline),
-        ),
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainerHighest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: context.hairline),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
         child: Row(
           children: [
-            Icon(Icons.search_rounded, color: context.scheme.primary),
-            const SizedBox(width: 12),
-            Text(hint, style: TextStyle(color: context.muted)),
-            const Spacer(),
-            Icon(
-              Icons.auto_awesome_rounded,
-              size: 18,
-              color: AppColors.accent.withValues(alpha: 0.9),
+            Icon(Icons.location_on_rounded, color: scheme.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Your location',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: context.muted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: 'Use current location',
+              onPressed: loading ? null : onRefresh,
+              style: IconButton.styleFrom(
+                backgroundColor: scheme.primary.withValues(alpha: 0.12),
+                foregroundColor: scheme.primary,
+                minimumSize: const Size(48, 48),
+              ),
+              icon: loading
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: scheme.primary,
+                      ),
+                    )
+                  : const Icon(Icons.my_location_rounded),
             ),
           ],
         ),

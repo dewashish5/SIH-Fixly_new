@@ -232,11 +232,12 @@ class _MenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Theme.of(context).cardColor,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
+        side: BorderSide(color: scheme.outline),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(

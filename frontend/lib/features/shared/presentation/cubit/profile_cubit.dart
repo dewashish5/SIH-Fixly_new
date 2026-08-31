@@ -15,15 +15,14 @@ class ProfileCubit extends Cubit<ProfileState> {
 
   Future<void> load() async {
     emit(state.copyWith(status: ProfileStatus.loading));
-    await _repo.mockDelay();
     final user = _repo.currentUser;
     emit(
       ProfileState(
         status: ProfileStatus.loaded,
-        name: user?.name ?? 'Rajesh Kumar',
-        phone: user?.phone ?? '+91 9876543210',
+        name: user?.name ?? '',
+        phone: user?.phone ?? '',
         eshramUan: user?.eshramUan ?? _repo.onboardingData.eshramUan,
-        insured: user?.insured ?? _repo.onboardingData.hasEshram,
+        insured: user?.insured ?? false,
         skills: _repo.onboardingData.skills,
       ),
     );
@@ -31,12 +30,12 @@ class ProfileCubit extends Cubit<ProfileState> {
 
   Future<void> updateProfile({required String name, required String phone}) async {
     emit(state.copyWith(status: ProfileStatus.loading));
-    await _repo.mockDelay();
     if (_repo.currentUser != null) {
       _repo.currentUser = AppUser(
         id: _repo.currentUser!.id,
         name: name,
         phone: phone,
+        email: _repo.currentUser!.email,
         role: _repo.currentUser!.role,
         eshramUan: _repo.currentUser!.eshramUan,
         insured: _repo.currentUser!.insured,
