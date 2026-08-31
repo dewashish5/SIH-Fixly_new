@@ -1,26 +1,20 @@
 import 'dart:math' as math;
 
+import '../location/app_location.dart';
 import 'map_token.dart';
 
-/// Mapbox + Noida demo coordinates for Fixly service area.
+/// Mapbox helpers + live user coordinates (no demo city hardcodes).
 abstract final class MapConstants {
   static String get accessToken => MapToken.accessToken;
 
   static bool get hasToken => MapToken.hasToken;
 
-  /// Sector 12, Noida — default customer location.
-  static const noidaSector12 = MapCoordinate(
-    lat: 28.5789,
-    lng: 77.3178,
-    label: 'Sector 12, Noida',
-  );
+  /// Current device location after [LocationService] refresh.
+  static MapCoordinate? get current => AppLocation.instance.coordinateOrNull;
 
-  /// Mock worker start point for live tracking / navigation.
-  static const workerStart = MapCoordinate(
-    lat: 28.5862,
-    lng: 77.3045,
-    label: 'Worker',
-  );
+  /// Animated "worker en route" start — offset from current GPS.
+  static MapCoordinate? get workerApproachStart =>
+      AppLocation.instance.approachStartOrNull;
 
   static const defaultZoom = 13.0;
   static const navigationZoom = 14.0;
@@ -35,6 +29,7 @@ abstract final class MapConstants {
     return MapCoordinate(
       lat: from.lat + (to.lat - from.lat) * t,
       lng: from.lng + (to.lng - from.lng) * t,
+      label: to.label,
     );
   }
 

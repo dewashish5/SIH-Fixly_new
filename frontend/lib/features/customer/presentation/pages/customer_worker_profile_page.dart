@@ -5,143 +5,171 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
-import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../shared/models/models.dart';
+import '../../../workers/data/workers_api_repository.dart';
 
-class CustomerWorkerProfilePage extends StatelessWidget {
+class CustomerWorkerProfilePage extends StatefulWidget {
   const CustomerWorkerProfilePage({required this.workerId, super.key});
 
   final String workerId;
 
   @override
+  State<CustomerWorkerProfilePage> createState() =>
+      _CustomerWorkerProfilePageState();
+}
+
+class _CustomerWorkerProfilePageState extends State<CustomerWorkerProfilePage> {
+  late final Future<WorkerProfile> _future =
+      WorkersApiRepository().fetchWorker(widget.workerId);
+
+  @override
   Widget build(BuildContext context) {
-    final worker = MockRepository.instance.workerById(workerId);
+    return FutureBuilder<WorkerProfile>(
+      future: _future,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return AppScaffold(
+            title: context.l10n.workerProfile,
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    if (worker == null) {
-      return AppScaffold(
-        title: context.l10n.workerProfile,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.person_off, size: 48, color: AppColors.error),
-              const SizedBox(height: 16),
-              const Text('Worker not found'),
-              const SizedBox(height: 16),
-              PrimaryButton(label: 'Go Back', onPressed: () => context.pop()),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return AppScaffold(
-      title: context.l10n.workerProfile,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 48,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-              child: Text(
-                worker.name[0],
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
+        if (snap.hasError || !snap.hasData) {
+          return AppScaffold(
+            title: context.l10n.workerProfile,
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.person_off, size: 48, color: AppColors.error),
+                  const SizedBox(height: 16),
+                  Text(snap.error?.toString() ?? 'Worker not found'),
+                  const SizedBox(height: 16),
+                  PrimaryButton(label: 'Go Back', onPressed: () => context.pop()),
+                ],
               ),
-            ).animate().scale(begin: const Offset(0.8, 0.8)),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            ),
+          );
+        }
+
+        final worker = snap.data!;
+        final skillLabel = worker.skills.isEmpty
+            ? 'Skilled worker'
+            : worker.skills.join(' • ');
+        final aboutSkill = worker.skills.isEmpty
+            ? 'professional'
+            : worker.skills.first.toLowerCase();
+
+        return AppScaffold(
+          title: context.l10n.workerProfile,
+          body: SingleChildScrollView(
+            child: Column(
               children: [
+                CircleAvatar(
+                  radius: 48,
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                  child: Text(
+                    worker.name.isNotEmpty ? worker.name[0] : 'W',
+                    style: const TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ).animate().scale(begin: const Offset(0.8, 0.8)),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      worker.name,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    if (worker.insured) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.verified, color: AppColors.primary),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
                 Text(
-                  worker.name,
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  skillLabel,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.outline,
+                      ),
                 ),
-                if (worker.insured) ...[
-                  const SizedBox(width: 8),
-                  const Icon(Icons.verified, color: AppColors.primary),
-                ],
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _StatChip(
+                      label: 'Rating',
+                      value: '${worker.rating}',
+                      icon: Icons.star,
+                    ),
+                    _StatChip(
+                      label: 'Jobs',
+                      value: '${worker.jobsCompleted}',
+                      icon: Icons.work,
+                    ),
+                    _StatChip(
+                      label: 'Reliability',
+                      value: '${worker.reliabilityScore}%',
+                      icon: Icons.trending_up,
+                    ),
+                  ],
+                ).animate().fadeIn(delay: 200.ms),
+                const SizedBox(height: 32),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'About',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Experienced $aboutSkill with ${worker.jobsCompleted}+ completed jobs. Known for quality work and punctuality.',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Recent Reviews',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      _ReviewTile(
+                        name: 'Priya S.',
+                        rating: 5,
+                        text: 'Excellent work, very professional!',
+                      ),
+                      _ReviewTile(
+                        name: 'Rahul V.',
+                        rating: 4,
+                        text: 'Good service, arrived on time.',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                AccentButton(
+                  label: 'Book This Worker',
+                  onPressed: () => context.push(RouteNames.customerBooking),
+                ),
+                const SizedBox(height: 24),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              worker.skills.join(' • '),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.outline,
-                  ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _StatChip(
-                  label: 'Rating',
-                  value: '${worker.rating}',
-                  icon: Icons.star,
-                ),
-                _StatChip(
-                  label: 'Jobs',
-                  value: '${worker.jobsCompleted}',
-                  icon: Icons.work,
-                ),
-                _StatChip(
-                  label: 'Reliability',
-                  value: '${worker.reliabilityScore}%',
-                  icon: Icons.trending_up,
-                ),
-              ],
-            ).animate().fadeIn(delay: 200.ms),
-            const SizedBox(height: 32),
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'About',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Experienced ${worker.skills.first.toLowerCase()} with ${worker.jobsCompleted}+ completed jobs. Known for quality work and punctuality.',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Recent Reviews',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  _ReviewTile(
-                    name: 'Priya S.',
-                    rating: 5,
-                    text: 'Excellent work, very professional!',
-                  ),
-                  _ReviewTile(
-                    name: 'Rahul V.',
-                    rating: 4,
-                    text: 'Good service, arrived on time.',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            AccentButton(
-              label: 'Book This Worker',
-              onPressed: () => context.push(RouteNames.customerBooking),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

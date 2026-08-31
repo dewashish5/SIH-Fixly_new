@@ -1,0 +1,571 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
+import {
+  User,
+  IndianRupee,
+  IdCard,
+  Users,
+  Star,
+  ArrowUpRight,
+  Navigation,
+  Sparkles,
+  Zap,
+  Plus,
+  Bell,
+  ArrowRight,
+  ExternalLink,
+  ShieldCheck,
+  CalendarCheck,
+  BrainCircuit,
+  Radio,
+  Clock
+} from 'lucide-react';
+
+import BookingsOverviewChart from '../../components/charts/BookingsOverviewChart';
+import TopServicesCard from '../../components/TopServicesCard';
+import Badge from '../../components/common/Badge';
+import AddWorkerModal from '../../components/modals/AddWorkerModal';
+import AddServiceModal from '../../components/modals/AddServiceModal';
+import SendNotificationModal from '../../components/modals/SendNotificationModal';
+import EmergencyDispatchModal from '../../components/modals/EmergencyDispatchModal';
+
+export default function DashboardPage() {
+  const navigate = useNavigate();
+  const { t } = useLanguage();
+  const { workers, bookings, services, notifications } = useApp();
+
+  // Modal controls
+  const [isAddWorkerOpen, setIsAddWorkerOpen] = useState(false);
+  const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
+  const [isSendNotifOpen, setIsSendNotifOpen] = useState(false);
+  const [emergencyBooking, setEmergencyBooking] = useState(null);
+
+  // Top stats matching screenshot
+  const statCards = [
+    {
+      id: 'bookings',
+      title: 'Total Bookings',
+      value: '8,789',
+      trend: '12.3%',
+      icon: User,
+    },
+    {
+      id: 'revenue',
+      title: 'Total Revenue',
+      value: '₹2,45,67,890',
+      trend: '15.7%',
+      icon: IndianRupee,
+    },
+    {
+      id: 'workers',
+      title: 'Active Workers',
+      value: '12,458',
+      trend: '10.3%',
+      icon: IdCard,
+    },
+    {
+      id: 'customers',
+      title: 'Total Customers',
+      value: '9,876',
+      trend: '8.4%',
+      icon: Users,
+    },
+  ];
+
+  const recentThreeBookings = bookings.slice(0, 3);
+  const activeEmergency = bookings.find((b) => b.status === 'Emergency');
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
+        padding: '0 32px 32px 32px',
+        animation: 'fadeIn 0.25s ease',
+      }}
+    >
+      {/* Emergency Flash Banner if any emergency booking exists */}
+      {activeEmergency && (
+        <div
+          style={{
+            backgroundColor: '#fef2f2',
+            border: '1.5px solid #f87171',
+            borderRadius: '14px',
+            padding: '12px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '20px' }}>🚨</span>
+            <div>
+              <span style={{ fontWeight: '800', color: '#991b1b', fontSize: '13.5px' }}>
+                CRITICAL SOS TICKET: {activeEmergency.service} — {activeEmergency.serviceType}
+              </span>
+              <span style={{ fontSize: '12px', color: '#7f1d1d', marginLeft: '8px' }}>
+                ({activeEmergency.customerAddress} • {activeEmergency.customerPhone})
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setEmergencyBooking(activeEmergency)}
+            style={{
+              padding: '6px 14px',
+              backgroundColor: '#dc2626',
+              color: '#ffffff',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: '700',
+              boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)',
+            }}
+          >
+            Dispatch Nearest Worker Now →
+          </button>
+        </div>
+      )}
+
+      {/* 1. Top KPI Stat Cards (4 Cards matching Screenshot + 1 Rating pill) */}
+      <div
+        className="stats-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          gap: '18px',
+        }}
+      >
+        {statCards.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={stat.id}
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border-light)',
+                padding: '20px 22px',
+                boxShadow: 'var(--shadow-card)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minHeight: '120px',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-card)';
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div
+                  style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '12px',
+                    backgroundColor: '#eaf7ee',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon size={22} color="#1e7e45" strokeWidth={2.2} />
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      fontSize: '22px',
+                      fontWeight: '800',
+                      color: '#111827',
+                      lineHeight: '1.15',
+                      letterSpacing: '-0.4px',
+                    }}
+                  >
+                    {stat.value}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '12.5px',
+                      color: 'var(--text-secondary)',
+                      fontWeight: '500',
+                      marginTop: '3px',
+                    }}
+                  >
+                    {stat.title}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  marginTop: '14px',
+                  paddingLeft: '60px',
+                }}
+              >
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    color: '#15803d',
+                  }}
+                >
+                  <ArrowUpRight size={14} strokeWidth={2.8} />
+                  {stat.trend}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 2. Middle Row: Bookings Overview (62%) + Top Services (38%) */}
+      <div
+        className="middle-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1.65fr 1fr',
+          gap: '20px',
+          alignItems: 'stretch',
+        }}
+      >
+        <div style={{ minHeight: '310px' }}>
+          <BookingsOverviewChart />
+        </div>
+        <div style={{ minHeight: '310px' }}>
+          <TopServicesCard onSelectService={() => navigate('/services')} />
+        </div>
+      </div>
+
+      {/* 3. Bottom Row: Recent Bookings (62%) + Workers on Duty Live on Map (38%) */}
+      <div
+        className="bottom-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1.65fr 1fr',
+          gap: '20px',
+          alignItems: 'stretch',
+        }}
+      >
+        {/* Recent Bookings Card */}
+        <div
+          style={{
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-light)',
+            padding: '22px 24px',
+            boxShadow: 'var(--shadow-card)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: '230px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px',
+            }}
+          >
+            <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#12251a' }}>
+              Recent Bookings
+            </h2>
+            <button
+              onClick={() => navigate('/bookings')}
+              style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                color: 'var(--primary-brand)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <span>View All</span>
+              <ExternalLink size={13} />
+            </button>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #f0f4f1', color: '#718278', fontSize: '12px', fontWeight: '600' }}>
+                  <th style={{ padding: '8px 12px 10px 4px' }}>Booking ID</th>
+                  <th style={{ padding: '8px 12px 10px 12px' }}>Customer</th>
+                  <th style={{ padding: '8px 12px 10px 12px' }}>Service</th>
+                  <th style={{ padding: '8px 12px 10px 12px' }}>Worker</th>
+                  <th style={{ padding: '8px 4px 10px 12px', textAlign: 'right' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentThreeBookings.map((b) => (
+                  <tr
+                    key={b.id}
+                    onClick={() => navigate(`/bookings`)}
+                    style={{ borderBottom: '1px solid #f5f8f6', fontSize: '13px', cursor: 'pointer' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f9fbf9')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <td style={{ padding: '12px 12px 12px 4px' }}>
+                      <span style={{ color: 'var(--text-link)', fontWeight: '600' }}>
+                        {b.id}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px', fontWeight: '500', color: '#203227' }}>
+                      {b.customer}
+                    </td>
+                    <td style={{ padding: '12px', color: '#556b5e', fontWeight: '500' }}>
+                      {b.service}
+                    </td>
+                    <td style={{ padding: '12px', color: '#203227', fontWeight: '500' }}>
+                      {b.worker}
+                    </td>
+                    <td style={{ padding: '12px 4px 12px 12px', textAlign: 'right' }}>
+                      <Badge status={b.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Workers on Duty Live on Map Banner */}
+        <div
+          style={{
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-light)',
+            padding: '20px 24px',
+            boxShadow: 'var(--shadow-card)',
+            position: 'relative',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: '230px',
+          }}
+        >
+          <div style={{ position: 'relative', zIndex: 2, maxWidth: '200px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#12251a', lineHeight: '1.3' }}>
+              Workers on Duty Live on Map
+            </h2>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginTop: '6px',
+                fontSize: '11px',
+                color: '#15803d',
+                fontWeight: '600',
+                backgroundColor: '#eaf8ef',
+                padding: '2px 8px',
+                borderRadius: '999px',
+              }}
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: '#15803d',
+                }}
+              />
+              <span>12,458 Online</span>
+            </div>
+          </div>
+
+          <div
+            style={{
+              position: 'absolute',
+              right: '-10px',
+              bottom: '-15px',
+              top: '0',
+              width: '60%',
+              pointerEvents: 'none',
+              zIndex: 1,
+            }}
+          >
+            <img
+              src="/worker-illustration.svg"
+              alt="Workers on Duty"
+              style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'bottom right' }}
+            />
+          </div>
+
+          <div style={{ position: 'relative', zIndex: 2, marginTop: '20px' }}>
+            <button
+              onClick={() => navigate('/workers')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                backgroundColor: 'var(--primary-brand)',
+                color: '#ffffff',
+                padding: '9px 18px',
+                borderRadius: 'var(--radius-pill)',
+                fontSize: '13px',
+                fontWeight: '600',
+                boxShadow: 'var(--shadow-pill)',
+              }}
+            >
+              <span>View Map</span>
+              <Navigation size={13} strokeWidth={2.4} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Quick Actions + AI Demand Ticker Section */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1.65fr 1fr',
+          gap: '20px',
+        }}
+      >
+        {/* Quick Actions Card */}
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            border: '1px solid var(--border-light)',
+            padding: '20px 24px',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#111827', marginBottom: '14px' }}>
+            ⚡ Fast Platform Operations
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+            <button
+              onClick={() => setIsAddWorkerOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                color: '#334155',
+                textAlign: 'left',
+              }}
+            >
+              <Plus size={15} color="#1e7e45" />
+              <span>Add New Worker</span>
+            </button>
+
+            <button
+              onClick={() => setIsAddServiceOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                color: '#334155',
+                textAlign: 'left',
+              }}
+            >
+              <Zap size={15} color="#1e7e45" />
+              <span>Add Service</span>
+            </button>
+
+            <button
+              onClick={() => setIsSendNotifOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                color: '#334155',
+                textAlign: 'left',
+              }}
+            >
+              <Bell size={15} color="#1e7e45" />
+              <span>Broadcast Alert</span>
+            </button>
+          </div>
+        </div>
+
+        {/* AI Forecast Ticker Card */}
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            border: '1.5px solid #bbf7d0',
+            padding: '20px 24px',
+            boxShadow: 'var(--shadow-card)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: '#15803d' }}>
+                <BrainCircuit size={16} />
+                <span>AI Workforce Allocation Forecast</span>
+              </div>
+              <button
+                onClick={() => navigate('/ai-insights')}
+                style={{ fontSize: '11.5px', color: 'var(--text-link)', fontWeight: '600' }}
+              >
+                Full Intel →
+              </button>
+            </div>
+            <p style={{ fontSize: '12px', color: '#4b5e52', marginTop: '8px', lineHeight: '1.4' }}>
+              "High probability of +28% AC repair surge this afternoon. Pre-route technicians to Sector 18."
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+            <span style={{ fontSize: '11px', backgroundColor: '#eaf8ef', color: '#15803d', padding: '2px 8px', borderRadius: '4px', fontWeight: '600' }}>
+              94.8% AI Confidence
+            </span>
+            <span style={{ fontSize: '11px', backgroundColor: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: '4px', fontWeight: '600' }}>
+              Fair Queue Active
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <AddWorkerModal isOpen={isAddWorkerOpen} onClose={() => setIsAddWorkerOpen(false)} />
+      <AddServiceModal isOpen={isAddServiceOpen} onClose={() => setIsAddServiceOpen(false)} />
+      <SendNotificationModal isOpen={isSendNotifOpen} onClose={() => setIsSendNotifOpen(false)} />
+      <EmergencyDispatchModal emergencyBooking={emergencyBooking} isOpen={!!emergencyBooking} onClose={() => setEmergencyBooking(null)} />
+    </div>
+  );
+}

@@ -4,76 +4,97 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
-import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../home/data/home_api_repository.dart';
 
-class CustomerAiDiscoveryPage extends StatelessWidget {
+class CustomerAiDiscoveryPage extends StatefulWidget {
   const CustomerAiDiscoveryPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final services = MockRepository.instance.services;
+  State<CustomerAiDiscoveryPage> createState() =>
+      _CustomerAiDiscoveryPageState();
+}
 
+class _CustomerAiDiscoveryPageState extends State<CustomerAiDiscoveryPage> {
+  late final Future<List<ServiceItem>> _future =
+      HomeApiRepository().fetchAllServices();
+
+  @override
+  Widget build(BuildContext context) {
     return AppScaffold(
       title: context.l10n.aiDiscovery,
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: 0.15),
-                    AppColors.aiBackground,
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+      body: FutureBuilder<List<ServiceItem>>(
+        future: _future,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snap.hasError) {
+            return Center(child: Text(snap.error.toString()));
+          }
+          final services = snap.data ?? const [];
+
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary.withValues(alpha: 0.15),
+                        AppColors.aiBackground,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.auto_awesome, color: AppColors.primary),
-                      const SizedBox(width: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.auto_awesome,
+                              color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'AI Recommendations',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
                       Text(
-                        'AI Recommendations',
-                        style: Theme.of(context).textTheme.titleMedium,
+                        'Based on your needs, we found these top matches',
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Based on your needs, we found these top matches',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            ...services.asMap().entries.map(
-                  (entry) => _DiscoveryCard(
-                    service: entry.value,
-                    rank: entry.key + 1,
-                    onTap: () => context.push(
-                      '/customer/service/${entry.value.id}',
-                    ),
-                    onWorkers: () =>
-                        context.push(RouteNames.customerAiWorkers),
-                  ),
                 ),
-            const SizedBox(height: 16),
-            PrimaryButton(
-              label: 'View Matched Workers',
-              onPressed: () => context.push(RouteNames.customerAiWorkers),
+                const SizedBox(height: 24),
+                ...services.asMap().entries.map(
+                      (entry) => _DiscoveryCard(
+                        service: entry.value,
+                        rank: entry.key + 1,
+                        onTap: () => context.push(
+                          '/customer/service/${entry.value.id}',
+                        ),
+                        onWorkers: () =>
+                            context.push(RouteNames.customerAiWorkers),
+                      ),
+                    ),
+                const SizedBox(height: 16),
+                PrimaryButton(
+                  label: 'View Matched Workers',
+                  onPressed: () => context.push(RouteNames.customerAiWorkers),
+                ),
+                const SizedBox(height: 24),
+              ],
             ),
-            const SizedBox(height: 24),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

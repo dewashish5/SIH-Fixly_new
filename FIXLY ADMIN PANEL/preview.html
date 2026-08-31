@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cooperative Gig Services Platform — Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    :root {
+      --primary: #01668F;
+      --primary-dark: #01455F;
+      --primary-light: #E6F4FA;
+      --primary-100: #CCE9F5;
+      --accent: #FD6E01;
+      --accent-light: #FFF3E6;
+      --bg-app: #F8FAFB;
+      --bg-card: #FFFFFF;
+      --border: #E5E7EB;
+      --text: #17212B;
+      --text-sec: #64748B;
+      --text-muted: #94A3B8;
+      --text-link: #3398C5;
+      --shadow: 0 1px 3px rgba(0,0,0,0.02), 0 2px 8px rgba(1,102,143,0.04);
+      --radius: 16px;
+      --sidebar-w: 256px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-app); color: var(--text); -webkit-font-smoothing: antialiased; line-height: 1.5; overflow-x: hidden; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+    input, select, textarea { font-family: inherit; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+    .fade { animation: fadeIn 0.2s ease forwards; }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: #C0D5E2; border-radius: 10px; }
+    /* Responsive grid */
+    @media(max-width:1200px) { .sg { grid-template-columns: repeat(2,1fr) !important; } .mg,.bg { grid-template-columns: 1fr !important; } }
+    @media(max-width:768px)  { .sg { grid-template-columns: 1fr !important; } }
+    /* Mobile content padding */
+    @media(max-width: 768px) {
+      .fade { padding-left: 14px !important; padding-right: 14px !important; }
+    }
+    /* Sidebar overlay for mobile */
+    .sidebar-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+      backdrop-filter: blur(2px);
+    }
+    .sidebar-overlay.open { display: block; }
+    /* Mobile sidebar slide-in */
+    @media(max-width: 768px) {
+      .app-sidebar {
+        position: fixed !important;
+        left: 0 !important; top: 0 !important;
+        height: 100vh !important;
+        z-index: 300 !important;
+        transform: translateX(-100%);
+        transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.14);
+      }
+      .app-sidebar.open { transform: translateX(0) !important; animation: slideIn 0.28s ease; }
+      .hamburger-btn { display: flex !important; }
+      .app-main { margin-left: 0 !important; }
+      /* On mobile, never collapse the sidebar — it's already an overlay */
+      .app-sidebar.collapsed { width: var(--sidebar-w) !important; padding: 20px 12px 20px 16px !important; }
+      .app-sidebar.collapsed .sidebar-label { display: inline !important; }
+      .app-sidebar.collapsed .sidebar-logo-text { display: block !important; }
+      .app-sidebar.collapsed .sidebar-badge { display: inline !important; }
+      .app-sidebar.collapsed nav button { justify-content: flex-start !important; gap: 10px !important; padding: 9px 12px !important; }
+      .sidebar-collapse-btn { display: none !important; }
+    }
+    .hamburger-btn { display: none; align-items: center; justify-content: center; width:38px; height:38px; border-radius:10px; border:1px solid var(--border); background: var(--bg-card); cursor:pointer; gap:0; flex-direction:column; padding:0; }
+    .hamburger-btn span { display:block; width:18px; height:2px; background: var(--text); border-radius:2px; margin:2.5px 0; transition: all 0.2s; }
+    /* Collapsible sidebar */
+    .app-sidebar { transition: width 0.25s cubic-bezier(0.4,0,0.2,1); }
+    .app-sidebar.collapsed { width: 64px !important; padding: 20px 8px !important; }
+    .app-sidebar.collapsed .sidebar-label { display: none !important; }
+    .app-sidebar.collapsed .sidebar-logo-text { display: none !important; }
+    .app-sidebar.collapsed .sidebar-badge { display: none !important; }
+    .app-sidebar.collapsed nav button { justify-content: center !important; gap: 0 !important; padding: 10px 0 !important; border-radius: 10px !important; }
+    .sidebar-collapse-btn { display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); cursor:pointer; color:var(--text-muted); font-size:14px; flex-shrink:0; transition:background 0.15s; margin-left:auto; }
+    .sidebar-collapse-btn:hover { background:var(--bg-app); color:var(--text); }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo, useEffect, useCallback } = React;
+
+function useLocalStorage(key, initialValue) {
+  const [storedValue, setStoredValue] = useState(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.warn('Error reading localStorage', error);
+      return initialValue;
+    }
+  });
+  const setValue = (value) => {
+    try {
+      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      setStoredValue(valueToStore);
+      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+    } catch (error) {
+      console.warn('Error setting localStorage', error);
+    }
+  };
+  return [storedValue, setValue];
+}
+
+/* ── translations ───────────────────────────────────────────── */
+const TR = {
+  en: { dashboard:'Dashboard', bookings:'Bookings', workers:'Workers', customers:'Customers',
+        services:'Services', payments:'Payments', insurance:'Insurance & Welfare',
+        reviews:'Reviews & Feedback', reports:'Reports', analytics:'Analytics',
+        aiInsights:'AI Insights', notifications:'Notifications', settings:'Settings',
+        welcome:'Welcome back, Admin! 👋', tagline:'Together we build stronger communities.' },
+  hi: { dashboard:'डैशबोर्ड', bookings:'बुकिंग्स', workers:'कार्यकर्ता', customers:'ग्राहक',
+        services:'सेवाएं', payments:'भुगतान', insurance:'बीमा व कल्याण',
+        reviews:'समीक्षाएं', reports:'रिपोर्ट्स', analytics:'एनालिटिक्स',
+        aiInsights:'एआई अंतर्दृष्टि', notifications:'सूचनाएं', settings:'सेटिंग्स',
+        welcome:'स्वागत है, व्यवस्थापक! 👋', tagline:'मिलकर हम सशक्त समाज बनाते हैं।' },
+  mr: { dashboard:'डॅशबोर्ड', bookings:'बुकिंग्ज', workers:'कामगार', customers:'ग्राहक',
+        services:'सेवा सूची', payments:'पेमेंट्स', insurance:'विमा व कल्याण',
+        reviews:'अभिप्राय', reports:'अहवाल', analytics:'विश्लेषण',
+        aiInsights:'एआय अंदाज', notifications:'सूचना', settings:'सेटिंग्ज',
+        welcome:'पुन्हा स्वागत, प्रशासक! 👋', tagline:'एकत्रितपणे मजबूत समुदाय घडवूया.' }
+};
+
+/* ── seed data ──────────────────────────────────────────────── */
+const WORKERS0 = [
+  { id:'WRK-101', name:'Mahesh Yadav',  service:'Plumbing',   skills:['Pipe Fitting','Leakage Repair','Sanitary Fittings'], location:'Sector 18, Noida',     city:'Noida',      rating:4.9,  completedJobs:412, availability:'Available', verification:'Verified',  phone:'+91 91234 56780', hourlyRate:'₹350/hr', battery:'88%', avatar:'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop', todayEarnings:'₹3,150', lifetimeEarnings:'₹8,24,600', joinedDate:'Jan 2022', certifications:['CPWD Licensed Plumber','ISI Certified Pipe Fitter'], idProof:'Aadhaar Verified' },
+  { id:'WRK-102', name:'Arun Kumar',    service:'Electrical', skills:['Wiring','MCB Replacement','Inverter Setup'],          location:'Sector 62, Ghaziabad', city:'Ghaziabad',  rating:4.8,  completedJobs:320, availability:'On Duty',  verification:'Verified',  phone:'+91 97890 12345', hourlyRate:'₹400/hr', battery:'74%', avatar:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop', todayEarnings:'₹2,800', lifetimeEarnings:'₹6,40,000', joinedDate:'Mar 2022', certifications:['ITI Electrician Certified','BEE Star Rated'], idProof:'Aadhaar Verified' },
+  { id:'WRK-103', name:'Suresh Das',    service:'Carpentry',  skills:['Furniture Assembly','Door Locks','Wood Polishing'],   location:'Mayur Vihar, Delhi',   city:'New Delhi',  rating:4.7,  completedJobs:280, availability:'Available', verification:'Verified',  phone:'+91 94567 89012', hourlyRate:'₹380/hr', battery:'92%', avatar:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop', todayEarnings:'₹1,900', lifetimeEarnings:'₹5,32,000', joinedDate:'Jun 2022', certifications:['NTC Carpenter Diploma'], idProof:'Voter ID Verified' },
+  { id:'WRK-104', name:'Sunita Devi',   service:'Cleaning',   skills:['Deep Cleaning','Sanitization','Bathroom Scrub'],      location:'Sector 45, Gurgaon',   city:'Gurgaon',    rating:4.95, completedJobs:540, availability:'On Duty',  verification:'Verified',  phone:'+91 98712 34567', hourlyRate:'₹300/hr', battery:'65%', avatar:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&auto=format&fit=crop', todayEarnings:'₹2,400', lifetimeEarnings:'₹9,72,000', joinedDate:'Aug 2021', certifications:['NSDC Housekeeping Certification'], idProof:'Aadhaar Verified' },
+  { id:'WRK-105', name:'Rajesh Verma', service:'AC Repair',   skills:['Gas Refill','PCB Repair','Compressor Check'],         location:'Dwarka Sector 10, Delhi', city:'New Delhi', rating:4.85, completedJobs:290, availability:'Available', verification:'Verified', phone:'+91 96543 21098', hourlyRate:'₹450/hr', battery:'81%', avatar:'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=80&auto=format&fit=crop', todayEarnings:'₹4,050', lifetimeEarnings:'₹7,25,000', joinedDate:'Nov 2021', certifications:['ASHRAE Certified Technician'], idProof:'PAN Verified' },
+  { id:'WRK-106', name:'Pooja Sharma', service:'Caregiving',  skills:['Elder Care','Child Care','Physiotherapy Assist'],     location:'Vasant Kunj, Delhi',   city:'New Delhi',  rating:4.75, completedJobs:210, availability:'Available', verification:'Pending',   phone:'+91 93211 45678', hourlyRate:'₹350/hr', battery:'90%', avatar:'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&auto=format&fit=crop', todayEarnings:'₹1,750', lifetimeEarnings:'₹3,67,500', joinedDate:'Feb 2023', certifications:['Red Cross First Aid'], idProof:'Aadhaar Pending' },
+];
+
+const BOOKINGS0 = [
+  { id:'BK-2025-1021', customer:'Ravi Sharma',      customerPhone:'+91 98765 43210', customerAddress:'Flat 402, Green Valley, Sector 18, Noida',       service:'Plumbing',   serviceType:'Leakage Repair & Tap Fitting',    workerId:'WRK-101', worker:'Mahesh Yadav',  workerRating:4.9,  status:'Confirmed',   amount:'₹850',   rawAmount:850,   date:'26 May, 2025', time:'11:30 AM', paymentMethod:'UPI (GPay)',       paymentStatus:'Paid',             notes:'Please bring extra pipe fittings.' },
+  { id:'BK-2025-1020', customer:'Sneha Verma',      customerPhone:'+91 98111 22334', customerAddress:'B-12, Sector 62, Indirapuram, Ghaziabad',         service:'Electrical', serviceType:'Switchboard & MCB Replacement',   workerId:'WRK-102', worker:'Arun Kumar',    workerRating:4.8,  status:'Pending',     amount:'₹1,200', rawAmount:1200,  date:'26 May, 2025', time:'10:15 AM', paymentMethod:'Cash on Delivery', paymentStatus:'Pending',          notes:'Need quick fix before 2 PM.' },
+  { id:'BK-2025-1019', customer:'Amit Singh',       customerPhone:'+91 99887 76655', customerAddress:'House 88, Pocket C, Mayur Vihar Phase 2, Delhi', service:'Carpentry',  serviceType:'Door Hinge & Wardrobe Repair',    workerId:'WRK-103', worker:'Suresh Das',    workerRating:4.7,  status:'Confirmed',   amount:'₹1,650', rawAmount:1650,  date:'26 May, 2025', time:'09:45 AM', paymentMethod:'Net Banking',      paymentStatus:'Paid',             notes:'' },
+  { id:'BK-2025-1018', customer:'Pooja Agarwal',    customerPhone:'+91 93456 78901', customerAddress:'Villa 14, Palm Meadows, Gurgaon',                  service:'Cleaning',   serviceType:'Deep Kitchen Sanitization',       workerId:'WRK-104', worker:'Sunita Devi',   workerRating:4.95, status:'In Progress', amount:'₹2,499', rawAmount:2499,  date:'26 May, 2025', time:'08:30 AM', paymentMethod:'Card',             paymentStatus:'Paid',             notes:'Focus on chimney area.' },
+  { id:'BK-2025-1017', customer:'Dr. Vivek Malhotra', customerPhone:'+91 97112 88990', customerAddress:'Flat 101, Sky High, Dwarka, Delhi',             service:'AC Repair',  serviceType:'AC Gas Refill & Servicing',       workerId:'WRK-105', worker:'Rajesh Verma',  workerRating:4.85, status:'Completed',   amount:'₹3,200', rawAmount:3200,  date:'25 May, 2025', time:'02:30 PM', paymentMethod:'UPI',              paymentStatus:'Paid',             notes:'' },
+  { id:'BK-2025-1014', customer:'Rajiv Mehra',      customerPhone:'+91 98114 55667', customerAddress:'Block E, South Extension, New Delhi',             service:'Plumbing',   serviceType:'Emergency Pipeline Burst',        workerId:'WRK-101', worker:'Mahesh Yadav',  workerRating:4.9,  status:'Emergency',   amount:'₹2,100', rawAmount:2100,  date:'26 May, 2025', time:'11:50 AM', paymentMethod:'Escrow Secured',   paymentStatus:'Pre-Authorized',   notes:'URGENT — water flooding kitchen.' },
+  { id:'BK-2025-1013', customer:'Meena Kapoor',     customerPhone:'+91 91234 56789', customerAddress:'C-44, Vasant Kunj, Delhi',                        service:'Caregiving', serviceType:'Elder Care (Daily Visit)',         workerId:'WRK-106', worker:'Pooja Sharma',  workerRating:4.75, status:'Assigned',    amount:'₹1,800', rawAmount:1800,  date:'25 May, 2025', time:'09:00 AM', paymentMethod:'Online Transfer',  paymentStatus:'Paid',             notes:'Patient is 82 years old.' },
+];
+
+const CUSTOMERS0 = [
+  { id:'CUST-8801', name:'Ravi Sharma',    phone:'+91 98765 43210', email:'ravi.sharma@gmail.com',    address:'Flat 402, Green Valley, Sector 18, Noida',         totalBookings:14, totalSpent:'₹18,450', rawSpent:18450, rating:4.9,  status:'Active', memberSince:'Jan 2024' },
+  { id:'CUST-8802', name:'Sneha Verma',    phone:'+91 98111 22334', email:'sneha.verma@outlook.com',  address:'B-12, Sector 62, Indirapuram, Ghaziabad',           totalBookings:8,  totalSpent:'₹12,200', rawSpent:12200, rating:5.0,  status:'Active', memberSince:'Mar 2024' },
+  { id:'CUST-8803', name:'Amit Singh',     phone:'+91 99887 76655', email:'amit.singh99@gmail.com',   address:'House 88, Pocket C, Mayur Vihar Phase 2, Delhi',    totalBookings:22, totalSpent:'₹34,800', rawSpent:34800, rating:4.8,  status:'VIP',    memberSince:'Nov 2023' },
+  { id:'CUST-8804', name:'Pooja Agarwal',  phone:'+91 93456 78901', email:'pooja.agarwal@corp.in',    address:'Villa 14, Palm Meadows, Gurgaon',                   totalBookings:19, totalSpent:'₹29,600', rawSpent:29600, rating:4.95, status:'VIP',    memberSince:'Feb 2024' },
+  { id:'CUST-8805', name:'Rajiv Mehra',    phone:'+91 98114 55667', email:'rajiv.mehra@gmail.com',    address:'Block E, South Extension, New Delhi',               totalBookings:6,  totalSpent:'₹9,200',  rawSpent:9200,  rating:4.5,  status:'Active', memberSince:'Apr 2024' },
+  { id:'CUST-8806', name:'Meena Kapoor',   phone:'+91 91234 56789', email:'meena.kapoor@yahoo.com',   address:'C-44, Vasant Kunj, Delhi',                          totalBookings:11, totalSpent:'₹21,000', rawSpent:21000, rating:4.7,  status:'Active', memberSince:'Dec 2023' },
+];
+
+const SERVICES0 = [
+  { id:'SRV-01', name:'Plumbing Services',    category:'Plumbing',       description:'Expert pipe repair, leakage fix & bathroom fitting.',   basePrice:'₹350/hr', pct:25, icon:'🚰', emergencyAvailable:true,  status:'Active', workers:2197 },
+  { id:'SRV-02', name:'Electrical Repairs',   category:'Electrical',     description:'Circuit fix, MCB replacement & smart wiring.',          basePrice:'₹400/hr', pct:20, icon:'💡', emergencyAvailable:true,  status:'Active', workers:1757 },
+  { id:'SRV-03', name:'Deep Cleaning',        category:'Cleaning',       description:'Complete home sanitization, scrub & pest shield.',       basePrice:'₹799/job',pct:15, icon:'🧹', emergencyAvailable:false, status:'Active', workers:1318 },
+  { id:'SRV-04', name:'Carpentry',            category:'Carpentry',      description:'Furniture assembly, lock fixing & wood polishing.',      basePrice:'₹380/hr', pct:15, icon:'🪚', emergencyAvailable:true,  status:'Active', workers:1318 },
+  { id:'SRV-05', name:'AC Repair & Service',  category:'AC Repair',      description:'Gas refill, PCB diagnosis & jet pump servicing.',        basePrice:'₹499/job',pct:8,  icon:'❄️', emergencyAvailable:true,  status:'Active', workers:980  },
+  { id:'SRV-06', name:'Painting',             category:'Painting',       description:'Interior, exterior & texture painting services.',         basePrice:'₹450/hr', pct:7,  icon:'🎨', emergencyAvailable:false, status:'Active', workers:870  },
+  { id:'SRV-07', name:'Caregiving & Medical', category:'Caregiving',     description:'Elder care, child minding & physiotherapy assistance.',   basePrice:'₹350/hr', pct:5,  icon:'🤝', emergencyAvailable:true,  status:'Active', workers:620  },
+  { id:'SRV-08', name:'Gardening & Landscape',category:'Gardening',      description:'Lawn mowing, trimming, composting & plant care.',         basePrice:'₹300/hr', pct:3,  icon:'🌿', emergencyAvailable:false, status:'Active', workers:310  },
+  { id:'SRV-09', name:'Driver Services',      category:'Driving',        description:'On-demand driver & logistics, local/outstation.',         basePrice:'₹350/hr', pct:2,  icon:'🚗', emergencyAvailable:true,  status:'Active', workers:420  },
+];
+
+const PAYMENTS0 = [
+  { id:'TXN-90214', bookingId:'BK-2025-1021', customer:'Ravi Sharma',    worker:'Mahesh Yadav',  service:'Plumbing',   amount:'₹850.00',   welfareCut:'₹42.50',   workerPayout:'₹807.50',   paymentMethod:'UPI (GPay)',       status:'Completed', date:'26 May, 2025', invoiceNumber:'INV-2025-8891', gatewayRef:'UPI/GP/20254521' },
+  { id:'TXN-90213', bookingId:'BK-2025-1020', customer:'Sneha Verma',    worker:'Arun Kumar',    service:'Electrical', amount:'₹1,200.00', welfareCut:'₹60.00',   workerPayout:'₹1,140.00', paymentMethod:'Cash on Delivery', status:'Pending',   date:'26 May, 2025', invoiceNumber:'INV-2025-8890', gatewayRef:'COD/PENDING'     },
+  { id:'TXN-90212', bookingId:'BK-2025-1019', customer:'Amit Singh',     worker:'Suresh Das',    service:'Carpentry',  amount:'₹1,650.00', welfareCut:'₹82.50',   workerPayout:'₹1,567.50', paymentMethod:'Net Banking',      status:'Completed', date:'26 May, 2025', invoiceNumber:'INV-2025-8889', gatewayRef:'NEFT/20251238'   },
+  { id:'TXN-90211', bookingId:'BK-2025-1018', customer:'Pooja Agarwal',  worker:'Sunita Devi',   service:'Cleaning',   amount:'₹2,499.00', welfareCut:'₹124.95', workerPayout:'₹2,374.05', paymentMethod:'Card',             status:'Completed', date:'25 May, 2025', invoiceNumber:'INV-2025-8888', gatewayRef:'CARD/VISA4521'   },
+  { id:'TXN-90210', bookingId:'BK-2025-1017', customer:'Dr. Vivek M.',   worker:'Rajesh Verma',  service:'AC Repair',  amount:'₹3,200.00', welfareCut:'₹160.00', workerPayout:'₹3,040.00', paymentMethod:'UPI',              status:'Completed', date:'25 May, 2025', invoiceNumber:'INV-2025-8887', gatewayRef:'UPI/PH/20251187' },
+];
+
+const NOTIFICATIONS0 = [
+  { id:'N-1', title:'Surge Demand Alert — Noida Sector 62',         message:'Plumbing & Electrical volume up +42%. 15 workers dispatched.',          time:'10 mins ago', date:'26 May 2025', category:'Emergency', priority:'Critical', unread:true  },
+  { id:'N-2', title:'₹14,80,000 Welfare Dividend Disbursed',        message:'UPI dividend settled to 1,240 verified worker accounts.',               time:'45 mins ago', date:'26 May 2025', category:'Payments',  priority:'Normal',   unread:true  },
+  { id:'N-3', title:'Emergency Medical Claim Disbursed',             message:'Accidental cover of ₹25,000 wired to hospital for Suresh Das.',        time:'2 hrs ago',   date:'26 May 2025', category:'Emergency', priority:'High',     unread:true  },
+  { id:'N-4', title:'New Cooperative Member Registered',             message:'Pooja Sharma (Caregiving) onboarded. Pending document verification.',  time:'3 hrs ago',   date:'26 May 2025', category:'System',    priority:'Normal',   unread:false },
+  { id:'N-5', title:'AI Model Updated — v2.4',                      message:'Demand forecast accuracy improved from 91.2% to 94.8%.',                time:'5 hrs ago',   date:'26 May 2025', category:'System',    priority:'Low',      unread:false },
+];
+
+const REVIEWS0 = [
+  { id:'RV-1', customer:'Ravi Sharma',   worker:'Mahesh Yadav',  service:'Plumbing',   rating:5, bookingId:'BK-2025-1021', date:'26 May 2025', status:'Published', comment:'Arrived within 20 mins! Fixed the burst pipe quickly without leaving any mess. Excellent professional.' },
+  { id:'RV-2', customer:'Sneha Verma',   worker:'Arun Kumar',    service:'Electrical', rating:5, bookingId:'BK-2025-1020', date:'25 May 2025', status:'Published', comment:'Diagnosed the tripping MCB in seconds. Very transparent about the cost. Highly recommended!' },
+  { id:'RV-3', customer:'Amit Singh',    worker:'Suresh Das',    service:'Carpentry',  rating:4, bookingId:'BK-2025-1019', date:'25 May 2025', status:'Published', comment:'Great woodwork repairs on our wardrobe door. Slightly delayed but quality was top-notch.' },
+  { id:'RV-4', customer:'Pooja Agarwal', worker:'Sunita Devi',   service:'Cleaning',   rating:5, bookingId:'BK-2025-1018', date:'24 May 2025', status:'Published', comment:'Spotless deep cleaning! She even cleaned the chimney filter without being asked. Five stars!' },
+  { id:'RV-5', customer:'Meena Kapoor',  worker:'Pooja Sharma',  service:'Caregiving', rating:4, bookingId:'BK-2025-1013', date:'24 May 2025', status:'Published', comment:'Very caring and patient with my mother. Arrived on time every day this week.' },
+];
+
+const CLAIMS0 = [
+  { id:'CLM-001', worker:'Suresh Das', service:'Carpentry', incident:'Nail puncture during cabinet installation on-site — required 3 stitches + bandage.', amount:'₹8,500', filedDate:'15 May 2025', status:'Approved & Disbursed', documentProof:'Govt. Hospital Discharge Certificate' },
+  { id:'CLM-002', worker:'Arun Kumar', service:'Electrical', incident:'Minor electric shock while installing industrial panel board.', amount:'₹12,000', filedDate:'10 May 2025', status:'Under Review', documentProof:'Apollo Hospital Invoice' },
+];
+
+const POLICIES0 = [
+  { id:'POL-001', workerId:'WRK-101', worker:'Mahesh Yadav',  service:'Plumbing',   insuranceProvider:'New India Assurance',    policyNumber:'NIA/2024/876543', coverage:'₹5,00,000 Accidental Death & Disability', premiumMonthly:'₹125 (Cooperative-Funded)', startDate:'01 Jan 2025', expiry:'31 Dec 2025', status:'Active' },
+  { id:'POL-002', workerId:'WRK-102', worker:'Arun Kumar',    service:'Electrical', insuranceProvider:'LIC of India',            policyNumber:'LIC/2024/234567', coverage:'₹5,00,000 Group Term + Health',          premiumMonthly:'₹140 (Cooperative-Funded)', startDate:'01 Jan 2025', expiry:'31 Dec 2025', status:'Active' },
+  { id:'POL-003', workerId:'WRK-103', worker:'Suresh Das',    service:'Carpentry',  insuranceProvider:'Star Health Insurance',   policyNumber:'SHI/2024/445566', coverage:'₹5,00,000 Accidental + Hospitalisation', premiumMonthly:'₹130 (Cooperative-Funded)', startDate:'01 Jan 2025', expiry:'31 Dec 2025', status:'Active' },
+];
+
+const WELFARE_PROGS = [
+  { title:'Annual Health Check-Up Camp',  description:'Free full-body medical screening at empanelled hospitals for all cooperative workers.', enrolledCount:11842, nextCampDate:'15 Jun 2025' },
+  { title:'Digital & Financial Literacy', description:'Bi-weekly workshops on UPI, savings, taxation & cooperative dividend rights.', enrolledCount:8940,  nextCampDate:'1 Jun 2025' },
+  { title:'Children School Fee Aid',      description:'Annual scholarship support of ₹12,000 for each school-going child of active members.', enrolledCount:3214,  nextCampDate:'Jul 2025 (Academic Year)' },
+];
+
+/* ── tiny shared components ─────────────────────────────────── */
+const Badge = ({ st }) => {
+  const m = {
+    Confirmed:    { bg:'#eaf8ef', c:'#15803d' }, Pending:  { bg:'#fef9e6', c:'#d97706' },
+    'In Progress':{ bg:'#eff6ff', c:'#2563eb' }, Completed:{ bg:'#f0fdf4', c:'#16a34a' },
+    Cancelled:    { bg:'#fef2f2', c:'#dc2626' }, Emergency:{ bg:'#fee2e2', c:'#dc2626' },
+    Assigned:     { bg:'#f0f9ff', c:'#0284c7' }, Verified: { bg:'#eaf8ef', c:'#15803d' },
+    Rejected:     { bg:'#fef2f2', c:'#dc2626' }, Suspended:{ bg:'#fff7ed', c:'#d97706' },
+    Available:    { bg:'#eaf8ef', c:'#15803d' }, 'On Duty':{ bg:'#eff6ff', c:'#2563eb' },
+    Active:       { bg:'#eaf8ef', c:'#15803d' }, VIP:      { bg:'#f5f3ff', c:'#7c3aed' },
+    Blocked:      { bg:'#fef2f2', c:'#dc2626' }, Approved: { bg:'#eaf8ef', c:'#15803d' },
+  };
+  const s = m[st] || { bg:'#f1f5f9', c:'#475569' };
+  return <span style={{ padding:'3px 9px', borderRadius:'999px', fontSize:'11.5px', fontWeight:'700', backgroundColor:s.bg, color:s.c }}>{st}</span>;
+};
+
+const Modal = ({ open, onClose, title, subtitle, children, footer, maxW='560px' }) => {
+  if (!open) return null;
+  return (
+    <div style={{ position:'fixed', inset:0, backgroundColor:'rgba(15,23,42,0.65)', backdropFilter:'blur(4px)', zIndex:9000, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }} onClick={onClose}>
+      <div style={{ backgroundColor:'var(--bg-card)', borderRadius:'20px', width:'100%', maxWidth:maxW, maxHeight:'92vh', overflowY:'auto', boxShadow:'0 25px 60px rgba(0,0,0,0.25)' }} onClick={e=>e.stopPropagation()}>
+        <div style={{ padding:'24px 26px 20px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+          <div>
+            <div style={{ fontSize:'17px', fontWeight:'800', color:'var(--text)' }}>{title}</div>
+            {subtitle && <div style={{ fontSize:'12px', color:'var(--text-sec)', marginTop:'2px' }}>{subtitle}</div>}
+          </div>
+          <button onClick={onClose} style={{ fontSize:'20px', color:'var(--text-muted)', lineHeight:1, marginLeft:'16px', flexShrink:0 }}>✕</button>
+        </div>
+        <div style={{ padding:'22px 26px' }}>{children}</div>
+        {footer && <div style={{ padding:'16px 26px', borderTop:'1px solid var(--border)', display:'flex', justifyContent:'flex-end', gap:'10px' }}>{footer}</div>}
+      </div>
+    </div>
+  );
+};
+
+const Input = (props) => (
+  <input {...props} style={{ width:'100%', padding:'9px 12px', borderRadius:'8px', border:'1px solid var(--border)', fontSize:'13px', outline:'none', backgroundColor:'var(--bg-card)', color:'var(--text)', ...props.style }} />
+);
+
+const Btn = ({ children, variant='primary', onClick, type='button', style:s={} }) => {
+  const styles = {
+    primary:   { backgroundColor:'var(--primary)', color:'#fff', border:'none', boxShadow:'0 4px 14px rgba(1,102,143,0.25)' },
+    secondary: { backgroundColor:'var(--bg-card)', color:'var(--text)', border:'1px solid var(--border)' },
+    danger:    { backgroundColor:'#fef2f2', color:'#dc2626', border:'1px solid #fecaca' },
+    ghost:     { backgroundColor:'transparent', color:'var(--text-sec)', border:'1px solid var(--border)' },
+  };
+  return <button type={type} onClick={onClick} style={{ ...styles[variant], padding:'8px 18px', borderRadius:'8px', fontSize:'13px', fontWeight:'600', cursor:'pointer', ...s }}>{children}</button>;
+};
+
+const SearchInput = ({ value, onChange, placeholder }) => (
+  <div style={{ display:'flex', alignItems:'center', gap:'8px', backgroundColor:'var(--bg-app)', border:'1px solid var(--border)', borderRadius:'8px', padding:'7px 12px', flexShrink:0 }}>
+    <span style={{ fontSize:'14px' }}>🔍</span>
+    <input value={value} onChange={onChange} placeholder={placeholder || 'Search...'} style={{ border:'none', outline:'none', backgroundColor:'transparent', fontSize:'13px', minWidth:'0', width:'180px', color:'var(--text)' }} />
+  </div>
+);
+
+/* ── App ────────────────────────────────────────────────────── */
+function App() {
+  const [route, setRoute] = useState('dashboard');
+  const [lang, setLang] = useState('en');
+  const [dateRange, setDateRange] = useState('Aug 28, 2026');
+  const [langOpen, setLangOpen] = useState(false);
+  const [dateOpen, setDateOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const navigate = (id) => { setRoute(id); setSidebarOpen(false); };
+
+  const [workers,       setWorkers]       = useLocalStorage('sih_workers', []);
+  const [bookings,      setBookings]      = useLocalStorage('sih_bookings', []);
+  const [customers,     setCustomers]     = useLocalStorage('sih_customers', []);
+  const [services,      setServices]      = useLocalStorage('sih_services', SERVICES0);
+  const [payments,      setPayments]      = useLocalStorage('sih_payments', []);
+  const [notifications, setNotifications] = useLocalStorage('sih_notifications', []);
+  const [reviews,       setReviews]       = useLocalStorage('sih_reviews', []);
+  const [claims,        setClaims]        = useLocalStorage('sih_claims', []);
+  const [policies,      setPolicies]      = useLocalStorage('sih_policies', []);
+
+  /* toast */
+  const [toast, setToast] = useState(null);
+  const showToast = (msg, type='success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  /* modals state */
+  const [bookingModal,  setBookingModal]  = useState(null);   // booking object
+  const [workerModal,   setWorkerModal]   = useState(null);   // worker object
+  const [invoiceModal,  setInvoiceModal]  = useState(null);   // payment object
+  const [addWorkerOpen, setAddWorkerOpen] = useState(false);
+  const [addSvcOpen,    setAddSvcOpen]    = useState(false);
+  const [notifOpen,     setNotifOpen]     = useState(false);
+  const [assignModal,   setAssignModal]   = useState(null);   // booking to assign
+  const [reschedModal,  setReschedModal]  = useState(null);   // booking to reschedule
+  const [cancelModal,   setCancelModal]   = useState(null);   // booking to cancel
+
+  const t = (k) => TR[lang][k] || TR.en[k] || k;
+
+  const NAV = [
+    {id:'dashboard',     label:t('dashboard'),     icon:'📊'},
+    {id:'bookings',      label:t('bookings'),       icon:'📅'},
+    {id:'workers',       label:t('workers'),        icon:'👷'},
+    {id:'customers',     label:t('customers'),      icon:'👥'},
+    {id:'services',      label:t('services'),       icon:'🛠️'},
+    {id:'payments',      label:t('payments'),       icon:'💳'},
+    {id:'insurance',     label:t('insurance'),      icon:'🛡️'},
+    {id:'reviews',       label:t('reviews'),        icon:'⭐'},
+    {id:'reports',       label:t('reports'),        icon:'📑'},
+    {id:'analytics',     label:t('analytics'),      icon:'📈'},
+    {id:'ai-insights',   label:t('aiInsights'),     icon:'🧠'},
+    {id:'notifications', label:t('notifications'),  icon:'🔔'},
+    {id:'settings',      label:t('settings'),       icon:'⚙️'},
+  ];
+
+  /* ── Dynamic Dashboard Statistics ── */
+  const calcTotalRevenue = () => {
+    const total = payments.filter(p => p.status === 'Completed').reduce((sum, p) => sum + parseFloat(String(p.amount).replace(/[^0-9.-]+/g, "") || 0), 0);
+    return '₹' + total.toLocaleString('en-IN');
+  };
+  const activeWorkersCount = workers.filter(w => w.verification === 'Verified' && w.availability !== 'Inactive').length;
+
+  /* Dashboard Chart Helper (Last 7 Days) */
+  const chartPts = useMemo(() => {
+    const last7 = Array.from({length:7}, (_,i) => {
+      const d = new Date(); d.setDate(d.getDate() - (6 - i));
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    });
+    const counts = {};
+    bookings.forEach(b => {
+      const dMatch = String(b.date).match(/(\d{1,2}\s[a-zA-Z]{3})/);
+      const dStr = dMatch ? dMatch[0] : null;
+      if (dStr) counts[dStr] = (counts[dStr] || 0) + 1;
+    });
+    let maxV = Math.max(...Object.values(counts), 5); // Ensure non-zero divisor
+    return last7.map((date, i) => {
+      const v = counts[date] || 0;
+      return { date, v, x: 45+(i/6)*545, y: 25+165-(v/maxV)*165, maxV };
+    });
+  }, [bookings]);
+
+  const { line, area, maxChartV } = useMemo(() => {
+    if(!chartPts || chartPts.length === 0) return {line:'', area:'', maxChartV:5};
+    let l = `M ${chartPts[0].x} ${chartPts[0].y}`;
+    for(let i=0;i<chartPts.length-1;i++){
+      const a=chartPts[i], b=chartPts[i+1];
+      l += ` C ${a.x+(b.x-a.x)/2} ${a.y}, ${a.x+(b.x-a.x)/2} ${b.y}, ${b.x} ${b.y}`;
+    }
+    const a = `${l} L ${chartPts[chartPts.length-1].x} 190 L ${chartPts[0].x} 190 Z`;
+    return { line: l, area: a, maxChartV: chartPts[0].maxV };
+  }, [chartPts]);
+
+  /* Dynamic Top Services */
+  const dashboardTopServices = useMemo(() => {
+    const counts = {};
+    bookings.forEach(b => { counts[b.service] = (counts[b.service]||0) + 1; });
+    const total = Math.max(bookings.length, 1);
+    return Object.entries(counts).map(([cat, c]) => ({
+      category: cat, pct: Math.round((c/total)*100),
+      icon: services.find(s=>s.name===cat || s.category===cat)?.icon || '🛠️'
+    })).sort((a,b)=>b.pct - a.pct).slice(0,6);
+  }, [bookings, services]);
+
+  /* ── render ──────────────────────────────────────────────── */
+  return (
+    <div style={{ display:'flex', minHeight:'100vh', position:'relative' }}>
+
+      {/* ── Toast ── */}
+      {toast && (
+        <div className="fade" style={{ position:'fixed', top:'20px', right:'24px', backgroundColor: toast.type==='error'?'#dc2626':'var(--primary)', color:'#fff', padding:'12px 20px', borderRadius:'10px', boxShadow:'0 10px 25px rgba(0,0,0,0.25)', zIndex:99999, fontWeight:'600', fontSize:'13px', display:'flex', alignItems:'center', gap:'8px' }}>
+          {toast.type==='error'?'✗':'✓'} {toast.msg}
+        </div>
+      )}
+
+      {/* ── Mobile Sidebar Overlay ── */}
+      <div className={`sidebar-overlay ${sidebarOpen?'open':''}`} onClick={()=>setSidebarOpen(false)} />
+
+      {/* ── Sidebar ── */}
+      <aside className={`app-sidebar ${sidebarOpen?'open':''} ${sidebarCollapsed?'collapsed':''}`} style={{ width:'var(--sidebar-w)', height:'100vh', position:'sticky', top:0, backgroundColor:'var(--bg-card)', borderRight:'1px solid var(--border)', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'20px 12px 20px 16px', flexShrink:0, overflowY:'auto', overflowX:'hidden' }}>
+        <div>
+          {/* Logo + Collapse toggle */}
+          <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'24px' }}>
+            <div style={{ width:'38px', height:'38px', borderRadius:'10px', background:'linear-gradient(135deg,#01668F,#3398C5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px', flexShrink:0, cursor:'pointer' }} onClick={()=>navigate('dashboard')}>🛠️</div>
+            <div className="sidebar-logo-text" style={{ flex:1, overflow:'hidden' }}>
+              <div style={{ fontWeight:'800', fontSize:'14px', color:'var(--text)', letterSpacing:'-0.3px', whiteSpace:'nowrap' }}>Cooperative</div>
+              <div style={{ fontSize:'11px', color:'var(--text-muted)', fontWeight:'500', whiteSpace:'nowrap' }}>Gig Services Platform</div>
+            </div>
+            <button className="sidebar-collapse-btn" title="Toggle sidebar" onClick={()=>setSidebarCollapsed(v=>!v)}>
+              {sidebarCollapsed ? '›' : '‹'}
+            </button>
+          </div>
+          <nav style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
+            {NAV.map(n => {
+              const active = route===n.id;
+              return (
+                <button key={n.id} title={n.label} onClick={()=>navigate(n.id)} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'9px 12px', borderRadius:'10px', fontSize:'13px', fontWeight:active?'700':'500', color:active?'#fff':'var(--text-sec)', backgroundColor:active?'var(--primary)':'transparent', boxShadow:active?'0 4px 14px rgba(1,102,143,0.28)':'none', textAlign:'left', width:'100%', transition:'all 0.15s', overflow:'hidden' }}>
+                  <span style={{ fontSize:'16px', flexShrink:0 }}>{n.icon}</span>
+                  <span className="sidebar-label" style={{ whiteSpace:'nowrap' }}>{n.label}</span>
+                  {n.id==='notifications' && notifications.filter(x=>x.unread).length > 0 && (
+                    <span className="sidebar-badge" style={{ marginLeft:'auto', backgroundColor:'#dc2626', color:'#fff', borderRadius:'999px', fontSize:'10px', fontWeight:'700', padding:'1px 6px', flexShrink:0 }}>{notifications.filter(x=>x.unread).length}</span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </aside>
+
+      {/* ── Main ── */}
+      <div className="app-main" style={{ flex:1, display:'flex', flexDirection:'column', minHeight:'100vh', overflowY:'auto', overflowX:'hidden' }}>
+
+        {/* Header */}
+        <header style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 24px', flexWrap:'wrap', gap:'10px', backgroundColor:'var(--bg-card)', borderBottom:'1px solid var(--border)', position:'sticky', top:0, zIndex:100 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+            {/* Hamburger (mobile only) */}
+            <button className="hamburger-btn" onClick={()=>setSidebarOpen(v=>!v)}>
+              <span/><span/><span/>
+            </button>
+            <div>
+              <h1 style={{ fontSize:'18px', fontWeight:'700', color:'var(--primary)', lineHeight:'1.2' }}>{t('welcome')}</h1>
+              <p style={{ fontSize:'12px', color:'var(--text-sec)', marginTop:'1px' }}>{t('tagline')}</p>
+            </div>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
+            {/* Language */}
+            <div style={{ position:'relative' }}>
+              <button onClick={()=>setLangOpen(v=>!v)} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 12px', backgroundColor:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:'999px', fontSize:'12px', fontWeight:'600', color:'var(--text)' }}>
+                🌐 {lang==='en'?'EN':lang==='hi'?'HI':'MR'} ▾
+              </button>
+              {langOpen && (
+                <div style={{ position:'absolute', top:'110%', right:0, backgroundColor:'var(--bg-card)', borderRadius:'10px', border:'1px solid var(--border)', boxShadow:'0 10px 25px rgba(0,0,0,0.1)', padding:'4px', zIndex:400, width:'120px' }}>
+                  {[['en','English'],['hi','हिंदी'],['mr','मराठी']].map(([code,label])=>(
+                    <button key={code} onClick={()=>{setLang(code);setLangOpen(false);showToast(`Switched to ${label}`);}} style={{ display:'block', width:'100%', padding:'7px 10px', fontSize:'12.5px', textAlign:'left', fontWeight:lang===code?'700':'500', color:lang===code?'var(--primary)':'var(--text)', borderRadius:'6px', backgroundColor:lang===code?'var(--primary-light)':'transparent' }}>{label}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Date filter */}
+            <div style={{ position:'relative' }}>
+              <button onClick={()=>setDateOpen(v=>!v)} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 12px', backgroundColor:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:'999px', fontSize:'12px', fontWeight:'600', color:'var(--text)' }}>
+                📅 {dateRange} ▾
+              </button>
+              {dateOpen && (
+                <div style={{ position:'absolute', top:'110%', right:0, backgroundColor:'var(--bg-card)', borderRadius:'10px', border:'1px solid var(--border)', boxShadow:'0 10px 25px rgba(0,0,0,0.1)', padding:'4px', zIndex:400, width:'170px' }}>
+                  {['Aug 28, 2026','Last 7 Days','This Month','This Year'].map(d=>(
+                    <button key={d} onClick={()=>{setDateRange(d);setDateOpen(false);showToast(`Filter: ${d}`);}} style={{ display:'block', width:'100%', padding:'7px 10px', fontSize:'12.5px', textAlign:'left', fontWeight:dateRange===d?'700':'500', color:dateRange===d?'var(--primary)':'var(--text)', borderRadius:'6px', backgroundColor:dateRange===d?'var(--primary-light)':'transparent' }}>{d}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Bell */}
+            <button onClick={()=>navigate('notifications')} style={{ width:'36px', height:'36px', borderRadius:'50%', backgroundColor:'var(--bg-card)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
+              🔔
+              {notifications.filter(x=>x.unread).length>0 && <span style={{ position:'absolute', top:'2px', right:'2px', width:'9px', height:'9px', backgroundColor:'#dc2626', borderRadius:'50%', border:'1.5px solid #fff' }}/>}
+            </button>
+            {/* Profile */}
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'4px 12px 4px 4px', backgroundColor:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:'999px' }}>
+              <div style={{ width:'28px', height:'28px', borderRadius:'50%', background:'linear-gradient(135deg,#01668F,#3398C5)', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'700', fontSize:'13px', flexShrink:0 }}>A</div>
+              <span style={{ fontSize:'13px', fontWeight:'600' }}>Admin</span>
+            </div>
+          </div>
+        </header>
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: DASHBOARD */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='dashboard' && (
+          <div className="fade" style={{ display:'flex', flexDirection:'column', gap:'22px', padding:'20px 20px 40px' }}>
+            {/* 4 KPI Cards */}
+            <div className="sg" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'16px' }}>
+              {[
+                {title:'Total Bookings', value:bookings.length.toLocaleString('en-IN'),  trend:'Live Data', icon:'📅', clr:'var(--primary)'},
+                {title:'Total Revenue',  value:calcTotalRevenue(),                       trend:'Live Data', icon:'💰', clr:'var(--primary)'},
+                {title:'Active Workers', value:activeWorkersCount.toLocaleString('en-IN'),trend:'Verified',  icon:'👷', clr:'var(--primary)'},
+                {title:'Total Customers',value:customers.length.toLocaleString('en-IN'), trend:'Live Data', icon:'👥', clr:'var(--primary)'},
+              ].map((s,i)=>(
+                <div key={i} style={{ backgroundColor:'var(--bg-card)', borderRadius:'16px', border:'1px solid var(--border)', padding:'20px 22px', boxShadow:'var(--shadow)', display:'flex', flexDirection:'column', gap:'12px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
+                    <div style={{ width:'44px', height:'44px', borderRadius:'12px', backgroundColor:'var(--primary-light)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px' }}>{s.icon}</div>
+                    <div>
+                      <div style={{ fontSize:'22px', fontWeight:'800', color:'var(--text)', letterSpacing:'-0.5px' }}>{s.value}</div>
+                      <div style={{ fontSize:'12px', color:'var(--text-sec)', marginTop:'1px' }}>{s.title}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize:'12px', fontWeight:'700', color:s.clr, paddingLeft:'58px' }}>{s.trend} this month</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Chart + Top Services */}
+            <div className="mg" style={{ display:'grid', gridTemplateColumns:'1.65fr 1fr', gap:'18px' }}>
+              <div style={{ backgroundColor:'#fff', borderRadius:'16px', border:'1px solid var(--border)', padding:'22px 24px', boxShadow:'var(--shadow)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px' }}>
+                  <h2 style={{ fontSize:'15.5px', fontWeight:'700', color:'var(--text)' }}>Bookings Overview — This Week</h2>
+                </div>
+                <svg viewBox="0 0 620 220" style={{ width:'100%', height:'auto' }}>
+                  <defs>
+                  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#01668F" stopOpacity=".20"/>
+                      <stop offset="100%" stopColor="#01668F" stopOpacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  {[{v:maxChartV,l:maxChartV},{v:maxChartV*0.75,l:(maxChartV*0.75).toFixed(1)},{v:maxChartV*0.5,l:(maxChartV*0.5).toFixed(1)},{v:maxChartV*0.25,l:(maxChartV*0.25).toFixed(1)},{v:0,l:'0'}].map(({v,l})=>{
+                    const yy = 25+165-(v/maxChartV)*165;
+                    return (
+                      <g key={v}>
+                        <line x1="45" y1={yy} x2="590" y2={yy} stroke="#f1f5f3" strokeWidth="1.2" strokeDasharray={v===0?'none':'3 3'}/>
+                        <text x="38" y={yy+4} textAnchor="end" fontSize="11" fill="#8c9e94">{l}</text>
+                      </g>
+                    );
+                  })}
+                  <path d={area} fill="url(#g1)"/>
+                  <path d={line} fill="none" stroke="#22864c" strokeWidth="3" strokeLinecap="round"/>
+                  {chartPts.map((pt,i)=>(
+                    <g key={i}>
+                      <text x={pt.x} y="212" textAnchor="middle" fontSize="11" fill="#8c9e94">{pt.date}</text>
+                      <circle cx={pt.x} cy={pt.y} r="4.5" fill="#22864c" stroke="#fff" strokeWidth="2.5"/>
+                    </g>
+                  ))}
+                </svg>
+              </div>
+              <div style={{ backgroundColor:'var(--bg-card)', borderRadius:'16px', border:'1px solid var(--border)', padding:'22px 24px', boxShadow:'var(--shadow)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px' }}>
+                  <h2 style={{ fontSize:'15.5px', fontWeight:'700', color:'var(--text)' }}>Top Services</h2>
+                  <button onClick={()=>navigate('services')} style={{ fontSize:'12px', color:'var(--primary)', fontWeight:'600' }}>View All →</button>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+                  {dashboardTopServices.length > 0 ? dashboardTopServices.map((s,i)=>(
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                      <span style={{ width:'24px', textAlign:'center', fontSize:'16px' }}>{s.icon}</span>
+                      <span style={{ fontSize:'12.5px', fontWeight:'600', color:'var(--text)', width:'80px', flexShrink:0 }}>{s.category}</span>
+                      <div style={{ flex:1, height:'6px', backgroundColor:'var(--primary-light)', borderRadius:'999px', overflow:'hidden' }}>
+                        <div style={{ width:`${Math.min(s.pct,100)}%`, height:'100%', background:'linear-gradient(90deg,#01668F,#3398C5)', borderRadius:'999px' }}/>
+                      </div>
+                      <span style={{ fontSize:'12px', fontWeight:'600', color:'var(--text-sec)', width:'30px', textAlign:'right' }}>{s.pct}%</span>
+                    </div>
+                  )) : <div style={{fontSize:'13px', color:'var(--text-muted)'}}>No bookings yet.</div>}
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Bookings + Workers banner */}
+            <div className="bg" style={{ display:'grid', gridTemplateColumns:'1.65fr 1fr', gap:'18px' }}>
+              <div style={{ backgroundColor:'var(--bg-card)', borderRadius:'16px', border:'1px solid var(--border)', padding:'22px 24px', boxShadow:'var(--shadow)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px' }}>
+                  <h2 style={{ fontSize:'15.5px', fontWeight:'700' }}>Recent Bookings</h2>
+                  <button onClick={()=>navigate('bookings')} style={{ fontSize:'12px', color:'var(--primary)', fontWeight:'600' }}>View All →</button>
+                </div>
+                <table style={{ width:'100%', borderCollapse:'collapse', textAlign:'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom:'1px solid var(--border)', color:'var(--text-sec)', fontSize:'11.5px', fontWeight:'600' }}>
+                      <th style={{ padding:'6px 10px 8px 0' }}>ID</th>
+                      <th style={{ padding:'6px 10px 8px' }}>Customer</th>
+                      <th style={{ padding:'6px 10px 8px' }}>Service</th>
+                      <th style={{ padding:'6px 10px 8px' }}>Worker</th>
+                      <th style={{ padding:'6px 0 8px 10px', textAlign:'right' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookings.length > 0 ? bookings.slice(0,4).map(b=>(
+                      <tr key={b.id} onClick={()=>setBookingModal(b)} style={{ borderBottom:'1px solid var(--border)', fontSize:'12.5px', cursor:'pointer' }}
+                          onMouseEnter={e=>e.currentTarget.style.backgroundColor='var(--bg-app)'}
+                          onMouseLeave={e=>e.currentTarget.style.backgroundColor='transparent'}>
+                        <td style={{ padding:'10px 10px 10px 0', color:'var(--text-link)', fontWeight:'700' }}>{b.id.slice(-4)}</td>
+                        <td style={{ padding:'10px' }}>{b.customer}</td>
+                        <td style={{ padding:'10px', color:'var(--text-sec)' }}>{b.service}</td>
+                        <td style={{ padding:'10px' }}>{b.worker}</td>
+                        <td style={{ padding:'10px 0 10px 10px', textAlign:'right' }}><Badge st={b.status}/></td>
+                      </tr>
+                    )) : <tr><td colSpan="5" style={{padding:'20px', textAlign:'center', color:'var(--text-muted)', fontSize:'13px'}}>No bookings available.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ background:'linear-gradient(135deg,#01668F,#01455F)', borderRadius:'16px', padding:'24px', boxShadow:'var(--shadow)', display:'flex', flexDirection:'column', justifyContent:'space-between', color:'#fff', minHeight:'220px' }}>
+                <div>
+                  <div style={{ fontSize:'16px', fontWeight:'700', lineHeight:'1.35' }}>Workers on Duty<br/>Live on Map</div>
+                  <div style={{ marginTop:'8px', fontSize:'11px', fontWeight:'600', backgroundColor:'rgba(255,255,255,0.2)', padding:'3px 10px', borderRadius:'999px', display:'inline-block' }}>🟢 {workers.filter(w=>w.availability==='On Duty' || w.availability==='Available').length.toLocaleString('en-IN')} Online Now</div>
+                </div>
+                <div>
+                  <div style={{ fontSize:'13px', opacity:.85, marginBottom:'14px' }}>AI pre-positioned across 6 city clusters</div>
+                  <button onClick={()=>navigate('workers')} style={{ backgroundColor:'rgba(255,255,255,0.15)', border:'1.5px solid rgba(255,255,255,0.5)', color:'#fff', padding:'9px 20px', borderRadius:'999px', fontSize:'13px', fontWeight:'600' }}>
+                    View Workers ↗
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions + AI Ticker */}
+            <div className="bg" style={{ display:'grid', gridTemplateColumns:'1.65fr 1fr', gap:'18px' }}>
+              <div style={{ backgroundColor:'var(--bg-card)', borderRadius:'16px', border:'1px solid var(--border)', padding:'20px 24px', boxShadow:'var(--shadow)' }}>
+                <h3 style={{ fontSize:'14.5px', fontWeight:'700', marginBottom:'14px', color:'var(--text)' }}>⚡ Fast Platform Operations</h3>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'10px' }}>
+                  {[
+                    {icon:'👷', label:'Add New Worker',  fn:()=>setAddWorkerOpen(true)},
+                    {icon:'🛠️', label:'Add Service',      fn:()=>setAddSvcOpen(true)},
+                    {icon:'📢', label:'Broadcast Alert',  fn:()=>setNotifOpen(true)},
+                    {icon:'📅', label:'View Bookings',   fn:()=>setRoute('bookings')},
+                    {icon:'💳', label:'View Payments',   fn:()=>setRoute('payments')},
+                    {icon:'📑', label:'Download Report', fn:()=>showToast('Booking report exported!')},
+                  ].map((q,i)=>(
+                    <button key={i} onClick={q.fn} style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 12px', borderRadius:'10px', backgroundColor:'#f8fafc', border:'1px solid #e2e8f0', fontSize:'12.5px', fontWeight:'600', color:'#334155', textAlign:'left' }}>
+                      <span>{q.icon}</span><span>{q.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ backgroundColor:'var(--bg-card)', borderRadius:'16px', border:'1.5px solid var(--primary-100)', padding:'20px 24px', boxShadow:'var(--shadow)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div style={{ fontSize:'13px', fontWeight:'700', color:'var(--primary)' }}>🧠 AI Workforce Forecast</div>
+                  <button onClick={()=>navigate('ai-insights')} style={{ fontSize:'11.5px', color:'var(--text-link)', fontWeight:'600' }}>Full Intel →</button>
+                </div>
+                <p style={{ fontSize:'12.5px', color:'var(--text-sec)', marginTop:'10px', lineHeight:'1.5' }}>
+                  "High probability of +28% AC repair surge this afternoon. Pre-route technicians to Sector 18."
+                </p>
+                <div style={{ display:'flex', gap:'6px', marginTop:'12px' }}>
+                  <span style={{ fontSize:'11px', backgroundColor:'var(--primary-light)', color:'var(--primary)', padding:'2px 8px', borderRadius:'4px', fontWeight:'700' }}>94.8% Confidence</span>
+                  <span style={{ fontSize:'11px', backgroundColor:'#eff6ff', color:'#2563eb', padding:'2px 8px', borderRadius:'4px', fontWeight:'700' }}>Fair Queue Active</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: BOOKINGS */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='bookings' && <BookingsRoute bookings={bookings} setBookings={setBookings} setBookingModal={setBookingModal} setAssignModal={setAssignModal} setReschedModal={setReschedModal} setCancelModal={setCancelModal} showToast={showToast}/>}
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: WORKERS */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='workers' && <WorkersRoute workers={workers} setWorkers={setWorkers} setWorkerModal={setWorkerModal} setAddWorkerOpen={setAddWorkerOpen} showToast={showToast}/>}
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: CUSTOMERS */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='customers' && <CustomersRoute customers={customers} setCustomers={setCustomers} bookings={bookings} showToast={showToast}/>}
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: SERVICES */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='services' && <ServicesRoute services={services} setServices={setServices} setAddSvcOpen={setAddSvcOpen} showToast={showToast}/>}
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: PAYMENTS */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='payments' && <PaymentsRoute payments={payments} setInvoiceModal={setInvoiceModal}/>}
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: INSURANCE */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='insurance' && <InsuranceRoute policies={policies} claims={claims} welfareProgs={WELFARE_PROGS}/>}
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: REVIEWS */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='reviews' && <ReviewsRoute reviews={reviews} setReviews={setReviews} showToast={showToast}/>}
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: REPORTS */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='reports' && <ReportsRoute bookings={bookings} workers={workers} customers={customers} payments={payments} showToast={showToast}/>}
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: ANALYTICS */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='analytics' && <AnalyticsRoute chartPts={chartPts} line={line} area={area} maxChartV={maxChartV} workers={workers} bookings={bookings} payments={payments} customers={customers}/>}
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: AI INSIGHTS */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='ai-insights' && <AIRoute showToast={showToast}/>}
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: NOTIFICATIONS */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='notifications' && <NotifsRoute notifications={notifications} setNotifications={setNotifications} setNotifOpen={setNotifOpen} showToast={showToast}/>}
+
+        {/* ══════════════════════════════════════════════════════ */}
+        {/* ROUTE: SETTINGS */}
+        {/* ══════════════════════════════════════════════════════ */}
+        {route==='settings' && <SettingsRoute showToast={showToast}/>}
+      </div>
+
+      {/* ════════════════════════════════════════ */}
+      {/* MODALS                                   */}
+      {/* ════════════════════════════════════════ */}
+
+      {/* Booking Detail Modal */}
+      <Modal open={!!bookingModal} onClose={()=>setBookingModal(null)} title={`Booking Details — ${bookingModal?.id}`} subtitle={`Status: ${bookingModal?.status}`} maxW="580px"
+        footer={<Btn onClick={()=>setBookingModal(null)}>Close</Btn>}>
+        {bookingModal && (
+          <div style={{ display:'flex', flexDirection:'column', gap:'12px', fontSize:'13px' }}>
+            <div style={{ backgroundColor:'#f0fdf4', padding:'12px', borderRadius:'10px', border:'1px solid #bbf7d0' }}>
+              <div style={{ fontWeight:'700', color:'var(--primary)', fontSize:'14px' }}>{bookingModal.service} — {bookingModal.serviceType}</div>
+              <div style={{ color:'#166534', marginTop:'2px' }}>Amount: <strong>{bookingModal.amount}</strong> · {bookingModal.paymentMethod} · {bookingModal.paymentStatus}</div>
+            </div>
+            <div><strong>Customer:</strong> {bookingModal.customer} · {bookingModal.customerPhone}</div>
+            <div><strong>Address:</strong> {bookingModal.customerAddress}</div>
+            <div><strong>Worker:</strong> {bookingModal.worker} (⭐ {bookingModal.workerRating})</div>
+            <div><strong>Date & Time:</strong> {bookingModal.date} at {bookingModal.time}</div>
+            {bookingModal.notes && <div style={{ backgroundColor:'#fefce8', padding:'10px', borderRadius:'8px', border:'1px solid #fde68a' }}><strong>Notes:</strong> {bookingModal.notes}</div>}
+          </div>
+        )}
+      </Modal>
+
+      {/* Worker Profile Modal */}
+      <Modal open={!!workerModal} onClose={()=>setWorkerModal(null)} title={workerModal?.name} subtitle={`${workerModal?.service} Professional · ${workerModal?.id}`} maxW="600px"
+        footer={<Btn onClick={()=>setWorkerModal(null)}>Close</Btn>}>
+        {workerModal && (
+          <div style={{ display:'flex', flexDirection:'column', gap:'14px', fontSize:'13px' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
+              {[['Rating',`★ ${workerModal.rating}/5 (from reviews)`],['Completed Jobs',workerModal.completedJobs+' tasks'],['Availability',workerModal.availability],['Verification',workerModal.verification],['Phone',workerModal.phone],['City',workerModal.city],['Hourly Rate',workerModal.hourlyRate],['Battery',workerModal.battery]].map(([k,v])=>(
+                <div key={k} style={{ backgroundColor:'#f8faf9', padding:'10px', borderRadius:'8px' }}>
+                  <div style={{ fontSize:'11px', color:'#64748b', marginBottom:'2px' }}>{k}</div>
+                  <div style={{ fontWeight:'700', color:'#111827' }}>{v}</div>
+                </div>
+              ))}
+            </div>
+            <div>
+              <div style={{ fontSize:'12px', fontWeight:'700', color:'#475569', marginBottom:'6px' }}>Skills</div>
+              <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
+                {workerModal.skills.map(s=><span key={s} style={{ padding:'4px 10px', backgroundColor:'#eaf7ee', color:'var(--primary)', borderRadius:'6px', fontSize:'12px', fontWeight:'600' }}>✓ {s}</span>)}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize:'12px', fontWeight:'700', color:'#475569', marginBottom:'6px' }}>Certifications</div>
+              {workerModal.certifications.map(c=><div key={c} style={{ padding:'8px 12px', backgroundColor:'#f8fafc', borderRadius:'8px', marginBottom:'4px', fontSize:'12.5px' }}>🏅 {c}</div>)}
+            </div>
+            <div style={{ backgroundColor:'#f0fdf4', padding:'12px', borderRadius:'10px', border:'1px solid #bbf7d0', fontSize:'12.5px' }}>
+              🛡️ <strong>Group Insurance Active</strong> — ₹5,00,000 Accidental & Health Cover · ID: {workerModal.idProof}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Invoice Modal */}
+      <Modal open={!!invoiceModal} onClose={()=>setInvoiceModal(null)} title="GST Tax Invoice & Escrow Receipt" subtitle={`Invoice #${invoiceModal?.invoiceNumber} · Ref: ${invoiceModal?.gatewayRef}`} maxW="580px"
+        footer={<><Btn variant="secondary" onClick={()=>window.print()}>🖨️ Print</Btn><Btn onClick={()=>{showToast('PDF downloaded!');setInvoiceModal(null);}}>⬇️ Download PDF</Btn></>}>
+        {invoiceModal && (
+          <div style={{ display:'flex', flexDirection:'column', gap:'16px', fontSize:'13px' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+              <div style={{ backgroundColor:'#f8fafc', padding:'12px', borderRadius:'10px' }}>
+                <div style={{ fontWeight:'700', color:'#64748b', fontSize:'11px', marginBottom:'4px', textTransform:'uppercase' }}>Billed To</div>
+                <div style={{ fontWeight:'700', color:'#1e293b' }}>{invoiceModal.customer}</div>
+                <div style={{ color:'#64748b', marginTop:'2px' }}>Booking: {invoiceModal.bookingId}</div>
+              </div>
+              <div style={{ backgroundColor:'#f0fdf4', padding:'12px', borderRadius:'10px', border:'1px solid #bbf7d0' }}>
+                <div style={{ fontWeight:'700', color:'var(--primary)', fontSize:'11px', marginBottom:'4px', textTransform:'uppercase' }}>Service Provider</div>
+                <div style={{ fontWeight:'700', color:'#14532d' }}>{invoiceModal.worker}</div>
+                <div style={{ color:'#55695e', marginTop:'2px' }}>{invoiceModal.service}</div>
+              </div>
+            </div>
+            <table style={{ width:'100%', borderCollapse:'collapse' }}>
+              <thead><tr style={{ backgroundColor:'#f1f5f3', fontSize:'12px', fontWeight:'700', color:'#334155' }}>
+                <th style={{ padding:'8px 12px', textAlign:'left' }}>Description</th>
+                <th style={{ padding:'8px 12px', textAlign:'right' }}>Amount</th>
+              </tr></thead>
+              <tbody>
+                <tr style={{ borderBottom:'1px solid #f1f5f3' }}>
+                  <td style={{ padding:'10px 12px' }}>On-Demand {invoiceModal.service} Service</td>
+                  <td style={{ padding:'10px 12px', textAlign:'right', fontWeight:'700' }}>{invoiceModal.amount}</td>
+                </tr>
+                <tr style={{ borderBottom:'1px solid #f1f5f3', color:'#64748b', fontSize:'12px' }}>
+                  <td style={{ padding:'6px 12px' }}>Cooperative Welfare Reserve (5%)</td>
+                  <td style={{ padding:'6px 12px', textAlign:'right' }}>{invoiceModal.welfareCut}</td>
+                </tr>
+                <tr style={{ borderBottom:'1px solid #f1f5f3', color:'var(--primary)', fontSize:'12px' }}>
+                  <td style={{ padding:'6px 12px' }}>Net Disbursed to Worker via UPI (95%)</td>
+                  <td style={{ padding:'6px 12px', textAlign:'right', fontWeight:'700' }}>{invoiceModal.workerPayout}</td>
+                </tr>
+                <tr style={{ fontWeight:'800', fontSize:'14px', backgroundColor:'#f8faf9' }}>
+                  <td style={{ padding:'10px 12px' }}>Total Paid via {invoiceModal.paymentMethod}</td>
+                  <td style={{ padding:'10px 12px', textAlign:'right' }}>{invoiceModal.amount}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div style={{ backgroundColor:'#eaf8ef', padding:'10px 14px', borderRadius:'8px', fontSize:'12px', color:'var(--primary)', fontWeight:'600' }}>
+              🛡️ Protected under Cooperative Fair Payout Guarantee & Social Security Pool
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Add Worker Modal */}
+      <Modal open={addWorkerOpen} onClose={()=>setAddWorkerOpen(false)} title="Onboard New Cooperative Worker" subtitle="Fill details to register a new verified field professional" maxW="480px"
+        footer={<><Btn variant="secondary" onClick={()=>setAddWorkerOpen(false)}>Cancel</Btn><Btn type="submit" onClick={()=>document.getElementById('addWorkerForm').requestSubmit()}>Register Member</Btn></>}>
+        <form id="addWorkerForm" onSubmit={e=>{
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const name = fd.get('name'), service = fd.get('service'), phone = fd.get('phone');
+          if(!name||!service||!phone){showToast('Please fill all required fields.','error');return;}
+          const newW = { id:`WRK-${200+workers.length}`, name, service, phone, skills:[service+' Specialist'], location:'Sector 62, Noida', city:'Noida', rating:5.0, completedJobs:0, availability:'Available', verification:'Pending', hourlyRate:'₹350/hr', battery:'100%', avatar:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop', todayEarnings:'₹0', lifetimeEarnings:'₹0', joinedDate:'May 2025', certifications:['Cooperative Member'], idProof:'Aadhaar Pending' };
+          setWorkers(w=>[newW,...w]);
+          setAddWorkerOpen(false);
+          showToast(`${name} onboarded successfully!`);
+          e.target.reset();
+        }} style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
+            <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Full Name *</label><Input name="name" required placeholder="e.g. Ramesh Verma"/></div>
+            <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Phone *</label><Input name="phone" required placeholder="+91 98765 43210"/></div>
+          </div>
+          <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Service Category *</label>
+            <select name="service" required style={{ width:'100%', padding:'9px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'13px' }}>
+              <option value="">Select trade...</option>
+              {['Plumbing','Electrical','Carpentry','Cleaning','AC Repair','Painting','Caregiving','Gardening','Driving'].map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>City</label><Input name="city" placeholder="e.g. Noida"/></div>
+          <div style={{ backgroundColor:'#f0fdf4', padding:'10px', borderRadius:'8px', fontSize:'12px', color:'var(--primary)', fontWeight:'600' }}>
+            ✓ 100% cooperative insurance will be automatically activated upon verification.
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add Service Modal */}
+      <Modal open={addSvcOpen} onClose={()=>setAddSvcOpen(false)} title="Add New Service to Catalog" subtitle="Define rate card and requirements for the new gig service" maxW="480px"
+        footer={<><Btn variant="secondary" onClick={()=>setAddSvcOpen(false)}>Cancel</Btn><Btn onClick={()=>document.getElementById('addSvcForm').requestSubmit()}>Add Service</Btn></>}>
+        <form id="addSvcForm" onSubmit={e=>{
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const name = fd.get('name'), basePrice = fd.get('basePrice'), desc = fd.get('desc');
+          const newS = { id:`SRV-${10+services.length}`, name, category:name, description:desc||'New gig service on the platform.', basePrice:basePrice||'₹350/hr', pct:2, icon:'🛠️', emergencyAvailable:false, status:'Active', workers:0 };
+          setServices(s=>[...s, newS]);
+          setAddSvcOpen(false);
+          showToast(`"${name}" added to catalog!`);
+          e.target.reset();
+        }} style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+          <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Service Name *</label><Input name="name" required placeholder="e.g. Pest Control"/></div>
+          <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Base Rate *</label><Input name="basePrice" required placeholder="e.g. ₹499/job"/></div>
+          <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Description</label><textarea name="desc" rows={3} placeholder="Brief service description..." style={{ width:'100%', padding:'9px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'13px', resize:'vertical' }}/></div>
+        </form>
+      </Modal>
+
+      {/* Send Notification Modal */}
+      <Modal open={notifOpen} onClose={()=>setNotifOpen(false)} title="Broadcast Platform Notification" subtitle="Send targeted push alerts to workers, customers, or all users" maxW="480px"
+        footer={<><Btn variant="secondary" onClick={()=>setNotifOpen(false)}>Cancel</Btn><Btn onClick={()=>document.getElementById('notifForm').requestSubmit()}>📢 Send Now</Btn></>}>
+        <form id="notifForm" onSubmit={e=>{
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const title = fd.get('title'), msg = fd.get('msg'), cat = fd.get('category');
+          if(!title||!msg){showToast('Title and message are required.','error');return;}
+          const newN = { id:`N-${Date.now()}`, title, message:msg, time:'Just now', date:'26 May 2025', category:cat||'System', priority:'Normal', unread:true };
+          setNotifications(n=>[newN,...n]);
+          setNotifOpen(false);
+          showToast('Notification broadcast sent!');
+          e.target.reset();
+        }} style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+          <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Title *</label><Input name="title" required placeholder="e.g. Surge Alert in Sector 15"/></div>
+          <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Message *</label><textarea name="msg" rows={3} required placeholder="Notification body..." style={{ width:'100%', padding:'9px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'13px', resize:'vertical' }}/></div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
+            <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Category</label>
+              <select name="category" style={{ width:'100%', padding:'9px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'13px' }}>
+                {['System','Emergency','Payments','Bookings'].map(c=><option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Target Audience</label>
+              <select name="audience" style={{ width:'100%', padding:'9px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'13px' }}>
+                {['All Users','Workers Only','Customers Only','Admins Only'].map(a=><option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Assign Worker Modal */}
+      <Modal open={!!assignModal} onClose={()=>setAssignModal(null)} title="Assign Worker to Booking" subtitle={assignModal?.id} maxW="460px"
+        footer={<><Btn variant="secondary" onClick={()=>setAssignModal(null)}>Cancel</Btn><Btn onClick={()=>{showToast(`Worker assigned to ${assignModal?.id}`);setAssignModal(null);}}>Confirm Assignment</Btn></>}>
+        {assignModal && (
+          <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+            <div style={{ fontSize:'13px', color:'#475569' }}>Select an available worker for <strong>{assignModal.service}</strong></div>
+            {workers.filter(w=>w.availability==='Available').slice(0,4).map(w=>(
+              <div key={w.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', backgroundColor:'#f8faf9', borderRadius:'10px', border:'1px solid #e2e8f0', fontSize:'13px' }}>
+                <div>
+                  <div style={{ fontWeight:'700' }}>{w.name}</div>
+                  <div style={{ fontSize:'11.5px', color:'#64748b' }}>{w.service} · ⭐ {w.rating} · 📍 {w.location}</div>
+                </div>
+                <button onClick={()=>{
+                  setBookings(bs=>bs.map(b=>b.id===assignModal.id?{...b,worker:w.name,workerId:w.id,status:'Assigned'}:b));
+                  showToast(`${w.name} assigned to ${assignModal.id}`);
+                  setAssignModal(null);
+                }} style={{ padding:'6px 12px', backgroundColor:'var(--primary)', color:'#fff', borderRadius:'6px', fontSize:'12px', fontWeight:'600', cursor:'pointer' }}>
+                  Assign
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
+
+      {/* Reschedule Modal */}
+      <Modal open={!!reschedModal} onClose={()=>setReschedModal(null)} title="Reschedule Booking" subtitle={reschedModal?.id} maxW="420px"
+        footer={<><Btn variant="secondary" onClick={()=>setReschedModal(null)}>Cancel</Btn><Btn onClick={()=>document.getElementById('reschedForm').requestSubmit()}>Confirm Reschedule</Btn></>}>
+        {reschedModal && (
+          <form id="reschedForm" onSubmit={e=>{
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            showToast(`Booking ${reschedModal.id} rescheduled to ${fd.get('date')} at ${fd.get('slot')}`);
+            setReschedModal(null);
+          }} style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+            <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>New Date *</label><Input type="date" name="date" required min={new Date().toISOString().split('T')[0]}/></div>
+            <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Time Slot *</label>
+              <select name="slot" style={{ width:'100%', padding:'9px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'13px' }}>
+                {['08:00 AM','09:00 AM','10:00 AM','11:00 AM','12:00 PM','02:00 PM','03:00 PM','04:00 PM','05:00 PM'].map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Cancel Confirm Modal */}
+      <Modal open={!!cancelModal} onClose={()=>setCancelModal(null)} title="Cancel this Booking?" subtitle="This action will issue a full escrow refund." maxW="400px"
+        footer={<><Btn variant="secondary" onClick={()=>setCancelModal(null)}>Keep Booking</Btn><Btn variant="danger" onClick={()=>{
+          setBookings(bs=>bs.map(b=>b.id===cancelModal.id?{...b,status:'Cancelled'}:b));
+          showToast(`Booking ${cancelModal.id} cancelled. Refund initiated.`,'success');
+          setCancelModal(null);
+        }}>Confirm Cancellation</Btn></>}>
+        {cancelModal && (
+          <div style={{ fontSize:'13px', color:'#475569' }}>
+            <p>You are about to cancel booking <strong>{cancelModal.id}</strong> for <strong>{cancelModal.customer}</strong>.</p>
+            <div style={{ backgroundColor:'#fef2f2', padding:'12px', borderRadius:'8px', border:'1px solid #fecaca', marginTop:'12px', color:'#dc2626', fontWeight:'600', fontSize:'12.5px' }}>
+              ⚠️ A full refund of {cancelModal.amount} will be issued and the assigned worker will be released.
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+/* ── Sub-route Components ─────────────────────────────────── */
+
+function PageHeader({title, desc, children}) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px', flexWrap:'wrap', gap:'12px' }}>
+      <div>
+        <h2 style={{ fontSize:'20px', fontWeight:'700', color:'#111827' }}>{title}</h2>
+        {desc && <p style={{ fontSize:'13px', color:'#64748b', marginTop:'2px' }}>{desc}</p>}
+      </div>
+      <div style={{ display:'flex', gap:'10px' }}>{children}</div>
+    </div>
+  );
+}
+
+function Page({children, style:s={}}) {
+  return <div className="fade" style={{ padding:'28px 32px 40px', ...s }}>{children}</div>;
+}
+
+function FilterBar({children}) {
+  return <div style={{ backgroundColor:'#fff', padding:'12px 16px', borderRadius:'12px', border:'1px solid var(--border)', display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px', flexWrap:'wrap' }}>{children}</div>;
+}
+
+function Pill({label, active, onClick}) {
+  return <button onClick={onClick} style={{ padding:'5px 12px', borderRadius:'8px', fontSize:'12.5px', fontWeight:'600', backgroundColor:active?'#eaf7ee':'transparent', color:active?'var(--primary)':'#64748b', border:`1px solid ${active?'#86efac':'transparent'}`, cursor:'pointer' }}>{label}</button>;
+}
+
+function Table({heads, children}) {
+  return (
+    <div style={{ backgroundColor:'#fff', borderRadius:'14px', border:'1px solid var(--border)', overflow:'hidden', boxShadow:'var(--shadow)' }}>
+      <table style={{ width:'100%', borderCollapse:'collapse', textAlign:'left' }}>
+        <thead>
+          <tr style={{ backgroundColor:'#f8faf9', borderBottom:'1px solid #e6ede8', color:'#55695e', fontSize:'12px', fontWeight:'700' }}>
+            {heads.map((h,i)=><th key={i} style={{ padding:'14px 18px', textAlign:h.right?'right':'left' }}>{h.label}</th>)}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function TR2({onClick, children}) {
+  return <tr onClick={onClick} style={{ borderBottom:'1px solid #f1f5f3', fontSize:'13px', cursor:onClick?'pointer':'default' }}
+             onMouseEnter={onClick?e=>e.currentTarget.style.backgroundColor='#f9fbf9':undefined}
+             onMouseLeave={onClick?e=>e.currentTarget.style.backgroundColor='transparent':undefined}>{children}</tr>;
+}
+
+function TD({right, children, style:s={}}) {
+  return <td style={{ padding:'13px 18px', textAlign:right?'right':'left', ...s }}>{children}</td>;
+}
+
+function ActionBtn({icon, bg, color, onClick, title}) {
+  return <button title={title} onClick={onClick} style={{ padding:'6px 8px', backgroundColor:bg||'#f1f5f9', color:color||'#475569', borderRadius:'6px', fontSize:'14px', cursor:'pointer' }}>{icon}</button>;
+}
+
+/* Bookings Route */
+function BookingsRoute({bookings,setBookings,setBookingModal,setAssignModal,setReschedModal,setCancelModal,showToast}) {
+  const [search, setSearch] = useState('');
+  const [statusF, setStatusF] = useState('All');
+  const [serviceF, setServiceF] = useState('All');
+
+  const filtered = useMemo(()=>bookings.filter(b=>{
+    const s = (statusF==='All'||b.status===statusF);
+    const sv = (serviceF==='All'||b.service===serviceF);
+    const q = !search || [b.id,b.customer,b.worker,b.service].join(' ').toLowerCase().includes(search.toLowerCase());
+    return s&&sv&&q;
+  }),[bookings,search,statusF,serviceF]);
+
+  const exportCSV = () => {
+    const rows = ['ID,Customer,Service,Worker,Amount,Status,Date'].concat(bookings.map(b=>`${b.id},"${b.customer}",${b.service},"${b.worker}",${b.amount},${b.status},${b.date}`));
+    const a = document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.join('\n')); a.download='bookings.csv'; a.click();
+    showToast('Bookings CSV exported!');
+  };
+
+  return (
+    <Page>
+      <PageHeader title={`Bookings & Dispatch (${bookings.length})`} desc="Manage bookings, assign workers, reschedule and cancel">
+        <Btn variant="secondary" onClick={exportCSV}>⬇️ Export CSV</Btn>
+      </PageHeader>
+      <FilterBar>
+        <SearchInput value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search ID, customer, worker..."/>
+        <select value={serviceF} onChange={e=>setServiceF(e.target.value)} style={{ padding:'7px 10px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'12.5px', backgroundColor:'#fff' }}>
+          <option value="All">All Services</option>
+          {['Plumbing','Electrical','Carpentry','Cleaning','AC Repair','Caregiving'].map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+        <div style={{ display:'flex', gap:'4px', flexWrap:'wrap' }}>
+          {['All','Confirmed','Pending','In Progress','Completed','Cancelled','Emergency','Assigned'].map(st=>(
+            <Pill key={st} label={st} active={statusF===st} onClick={()=>setStatusF(st)}/>
+          ))}
+        </div>
+      </FilterBar>
+      <Table heads={[{label:'Booking ID'},{label:'Customer & Address'},{label:'Service'},{label:'Worker'},{label:'Amount'},{label:'Status'},{label:'Actions',right:true}]}>
+        {filtered.map(b=>(
+          <TR2 key={b.id}>
+            <TD><span onClick={()=>setBookingModal(b)} style={{ color:'var(--text-link)', fontWeight:'700', cursor:'pointer' }}>{b.id}</span><div style={{ fontSize:'11px', color:'#94a3b8' }}>{b.date} · {b.time}</div></TD>
+            <TD><div style={{ fontWeight:'700' }}>{b.customer}</div><div style={{ fontSize:'11px', color:'#64748b', maxWidth:'220px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{b.customerAddress}</div></TD>
+            <TD><div style={{ fontWeight:'600' }}>{b.service}</div><div style={{ fontSize:'11px', color:'#64748b' }}>{b.serviceType}</div></TD>
+            <TD><div style={{ fontWeight:'600' }}>{b.worker}</div><div style={{ fontSize:'11px', color:'var(--primary)' }}>⭐ {b.workerRating}</div></TD>
+            <TD><span style={{ fontWeight:'800' }}>{b.amount}</span></TD>
+            <TD><Badge st={b.status}/></TD>
+            <TD right>
+              <div style={{ display:'flex', gap:'6px', justifyContent:'flex-end' }}>
+                <ActionBtn icon="👁️" bg="#f1f8f3" color="var(--primary)" title="View details" onClick={()=>setBookingModal(b)}/>
+                <ActionBtn icon="👤" bg="#eff6ff" color="#2563eb" title="Assign worker" onClick={()=>setAssignModal(b)}/>
+                <ActionBtn icon="📅" bg="#f8fafc" color="#475569" title="Reschedule" onClick={()=>setReschedModal(b)}/>
+                {b.status!=='Cancelled' && <ActionBtn icon="🚫" bg="#fef2f2" color="#dc2626" title="Cancel" onClick={()=>setCancelModal(b)}/>}
+              </div>
+            </TD>
+          </TR2>
+        ))}
+      </Table>
+    </Page>
+  );
+}
+
+/* Workers Route */
+function WorkersRoute({workers,setWorkers,setWorkerModal,setAddWorkerOpen,showToast}) {
+  const [search, setSearch] = useState('');
+  const [serviceF, setServiceF] = useState('All');
+  const [verF, setVerF] = useState('All');
+
+  const filtered = useMemo(()=>workers.filter(w=>{
+    const sv = serviceF==='All'||w.service===serviceF;
+    const vr = verF==='All'||w.verification===verF;
+    const q = !search || [w.name,w.service,w.location].join(' ').toLowerCase().includes(search.toLowerCase());
+    return sv&&vr&&q;
+  }),[workers,search,serviceF,verF]);
+
+  const verify = (id) => { setWorkers(ws=>ws.map(w=>w.id===id?{...w,verification:'Verified'}:w)); showToast('Worker verified!'); };
+  const suspend = (id) => { setWorkers(ws=>ws.map(w=>w.id===id?{...w,verification:'Suspended'}:w)); showToast('Worker suspended.'); };
+  const reject = (id) => { setWorkers(ws=>ws.map(w=>w.id===id?{...w,verification:'Rejected'}:w)); showToast('Worker rejected.'); };
+
+  return (
+    <Page>
+      <PageHeader title={`Cooperative Workers (${workers.length})`} desc="Member verification, telemetry tracking, welfare status">
+        <Btn onClick={()=>setAddWorkerOpen(true)}>+ Onboard Member</Btn>
+      </PageHeader>
+      <FilterBar>
+        <SearchInput value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search worker, trade, city..."/>
+        <select value={serviceF} onChange={e=>setServiceF(e.target.value)} style={{ padding:'7px 10px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'12.5px', backgroundColor:'#fff' }}>
+          <option value="All">All Trades</option>
+          {['Plumbing','Electrical','Carpentry','Cleaning','AC Repair','Caregiving'].map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={verF} onChange={e=>setVerF(e.target.value)} style={{ padding:'7px 10px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'12.5px', backgroundColor:'#fff' }}>
+          <option value="All">All Verification</option>
+          {['Verified','Pending','Rejected','Suspended'].map(v=><option key={v} value={v}>{v}</option>)}
+        </select>
+      </FilterBar>
+      <Table heads={[{label:'Worker'},{label:'Trade & Skills'},{label:'Location'},{label:'Rating'},{label:'Jobs'},{label:'Status'},{label:'Verification'},{label:'Actions',right:true}]}>
+        {filtered.map(w=>(
+          <TR2 key={w.id}>
+            <TD>
+              <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                <img src={w.avatar} alt={w.name} style={{ width:'36px', height:'36px', borderRadius:'50%', objectFit:'cover', border:'2px solid #22c55e' }}/>
+                <div>
+                  <div style={{ fontWeight:'700', color:'var(--text-link)', cursor:'pointer' }} onClick={()=>setWorkerModal(w)}>{w.name}</div>
+                  <div style={{ fontSize:'11px', color:'#64748b' }}>{w.id} · {w.phone}</div>
+                </div>
+              </div>
+            </TD>
+            <TD><div style={{ fontWeight:'700' }}>{w.service}</div><div style={{ fontSize:'11px', color:'#64748b', maxWidth:'160px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{w.skills.join(', ')}</div></TD>
+            <TD>{w.location}<div style={{ fontSize:'11px', color:'#94a3b8' }}>{w.city}</div></TD>
+            <TD><span style={{ fontWeight:'700', color:'var(--primary)' }}>★ {w.rating}</span></TD>
+            <TD><span style={{ fontWeight:'700' }}>{w.completedJobs}</span></TD>
+            <TD><Badge st={w.availability}/></TD>
+            <TD><Badge st={w.verification}/></TD>
+            <TD right>
+              <div style={{ display:'flex', gap:'6px', justifyContent:'flex-end' }}>
+                <ActionBtn icon="👁️" bg="#f1f8f3" color="var(--primary)" title="View profile" onClick={()=>setWorkerModal(w)}/>
+                {w.verification!=='Verified' && <ActionBtn icon="✅" bg="#eaf8ef" color="#15803d" title="Verify" onClick={()=>verify(w.id)}/>}
+                {w.verification==='Pending' && <ActionBtn icon="❌" bg="#fef2f2" color="#dc2626" title="Reject" onClick={()=>reject(w.id)}/>}
+                {w.verification==='Verified' && <ActionBtn icon="🚫" bg="#fef2f2" color="#dc2626" title="Suspend" onClick={()=>suspend(w.id)}/>}
+              </div>
+            </TD>
+          </TR2>
+        ))}
+      </Table>
+    </Page>
+  );
+}
+
+/* Customers Route */
+function CustomersRoute({customers,setCustomers,bookings,showToast}) {
+  const [search, setSearch] = useState('');
+  const [statusF, setStatusF] = useState('All');
+  const [custDetail, setCustDetail] = useState(null);
+
+  const filtered = useMemo(()=>customers.filter(c=>{
+    const st = statusF==='All'||c.status===statusF;
+    const q = !search || [c.name,c.phone,c.email,c.address].join(' ').toLowerCase().includes(search.toLowerCase());
+    return st&&q;
+  }),[customers,search,statusF]);
+
+  const toggleBlock = (id) => {
+    setCustomers(cs=>cs.map(c=>c.id===id?{...c,status:c.status==='Blocked'?'Active':'Blocked'}:c));
+    showToast('Customer status updated.');
+  };
+
+  const custBookings = (name) => bookings.filter(b=>b.customer===name);
+
+  return (
+    <Page>
+      <PageHeader title={`Customer Directory (${customers.length})`} desc="Lifetime spending, ratings, and account management"/>
+      <FilterBar>
+        <SearchInput value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, phone, email..."/>
+        <div style={{ display:'flex', gap:'4px' }}>
+          {['All','Active','VIP','Blocked'].map(s=><Pill key={s} label={s} active={statusF===s} onClick={()=>setStatusF(s)}/>)}
+        </div>
+      </FilterBar>
+      <Table heads={[{label:'Customer'},{label:'Contact'},{label:'Bookings'},{label:'Lifetime Spend'},{label:'Rating'},{label:'Status'},{label:'Actions',right:true}]}>
+        {filtered.map(c=>(
+          <TR2 key={c.id}>
+            <TD><div style={{ fontWeight:'700', color:'var(--text-link)', cursor:'pointer' }} onClick={()=>setCustDetail(c)}>{c.name}</div><div style={{ fontSize:'11px', color:'#64748b' }}>{c.id} · Since {c.memberSince}</div></TD>
+            <TD><div>{c.phone}</div><div style={{ fontSize:'11.5px', color:'#64748b' }}>{c.email}</div></TD>
+            <TD><span style={{ fontWeight:'700' }}>{c.totalBookings} tasks</span></TD>
+            <TD><span style={{ fontWeight:'800', color:'var(--primary)' }}>{c.totalSpent}</span></TD>
+            <TD><span style={{ fontWeight:'700', color:'#ca8a04' }}>★ {c.rating}</span></TD>
+            <TD><Badge st={c.status}/></TD>
+            <TD right>
+              <div style={{ display:'flex', gap:'6px', justifyContent:'flex-end' }}>
+                <ActionBtn icon="👁️" bg="#f1f8f3" color="var(--primary)" title="View details" onClick={()=>setCustDetail(c)}/>
+                <ActionBtn icon={c.status==='Blocked'?'✅':'🚫'} bg={c.status==='Blocked'?'#eaf8ef':'#fef2f2'} color={c.status==='Blocked'?'var(--primary)':'#dc2626'} title={c.status==='Blocked'?'Unblock':'Block'} onClick={()=>toggleBlock(c.id)}/>
+              </div>
+            </TD>
+          </TR2>
+        ))}
+      </Table>
+
+      {/* Customer Detail Modal inline */}
+      <Modal open={!!custDetail} onClose={()=>setCustDetail(null)} title={custDetail?.name} subtitle={`${custDetail?.id} · Member since ${custDetail?.memberSince}`} maxW="600px"
+        footer={<><Btn variant="secondary" onClick={()=>{toggleBlock(custDetail.id);setCustDetail(null);}}>{custDetail?.status==='Blocked'?'Unblock Account':'Block Account'}</Btn><Btn onClick={()=>setCustDetail(null)}>Close</Btn></>}>
+        {custDetail && (
+          <div style={{ display:'flex', flexDirection:'column', gap:'14px', fontSize:'13px' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'10px' }}>
+              {[['Total Bookings',custDetail.totalBookings+' tasks'],['Lifetime Spend',custDetail.totalSpent],['Avg Rating','★ '+custDetail.rating]].map(([k,v])=>(
+                <div key={k} style={{ backgroundColor:'#f8faf9', padding:'12px', borderRadius:'10px', textAlign:'center' }}>
+                  <div style={{ fontSize:'11px', color:'#64748b' }}>{k}</div>
+                  <div style={{ fontWeight:'800', fontSize:'16px', color:'#111827', marginTop:'2px' }}>{v}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize:'12.5px', color:'#475569' }}>📞 {custDetail.phone} · ✉️ {custDetail.email}</div>
+            <div style={{ fontSize:'12.5px', color:'#475569' }}>📍 {custDetail.address}</div>
+            <div style={{ fontWeight:'700', fontSize:'13.5px', color:'#111827', marginBottom:'4px' }}>Booking History ({custBookings(custDetail.name).length})</div>
+            {custBookings(custDetail.name).length===0
+              ? <div style={{ color:'#94a3b8', fontSize:'12.5px' }}>No bookings recorded.</div>
+              : custBookings(custDetail.name).map(b=>(
+                <div key={b.id} style={{ display:'flex', justifyContent:'space-between', padding:'10px 14px', backgroundColor:'#f8faf9', borderRadius:'10px', fontSize:'12.5px' }}>
+                  <div><strong>{b.id}</strong> · {b.service}</div>
+                  <div style={{ display:'flex', gap:'10px', alignItems:'center' }}><span style={{ fontWeight:'700' }}>{b.amount}</span><Badge st={b.status}/></div>
+                </div>
+              ))
+            }
+          </div>
+        )}
+      </Modal>
+    </Page>
+  );
+}
+
+/* Services Route */
+function ServicesRoute({services,setServices,setAddSvcOpen,showToast}) {
+  const [search, setSearch] = useState('');
+  const filtered = useMemo(()=>services.filter(s=>s.name.toLowerCase().includes(search.toLowerCase())||s.category.toLowerCase().includes(search.toLowerCase())),[services,search]);
+  const remove = (id) => { setServices(ss=>ss.filter(s=>s.id!==id)); showToast('Service removed from catalog.'); };
+
+  return (
+    <Page>
+      <PageHeader title={`Service Catalog (${services.length})`} desc="All 9 gig service categories with rate cards and welfare allocation">
+        <Btn onClick={()=>setAddSvcOpen(true)}>+ Add Service</Btn>
+      </PageHeader>
+      <FilterBar>
+        <SearchInput value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search service, category..."/>
+        <span style={{ fontSize:'12px', color:'#64748b' }}>Showing {filtered.length} categories</span>
+      </FilterBar>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px,1fr))', gap:'18px' }}>
+        {filtered.map(s=>(
+          <div key={s.id} style={{ backgroundColor:'#fff', borderRadius:'16px', border:'1px solid var(--border)', padding:'22px', boxShadow:'var(--shadow)', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
+            <div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                <div style={{ fontSize:'28px' }}>{s.icon}</div>
+                <Badge st={s.status}/>
+              </div>
+              <h3 style={{ fontSize:'16px', fontWeight:'700', color:'#111827', marginTop:'8px' }}>{s.name}</h3>
+              <p style={{ fontSize:'12.5px', color:'#64748b', marginTop:'4px', lineHeight:'1.45' }}>{s.description}</p>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', backgroundColor:'#f8faf9', padding:'12px', borderRadius:'10px', marginTop:'14px', fontSize:'12px' }}>
+                <div><div style={{ color:'#64748b' }}>Base Rate</div><div style={{ fontWeight:'800', color:'#111827', fontSize:'15px' }}>{s.basePrice}</div></div>
+                <div><div style={{ color:'#64748b' }}>Welfare Pool</div><div style={{ fontWeight:'700', color:'var(--primary)', fontSize:'15px' }}>5% Auto</div></div>
+              </div>
+              <div style={{ fontSize:'11.5px', color:'#64748b', marginTop:'10px' }}>👷 {s.workers?.toLocaleString()||'N/A'} active workers · {s.emergencyAvailable?'⚡ Emergency enabled':''}</div>
+            </div>
+            <div style={{ display:'flex', gap:'8px', marginTop:'16px', borderTop:'1px solid #f1f5f9', paddingTop:'14px' }}>
+              <button onClick={()=>{const nr=prompt('New benchmark rate:',s.basePrice);if(nr)setServices(ss=>ss.map(sv=>sv.id===s.id?{...sv,basePrice:nr}:sv));showToast('Rate updated!');}} style={{ flex:1, padding:'7px', borderRadius:'8px', backgroundColor:'#f1f5f9', color:'#334155', fontSize:'12px', fontWeight:'600', cursor:'pointer' }}>✏️ Edit Rate</button>
+              <button onClick={()=>{if(confirm(`Remove "${s.name}"?`))remove(s.id);}} style={{ padding:'7px 10px', borderRadius:'8px', backgroundColor:'#fef2f2', color:'#dc2626', fontSize:'14px', cursor:'pointer' }}>🗑️</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Page>
+  );
+}
+
+/* Payments Route */
+function PaymentsRoute({payments,setInvoiceModal}) {
+  const [search, setSearch] = useState('');
+  const [statusF, setStatusF] = useState('All');
+  const filtered = useMemo(()=>payments.filter(p=>{
+    const st = statusF==='All'||p.status===statusF;
+    const q = !search||[p.id,p.customer,p.worker,p.bookingId].join(' ').toLowerCase().includes(search.toLowerCase());
+    return st&&q;
+  }),[payments,search,statusF]);
+
+  return (
+    <Page>
+      <PageHeader title="Payments & Escrow Treasury" desc="Transaction ledger with 95% worker payouts and 5% welfare pool allocation">
+        <Btn variant="secondary" onClick={()=>{
+          const rows=['TxnID,Customer,Worker,Amount,WelfareSplit,WorkerNet,Status'].concat(payments.map(p=>`${p.id},"${p.customer}","${p.worker}",${p.amount},${p.welfareCut},${p.workerPayout},${p.status}`));
+          const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.join('\n'));a.download='payments.csv';a.click();
+        }}>⬇️ Export Ledger</Btn>
+      </PageHeader>
+      {/* 5 KPI Cards */}
+      <div className="sg" style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:'12px', marginBottom:'20px' }}>
+        {[
+          {l:'Total GTV',        v:'₹2,45,67,890', c:'#111827'},
+          {l:'Settled',          v:'₹2,33,39,496', c:'var(--primary)'},
+          {l:'Escrow Pending',   v:'₹10,48,394',   c:'#d97706'},
+          {l:'Welfare Pool (5%)',v:'₹12,28,394',   c:'#0284c7'},
+          {l:'Refunds',          v:'₹1,80,000',    c:'#dc2626'},
+        ].map(k=>(
+          <div key={k.l} style={{ backgroundColor:'#fff', padding:'16px', borderRadius:'14px', border:'1px solid var(--border)' }}>
+            <div style={{ fontSize:'11.5px', color:'#64748b' }}>{k.l}</div>
+            <div style={{ fontSize:'18px', fontWeight:'800', color:k.c, marginTop:'4px' }}>{k.v}</div>
+          </div>
+        ))}
+      </div>
+      <FilterBar>
+        <SearchInput value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search Txn, customer, worker..."/>
+        <div style={{ display:'flex', gap:'4px' }}>
+          {['All','Completed','Pending','Refunded'].map(s=><Pill key={s} label={s} active={statusF===s} onClick={()=>setStatusF(s)}/>)}
+        </div>
+      </FilterBar>
+      <Table heads={[{label:'Transaction ID'},{label:'Parties & Booking'},{label:'Gross Amount'},{label:'Welfare 5%'},{label:'Worker Net 95%'},{label:'Method'},{label:'Status'},{label:'Invoice',right:true}]}>
+        {filtered.map(p=>(
+          <TR2 key={p.id}>
+            <TD><span style={{ fontWeight:'700', color:'#0284c7' }}>{p.id}</span><div style={{ fontSize:'11px', color:'#94a3b8' }}>{p.date}</div></TD>
+            <TD><div style={{ fontWeight:'600' }}>{p.customer} → {p.worker}</div><div style={{ fontSize:'11px', color:'#64748b' }}>{p.service} · {p.bookingId}</div></TD>
+            <TD><span style={{ fontWeight:'800' }}>{p.amount}</span></TD>
+            <TD><span style={{ fontWeight:'700', color:'var(--primary)' }}>{p.welfareCut}</span></TD>
+            <TD><span style={{ fontWeight:'700' }}>{p.workerPayout}</span></TD>
+            <TD>{p.paymentMethod}</TD>
+            <TD><Badge st={p.status}/></TD>
+            <TD right><button onClick={()=>setInvoiceModal(p)} style={{ display:'inline-flex', alignItems:'center', gap:'4px', padding:'6px 12px', backgroundColor:'#f1f8f3', color:'var(--primary)', borderRadius:'6px', fontSize:'12px', fontWeight:'600', cursor:'pointer' }}>📄 Invoice</button></TD>
+          </TR2>
+        ))}
+      </Table>
+    </Page>
+  );
+}
+
+/* Insurance Route */
+function InsuranceRoute({policies,claims,welfareProgs}) {
+  const [tab, setTab] = useState('policies');
+  return (
+    <Page>
+      <PageHeader title="Insurance & Social Welfare Trust" desc="Group accidental coverage, emergency claims, and welfare programs"/>
+      <div className="sg" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px', marginBottom:'22px' }}>
+        {[{l:'Insured Workers',v:'12,458 / 12,458',c:'var(--primary)'},{l:'Cover Per Member',v:'₹5,00,000',c:'#111827'},{l:'Claims Settled YTD',v:'₹18,40,000',c:'#0284c7'},{l:'Active Reserve Pool',v:'₹12,28,394',c:'#111827'}].map(k=>(
+          <div key={k.l} style={{ backgroundColor:'#fff', padding:'18px', borderRadius:'14px', border:'1px solid var(--border)' }}>
+            <div style={{ fontSize:'11.5px', color:'#64748b' }}>{k.l}</div>
+            <div style={{ fontSize:'18px', fontWeight:'800', color:k.c, marginTop:'4px' }}>{k.v}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display:'flex', gap:'4px', borderBottom:'1px solid var(--border)', marginBottom:'18px' }}>
+        {[['policies',`Active Policies (${policies.length})`],['claims',`Claims (${claims.length})`],['welfare','Welfare Programs']].map(([k,l])=>(
+          <button key={k} onClick={()=>setTab(k)} style={{ padding:'10px 18px', fontSize:'13px', fontWeight:tab===k?'700':'500', color:tab===k?'var(--primary)':'#64748b', borderBottom:tab===k?'2.5px solid var(--primary)':'none', marginBottom:'-1px', cursor:'pointer' }}>{l}</button>
+        ))}
+      </div>
+      {tab==='policies' && (
+        <Table heads={[{label:'Worker & Trade'},{label:'Insurance Provider'},{label:'Policy Number'},{label:'Coverage'},{label:'Expiry'},{label:'Status'}]}>
+          {policies.map(p=>(
+            <TR2 key={p.id}>
+              <TD><div style={{ fontWeight:'700' }}>{p.worker}</div><div style={{ fontSize:'11px', color:'#64748b' }}>{p.service} · {p.workerId}</div></TD>
+              <TD>{p.insuranceProvider}</TD>
+              <TD><span style={{ fontWeight:'700', color:'#0284c7' }}>{p.policyNumber}</span></TD>
+              <TD><span style={{ fontWeight:'600', color:'var(--primary)' }}>{p.coverage}</span></TD>
+              <TD>{p.expiry}</TD>
+              <TD><Badge st={p.status}/></TD>
+            </TR2>
+          ))}
+        </Table>
+      )}
+      {tab==='claims' && (
+        <Table heads={[{label:'Claim ID'},{label:'Worker'},{label:'Incident'},{label:'Amount'},{label:'Filed'},{label:'Status'}]}>
+          {claims.map(c=>(
+            <TR2 key={c.id}>
+              <TD><span style={{ fontWeight:'700', color:'#0284c7' }}>{c.id}</span></TD>
+              <TD style={{ fontWeight:'600' }}>{c.worker}</TD>
+              <TD style={{ maxWidth:'280px', color:'#475569' }}>{c.incident}</TD>
+              <TD><span style={{ fontWeight:'700', color:'var(--primary)' }}>{c.amount}</span></TD>
+              <TD>{c.filedDate}</TD>
+              <TD><Badge st={c.status.includes('Approved')?'Approved':'Pending'}/></TD>
+            </TR2>
+          ))}
+        </Table>
+      )}
+      {tab==='welfare' && (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:'18px' }}>
+          {welfareProgs.map((p,i)=>(
+            <div key={i} style={{ backgroundColor:'#fff', padding:'22px', borderRadius:'16px', border:'1px solid var(--border)', boxShadow:'var(--shadow)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px' }}>
+                <div style={{ width:'36px', height:'36px', borderRadius:'10px', backgroundColor:'#eaf7ee', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px' }}>💚</div>
+                <h3 style={{ fontSize:'15px', fontWeight:'700' }}>{p.title}</h3>
+              </div>
+              <p style={{ fontSize:'12.5px', color:'#475569', lineHeight:'1.45' }}>{p.description}</p>
+              <div style={{ backgroundColor:'#f8faf9', padding:'10px', borderRadius:'8px', marginTop:'14px', fontSize:'12px' }}>
+                <div>Enrolled: <strong>{p.enrolledCount.toLocaleString()}</strong></div>
+                <div style={{ color:'var(--primary)', fontWeight:'600', marginTop:'2px' }}>Next: {p.nextCampDate}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Page>
+  );
+}
+
+/* Reviews Route */
+function ReviewsRoute({reviews,setReviews,showToast}) {
+  const [search, setSearch] = useState('');
+  const [starF, setStarF] = useState('All');
+  const filtered = useMemo(()=>reviews.filter(r=>{
+    const sr = starF==='All'||r.rating===Number(starF);
+    const q = !search||[r.customer,r.worker,r.service,r.comment].join(' ').toLowerCase().includes(search.toLowerCase());
+    return sr&&q;
+  }),[reviews,search,starF]);
+  const total = reviews.length;
+  const avg = (reviews.reduce((s,r)=>s+r.rating,0)/total).toFixed(1);
+  const stars = {5:0,4:0,3:0,2:0,1:0};
+  reviews.forEach(r=>stars[r.rating]=(stars[r.rating]||0)+1);
+
+  return (
+    <Page>
+      <PageHeader title={`Reviews & Satisfaction Index (★ ${avg} / 5.0)`} desc="Customer feedback, rating distribution, and moderation"/>
+      {/* Rating breakdown */}
+      <div style={{ backgroundColor:'#fff', borderRadius:'16px', border:'1px solid var(--border)', padding:'22px', display:'grid', gridTemplateColumns:'1fr 2fr', gap:'24px', alignItems:'center', marginBottom:'20px', boxShadow:'var(--shadow)' }}>
+        <div style={{ textAlign:'center', borderRight:'1px solid var(--border)', paddingRight:'20px' }}>
+          <div style={{ fontSize:'52px', fontWeight:'800', color:'var(--primary)', lineHeight:1 }}>{avg}</div>
+          <div style={{ fontSize:'22px', color:'#ca8a04', margin:'6px 0' }}>★★★★★</div>
+          <div style={{ fontSize:'12.5px', color:'#64748b' }}>Based on <strong>{total}</strong> reviews</div>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+          {[5,4,3,2,1].map(s=>{
+            const pct = Math.round((stars[s]||0)/total*100)||0;
+            return (
+              <div key={s} style={{ display:'flex', alignItems:'center', gap:'10px', fontSize:'12.5px' }}>
+                <span style={{ width:'48px', fontWeight:'600', color:'#475569' }}>{s} Stars</span>
+                <div style={{ flex:1, height:'8px', backgroundColor:'#e6ede8', borderRadius:'999px', overflow:'hidden' }}>
+                  <div style={{ width:`${pct}%`, height:'100%', backgroundColor:'#22864c', borderRadius:'999px' }}/>
+                </div>
+                <span style={{ width:'36px', textAlign:'right', fontWeight:'600' }}>{pct}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <FilterBar>
+        <SearchInput value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search comment, worker, service..."/>
+        <div style={{ display:'flex', gap:'4px' }}>
+          {['All','5','4','3','2','1'].map(s=><Pill key={s} label={s==='All'?'All Ratings':`★ ${s}`} active={starF===s} onClick={()=>setStarF(s)}/>)}
+        </div>
+      </FilterBar>
+      <Table heads={[{label:'Customer'},{label:'Worker & Service'},{label:'Rating'},{label:'Feedback Comment'},{label:'Date'},{label:'Status'},{label:'Action',right:true}]}>
+        {filtered.map(r=>(
+          <TR2 key={r.id}>
+            <TD><div style={{ fontWeight:'700' }}>{r.customer}</div><div style={{ fontSize:'11px', color:'#94a3b8' }}>{r.bookingId}</div></TD>
+            <TD><div style={{ fontWeight:'600' }}>{r.worker}</div><div style={{ fontSize:'11.5px', color:'#64748b' }}>{r.service}</div></TD>
+            <TD><span style={{ fontWeight:'700', color:'#ca8a04' }}>★ {r.rating} / 5</span></TD>
+            <TD style={{ maxWidth:'320px', lineHeight:'1.4', color:'#334155' }}>"{r.comment}"</TD>
+            <TD>{r.date}</TD>
+            <TD><Badge st={r.status}/></TD>
+            <TD right><ActionBtn icon="🗑️" bg="#fef2f2" color="#dc2626" title="Delete review" onClick={()=>{setReviews(rv=>rv.filter(x=>x.id!==r.id));showToast('Review removed.');}}/></TD>
+          </TR2>
+        ))}
+      </Table>
+    </Page>
+  );
+}
+
+/* Reports Route */
+function ReportsRoute({bookings,workers,customers,payments,showToast}) {
+  const [dateRange, setDateRange] = useState('This Month');
+  const reports = [
+    {title:'Booking Dispatch Operations',desc:'All bookings with status, worker, amounts.',data:()=>['ID,Customer,Service,Worker,Amount,Status'].concat(bookings.map(b=>`${b.id},"${b.customer}",${b.service},"${b.worker}",${b.amount},${b.status}`)).join('\n'),file:'bookings.csv'},
+    {title:'Welfare Reserve Audit',desc:'Transaction splits: 95% worker vs 5% social pool.',data:()=>['TxnID,Amount,WelfareSplit,WorkerNet,Status'].concat(payments.map(p=>`${p.id},${p.amount},${p.welfareCut},${p.workerPayout},${p.status}`)).join('\n'),file:'welfare_audit.csv'},
+    {title:'Worker Performance Ledger',desc:'Ratings, job completion, earnings, verification.',data:()=>['ID,Name,Service,Rating,Jobs,Verification'].concat(workers.map(w=>`${w.id},"${w.name}",${w.service},${w.rating},${w.completedJobs},${w.verification}`)).join('\n'),file:'workers.csv'},
+    {title:'Customer Lifetime Spending',desc:'Booking frequency, total spend per patron.',data:()=>['ID,Name,Bookings,Spent,Status'].concat(customers.map(c=>`${c.id},"${c.name}",${c.totalBookings},${c.totalSpent},${c.status}`)).join('\n'),file:'customers.csv'},
+  ];
+  const exportReport = (rep) => {
+    const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rep.data());a.download=rep.file;a.click();
+    showToast(`${rep.title} exported!`);
+  };
+  return (
+    <Page>
+      <PageHeader title="Audit & Compliance Reports" desc="Generate and export official cooperative reports">
+        <div style={{ display:'flex', gap:'6px' }}>
+          {['Today','This Week','This Month','This Year'].map(r=>(
+            <Pill key={r} label={r} active={dateRange===r} onClick={()=>setDateRange(r)}/>
+          ))}
+        </div>
+      </PageHeader>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:'18px' }}>
+        {reports.map((rep,i)=>(
+          <div key={i} style={{ backgroundColor:'#fff', padding:'24px', borderRadius:'16px', border:'1px solid var(--border)', boxShadow:'var(--shadow)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+              <div style={{ width:'44px', height:'44px', borderRadius:'12px', backgroundColor:'#eaf7ee', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px' }}>📊</div>
+              <div>
+                <h3 style={{ fontWeight:'700', fontSize:'15.5px', color:'#111827' }}>{rep.title}</h3>
+                <div style={{ fontSize:'12px', color:'#64748b' }}>Range: {dateRange} · Certified Cooperative Audit</div>
+              </div>
+            </div>
+            <p style={{ fontSize:'13px', color:'#475569', marginTop:'14px', lineHeight:'1.5' }}>{rep.desc}</p>
+            <div style={{ fontSize:'12px', color:'var(--primary)', fontWeight:'600', marginTop:'10px' }}>✓ Compliant with Cooperative Bylaws & GST Regulations</div>
+            <div style={{ display:'flex', gap:'10px', marginTop:'18px', justifyContent:'flex-end' }}>
+              <Btn variant="secondary" onClick={()=>window.print()}>🖨️ Print</Btn>
+              <Btn onClick={()=>exportReport(rep)}>⬇️ Export CSV</Btn>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Page>
+  );
+}
+
+/* Analytics Route */
+function AnalyticsRoute({chartPts,line,area,maxChartV,workers,bookings,payments,customers}) {
+  // Compute cities from dynamic data
+  const citiesCounts = {};
+  workers.forEach(w => {
+    if(w.city) citiesCounts[w.city] = { workers: (citiesCounts[w.city]?.workers||0) + 1, bookings: 0 };
+  });
+  bookings.forEach(b => {
+    const w = workers.find(x=>x.name===b.worker || x.id===b.workerId);
+    if(w && w.city) {
+      if(!citiesCounts[w.city]) citiesCounts[w.city] = {workers:0, bookings:0};
+      citiesCounts[w.city].bookings += 1;
+    }
+  });
+  const cities = Object.entries(citiesCounts).map(([city, data]) => ({
+    city,
+    workers: data.workers,
+    bookings: data.bookings,
+    growth: '+' + (Math.floor(Math.random()*15)+5) + '%' // Mock growth%
+  })).sort((a,b)=>b.bookings - a.bookings).slice(0,5);
+
+  // Compute cancel rate
+  const cancelled = bookings.filter(b=>b.status==='Cancelled').length;
+  const cancelRate = bookings.length > 0 ? (cancelled/bookings.length*100).toFixed(1) : '0';
+
+  const kpis = [{l:'Avg. Response Time',v:bookings.length>0?'18 Mins':'-'},{l:'Worker Retention (30d)',v:workers.length>0?'94.2%':'-'},{l:'Cancellation Rate',v:`${cancelRate}%`},{l:'Customer NPS Score',v:customers.length>0?'+72':'-'}];
+  
+  // Compute Revenue Chart Data dynamically from last 5 months
+  const revenueChartData = useMemo(() => {
+    const monthly = {};
+    payments.forEach(p => {
+      if(p.status !== 'Completed') return;
+      const dMatch = String(p.date).match(/(\d{4})/);
+      const mMatch = String(p.date).match(/([a-zA-Z]{3})/);
+      const yr = dMatch ? dMatch[0] : new Date().getFullYear();
+      const mo = mMatch ? mMatch[0] : new Date().toLocaleDateString('en-GB',{month:'short'});
+      const key = `${mo} ${yr}`;
+      if(!monthly[key]) monthly[key] = {rev:0, pay:0, label:mo};
+      monthly[key].rev += parseFloat(String(p.amount).replace(/[^0-9.-]+/g, "") || 0);
+      monthly[key].pay += parseFloat(String(p.workerPayout).replace(/[^0-9.-]+/g, "") || 0);
+    });
+    const rawData = Object.entries(monthly).map(([k, d]) => ({label:d.label, rev:d.rev, pay:d.pay}));
+    const maxVal = Math.max(...rawData.map(d=>d.rev), 100);
+    return rawData.map(d => ({
+      m: d.label,
+      rev: Math.max(2, Math.round((d.rev / maxVal) * 160)),
+      pay: Math.max(2, Math.round((d.pay / maxVal) * 160))
+    })).slice(-5);
+  }, [payments]);
+
+  return (
+    <Page>
+      <PageHeader title="Platform Analytics & Performance KPIs" desc="Real-time fulfillment, retention, and geographic demand intelligence"/>
+      <div className="sg" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'14px', marginBottom:'22px' }}>
+        {kpis.map(k=>(
+          <div key={k.l} style={{ backgroundColor:'#fff', padding:'18px', borderRadius:'14px', border:'1px solid var(--border)' }}>
+            <div style={{ fontSize:'11.5px', color:'#64748b' }}>{k.l}</div>
+            <div style={{ fontSize:'22px', fontWeight:'800', color:'var(--primary)', marginTop:'4px' }}>{k.v}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mg" style={{ display:'grid', gridTemplateColumns:'1.65fr 1fr', gap:'18px', marginBottom:'18px' }}>
+        <div style={{ backgroundColor:'#fff', borderRadius:'16px', border:'1px solid var(--border)', padding:'22px', boxShadow:'var(--shadow)' }}>
+          <h3 style={{ fontSize:'15.5px', fontWeight:'700', marginBottom:'16px' }}>Weekly Booking Growth Trend</h3>
+          <svg viewBox="0 0 620 220" style={{ width:'100%', height:'auto' }}>
+            <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#22864c" stopOpacity=".18"/><stop offset="100%" stopColor="#22864c" stopOpacity="0"/></linearGradient></defs>
+            {[{v:maxChartV,l:maxChartV},{v:maxChartV*0.75,l:(maxChartV*0.75).toFixed(1)},{v:maxChartV*0.5,l:(maxChartV*0.5).toFixed(1)},{v:maxChartV*0.25,l:(maxChartV*0.25).toFixed(1)},{v:0,l:'0'}].map(({v,l})=>{
+              const yy=25+165-(v/maxChartV)*165;
+              return <g key={v}><line x1="45" y1={yy} x2="590" y2={yy} stroke="#f1f5f3" strokeWidth="1.2" strokeDasharray={v===0?'none':'3 3'}/><text x="38" y={yy+4} textAnchor="end" fontSize="11" fill="#8c9e94">{l}</text></g>;
+            })}
+            <path d={area} fill="url(#ag)"/>
+            <path d={line} fill="none" stroke="#22864c" strokeWidth="3" strokeLinecap="round"/>
+            {chartPts.map((pt,i)=>(
+              <g key={i}>
+                <text x={pt.x} y="212" textAnchor="middle" fontSize="11" fill="#8c9e94">{pt.date}</text>
+                <circle cx={pt.x} cy={pt.y} r="4.5" fill="#22864c" stroke="#fff" strokeWidth="2.5"/>
+              </g>
+            ))}
+          </svg>
+        </div>
+        <div style={{ backgroundColor:'#fff', borderRadius:'16px', border:'1px solid var(--border)', padding:'22px', boxShadow:'var(--shadow)' }}>
+          <h3 style={{ fontSize:'15.5px', fontWeight:'700', marginBottom:'14px' }}>City Cluster Distribution</h3>
+          <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+            {cities.length > 0 ? cities.map(c=>(
+              <div key={c.city} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', backgroundColor:'#f8faf9', borderRadius:'10px' }}>
+                <div>
+                  <div style={{ fontWeight:'700', fontSize:'13.5px' }}>{c.city}</div>
+                  <div style={{ fontSize:'11.5px', color:'#64748b' }}>{c.workers.toLocaleString()} workers · {c.bookings.toLocaleString()} bookings</div>
+                </div>
+                <span style={{ fontSize:'12px', fontWeight:'700', color:'var(--primary)', backgroundColor:'#eaf8ef', padding:'3px 8px', borderRadius:'6px' }}>{c.growth}</span>
+              </div>
+            )) : <div style={{fontSize:'13px', color:'#64748b', textAlign:'center', marginTop:'40px'}}>No city data available. Add workers to populate.</div>}
+          </div>
+        </div>
+      </div>
+      {/* Revenue bar chart simulation */}
+      <div style={{ backgroundColor:'#fff', borderRadius:'16px', border:'1px solid var(--border)', padding:'22px', boxShadow:'var(--shadow)' }}>
+        <h3 style={{ fontSize:'15.5px', fontWeight:'700', marginBottom:'16px' }}>Revenue vs Worker Payout — Monthly Trend</h3>
+        <div style={{ display:'flex', alignItems:'flex-end', gap:'12px', height:'180px' }}>
+          {revenueChartData.length > 0 ? revenueChartData.map((d,i)=>(
+            <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', flex:1 }}>
+              <div style={{ display:'flex', gap:'4px', alignItems:'flex-end', width:'100%' }}>
+                <div style={{ flex:1, backgroundColor:'#1e7e45', borderRadius:'4px 4px 0 0', height:`${d.rev}px` }}/>
+                <div style={{ flex:1, backgroundColor:'#86efac', borderRadius:'4px 4px 0 0', height:`${d.pay}px` }}/>
+              </div>
+              <span style={{ fontSize:'11.5px', color:'#64748b', fontWeight:'500' }}>{d.m}</span>
+            </div>
+          )) : <div style={{flex:1, textAlign:'center', color:'#64748b', alignSelf:'center'}}>No payment data available yet.</div>}
+          <div style={{ fontSize:'11.5px', color:'#64748b', alignSelf:'flex-end', paddingBottom:'18px', marginLeft:'8px' }}>
+            <div style={{ display:'flex', gap:'6px', alignItems:'center' }}><div style={{ width:'10px', height:'10px', backgroundColor:'#1e7e45', borderRadius:'2px' }}/> Revenue</div>
+            <div style={{ display:'flex', gap:'6px', alignItems:'center', marginTop:'4px' }}><div style={{ width:'10px', height:'10px', backgroundColor:'#86efac', borderRadius:'2px' }}/> Worker Payout</div>
+          </div>
+        </div>
+      </div>
+    </Page>
+  );
+}
+
+/* AI Route */
+function AIRoute({showToast}) {
+  const recs = [
+    {title:'Dynamic Surge — East Delhi Plumbing',detail:'+38% Plumbing requests expected due to municipal pipeline maintenance. 12 extra workers needed.',urgency:'Immediate',impact:'Prevent 200+ missed SLAs',action:'Deploy 15 Standby Workers'},
+    {title:'Afternoon Heatwave — AC Repair Spike',detail:'+28% AC Repair spike predicted 12PM–5PM. Current roster at 78% capacity.',urgency:'Immediate',impact:'+₹45,000 revenue capture',action:'Pre-Schedule 20 Shifts'},
+    {title:'Fair Gig Allocation Equalizer',detail:'8 newly verified carpentry members have not received a job in 7 days. Prioritize them.',urgency:'Scheduled',impact:'Equitable income distribution',action:'Trigger Fair Queue'},
+    {title:'New City Expansion — Lucknow',detail:'Search volume from Lucknow up 180% MoM with 0 supply. Consider onboarding 50 members.',urgency:'Strategic',impact:'Potential ₹12L/month revenue',action:'Initiate Onboarding Drive'},
+  ];
+  const forecasts = [
+    {service:'AC Repair',demand:'Very High',trend:'↑ +28%',bookings:340,peak:'12PM–5PM',rec:'Stage 20 technicians in AC hotspots'},
+    {service:'Plumbing',demand:'High',trend:'↑ +18%',bookings:280,peak:'8AM–12PM',rec:'Route to East Delhi, Noida'},
+    {service:'Cleaning',demand:'Medium',trend:'→ Stable',bookings:190,peak:'9AM–2PM',rec:'No action needed'},
+    {service:'Electrical',demand:'High',trend:'↑ +12%',bookings:210,peak:'6PM–9PM',rec:'Retain evening shift workers'},
+  ];
+  return (
+    <Page>
+      <PageHeader title="AI Demand Forecasting & Workforce Equalizer" desc="Predictive demand curves, heat-cluster routing, and fair gig rotation">
+        <span style={{ fontSize:'12px', fontWeight:'700', padding:'5px 12px', backgroundColor:'#eaf8ef', color:'var(--primary)', borderRadius:'999px' }}>🧠 94.8% Accuracy</span>
+      </PageHeader>
+      <div className="sg" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'14px', marginBottom:'22px' }}>
+        {[{l:'Highest Predicted Surge','v':'AC Repair',c:'#dc2626'},{l:'Peak Demand Window',v:'12PM – 5PM',c:'var(--primary)'},{l:'Workforce Deficit Risk',v:'AC Repair (Moderate)',c:'#d97706'}].map(k=>(
+          <div key={k.l} style={{ backgroundColor:'#fff', padding:'18px', borderRadius:'14px', border:'1px solid var(--border)' }}>
+            <div style={{ fontSize:'11.5px', color:'#64748b' }}>{k.l}</div>
+            <div style={{ fontSize:'18px', fontWeight:'800', color:k.c, marginTop:'4px' }}>{k.v}</div>
+          </div>
+        ))}
+      </div>
+      <h3 style={{ fontSize:'15.5px', fontWeight:'700', marginBottom:'12px' }}>Real-Time AI Operational Directives</h3>
+      <div style={{ display:'flex', flexDirection:'column', gap:'12px', marginBottom:'22px' }}>
+        {recs.map((r,i)=>(
+          <div key={i} style={{ backgroundColor:'#fff', borderRadius:'14px', border:'1.5px solid #bbf7d0', padding:'18px 22px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px', flexWrap:'wrap', boxShadow:'var(--shadow)' }}>
+            <div style={{ display:'flex', gap:'14px', alignItems:'flex-start' }}>
+              <div style={{ width:'36px', height:'36px', borderRadius:'10px', backgroundColor:'#eaf7ee', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', flexShrink:0 }}>🧠</div>
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                  <h4 style={{ fontSize:'14px', fontWeight:'700', color:'#111827' }}>{r.title}</h4>
+                  <span style={{ fontSize:'11px', fontWeight:'700', padding:'2px 8px', borderRadius:'4px', backgroundColor:r.urgency==='Immediate'?'#fee2e2':'#fef3c7', color:r.urgency==='Immediate'?'#dc2626':'#b45309' }}>{r.urgency}</span>
+                </div>
+                <p style={{ fontSize:'12.5px', color:'#475569', marginTop:'3px' }}>{r.detail}</p>
+                <div style={{ fontSize:'12px', color:'var(--primary)', fontWeight:'600', marginTop:'4px' }}>Impact: {r.impact}</div>
+              </div>
+            </div>
+            <Btn onClick={()=>showToast(`AI Directive Executed: ${r.action}`)}>{r.action} →</Btn>
+          </div>
+        ))}
+      </div>
+      <h3 style={{ fontSize:'15.5px', fontWeight:'700', marginBottom:'12px' }}>Service-Wise 24-Hour Demand Forecast</h3>
+      <Table heads={[{label:'Service'},{label:'Current Demand'},{label:'Trend'},{label:'Expected Bookings'},{label:'Peak Hours'},{label:'AI Recommendation'}]}>
+        {forecasts.map((f,i)=>(
+          <TR2 key={i}>
+            <TD><span style={{ fontWeight:'700' }}>{f.service}</span></TD>
+            <TD><span style={{ padding:'3px 8px', borderRadius:'4px', fontSize:'11.5px', fontWeight:'700', backgroundColor:f.demand==='Very High'?'#fee2e2':f.demand==='High'?'#fef3c7':'#f0fdf4', color:f.demand==='Very High'?'#dc2626':f.demand==='High'?'#d97706':'var(--primary)' }}>{f.demand}</span></TD>
+            <TD><span style={{ fontWeight:'700', color:'var(--primary)' }}>{f.trend}</span></TD>
+            <TD><span style={{ fontWeight:'800' }}>~{f.bookings}</span></TD>
+            <TD>{f.peak}</TD>
+            <TD style={{ fontSize:'12.5px', color:'#334155' }}>{f.rec}</TD>
+          </TR2>
+        ))}
+      </Table>
+    </Page>
+  );
+}
+
+/* Notifications Route */
+function NotifsRoute({notifications,setNotifications,setNotifOpen,showToast}) {
+  const [filter, setFilter] = useState('All');
+  const filtered = useMemo(()=>notifications.filter(n=>{
+    if(filter==='All') return true;
+    if(filter==='Unread') return n.unread;
+    return n.category===filter;
+  }),[notifications,filter]);
+  const markAllRead = () => { setNotifications(ns=>ns.map(n=>({...n,unread:false}))); showToast('All marked as read.'); };
+  const deleteN = (id) => setNotifications(ns=>ns.filter(n=>n.id!==id));
+
+  return (
+    <Page>
+      <PageHeader title={`Notifications (${notifications.filter(n=>n.unread).length} unread)`} desc="Platform alerts, emergencies, and broadcast dispatcher">
+        <Btn variant="secondary" onClick={markAllRead}>✓ Mark All Read</Btn>
+        <Btn onClick={()=>setNotifOpen(true)}>📢 Broadcast</Btn>
+      </PageHeader>
+      <div style={{ display:'flex', gap:'6px', marginBottom:'18px', flexWrap:'wrap' }}>
+        {['All','Unread','Emergency','Payments','System'].map(cat=>(
+          <Pill key={cat} label={cat} active={filter===cat} onClick={()=>setFilter(cat)}/>
+        ))}
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+        {filtered.length===0 && <div style={{ textAlign:'center', padding:'40px', color:'#94a3b8', fontSize:'14px' }}>No notifications in this category.</div>}
+        {filtered.map(n=>(
+          <div key={n.id} style={{ backgroundColor:n.unread?'#f6fbf8':'#fff', borderRadius:'14px', border:`1.5px solid ${n.unread?'#bbf7d0':'var(--border)'}`, padding:'18px 20px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'16px', boxShadow:'var(--shadow)' }}>
+            <div style={{ display:'flex', gap:'14px' }}>
+              <div style={{ width:'36px', height:'36px', borderRadius:'10px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', backgroundColor:n.category==='Emergency'?'#fee2e2':n.category==='Payments'?'#eaf8ef':'#eff6ff' }}>
+                {n.category==='Emergency'?'🚨':n.category==='Payments'?'💳':'🔔'}
+              </div>
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                  <h4 style={{ fontSize:'14px', fontWeight:'700', color:'#111827' }}>{n.title}</h4>
+                  {n.unread && <span style={{ fontSize:'10.5px', backgroundColor:'var(--primary)', color:'#fff', padding:'1px 6px', borderRadius:'4px', fontWeight:'700' }}>NEW</span>}
+                  <span style={{ fontSize:'11px', padding:'1px 6px', backgroundColor:'#f1f5f9', borderRadius:'4px', color:'#475569' }}>{n.priority}</span>
+                </div>
+                <p style={{ fontSize:'12.5px', color:'#475569', marginTop:'3px' }}>{n.message}</p>
+                <div style={{ fontSize:'11.5px', color:'#94a3b8', marginTop:'6px' }}>{n.time} · {n.category}</div>
+              </div>
+            </div>
+            <button onClick={()=>deleteN(n.id)} style={{ color:'#94a3b8', fontSize:'16px', cursor:'pointer', flexShrink:0 }}>✕</button>
+          </div>
+        ))}
+      </div>
+    </Page>
+  );
+}
+
+/* Settings Route */
+function SettingsRoute({showToast}) {
+  const [tab, setTab] = useState('platform');
+  const [welfare, setWelfare] = useState(5);
+  const [hotline, setHotline] = useState('1800-456-GIGS');
+  const [autoDispatch, setAutoDispatch] = useState(true);
+  const [emailNotifs, setEmailNotifs] = useState(true);
+  const [smsAlerts, setSmsAlerts] = useState(true);
+  const [payout, setPayout] = useState('Instant Automated UPI');
+
+  const save = () => showToast('Platform settings saved successfully!');
+
+  return (
+    <Page style={{ maxWidth:'880px' }}>
+      <PageHeader title="Platform Settings & Governance" desc="Cooperative bylaws, welfare rates, security, and permissions"/>
+      <div style={{ display:'flex', gap:'4px', borderBottom:'1px solid var(--border)', marginBottom:'22px', overflowX:'auto' }}>
+        {[['platform','⚙️ Platform & Bylaws'],['profile','👤 Admin Profile'],['notifications','🔔 Notifications'],['payments','💳 Payout Rules'],['security','🔒 Security'],['roles','🛡️ Roles']].map(([k,l])=>(
+          <button key={k} onClick={()=>setTab(k)} style={{ padding:'10px 18px', fontSize:'13px', fontWeight:tab===k?'700':'500', color:tab===k?'var(--primary)':'#64748b', borderBottom:tab===k?'2.5px solid var(--primary)':'none', marginBottom:'-1px', cursor:'pointer', whiteSpace:'nowrap' }}>{l}</button>
+        ))}
+      </div>
+
+      {tab==='platform' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+          <div style={{ backgroundColor:'#fff', padding:'22px', borderRadius:'14px', border:'1px solid var(--border)' }}>
+            <h3 style={{ fontSize:'14.5px', fontWeight:'700', marginBottom:'8px' }}>Cooperative Welfare Reserve Allocation</h3>
+            <p style={{ fontSize:'12.5px', color:'#64748b', marginBottom:'12px' }}>Percentage of each booking automatically routed to Worker Insurance & Social Security Pool.</p>
+            <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+              <input type="number" value={welfare} onChange={e=>setWelfare(Number(e.target.value))} min={1} max={20} style={{ width:'80px', padding:'8px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'16px', fontWeight:'700' }}/> <span style={{ fontWeight:'700' }}>%</span>
+              <span style={{ fontSize:'12px', color:'var(--primary)', fontWeight:'600' }}>Remaining {100-welfare}% disbursed directly to worker via UPI</span>
+            </div>
+          </div>
+          <div style={{ backgroundColor:'#fff', padding:'22px', borderRadius:'14px', border:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <h3 style={{ fontSize:'14.5px', fontWeight:'700' }}>Automated Fair Dispatch & Rotation Engine</h3>
+              <p style={{ fontSize:'12.5px', color:'#64748b', marginTop:'2px' }}>Equitably distribute gig calls among verified cooperative members. Prevents monopoly.</p>
+            </div>
+            <label style={{ position:'relative', display:'inline-block', width:'44px', height:'24px', cursor:'pointer' }}>
+              <input type="checkbox" checked={autoDispatch} onChange={e=>setAutoDispatch(e.target.checked)} style={{ opacity:0, width:0, height:0 }}/>
+              <span style={{ position:'absolute', inset:0, backgroundColor:autoDispatch?'var(--primary)':'#cbd5e1', borderRadius:'999px', transition:'0.2s' }}/>
+              <span style={{ position:'absolute', top:'2px', left:autoDispatch?'22px':'2px', width:'20px', height:'20px', backgroundColor:'#fff', borderRadius:'50%', transition:'0.2s', boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }}/>
+            </label>
+          </div>
+          <div style={{ backgroundColor:'#fff', padding:'22px', borderRadius:'14px', border:'1px solid var(--border)' }}>
+            <h3 style={{ fontSize:'14.5px', fontWeight:'700', marginBottom:'8px' }}>Emergency SOS Dispatch Hotline</h3>
+            <Input value={hotline} onChange={e=>setHotline(e.target.value)} style={{ width:'280px' }}/>
+          </div>
+        </div>
+      )}
+
+      {tab==='profile' && (
+        <div style={{ backgroundColor:'#fff', padding:'22px', borderRadius:'14px', border:'1px solid var(--border)' }}>
+          <h3 style={{ fontSize:'14.5px', fontWeight:'700', marginBottom:'16px' }}>Administrator Account</h3>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+            <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Admin Name</label><Input defaultValue="Super Administrator"/></div>
+            <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Admin Email</label><Input type="email" defaultValue="admin@cooperative.org"/></div>
+            <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Phone</label><Input defaultValue="+91 98765 00001"/></div>
+            <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Organization</label><Input defaultValue="Cooperative Gig Platform Society"/></div>
+          </div>
+        </div>
+      )}
+
+      {tab==='notifications' && (
+        <div style={{ backgroundColor:'#fff', padding:'22px', borderRadius:'14px', border:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:'16px' }}>
+          {[['Email Notifications for New Bookings','emailNotifs',emailNotifs,setEmailNotifs],['SMS / WhatsApp Dispatch Alerts','smsAlerts',smsAlerts,setSmsAlerts]].map(([label,key,val,setter])=>(
+            <div key={key} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingBottom:'16px', borderBottom:'1px solid #f1f5f9' }}>
+              <div>
+                <div style={{ fontWeight:'600', fontSize:'13.5px' }}>{label}</div>
+                <div style={{ fontSize:'12px', color:'#64748b', marginTop:'2px' }}>Control this notification channel</div>
+              </div>
+              <label style={{ position:'relative', display:'inline-block', width:'44px', height:'24px', cursor:'pointer' }}>
+                <input type="checkbox" checked={val} onChange={e=>setter(e.target.checked)} style={{ opacity:0, width:0, height:0 }}/>
+                <span style={{ position:'absolute', inset:0, backgroundColor:val?'var(--primary)':'#cbd5e1', borderRadius:'999px', transition:'0.2s' }}/>
+                <span style={{ position:'absolute', top:'2px', left:val?'22px':'2px', width:'20px', height:'20px', backgroundColor:'#fff', borderRadius:'50%', transition:'0.2s', boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }}/>
+              </label>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab==='payments' && (
+        <div style={{ backgroundColor:'#fff', padding:'22px', borderRadius:'14px', border:'1px solid var(--border)' }}>
+          <h3 style={{ fontSize:'14.5px', fontWeight:'700', marginBottom:'12px' }}>Automated Payout & Settlement Method</h3>
+          <select value={payout} onChange={e=>setPayout(e.target.value)} style={{ width:'320px', padding:'9px 12px', borderRadius:'8px', border:'1px solid #cbd5e1', fontSize:'13px', backgroundColor:'#fff' }}>
+            {['Instant Automated UPI','Daily Batch Settlement (Midnight)','Weekly Cycle (Wednesday)'].map(p=><option key={p} value={p}>{p}</option>)}
+          </select>
+          <div style={{ marginTop:'12px', fontSize:'12px', color:'var(--primary)', fontWeight:'600' }}>Current: {payout}</div>
+        </div>
+      )}
+
+      {tab==='security' && (
+        <div style={{ backgroundColor:'#fff', padding:'22px', borderRadius:'14px', border:'1px solid var(--border)' }}>
+          <h3 style={{ fontSize:'14.5px', fontWeight:'700', marginBottom:'12px' }}>Security & Access Controls</h3>
+          <div style={{ display:'flex', alignItems:'center', gap:'8px', color:'var(--primary)', fontWeight:'600', fontSize:'13px', marginBottom:'14px' }}>
+            ✅ Two-Factor Authentication (2FA) is Active
+          </div>
+          <div><label style={{ fontSize:'12px', fontWeight:'600', color:'#475569', display:'block', marginBottom:'4px' }}>Current Password</label><Input type="password" placeholder="••••••••" style={{ width:'280px' }}/></div>
+        </div>
+      )}
+
+      {tab==='roles' && (
+        <div style={{ backgroundColor:'#fff', padding:'22px', borderRadius:'14px', border:'1px solid var(--border)' }}>
+          <h3 style={{ fontSize:'14.5px', fontWeight:'700', marginBottom:'14px' }}>Admin Roles & Delegation</h3>
+          {[{role:'Super Admin',desc:'Full access to escrow & welfare pool',count:'1 (You)',c:'var(--primary)'},{role:'Field Dispatch Supervisor',desc:'Manage bookings & worker dispatch',count:'4 Officers',c:'#0284c7'},{role:'Welfare & Claims Auditor',desc:'Review insurance claims & disbursements',count:'2 Officers',c:'#7c3aed'},{role:'Read-Only Analyst',desc:'Access reports & analytics only',count:'3 Users',c:'#64748b'}].map(r=>(
+            <div key={r.role} style={{ display:'flex', justifyContent:'space-between', padding:'12px 16px', backgroundColor:'#f8faf9', borderRadius:'10px', marginBottom:'8px', fontSize:'13px' }}>
+              <div>
+                <div style={{ fontWeight:'700', color:r.c }}>{r.role}</div>
+                <div style={{ fontSize:'12px', color:'#64748b' }}>{r.desc}</div>
+              </div>
+              <span style={{ fontWeight:'700', color:r.c }}>{r.count}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display:'flex', justifyContent:'flex-end', marginTop:'20px' }}>
+        <Btn onClick={save}>💾 Save Platform Preferences</Btn>
+      </div>
+    </Page>
+  );
+}
+
+/* ── Bootstrap ──────────────────────────────────────────────── */
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

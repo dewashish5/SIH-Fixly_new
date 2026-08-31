@@ -7,6 +7,7 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/map_constants.dart';
+import '../../../../core/location/app_location.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/widgets/fixly_map_view.dart';
 import '../cubit/booking_flow_cubit.dart';
@@ -49,12 +50,13 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FixlyMapView(
+                  FixlyMapView(
                   height: 320,
                   borderRadius: BorderRadius.circular(20),
-                  center: MapConstants.noidaSector12,
+                  center: MapConstants.current,
                   zoom: MapConstants.navigationZoom,
-                  routeEnd: MapConstants.noidaSector12,
+                  routeEnd: MapConstants.current,
+                  routeStart: MapConstants.workerApproachStart,
                   routeProgress: state.progress,
                 ).animate().fadeIn(),
                 const SizedBox(height: 24),
@@ -118,7 +120,8 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                                       .read<BookingFlowCubit>()
                                       .state
                                       .address ??
-                                  'Sector 12, Noida',
+                                  AppLocation.instance.addressLabel ??
+                                  'Current location',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ],

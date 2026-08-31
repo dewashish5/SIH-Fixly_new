@@ -3,64 +3,77 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
-import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../../../shared/widgets/shared_widgets.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../bookings/data/bookings_api_repository.dart';
 
-class OrderHistoryPage extends StatelessWidget {
+class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final orders = MockRepository.instance.orderHistory;
-    final dateFormat = DateFormat('d MMM yyyy');
+  State<OrderHistoryPage> createState() => _OrderHistoryPageState();
+}
 
-    if (orders.isEmpty) {
-      return AppScaffold(
-        title: context.l10n.orderHistory,
-        body: Center(child: Text(context.l10n.noOrdersYet)),
-      );
-    }
+class _OrderHistoryPageState extends State<OrderHistoryPage> {
+  late final Future<List<Booking>> _future = BookingsApiRepository().history();
+
+  @override
+  Widget build(BuildContext context) {
+    final dateFormat = DateFormat('d MMM yyyy');
 
     return AppScaffold(
       title: context.l10n.orderHistory,
-      body: ListView.separated(
-        itemCount: orders.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final order = orders[index];
-          return AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      body: FutureBuilder<List<Booking>>(
+        future: _future,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final orders = snap.data ?? const [];
+          if (orders.isEmpty) {
+            return Center(child: Text(context.l10n.noOrdersYet));
+          }
+
+          return ListView.separated(
+            itemCount: orders.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final order = orders[index];
+              return AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        order.serviceTitle,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            order.serviceTitle,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        StatusBadge(
+                          label: _statusLabel(order.status),
+                          color: _statusColor(order.status),
+                        ),
+                      ],
                     ),
-                    StatusBadge(
-                      label: _statusLabel(order.status),
-                      color: _statusColor(order.status),
+                    const SizedBox(height: 8),
+                    if (order.address != null) Text(order.address!),
+                    if (order.scheduledAt != null)
+                      Text(dateFormat.format(order.scheduledAt!)),
+                    const SizedBox(height: 8),
+                    Text(
+                      '₹${order.estimatedPrice.toStringAsFixed(0)}',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: AppColors.primary,
+                          ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                if (order.address != null) Text(order.address!),
-                if (order.scheduledAt != null)
-                  Text(dateFormat.format(order.scheduledAt!)),
-                const SizedBox(height: 8),
-                Text(
-                  '₹${order.estimatedPrice.toStringAsFixed(0)}',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColors.primary,
-                      ),
-                ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),

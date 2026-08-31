@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../core/location/app_location.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/booking_flow_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -16,11 +17,17 @@ class CustomerBookingPage extends StatefulWidget {
 }
 
 class _CustomerBookingPageState extends State<CustomerBookingPage> {
-  final _addressController = TextEditingController(
-    text: 'Sector 12, Noida, UP',
-  );
+  late final TextEditingController _addressController;
   DateTime _selectedDate = DateTime.now().add(const Duration(hours: 2));
   final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _addressController = TextEditingController(
+      text: AppLocation.instance.addressLabel ?? '',
+    );
+  }
 
   @override
   void dispose() {
@@ -81,7 +88,8 @@ class _CustomerBookingPageState extends State<CustomerBookingPage> {
               AppTextField(
                 controller: _addressController,
                 label: 'Service Address',
-                hint: 'Enter your address',
+                hint: AppLocation.instance.addressLabel ??
+                    'Uses your current location',
                 prefixIcon: const Icon(Icons.location_on_outlined),
                 validator: (v) =>
                     v == null || v.trim().isEmpty ? 'Address required' : null,

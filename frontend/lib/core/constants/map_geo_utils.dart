@@ -38,6 +38,7 @@ abstract final class MapGeoUtils {
 
   static List<Point> cameraPoints({
     required MapCoordinate center,
+    MapCoordinate? routeStart,
     MapCoordinate? routeEnd,
     double? routeProgress,
     double? serviceRadiusKm,
@@ -59,17 +60,14 @@ abstract final class MapGeoUtils {
       }
     }
 
-    if (routeEnd != null) {
+    if (routeEnd != null && routeStart != null) {
       points.add(
         Point(
-          coordinates: Position(
-            MapConstants.workerStart.lng,
-            MapConstants.workerStart.lat,
-          ),
+          coordinates: Position(routeStart.lng, routeStart.lat),
         ),
       );
       final worker = MapConstants.lerpRoute(
-        MapConstants.workerStart,
+        routeStart,
         routeEnd,
         routeProgress ?? 0,
       );
