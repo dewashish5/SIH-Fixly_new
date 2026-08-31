@@ -34,7 +34,6 @@ class _AppState extends State<App> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Cold open handled on splash. Warm resume → one GPS refresh if permitted.
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       _wasPaused = true;
@@ -58,26 +57,27 @@ class _AppState extends State<App> with WidgetsBindingObserver {
         buildWhen: (prev, curr) =>
             prev.locale != curr.locale || prev.themeMode != curr.themeMode,
         builder: (context, session) {
-          return MaterialApp.router(
-            title: 'Fixly',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.light,
-            darkTheme: AppTheme.dark,
-            themeMode: session.themeMode,
-            locale: Locale(session.locale),
-            supportedLocales: const [
-              Locale('en'),
-              Locale('hi'),
-            ],
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            routerConfig: _router,
-            builder: (context, child) => LocaleScope(
-              locale: session.locale,
-              child: child ?? const SizedBox.shrink(),
+          // LocaleScope ABOVE MaterialApp — wrapping navigator child
+          // caused GlobalKey reservation crashes on locale rebuild.
+          return LocaleScope(
+            locale: session.locale,
+            child: MaterialApp.router(
+              title: 'Fixly',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.light,
+              darkTheme: AppTheme.dark,
+              themeMode: session.themeMode,
+              locale: Locale(session.locale),
+              supportedLocales: const [
+                Locale('en'),
+                Locale('hi'),
+              ],
+              localizationsDelegates: const [
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              routerConfig: _router,
             ),
           );
         },

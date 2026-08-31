@@ -25,6 +25,7 @@ import paymentRoutes from './routes/payment-routes.js';
 import reviewRoutes from './routes/review-routes.js';
 import homeRoutes from './routes/home-routes.js';
 import aiRoutes from './routes/ai-routes.js';
+import adminRoutes from './routes/admin-routes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -35,7 +36,28 @@ app.set('trust proxy', 1);
 
 // Security & Utility Middleware
 app.use(helmet());
-app.use(cors());
+
+const corsAllowedOrigins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    ...(process.env.CORS_ORIGINS || '')
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean)
+];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow non-browser clients (mobile / curl) and admin Vite + configured origins
+        if (!origin || corsAllowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        // Keep prior open behavior for other browser clients (e.g. Flutter web)
+        return callback(null, true);
+    },
+    credentials: true
+}));
+
 app.use(express.json({ limit: '10kb' }));
 
 // Safe Custom NoSQL Injection Sanitizer (Compatible with Node.js v20+)
@@ -86,6 +108,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/home', homeRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/admin', apiLimiter, adminRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
