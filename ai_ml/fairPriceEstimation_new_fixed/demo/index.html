@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FairPrice AI — Pre-Booking Fair Price Estimation Simulator</title>
+  <link rel="stylesheet" href="../gig_fair_pricing/widget/estimator.css" />
+  <style>
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      background: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    .demo-container {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .demo-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .demo-header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .demo-header p {
+      font-size: 13.5px;
+      color: #64748b;
+      margin: 0;
+      line-height: 1.5;
+    }
+    .badge-bar {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      font-size: 11px;
+      font-weight: 600;
+      background: #e2e8f0;
+      color: #334155;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .pill.green { background: #dcfce7; color: #166534; }
+    .pill.blue { background: #e0f2fe; color: #0369a1; }
+    .architecture-box {
+      margin-top: 24px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 18px 20px;
+      font-size: 12px;
+      color: #334155;
+      line-height: 1.6;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .architecture-box h4 {
+      margin: 0 0 10px 0;
+      font-size: 13.5px;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .architecture-box ol {
+      margin: 8px 0 0 0;
+      padding-left: 18px;
+    }
+    .architecture-box li {
+      margin-bottom: 6px;
+    }
+    .footer-links {
+      text-align: center;
+      margin-top: 18px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .footer-links a {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 600;
+      margin: 0 8px;
+    }
+    .footer-links a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="demo-container">
+    <div class="demo-header">
+      <h1>🛠️ FairPrice AI — Hackathon Simulator</h1>
+      <p>
+        Transparent pre-booking price estimation powered by statutory labour economics, city-tier cost indices, ML market regression, and deterministic fairness guardrails.
+      </p>
+      <div class="badge-bar">
+        <span class="pill green">✓ 15% Platform Commission</span>
+        <span class="pill blue">✓ Statutory Minimum Wage Floor</span>
+        <span class="pill blue">✓ 7th CPC X/Y/Z City Tiers</span>
+        <span class="pill green">✓ 1.60x Anti-Gouging Surge Cap</span>
+      </div>
+    </div>
+
+    <!-- Main Widget Container -->
+    <div id="customer-pricing-container"></div>
+
+    <!-- Technical Architecture Box -->
+    <div class="architecture-box">
+      <h4>💡 FairPrice AI Multi-Layer Architecture:</h4>
+      <ol>
+        <li><strong>Deterministic Statutory Baseline:</strong> Base price is mathematically derived from Ministry of Labour hourly wage floors (₹108/hr, ₹119/hr, ₹129/hr) × 1.8 markup factor ÷ 0.85 (15% platform commission).</li>
+        <li><strong>Structural City-Tier Cost Adjustment:</strong> 7th CPC HRA framework scales the base rate (Tier X: 1.30x Metro, Tier Y: 1.15x Large City, Tier Z: 1.00x Base).</li>
+        <li><strong>ML Market Intelligence:</strong> Gradient Boosting Regressor (12 features, R² = 0.9977) evaluates multi-factor market dynamics and confidence intervals.</li>
+        <li><strong>Deterministic Fairness Guardrails:</strong> Clamps dynamic surges at 1.60x maximum ceiling and guarantees worker payout never falls below the statutory hourly living wage.</li>
+      </ol>
+    </div>
+
+    <div class="footer-links">
+      <span>FairPrice AI Core Microservice</span> •
+      <a href="/api/health" target="_blank">Health Status</a> •
+      <a href="/api/services" target="_blank">Service Catalog</a> •
+      <a href="/api/demo-scenarios" target="_blank">Demo Scenarios JSON</a>
+    </div>
+  </div>
+
+  <script src="../gig_fair_pricing/widget/estimator.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.GigPriceEstimator.init({
+        containerId: 'customer-pricing-container',
+        apiBaseUrl: '' // Same origin API
+      });
+    });
+  </script>
+</body>
+</html>

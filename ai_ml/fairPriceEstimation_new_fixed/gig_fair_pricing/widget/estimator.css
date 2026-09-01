@@ -1,0 +1,399 @@
+/* Fair Price Estimator Card Styling */
+:root {
+  --fp-primary: #2563eb;
+  --fp-primary-hover: #1d4ed8;
+  --fp-success: #16a34a;
+  --fp-success-bg: #dcfce7;
+  --fp-warning: #ea580c;
+  --fp-danger: #dc2626;
+  --fp-bg-card: #ffffff;
+  --fp-bg-subtle: #f8fafc;
+  --fp-text-main: #0f172a;
+  --fp-text-muted: #64748b;
+  --fp-border: #e2e8f0;
+  --fp-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --fp-radius: 16px;
+  --fp-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.fp-card {
+  font-family: var(--fp-font);
+  background: var(--fp-bg-card);
+  border: 1px solid var(--fp-border);
+  border-radius: var(--fp-radius);
+  padding: 24px;
+  box-shadow: var(--fp-shadow);
+  max-width: 580px;
+  margin: 0 auto;
+  color: var(--fp-text-main);
+}
+
+.fp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--fp-border);
+  padding-bottom: 14px;
+}
+
+.fp-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+/* Scenario Pills Bar */
+.fp-scenario-bar {
+  margin-bottom: 18px;
+  background: #f1f5f9;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.fp-scenario-bar label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.fp-scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.fp-scenario-btn {
+  background: white;
+  border: 1px solid #cbd5e1;
+  padding: 6px 4px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.fp-scenario-btn:hover {
+  border-color: var(--fp-primary);
+  background: #eff6ff;
+  color: var(--fp-primary);
+}
+
+.fp-scenario-btn.active {
+  background: var(--fp-primary);
+  color: white;
+  border-color: var(--fp-primary);
+}
+
+.fp-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.fp-badge.low { background: #dcfce7; color: #166534; }
+.fp-badge.normal { background: #e0f2fe; color: #0369a1; }
+.fp-badge.moderate { background: #fef9c3; color: #854d0e; }
+.fp-badge.high { background: #ffedd5; color: #9a3412; }
+.fp-badge.peak { background: #fee2e2; color: #991b1b; }
+
+.fp-form-group {
+  margin-bottom: 14px;
+}
+
+.fp-form-group label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fp-text-main);
+  margin-bottom: 5px;
+}
+
+.fp-select, .fp-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--fp-border);
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  background: var(--fp-bg-subtle);
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.fp-select:focus, .fp-input:focus {
+  border-color: var(--fp-primary);
+  background: #ffffff;
+}
+
+.fp-urgency-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.fp-urgency-btn {
+  background: var(--fp-bg-subtle);
+  border: 1px solid var(--fp-border);
+  padding: 8px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fp-text-muted);
+  transition: all 0.2s ease;
+}
+
+.fp-urgency-btn .icon { font-size: 16px; display: block; margin-bottom: 2px; }
+.fp-urgency-btn.active {
+  border-color: var(--fp-primary);
+  background: #eff6ff;
+  color: var(--fp-primary);
+}
+
+.fp-urgency-btn.active.emergency {
+  border-color: var(--fp-danger);
+  background: #fef2f2;
+  color: var(--fp-danger);
+}
+
+/* Price Preview Banner */
+.fp-price-banner {
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: white;
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fp-price-main h2 {
+  font-size: 30px;
+  font-weight: 800;
+  margin: 0;
+  color: #38bdf8;
+}
+
+.fp-price-main .range {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.fp-price-badge-col {
+  text-align: right;
+  font-size: 12px;
+}
+
+.fp-price-badge-col .ai-badge {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+/* Fairness Guard Badges */
+.fp-fairness-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.fp-chip {
+  font-size: 11px;
+  font-weight: 600;
+  color: #166534;
+  background: #dcfce7;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Breakdown List */
+.fp-breakdown {
+  margin-top: 16px;
+  background: var(--fp-bg-subtle);
+  border: 1px solid var(--fp-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.fp-breakdown h4 {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  color: var(--fp-text-main);
+  display: flex;
+  justify-content: space-between;
+}
+
+.fp-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 6px;
+  color: var(--fp-text-muted);
+}
+
+.fp-breakdown-row.highlight {
+  font-weight: 700;
+  color: var(--fp-text-main);
+  border-top: 1px dashed var(--fp-border);
+  padding-top: 8px;
+  margin-top: 8px;
+  font-size: 13.5px;
+}
+
+.fp-breakdown-row.split {
+  font-size: 11.5px;
+  color: #475569;
+}
+
+/* Expandable Why this price section */
+.fp-explain-accordion {
+  margin-top: 12px;
+  border: 1px solid #bae6fd;
+  background: #f0f9ff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.fp-explain-toggle {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0369a1;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.fp-explain-content {
+  padding: 0 14px 12px 14px;
+  font-size: 11.5px;
+  color: #0c4a6e;
+  line-height: 1.6;
+  border-top: 1px solid #e0f2fe;
+}
+
+.fp-notes-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fp-notes-list li {
+  font-size: 11.5px;
+  color: #0369a1;
+  background: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border-left: 3px solid #0284c7;
+  border: 1px solid #e0f2fe;
+  border-left-width: 3px;
+}
+
+/* Comparison Button & Modal */
+.fp-action-bar {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.fp-confirm-btn {
+  flex: 2;
+  padding: 12px;
+  background: var(--fp-primary);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.fp-confirm-btn:hover {
+  background: var(--fp-primary-hover);
+}
+
+.fp-compare-btn {
+  flex: 1;
+  padding: 12px;
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fp-compare-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* Comparison Table View */
+.fp-comparison-box {
+  margin-top: 16px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 11.5px;
+}
+
+.fp-comparison-box h5 {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.fp-compare-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fp-compare-table th, .fp-compare-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+}
+
+.fp-compare-table th {
+  background: #f8fafc;
+  font-weight: 700;
+}
