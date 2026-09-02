@@ -30,14 +30,16 @@ class AuthApiRepository {
   final TokenStorage _tokens;
   final DeviceId _deviceId;
 
-  static Map<String, dynamic> _locationBody() {
+  static Map<String, dynamic> _locationBody({bool fallbackIfMissing = true}) {
     final loc = AppLocation.instance;
-    if (!loc.hasFix) {
+    if (!loc.hasFix && !fallbackIfMissing) {
       throw ApiException('Location required — enable GPS and try again');
     }
+    final lng = loc.hasFix ? loc.requireLng : 77.209;
+    final lat = loc.hasFix ? loc.requireLat : 28.6139;
     return {
       'type': 'Point',
-      'coordinates': [loc.requireLng, loc.requireLat],
+      'coordinates': [lng, lat],
     };
   }
 
@@ -54,7 +56,7 @@ class AuthApiRepository {
       'password': password,
       'role': role,
       'phone': phone,
-      'location': _locationBody(),
+      'location': _locationBody(fallbackIfMissing: false),
     });
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Register failed');
@@ -83,7 +85,7 @@ class AuthApiRepository {
       'email': email,
       'password': password,
       'deviceId': device,
-      'location': _locationBody(),
+      'location': _locationBody(fallbackIfMissing: true),
     });
     return _persistSession(res, fallbackMessage: 'Login failed');
   }
@@ -96,14 +98,18 @@ class AuthApiRepository {
     required String role,
   }) async {
     final device = await _deviceId.getOrCreate();
+    final effectiveAvatar = (avatar != null && avatar.trim().isNotEmpty)
+        ? avatar.trim()
+        : 'https://lh3.googleusercontent.com/a/default-user';
+
     final res = await _api.post('/api/auth/google', data: {
       'email': email,
       'name': name,
-      'avatar': avatar ?? '',
+      'avatar': effectiveAvatar,
       'role': role,
       'phone': phone,
       'deviceId': device,
-      'location': _locationBody(),
+      'location': _locationBody(fallbackIfMissing: true),
     });
     return _persistSession(res, fallbackMessage: 'Google login failed');
   }

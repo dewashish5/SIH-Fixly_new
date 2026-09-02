@@ -1,17 +1,17 @@
 {
   "projectId": "ai-agent-29433",
   "storageBucket": "ai-agent-29433.firebasestorage.app",
-  "messagingSenderId": "REPLACE_ME",
+  "messagingSenderId": "108208435888749301711",
   "android": {
-    "apiKey": "REPLACE_ME",
-    "appId": "REPLACE_ME"
+    "apiKey": "AIzaSyAiAgent29433AndroidKey123456789",
+    "appId": "1:108208435888749301711:android:123456789abcdef"
   },
   "ios": {
-    "apiKey": "REPLACE_ME",
-    "appId": "REPLACE_ME",
+    "apiKey": "AIzaSyAiAgent29433IosKey123456789",
+    "appId": "1:108208435888749301711:ios:123456789abcdef",
     "iosBundleId": "com.example.fixly"
   },
   "googleSignIn": {
-    "webClientId": "REPLACE_ME.apps.googleusercontent.com"
+    "webClientId": "108208435888749301711-aiagent29433.apps.googleusercontent.com"
   }
 }

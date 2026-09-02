@@ -90,13 +90,9 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     try {
       await GoogleAuthService.instance.ensureReady();
 
-      final locationReady =
-          await LocationService.instance.refreshCurrentPosition();
-      if (!locationReady) {
-        throw ApiException(
-          'Location required — enable GPS and try again',
-        );
-      }
+      try {
+        await LocationService.instance.refreshCurrentPosition();
+      } catch (_) {}
 
       final profile = await GoogleAuthService.instance.signIn();
       final session = await _auth.googleLogin(
