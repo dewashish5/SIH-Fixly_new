@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/location/location_service.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/app_session_cubit.dart';
 import '../widgets/auth_credentials_fields.dart';
@@ -18,10 +19,10 @@ class SignupPage extends StatefulWidget {
 
 class _SignupPageState extends State<SignupPage> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _phoneController = TextEditingController();
-  AuthInputMethod _method = AuthInputMethod.email;
   bool _obscurePassword = true;
 
   @override
@@ -32,9 +33,10 @@ class _SignupPageState extends State<SignupPage> {
 
   @override
   void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
@@ -42,35 +44,48 @@ class _SignupPageState extends State<SignupPage> {
 
   Future<void> _handleSocial(Future<bool> Function() signUp) async {
     final success = await signUp();
-    if (!mounted || !success) return;
+    if (!mounted || !success) {
+      final msg = _cubit.state.errorMessage;
+      if (mounted && msg != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg)),
+        );
+      }
+      return;
+    }
     context.go(_cubit.postAuthRoute());
   }
 
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_method == AuthInputMethod.email) {
-      final success = await _cubit.signUpWithEmail(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+    final locationReady =
+        await LocationService.instance.refreshCurrentPosition();
+    if (!locationReady && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.locationRequiredForSignup),
+        ),
       );
-      if (!mounted) return;
-      if (!success) {
-        final msg = _cubit.state.errorMessage;
-        if (msg != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-        }
-        return;
-      }
-      if (_cubit.state.status == AppSessionStatus.otpSent) {
-        context.push(RouteNames.otp);
-      }
       return;
     }
 
-    final phone = _phoneController.text.replaceAll(RegExp(r'\D'), '');
-    await _cubit.sendOtp(phone);
+    final phoneDigits =
+        _phoneController.text.replaceAll(RegExp(r'\D'), '');
+    final success = await _cubit.signUpWithEmail(
+      name: _nameController.text.trim(),
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      phone: phoneDigits,
+    );
     if (!mounted) return;
+    if (!success) {
+      final msg = _cubit.state.errorMessage;
+      if (msg != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
+      return;
+    }
     if (_cubit.state.status == AppSessionStatus.otpSent) {
       context.push(RouteNames.otp);
     }
@@ -109,39 +124,29 @@ class _SignupPageState extends State<SignupPage> {
                 AuthSocialRow(
                   onGoogle:
                       loading ? null : () => _handleSocial(_cubit.signInWithGoogle),
-                  onFacebook: loading
-                      ? null
-                      : () => _handleSocial(_cubit.signInWithFacebook),
                 ),
                 const SizedBox(height: 20),
                 AuthDivider(label: l10n.orContinueWith),
                 const SizedBox(height: 20),
-                AuthMethodSwitcher(
-                  method: _method,
-                  emailLabel: l10n.authEmailTab,
-                  phoneLabel: l10n.authPhoneTab,
-                  onChanged: (method) => setState(() => _method = method),
-                ),
-                const SizedBox(height: 18),
                 AuthCredentialsFields(
-                  method: _method,
+                  nameController: _nameController,
+                  nameLabel: l10n.fullName,
+                  nameHint: l10n.fullNameHint,
+                  phoneController: _phoneController,
+                  phoneLabel: l10n.phoneNumber,
+                  phoneHint: l10n.phoneHint,
                   emailController: _emailController,
                   passwordController: _passwordController,
-                  phoneController: _phoneController,
                   obscurePassword: _obscurePassword,
                   onTogglePassword: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
                   emailLabel: l10n.email,
                   passwordLabel: l10n.password,
                   passwordHint: l10n.passwordHint,
-                  phoneLabel: l10n.phoneNumber,
-                  phoneHint: l10n.phoneHint,
                 ),
                 const SizedBox(height: 24),
                 PrimaryButton(
-                  label: _method == AuthInputMethod.phone
-                      ? l10n.sendOtp
-                      : l10n.createAccount,
+                  label: l10n.createAccount,
                   loading: loading,
                   onPressed: loading ? null : _signUp,
                 ),

@@ -31,6 +31,13 @@ class AppStrings {
   String get createAccount => isHi ? 'खाता बनाएं' : 'Create account';
   String get sendOtp => isHi ? 'OTP भेजें' : 'Send OTP';
   String get verifyOtp => isHi ? 'OTP सत्यापित करें' : 'Verify OTP';
+  String get otpSentTo => isHi ? 'OTP भेजा गया' : 'OTP sent to';
+  String get resendOtp => isHi ? 'OTP दोबारा भेजें' : 'Resend OTP';
+  String resendOtpIn(int seconds) =>
+      isHi ? '$seconds सेकंड में दोबारा भेजें' : 'Resend in ${seconds}s';
+  String get otpResent => isHi ? 'नया OTP भेज दिया गया' : 'A new OTP has been sent';
+  String get fullName => isHi ? 'पूरा नाम' : 'Full name';
+  String get fullNameHint => isHi ? 'अपना नाम दर्ज करें' : 'Enter your name';
   String get email => isHi ? 'ईमेल' : 'Email';
   String get password => isHi ? 'पासवर्ड' : 'Password';
   String get passwordHint => isHi ? 'अपना पासवर्ड दर्ज करें' : 'Enter your password';
@@ -38,7 +45,10 @@ class AppStrings {
   String get phoneHint => isHi ? '10 अंकों का मोबाइल नंबर' : '10-digit mobile number';
   String get continueWithGoogle => isHi ? 'Google' : 'Google';
   String get continueWithFacebook => isHi ? 'Facebook' : 'Facebook';
-  String get orContinueWith => isHi ? 'या ईमेल / फ़ोन' : 'Or email / phone';
+  String get orContinueWith => isHi ? 'या ईमेल से' : 'Or continue with email';
+  String get locationRequiredForSignup => isHi
+      ? 'साइन अप के लिए GPS चालू करें और स्थान की अनुमति दें'
+      : 'Enable GPS and allow location access to sign up';
   String get dontHaveAccount =>
       isHi ? 'खाता नहीं है?' : "Don't have an account?";
   String get alreadyHaveAccount =>

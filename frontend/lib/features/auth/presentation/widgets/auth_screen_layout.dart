@@ -7,8 +7,6 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_strings.dart';
 
-enum AuthInputMethod { email, phone }
-
 class AuthScreenLayout extends StatelessWidget {
   const AuthScreenLayout({
     required this.title,
@@ -114,33 +112,17 @@ class AuthScreenLayout extends StatelessWidget {
 class AuthSocialRow extends StatelessWidget {
   const AuthSocialRow({
     required this.onGoogle,
-    required this.onFacebook,
     super.key,
   });
 
   final VoidCallback? onGoogle;
-  final VoidCallback? onFacebook;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _SocialTag(
-            asset: 'assets/icons/google.svg',
-            semanticLabel: 'Google',
-            onPressed: onGoogle,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _SocialTag(
-            asset: 'assets/icons/facebook.svg',
-            semanticLabel: 'Facebook',
-            onPressed: onFacebook,
-          ),
-        ),
-      ],
+    return _SocialTag(
+      asset: 'assets/icons/google.svg',
+      semanticLabel: 'Google',
+      onPressed: onGoogle,
     );
   }
 }
@@ -180,159 +162,6 @@ class _SocialTag extends StatelessWidget {
                 height: 24,
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class AuthMethodSwitcher extends StatelessWidget {
-  const AuthMethodSwitcher({
-    required this.method,
-    required this.emailLabel,
-    required this.phoneLabel,
-    required this.onChanged,
-    super.key,
-  });
-
-  final AuthInputMethod method;
-  final String emailLabel;
-  final String phoneLabel;
-  final ValueChanged<AuthInputMethod> onChanged;
-
-  static const _duration = Duration(milliseconds: 320);
-  static const _curve = Curves.easeInOutCubic;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const padding = 4.0;
-        final trackWidth = constraints.maxWidth - (padding * 2);
-        final segmentWidth = trackWidth / 2;
-        final isEmail = method == AuthInputMethod.email;
-
-        return Container(
-          height: 48,
-          padding: const EdgeInsets.all(padding),
-          decoration: BoxDecoration(
-            color: context.scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Stack(
-            children: [
-              AnimatedAlign(
-                duration: _duration,
-                curve: _curve,
-                alignment: isEmail ? Alignment.centerLeft : Alignment.centerRight,
-                child: Container(
-                  width: segmentWidth,
-                  height: double.infinity,
-                  decoration: BoxDecoration(
-                    color: context.card,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: context.scheme.primary.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: _MethodTab(
-                      label: emailLabel,
-                      icon: Icons.mail_outline_rounded,
-                      selected: isEmail,
-                      onTap: () => onChanged(AuthInputMethod.email),
-                    ),
-                  ),
-                  Expanded(
-                    child: _MethodTab(
-                      label: phoneLabel,
-                      icon: Icons.phone_outlined,
-                      selected: !isEmail,
-                      onTap: () => onChanged(AuthInputMethod.phone),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _MethodTab extends StatelessWidget {
-  const _MethodTab({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  static const _duration = Duration(milliseconds: 320);
-  static const _curve = Curves.easeInOutCubic;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? context.scheme.primary : context.muted;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        splashColor: AppColors.primary.withValues(alpha: 0.08),
-        highlightColor: AppColors.primary.withValues(alpha: 0.04),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedScale(
-                scale: selected ? 1.05 : 1,
-                duration: _duration,
-                curve: _curve,
-                child: AnimatedSwitcher(
-                  duration: _duration,
-                  switchInCurve: _curve,
-                  switchOutCurve: _curve,
-                  transitionBuilder: (child, animation) => ScaleTransition(
-                    scale: animation,
-                    child: child,
-                  ),
-                  child: Icon(
-                    icon,
-                    key: ValueKey('$icon-$selected'),
-                    size: 18,
-                    color: color,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              AnimatedDefaultTextStyle(
-                duration: _duration,
-                curve: _curve,
-                style: Theme.of(context).textTheme.labelLarge!.copyWith(
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: color,
-                    ),
-                child: Text(label),
-              ),
-            ],
           ),
         ),
       ),

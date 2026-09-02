@@ -1,0 +1,17 @@
+{
+  "projectId": "ai-agent-29433",
+  "storageBucket": "ai-agent-29433.firebasestorage.app",
+  "messagingSenderId": "REPLACE_ME",
+  "android": {
+    "apiKey": "REPLACE_ME",
+    "appId": "REPLACE_ME"
+  },
+  "ios": {
+    "apiKey": "REPLACE_ME",
+    "appId": "REPLACE_ME",
+    "iosBundleId": "com.example.fixly"
+  },
+  "googleSignIn": {
+    "webClientId": "REPLACE_ME.apps.googleusercontent.com"
+  }
+}

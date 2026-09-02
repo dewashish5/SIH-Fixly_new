@@ -1,9 +1,11 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../core/network/api_client.dart';
+import '../../../../core/auth/google_auth_service.dart';
+import '../../../../core/location/location_service.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/preferences/app_preferences.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
@@ -86,12 +88,22 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   Future<bool> signInWithGoogle() async {
     emit(state.copyWith(status: AppSessionStatus.loading, clearError: true));
     try {
-      // No Firebase idToken on FE yet — stable device-scoped identity for /api/auth/google.
-      final device = await ApiServices.deviceId.getOrCreate();
-      final email = 'google_$device@fixly.local';
+      await GoogleAuthService.instance.ensureReady();
+
+      final locationReady =
+          await LocationService.instance.refreshCurrentPosition();
+      if (!locationReady) {
+        throw ApiException(
+          'Location required — enable GPS and try again',
+        );
+      }
+
+      final profile = await GoogleAuthService.instance.signIn();
       final session = await _auth.googleLogin(
-        email: email,
-        name: 'Fixly Member',
+        email: profile.email,
+        name: profile.name,
+        phone: profile.phone,
+        avatar: profile.avatar,
         role: state.role,
       );
       _applySession(session);
@@ -102,6 +114,14 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         errorMessage: e.message,
       ));
       return false;
+    } on GoogleSignInException catch (e) {
+      final canceled = e.code == GoogleSignInExceptionCode.canceled;
+      emit(state.copyWith(
+        status: AppSessionStatus.initial,
+        errorMessage: canceled ? null : e.toString(),
+        clearError: canceled,
+      ));
+      return false;
     } catch (e) {
       emit(state.copyWith(
         status: AppSessionStatus.initial,
@@ -109,14 +129,6 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       ));
       return false;
     }
-  }
-
-  Future<bool> signInWithFacebook() async {
-    emit(state.copyWith(
-      status: AppSessionStatus.initial,
-      errorMessage: 'Facebook sign-in not available on server',
-    ));
-    return false;
   }
 
   Future<bool> signInWithEmail({
@@ -149,24 +161,32 @@ class AppSessionCubit extends Cubit<AppSessionState> {
 
   /// Register then expect OTP verify (email).
   Future<bool> signUpWithEmail({
+    required String name,
     required String email,
     required String password,
+    required String phone,
   }) async {
     emit(state.copyWith(
       email: email,
+      phone: phone,
+      pendingSignupName: name,
+      pendingSignupPassword: password,
       status: AppSessionStatus.loading,
       clearError: true,
     ));
     try {
-      final name = _nameFromEmail(email);
       await _auth.register(
         name: name,
         email: email,
         password: password,
         role: state.role,
+        phone: phone,
       );
       emit(state.copyWith(
         email: email,
+        phone: phone,
+        pendingSignupName: name,
+        pendingSignupPassword: password,
         status: AppSessionStatus.otpSent,
         clearError: true,
       ));
@@ -186,13 +206,43 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     }
   }
 
-  Future<void> sendOtp(String phone) async {
-    // Phone OTP not on backend — keep UX path but mark unsupported.
-    emit(state.copyWith(
-      phone: phone,
-      status: AppSessionStatus.initial,
-      errorMessage: 'Use email sign-up; phone OTP not supported by API',
-    ));
+  /// Re-hit register to trigger a fresh email OTP.
+  Future<bool> resendSignupOtp() async {
+    final name = state.pendingSignupName;
+    final email = state.email;
+    final password = state.pendingSignupPassword;
+    final phone = state.phone;
+    if (name == null ||
+        email == null ||
+        email.isEmpty ||
+        password == null ||
+        phone == null) {
+      emit(state.copyWith(
+        errorMessage: 'Missing signup details — go back and sign up again',
+      ));
+      return false;
+    }
+
+    try {
+      await _auth.register(
+        name: name,
+        email: email,
+        password: password,
+        role: state.role,
+        phone: phone,
+      );
+      emit(state.copyWith(
+        status: AppSessionStatus.otpSent,
+        clearError: true,
+      ));
+      return true;
+    } on ApiException catch (e) {
+      emit(state.copyWith(errorMessage: e.message));
+      return false;
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+      return false;
+    }
   }
 
   Future<bool> verifyOtp(String otp) async {
@@ -243,6 +293,8 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         status: AppSessionStatus.initial,
         email: '',
         phone: '',
+        pendingSignupName: '',
+        pendingSignupPassword: '',
         clearError: true,
       ),
     );
@@ -255,6 +307,8 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       state.copyWith(
         email: session.user.email,
         phone: session.user.phone,
+        pendingSignupName: '',
+        pendingSignupPassword: '',
         role: session.user.role == UserRole.worker ? 'worker' : 'customer',
         status: AppSessionStatus.authenticated,
         clearError: true,
@@ -262,13 +316,4 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     );
   }
 
-  String _nameFromEmail(String email) {
-    final local = email.split('@').first.trim();
-    if (local.isEmpty) return 'Fixly User';
-    return local
-        .split(RegExp(r'[._-]+'))
-        .where((part) => part.isNotEmpty)
-        .map((part) => part[0].toUpperCase() + part.substring(1))
-        .join(' ');
-  }
 }

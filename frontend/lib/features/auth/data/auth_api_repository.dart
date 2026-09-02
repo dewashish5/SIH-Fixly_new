@@ -46,14 +46,14 @@ class AuthApiRepository {
     required String email,
     required String password,
     required String role,
-    String? phone,
+    required String phone,
   }) async {
     final res = await _api.post('/api/auth/register', data: {
       'name': name,
       'email': email,
       'password': password,
       'role': role,
-      if (phone != null && phone.isNotEmpty) 'phone': phone,
+      'phone': phone,
       'location': _locationBody(),
     });
     if (res['success'] != true) {
@@ -91,6 +91,7 @@ class AuthApiRepository {
   Future<AuthSession> googleLogin({
     required String email,
     required String name,
+    required String phone,
     String? avatar,
     required String role,
   }) async {
@@ -98,8 +99,9 @@ class AuthApiRepository {
     final res = await _api.post('/api/auth/google', data: {
       'email': email,
       'name': name,
-      if (avatar != null) 'avatar': avatar,
+      'avatar': avatar ?? '',
       'role': role,
+      'phone': phone,
       'deviceId': device,
       'location': _locationBody(),
     });
