@@ -30,17 +30,8 @@ class AuthApiRepository {
   final TokenStorage _tokens;
   final DeviceId _deviceId;
 
-  static Map<String, dynamic> _locationBody({bool fallbackIfMissing = true}) {
-    final loc = AppLocation.instance;
-    if (!loc.hasFix && !fallbackIfMissing) {
-      throw ApiException('Location required — enable GPS and try again');
-    }
-    final lng = loc.hasFix ? loc.requireLng : 77.209;
-    final lat = loc.hasFix ? loc.requireLat : 28.6139;
-    return {
-      'type': 'Point',
-      'coordinates': [lng, lat],
-    };
+  static Map<String, dynamic>? _locationBody() {
+    return AppLocation.instance.toGeoJsonPointOrNull();
   }
 
   Future<void> register({
@@ -56,7 +47,7 @@ class AuthApiRepository {
       'password': password,
       'role': role,
       'phone': phone,
-      'location': _locationBody(fallbackIfMissing: false),
+      'location': _locationBody(),
     });
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Register failed');
@@ -85,7 +76,7 @@ class AuthApiRepository {
       'email': email,
       'password': password,
       'deviceId': device,
-      'location': _locationBody(fallbackIfMissing: true),
+      'location': _locationBody(),
     });
     return _persistSession(res, fallbackMessage: 'Login failed');
   }
@@ -109,7 +100,7 @@ class AuthApiRepository {
       'role': role,
       'phone': phone,
       'deviceId': device,
-      'location': _locationBody(fallbackIfMissing: true),
+      'location': _locationBody(),
     });
     return _persistSession(res, fallbackMessage: 'Google login failed');
   }

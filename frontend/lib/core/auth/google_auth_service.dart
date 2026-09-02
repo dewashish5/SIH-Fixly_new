@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../firebase/firebase_bootstrap.dart';
@@ -23,36 +22,29 @@ class GoogleAuthService {
   static final GoogleAuthService instance = GoogleAuthService._();
 
   Future<GoogleAuthProfile> signIn() async {
-    final account = await GoogleSignIn.instance.authenticate();
-    final idToken = account.authentication.idToken;
-    if (idToken == null || idToken.isEmpty) {
-      throw StateError('Google sign-in did not return an ID token');
-    }
+    await ensureReady();
 
-    final credential = GoogleAuthProvider.credential(idToken: idToken);
-    final userCredential =
-        await FirebaseAuth.instance.signInWithCredential(credential);
-    final user = userCredential.user;
-    if (user == null) {
-      throw StateError('Firebase sign-in failed');
+    final account = await GoogleSignIn.instance.authenticate();
+    final email = account.email.trim();
+    if (email.isEmpty) {
+      throw StateError('Google account did not return an email address.');
     }
 
     return GoogleAuthProfile(
-      email: (user.email ?? account.email).trim(),
-      name: (user.displayName ?? account.displayName ?? 'Fixly User').trim(),
-      phone: (user.phoneNumber ?? '').trim(),
-      avatar: user.photoURL ?? account.photoUrl,
+      email: email,
+      name: (account.displayName ?? 'Fixly User').trim(),
+      phone: '',
+      avatar: account.photoUrl,
     );
   }
 
   Future<void> signOut() async {
-    await FirebaseAuth.instance.signOut();
-    await GoogleSignIn.instance.signOut();
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {}
   }
 
   Future<void> ensureReady() async {
-    if (FirebaseBootstrap.webClientId == null) {
-      await FirebaseBootstrap.init();
-    }
+    await FirebaseBootstrap.init();
   }
 }

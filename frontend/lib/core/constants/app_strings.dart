@@ -49,6 +49,25 @@ class AppStrings {
   String get locationRequiredForSignup => isHi
       ? 'साइन अप के लिए GPS चालू करें और स्थान की अनुमति दें'
       : 'Enable GPS and allow location access to sign up';
+  String get locationServicesOffTitle =>
+      isHi ? 'स्थान बंद है' : 'Location is off';
+  String get locationServicesOffBody => isHi
+      ? 'साइन अप के लिए फ़ोन की सेटिंग में GPS चालू करें, फिर वापस आकर दोबारा कोशिश करें।'
+      : 'Turn on location in your phone settings so we can send your area with sign-up, then try again.';
+  String get turnOnLocation => isHi ? 'स्थान चालू करें' : 'Turn on location';
+  String get locationPermissionBlockedTitle =>
+      isHi ? 'स्थान अनुमति बंद' : 'Location blocked';
+  String get locationPermissionBlockedBody => isHi
+      ? 'Fixly को स्थान की अनुमति चाहिए। सेटिंग्स में जाकर चालू करें।'
+      : 'Fixly needs location access. Open Settings to enable it.';
+  String get openSettings => isHi ? 'सेटिंग्स खोलें' : 'Open Settings';
+  String get locationEnableTitle =>
+      isHi ? 'स्थान चालू करें' : 'Enable location';
+  String get locationEnableBody => isHi
+      ? 'Fixly को पास के कार्यकर्ता और बुकिंग पता दिखाने के लिए आपका स्थान चाहिए।'
+      : 'Fixly needs your location to find nearby workers and set booking addresses.';
+  String get notNow => isHi ? 'अभी नहीं' : 'Not now';
+  String get allow => isHi ? 'अनुमति दें' : 'Allow';
   String get dontHaveAccount =>
       isHi ? 'खाता नहीं है?' : "Don't have an account?";
   String get alreadyHaveAccount =>

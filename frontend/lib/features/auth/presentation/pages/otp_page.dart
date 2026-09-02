@@ -85,15 +85,7 @@ class _OtpPageState extends State<OtpPage> with SingleTickerProviderStateMixin {
 
     setState(() => _resending = true);
 
-    final locationReady =
-        await LocationService.instance.refreshCurrentPosition();
-    if (!locationReady && mounted) {
-      setState(() => _resending = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.locationRequiredForSignup)),
-      );
-      return;
-    }
+    await LocationService.instance.ensureForSignup(context);
 
     final success = await cubit.resendSignupOtp();
 

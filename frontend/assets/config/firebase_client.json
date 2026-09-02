@@ -1,17 +1,19 @@
 {
   "projectId": "ai-agent-29433",
   "storageBucket": "ai-agent-29433.firebasestorage.app",
-  "messagingSenderId": "108208435888749301711",
+  "messagingSenderId": "343135068849",
   "android": {
-    "apiKey": "AIzaSyAiAgent29433AndroidKey123456789",
-    "appId": "1:108208435888749301711:android:123456789abcdef"
+    "apiKey": "AIzaSyCyZroz3DXFCfqQ1Pu31xtCzeq_GltvyuA",
+    "appId": "1:343135068849:android:3b9a3640221455495cf890"
   },
   "ios": {
-    "apiKey": "AIzaSyAiAgent29433IosKey123456789",
-    "appId": "1:108208435888749301711:ios:123456789abcdef",
+    "apiKey": "AIzaSyBeAUSmdLabmvgrweeKsFD5EgFaKWHz2uI",
+    "appId": "1:343135068849:ios:c618499701526cc85cf890",
     "iosBundleId": "com.example.fixly"
   },
   "googleSignIn": {
-    "webClientId": "108208435888749301711-aiagent29433.apps.googleusercontent.com"
+    "webClientId": "343135068849-vfmcn24j4k6lm5361pkk6a8ucrha9h65.apps.googleusercontent.com",
+    "iosClientId": "343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta.apps.googleusercontent.com",
+    "iosReversedClientId": "com.googleusercontent.apps.343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta"
   }
 }

@@ -59,16 +59,7 @@ class _SignupPageState extends State<SignupPage> {
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final locationReady =
-        await LocationService.instance.refreshCurrentPosition();
-    if (!locationReady && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.locationRequiredForSignup),
-        ),
-      );
-      return;
-    }
+    await LocationService.instance.ensureForSignup(context);
 
     final phoneDigits =
         _phoneController.text.replaceAll(RegExp(r'\D'), '');

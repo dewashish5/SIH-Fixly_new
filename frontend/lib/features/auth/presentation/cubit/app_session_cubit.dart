@@ -112,9 +112,15 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       return false;
     } on GoogleSignInException catch (e) {
       final canceled = e.code == GoogleSignInExceptionCode.canceled;
+      final configError =
+          e.code == GoogleSignInExceptionCode.clientConfigurationError;
+      final message = configError
+          ? 'Google Sign-In not configured. Add Firebase config files — '
+              'see assets/config/README in project.'
+          : e.toString();
       emit(state.copyWith(
         status: AppSessionStatus.initial,
-        errorMessage: canceled ? null : e.toString(),
+        errorMessage: canceled ? null : message,
         clearError: canceled,
       ));
       return false;

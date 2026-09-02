@@ -19,6 +19,11 @@ class LocationService {
     if (_refreshing) return AppLocation.instance.hasFix;
     _refreshing = true;
     try {
+      if (!await _ensureLocationServices(context)) {
+        AppLocation.instance.permissionGranted = false;
+        return false;
+      }
+      if (!context.mounted) return false;
       final granted = await _ensurePermission(context);
       if (!granted) {
         AppLocation.instance.permissionGranted = false;
@@ -28,6 +33,15 @@ class LocationService {
     } finally {
       _refreshing = false;
     }
+  }
+
+  /// Sign-up / register — GPS on, permission granted, then fix for API body.
+  Future<bool> ensureForSignup(BuildContext context) async {
+    if (!context.mounted) return false;
+    if (!await _ensureLocationServices(context)) return false;
+    if (!context.mounted) return false;
+    if (!await _ensurePermission(context)) return false;
+    return refreshCurrentPosition();
   }
 
   /// GPS-only refresh (permission already granted). Safe without context.
@@ -74,6 +88,17 @@ class LocationService {
       debugPrint('LocationService: position failed: $e');
       return false;
     }
+  }
+
+  Future<bool> _ensureLocationServices(BuildContext context) async {
+    if (await Geolocator.isLocationServiceEnabled()) return true;
+    if (!context.mounted) return false;
+
+    final open = await LocationPermissionDialogs.showLocationServicesOff(context);
+    if (!open) return false;
+
+    await Geolocator.openLocationSettings();
+    return Geolocator.isLocationServiceEnabled();
   }
 
   Future<bool> _ensurePermission(BuildContext context) async {

@@ -13,7 +13,7 @@ Future<void> main() async {
   try {
     await FirebaseBootstrap.init();
   } catch (e) {
-    debugPrint('Firebase init skipped: $e');
+    debugPrint('Google Sign-In bootstrap failed: $e');
   }
   await ApiServices.init();
   runApp(const App());

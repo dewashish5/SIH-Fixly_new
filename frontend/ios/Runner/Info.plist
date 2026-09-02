@@ -70,7 +70,23 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
-		<key>UIStatusBarHidden</key>
-		<false/>
+	<key>UIStatusBarHidden</key>
+	<false/>
+	<!-- GOOGLE_SIGN_IN_URL_SCHEME -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta</string>
+			</array>
+		</dict>
+	</array>
+	<key>GIDClientID</key>
+	<string>343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta.apps.googleusercontent.com</string>
+	<key>GIDServerClientID</key>
+	<string>343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta.apps.googleusercontent.com</string>
 	</dict>
 </plist>

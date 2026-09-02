@@ -50,13 +50,41 @@ class AppLocation {
     );
   }
 
+  /// GeoJSON Point for API — `[latitude, longitude]`, or null if no GPS fix.
+  Map<String, dynamic>? toGeoJsonPointOrNull() {
+    if (!hasFix) return null;
+    return {
+      'type': 'Point',
+      'coordinates': [requireLat, requireLng],
+    };
+  }
+
+  /// `[latitude, longitude]` for flat coordinate fields.
+  List<double> get geoJsonCoordinates {
+    if (!hasFix) {
+      throw StateError('Location not available yet');
+    }
+    return [requireLat, requireLng];
+  }
+
   void update({
     required double latitude,
     required double longitude,
     String? address,
   }) {
-    lat = latitude;
-    lng = longitude;
+    var lat = latitude;
+    var lng = longitude;
+    // GPS sometimes arrives swapped — normalize before store/send.
+    if (lat.abs() > 90 || lng.abs() > 180) {
+      final fixedLat = lng;
+      final fixedLng = lat;
+      if (fixedLat.abs() <= 90 && fixedLng.abs() <= 180) {
+        lat = fixedLat;
+        lng = fixedLng;
+      }
+    }
+    this.lat = lat;
+    this.lng = lng;
     if (address != null && address.isNotEmpty) {
       addressLabel = address;
     }
