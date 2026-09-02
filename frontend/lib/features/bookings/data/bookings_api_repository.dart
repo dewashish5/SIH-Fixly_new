@@ -76,7 +76,7 @@ class BookingsApiRepository {
       'workerId': ?workerId,
       'problemDescription': ?problemDescription,
       'addressLine': addressLine,
-      'coordinates': [useLat, useLng],
+      'coordinates': [useLng, useLat],
       'scheduledTime': ?scheduledTime?.toUtc().toIso8601String(),
     });
     if (res['success'] != true || res['booking'] == null) {

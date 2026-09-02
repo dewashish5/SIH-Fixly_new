@@ -50,21 +50,21 @@ class AppLocation {
     );
   }
 
-  /// GeoJSON Point for API — `[latitude, longitude]`, or null if no GPS fix.
+  /// GeoJSON Point for API — `[longitude, latitude]` (RFC 7946).
   Map<String, dynamic>? toGeoJsonPointOrNull() {
     if (!hasFix) return null;
     return {
       'type': 'Point',
-      'coordinates': [requireLat, requireLng],
+      'coordinates': [requireLng, requireLat],
     };
   }
 
-  /// `[latitude, longitude]` for flat coordinate fields.
+  /// `[longitude, latitude]` for flat GeoJSON coordinate fields.
   List<double> get geoJsonCoordinates {
     if (!hasFix) {
       throw StateError('Location not available yet');
     }
-    return [requireLat, requireLng];
+    return [requireLng, requireLat];
   }
 
   void update({

@@ -61,6 +61,12 @@
 		</array>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Fixly uses your location to show nearby workers and navigation.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>Fixly needs camera access to capture Aadhaar, PAN, and selfie photos for KYC.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Fixly needs photo library access so you can upload Aadhaar and PAN images.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>Fixly may save captured KYC photos to your library when needed.</string>
 		<key>MBXAccessToken</key>
 		<string>pk.eyJ1IjoiZGV3YXNoaXNoIiwiYSI6ImNtbmQydmlybjE1bTMyd3BqNzB5NzBtbWYifQ.1pPZzeZwPl3IWciYjWL_-g</string>
 		<key>UISupportedInterfaceOrientations~ipad</key>

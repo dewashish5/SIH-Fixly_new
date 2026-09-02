@@ -259,13 +259,32 @@ class AppStrings {
   String get otherSkillsHint => isHi
       ? 'कौशल लिखें, कॉमा से अलग करें'
       : 'Type a skill, then comma to add more';
-  String get serviceArea => isHi ? 'सेवा क्षेत्र' : 'Service area';
+  String get serviceArea => isHi ? 'आपका स्थान' : 'Your location';
   String get serviceAreaHint => isHi
-      ? 'नौकरियों के लिए आप कितनी दूर जा सकते हैं, सेट करें।'
-      : 'Set how far you are willing to travel for jobs.';
+      ? 'मानचित्र पर अपना वर्तमान स्थान देखें। पैन करके आसपास देखें।'
+      : 'See your current location on the map. Pan around to explore nearby.';
+  String get yourRates => isHi ? 'आपकी दरें' : 'Your rates';
+  String get yourRatesHint => isHi
+      ? 'प्रत्येक चुने कौशल के लिए प्रति घंटा दर (₹) सेट करें।'
+      : 'Set an hourly rate (₹) for each skill you selected.';
+  String get experienceYears =>
+      isHi ? 'अनुभव (वर्ष)' : 'Years of experience';
+  String get workerBio => isHi ? 'संक्षिप्त परिचय' : 'Short bio';
+  String get workerBioHint => isHi
+      ? 'ग्राहकों को अपने अनुभव के बारे में बताएं'
+      : 'Tell customers about your experience';
+  String get hourlyRateLabel => isHi ? 'प्रति घंटा दर (₹)' : 'Hourly rate (₹)';
+  String get selectSkillsFirstForRates => isHi
+      ? 'पहले कौशल चुनें, फिर दरें जोड़ें।'
+      : 'Select skills above to set rates.';
   String get largerRadiusHint => isHi
       ? 'बड़ा क्षेत्र = अधिक नज़दीकी नौकरियां'
       : 'Larger radius = more nearby jobs';
+  String get locationOnMap => isHi ? 'मानचित्र पर स्थान' : 'Location on map';
+  String get youAreHere => isHi ? 'आप यहाँ हैं' : 'You are here';
+  String get waitingForLocation =>
+      isHi ? 'स्थान की प्रतीक्षा…' : 'Waiting for location…';
+  String get refreshLocation => isHi ? 'स्थान रीफ़्रेश करें' : 'Refresh location';
   String get welfareInsurance => isHi ? 'कल्याण और बीमा' : 'Welfare & insurance';
   String get bankUpi => isHi ? 'बैंक और UPI' : 'Bank & UPI';
   String get kycStatus => isHi ? 'KYC स्थिति' : 'KYC status';

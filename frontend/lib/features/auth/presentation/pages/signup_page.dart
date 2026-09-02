@@ -48,7 +48,10 @@ class _SignupPageState extends State<SignupPage> {
       final msg = _cubit.state.errorMessage;
       if (mounted && msg != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
       }
       return;
@@ -73,7 +76,12 @@ class _SignupPageState extends State<SignupPage> {
     if (!success) {
       final msg = _cubit.state.errorMessage;
       if (msg != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
       return;
     }

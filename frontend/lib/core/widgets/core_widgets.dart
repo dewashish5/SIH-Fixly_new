@@ -186,6 +186,8 @@ class AppTextField extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.inputFormatters,
     this.obscureText = false,
+    this.readOnly = false,
+    this.enabled = true,
     this.maxLength,
     this.focusNode,
     this.textInputAction,
@@ -194,6 +196,7 @@ class AppTextField extends StatelessWidget {
     this.suffixIcon,
     this.onChanged,
     this.onSubmitted,
+    this.onTap,
   });
 
   final TextEditingController controller;
@@ -203,6 +206,8 @@ class AppTextField extends StatelessWidget {
   final TextCapitalization textCapitalization;
   final List<TextInputFormatter>? inputFormatters;
   final bool obscureText;
+  final bool readOnly;
+  final bool enabled;
   final int? maxLength;
   final FocusNode? focusNode;
   final TextInputAction? textInputAction;
@@ -211,6 +216,7 @@ class AppTextField extends StatelessWidget {
   final Widget? prefixIcon;
   final Widget? suffixIcon;
   final ValueChanged<String>? onChanged;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -227,6 +233,8 @@ class AppTextField extends StatelessWidget {
         TextFormField(
           controller: controller,
           focusNode: focusNode,
+          enabled: enabled,
+          readOnly: readOnly,
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,
           textInputAction: textInputAction,
@@ -235,6 +243,7 @@ class AppTextField extends StatelessWidget {
           maxLength: maxLength,
           validator: validator,
           onChanged: onChanged,
+          onTap: onTap,
           onFieldSubmitted: onSubmitted,
           decoration: InputDecoration(
             hintText: hint,

@@ -184,13 +184,80 @@ class AuthApiRepository {
   }
 
   Future<AppUser> fetchMe() async {
+    final userJson = await fetchMeUserJson();
+    final user = mapUser(userJson);
+    await _tokens.saveProfile(name: user.name, phone: user.phone);
+    return user;
+  }
+
+  /// Full `/api/auth/me` user object (includes workerProfile / KYC fields).
+  Future<Map<String, dynamic>> fetchMeUserJson() async {
     final res = await _api.get('/api/auth/me');
     if (res['success'] != true || res['user'] == null) {
       throw ApiException(res['message']?.toString() ?? 'Profile fetch failed');
     }
-    final user = mapUser(Map<String, dynamic>.from(res['user'] as Map));
-    await _tokens.saveProfile(name: user.name, phone: user.phone);
-    return user;
+    return Map<String, dynamic>.from(res['user'] as Map);
+  }
+
+  /// Map KYC tracker state from `/api/auth/me` user payload.
+  static KycReviewStatus mapKycStatus(Map<String, dynamic> user) {
+    final profileRaw = user['workerProfile'];
+    final profile = profileRaw is Map
+        ? Map<String, dynamic>.from(profileRaw)
+        : <String, dynamic>{};
+
+    final raw = (user['kycStatus'] ??
+            user['verificationStatus'] ??
+            profile['kycStatus'] ??
+            profile['status'] ??
+            profile['verificationStatus'] ??
+            profile['profileStatus'] ??
+            '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll(' ', '_')
+        .replaceAll('-', '_');
+
+    switch (raw) {
+      case 'approved':
+      case 'verified':
+      case 'active':
+      case 'completed':
+        return KycReviewStatus.approved;
+      case 'in_review':
+      case 'inreview':
+      case 'pending':
+      case 'under_review':
+      case 'review':
+        return KycReviewStatus.inReview;
+      case 'submitted':
+      case 'pending_review':
+      case 'pendingreview':
+        return KycReviewStatus.submitted;
+    }
+
+    final badges = profile['badges'];
+    if (badges is List) {
+      final joined = badges.map((e) => e.toString().toLowerCase()).join(' ');
+      if (joined.contains('verified') ||
+          joined.contains('approved') ||
+          joined.contains('background checked')) {
+        return KycReviewStatus.approved;
+      }
+    }
+
+    // Profile exists after onboarding → at least submitted; prefer in-review.
+    if (profile.isNotEmpty) {
+      final selfieOk = profile['selfieVerified'] == true;
+      final hasDocs = profile['aadhaarNumber'] != null ||
+          profile['panNumber'] != null ||
+          profile['govermentIdNumber'] != null;
+      if (selfieOk && hasDocs) return KycReviewStatus.inReview;
+      return KycReviewStatus.submitted;
+    }
+
+    return KycReviewStatus.submitted;
   }
 
   Future<AppUser> updateProfile({

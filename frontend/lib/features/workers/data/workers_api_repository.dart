@@ -2,10 +2,11 @@ import '../../../core/location/app_location.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../shared/models/models.dart';
+import '../../worker/data/worker_setup_profile_mapper.dart';
 
 class WorkersApiRepository {
   WorkersApiRepository({ApiClient? client})
-      : _api = client ?? ApiServices.client;
+    : _api = client ?? ApiServices.client;
 
   final ApiClient _api;
 
@@ -49,18 +50,35 @@ class WorkersApiRepository {
     return mapWorker(Map<String, dynamic>.from(res['worker'] as Map));
   }
 
+  /// Worker onboarding final submit.
+  Future<Map<String, dynamic>> submitSetupProfile(
+    OnboardingFormData formData,
+  ) async {
+    final body = WorkerSetupProfileMapper.toBody(formData);
+    final res = await _api.put('/api/workers/setup-profile', data: body);
+    if (res['success'] != true) {
+      throw ApiException(
+        res['message']?.toString() ?? 'Worker profile update failed',
+      );
+    }
+    return res;
+  }
+
   static WorkerProfile mapWorker(Map<String, dynamic> json) {
     final profile = json['workerProfile'];
-    final profileMap =
-        profile is Map ? Map<String, dynamic>.from(profile) : <String, dynamic>{};
+    final profileMap = profile is Map
+        ? Map<String, dynamic>.from(profile)
+        : <String, dynamic>{};
     final skillsRaw = profileMap['skills'] ?? json['skills'];
     final skills = skillsRaw is List
         ? skillsRaw.map((e) => e.toString()).toList()
         : <String>[];
-    final rating = (profileMap['rating'] as num?)?.toDouble() ??
+    final rating =
+        (profileMap['rating'] as num?)?.toDouble() ??
         (json['rating'] as num?)?.toDouble() ??
         0;
-    final jobs = (profileMap['jobsCompleted'] as num?)?.toInt() ??
+    final jobs =
+        (profileMap['jobsCompleted'] as num?)?.toInt() ??
         (json['jobsCompleted'] as num?)?.toInt() ??
         0;
     return WorkerProfile(

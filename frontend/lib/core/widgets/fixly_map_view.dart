@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 
@@ -19,6 +21,7 @@ class FixlyMapView extends StatefulWidget {
     this.serviceRadiusKm,
     this.showDestinationPin = true,
     this.routeStart,
+    this.claimGestures = false,
   });
 
   final double height;
@@ -32,6 +35,8 @@ class FixlyMapView extends StatefulWidget {
   final bool showDestinationPin;
   /// Worker / route start. Defaults to [MapConstants.workerApproachStart].
   final MapCoordinate? routeStart;
+  /// Win gesture arena vs parent [ScrollView] so user can pan/zoom the map.
+  final bool claimGestures;
 
   @override
   State<FixlyMapView> createState() => _FixlyMapViewState();
@@ -288,6 +293,13 @@ class _FixlyMapViewState extends State<FixlyMapView> {
             key: ValueKey('fixly-map-${center.lat}-${center.lng}'),
             styleUri: MapboxStyles.MAPBOX_STREETS,
             textureView: true,
+            gestureRecognizers: widget.claimGestures
+                ? <Factory<OneSequenceGestureRecognizer>>{
+                    Factory<EagerGestureRecognizer>(
+                      EagerGestureRecognizer.new,
+                    ),
+                  }
+                : null,
             viewport: CameraViewportState(
               center: Point(
                 coordinates: Position(center.lng, center.lat),

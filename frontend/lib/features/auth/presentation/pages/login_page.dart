@@ -46,7 +46,10 @@ class _LoginPageState extends State<LoginPage> {
       final msg = _cubit.state.errorMessage;
       if (mounted && msg != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
       }
       return;
@@ -65,7 +68,12 @@ class _LoginPageState extends State<LoginPage> {
     if (!success) {
       final msg = _cubit.state.errorMessage;
       if (msg != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
       return;
     }

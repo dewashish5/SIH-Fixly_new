@@ -117,7 +117,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       final message = configError
           ? 'Google Sign-In not configured. Add Firebase config files — '
               'see assets/config/README in project.'
-          : e.toString();
+          : ApiException.fromError(e);
       emit(state.copyWith(
         status: AppSessionStatus.initial,
         errorMessage: canceled ? null : message,
@@ -127,7 +127,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     } catch (e) {
       emit(state.copyWith(
         status: AppSessionStatus.initial,
-        errorMessage: e.toString(),
+        errorMessage: ApiException.fromError(e),
       ));
       return false;
     }
@@ -155,7 +155,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     } catch (e) {
       emit(state.copyWith(
         status: AppSessionStatus.initial,
-        errorMessage: e.toString(),
+        errorMessage: ApiException.fromError(e),
       ));
       return false;
     }
@@ -202,7 +202,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     } catch (e) {
       emit(state.copyWith(
         status: AppSessionStatus.initial,
-        errorMessage: e.toString(),
+        errorMessage: ApiException.fromError(e),
       ));
       return false;
     }
@@ -242,7 +242,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       emit(state.copyWith(errorMessage: e.message));
       return false;
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: ApiException.fromError(e)));
       return false;
     }
   }
@@ -270,7 +270,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     } catch (e) {
       emit(state.copyWith(
         status: AppSessionStatus.otpFailed,
-        errorMessage: e.toString(),
+        errorMessage: ApiException.fromError(e),
       ));
       return false;
     }

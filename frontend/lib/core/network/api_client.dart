@@ -152,6 +152,18 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> put(
+    String path, {
+    Object? data,
+  }) async {
+    try {
+      final res = await _dio.put<Map<String, dynamic>>(path, data: data);
+      return res.data ?? {};
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
   ApiException _mapError(DioException e) {
     final data = e.response?.data;
     String message = e.message ?? 'Network error';
