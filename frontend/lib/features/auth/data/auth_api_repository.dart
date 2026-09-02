@@ -172,18 +172,9 @@ class AuthApiRepository {
     if (refresh == null || userId == null) return null;
     try {
       await refreshAccessToken();
-      final roleStr = await _tokens.role;
-      final email = await _tokens.email;
-      final name = await _tokens.name;
-      final phone = await _tokens.phone;
+      final user = await fetchMe();
       return AuthSession(
-        user: AppUser(
-          id: userId,
-          name: name ?? 'Fixly User',
-          phone: phone ?? '',
-          email: email ?? '',
-          role: roleStr == 'worker' ? UserRole.worker : UserRole.customer,
-        ),
+        user: user,
         accessToken: (await _tokens.accessToken) ?? '',
         refreshToken: refresh,
       );
@@ -191,6 +182,32 @@ class AuthApiRepository {
       await _tokens.clearSession();
       return null;
     }
+  }
+
+  Future<AppUser> fetchMe() async {
+    final res = await _api.get('/api/auth/me');
+    if (res['success'] != true || res['user'] == null) {
+      throw ApiException(res['message']?.toString() ?? 'Profile fetch failed');
+    }
+    final user = mapUser(Map<String, dynamic>.from(res['user'] as Map));
+    await _tokens.saveProfile(name: user.name, phone: user.phone);
+    return user;
+  }
+
+  Future<AppUser> updateProfile({
+    required String name,
+    required String phone,
+  }) async {
+    final res = await _api.patch('/api/auth/me', data: {
+      'name': name,
+      'phone': phone,
+    });
+    if (res['success'] != true || res['user'] == null) {
+      throw ApiException(res['message']?.toString() ?? 'Profile update failed');
+    }
+    final user = mapUser(Map<String, dynamic>.from(res['user'] as Map));
+    await _tokens.saveProfile(name: user.name, phone: user.phone);
+    return user;
   }
 
   Future<AuthSession> _persistSession(

@@ -4,6 +4,7 @@ import '../../app/theme/app_colors.dart';
 
 abstract final class AppConstants {
   static const appName = 'Fixly';
+  static const homeCategoryPreviewCount = 4;
   static const mockOtp = '123456';
   static const mockDelayMs = 200;
   static const onboardingTotalSteps = 3;

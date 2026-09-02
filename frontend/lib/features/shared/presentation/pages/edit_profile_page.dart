@@ -39,15 +39,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    await context.read<ProfileCubit>().updateProfile(
-          name: _nameController.text.trim(),
-          phone: _phoneController.text.trim(),
+    try {
+      await context.read<ProfileCubit>().updateProfile(
+            name: _nameController.text.trim(),
+            phone: _phoneController.text.trim(),
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.profileSaved)),
         );
-    if (mounted) {
+        context.pop();
+      }
+    } catch (_) {
+      if (!mounted) return;
+      final message = context.read<ProfileCubit>().state.errorMessage;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.profileSaved)),
+        SnackBar(content: Text(message ?? 'Could not save profile')),
       );
-      context.pop();
     }
   }
 

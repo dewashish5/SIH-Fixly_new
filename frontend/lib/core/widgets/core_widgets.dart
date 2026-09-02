@@ -356,3 +356,34 @@ class GreetingAppBarTitle extends StatelessWidget {
     );
   }
 }
+
+/// Branded pull-to-refresh — uses [ColorScheme.primary] and surface container.
+class AppRefreshIndicator extends StatelessWidget {
+  const AppRefreshIndicator({
+    required this.onRefresh,
+    required this.child,
+    super.key,
+  });
+
+  final Future<void> Function() onRefresh;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: scheme.primary,
+      backgroundColor: scheme.surfaceContainerHighest,
+      strokeWidth: 2.5,
+      displacement: 48,
+      edgeOffset: 12,
+      child: child,
+    );
+  }
+}
+
+/// Lets pull-to-refresh work when content shorter than viewport.
+const ScrollPhysics appRefreshScrollPhysics = AlwaysScrollableScrollPhysics(
+  parent: BouncingScrollPhysics(),
+);

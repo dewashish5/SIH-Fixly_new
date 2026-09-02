@@ -47,6 +47,13 @@ class TokenStorage {
   Future<void> saveAccessToken(String token) =>
       _storage.write(key: _kAccess, value: token);
 
+  Future<void> saveProfile({String? name, String? phone}) async {
+    await Future.wait([
+      if (name != null) _storage.write(key: _kName, value: name),
+      if (phone != null) _storage.write(key: _kPhone, value: phone),
+    ]);
+  }
+
   Future<void> saveDeviceId(String id) =>
       _storage.write(key: _kDeviceId, value: id);
 

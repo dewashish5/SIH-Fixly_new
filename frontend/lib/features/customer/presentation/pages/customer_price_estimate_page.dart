@@ -13,6 +13,12 @@ import '../../../../core/constants/app_strings.dart';
 class CustomerPriceEstimatePage extends StatelessWidget {
   const CustomerPriceEstimatePage({super.key});
 
+  String _range(double min, double max) {
+    if (min <= 0 && max <= 0) return '—';
+    if (min == max) return '₹${min.toInt()}';
+    return '₹${min.toInt()} – ₹${max.toInt()}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
@@ -20,7 +26,7 @@ class CustomerPriceEstimatePage extends StatelessWidget {
       body: BlocBuilder<BookingFlowCubit, BookingFlowState>(
         builder: (context, state) {
           final service = state.service;
-          final price = state.displayPrice;
+          final estimate = state.priceEstimate;
 
           return SingleChildScrollView(
             child: Column(
@@ -80,15 +86,33 @@ class CustomerPriceEstimatePage extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
-                _PriceRow(label: 'Base service fee', amount: price * 0.7),
-                _PriceRow(label: 'Platform fee', amount: price * 0.1),
-                _PriceRow(label: 'Insurance', amount: price * 0.05),
-                const Divider(height: 24),
-                _PriceRow(
-                  label: 'Estimated Total',
-                  amount: price,
-                  bold: true,
-                ),
+                if (estimate != null) ...[
+                  _PriceRow(
+                    label: 'Labor estimate',
+                    value: _range(estimate.laborMin, estimate.laborMax),
+                  ),
+                  _PriceRow(
+                    label: 'Materials & parts',
+                    value: _range(estimate.materialsMin, estimate.materialsMax),
+                  ),
+                  _PriceRow(
+                    label: 'Service fee',
+                    value: '₹${estimate.serviceFee.toInt()}',
+                  ),
+                  const Divider(height: 24),
+                  _PriceRow(
+                    label: 'Estimated total',
+                    value: _range(estimate.minTotal, estimate.maxTotal),
+                    bold: true,
+                  ),
+                ] else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'Estimate unavailable. Base price from ₹${state.displayPrice.toInt()}.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
                 const SizedBox(height: 8),
                 Text(
                   '* Final price may vary based on parts & labour',
@@ -120,12 +144,12 @@ class CustomerPriceEstimatePage extends StatelessWidget {
 class _PriceRow extends StatelessWidget {
   const _PriceRow({
     required this.label,
-    required this.amount,
+    required this.value,
     this.bold = false,
   });
 
   final String label;
-  final double amount;
+  final String value;
   final bool bold;
 
   @override
@@ -142,7 +166,7 @@ class _PriceRow extends StatelessWidget {
                 : Theme.of(context).textTheme.bodyMedium,
           ),
           Text(
-            '₹${amount.toInt()}',
+            value,
             style: TextStyle(
               fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
               color: bold ? AppColors.primary : null,

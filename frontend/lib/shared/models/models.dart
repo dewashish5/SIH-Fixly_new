@@ -96,6 +96,21 @@ enum BookingStatus {
   paid,
 }
 
+class BookingAddOn extends Equatable {
+  const BookingAddOn({
+    required this.title,
+    required this.price,
+    this.quantity = 1,
+  });
+
+  final String title;
+  final double price;
+  final int quantity;
+
+  @override
+  List<Object?> get props => [title, price, quantity];
+}
+
 class Booking extends Equatable {
   const Booking({
     required this.id,
@@ -107,6 +122,10 @@ class Booking extends Equatable {
     this.workerName,
     this.address,
     this.scheduledAt,
+    this.addOns = const [],
+    this.baseServiceFee,
+    this.platformFee,
+    this.extraPartsTotal,
   });
 
   final String id;
@@ -118,12 +137,20 @@ class Booking extends Equatable {
   final String? workerName;
   final String? address;
   final DateTime? scheduledAt;
+  final List<BookingAddOn> addOns;
+  final double? baseServiceFee;
+  final double? platformFee;
+  final double? extraPartsTotal;
 
   Booking copyWith({
     BookingStatus? status,
     String? workerId,
     String? workerName,
     double? estimatedPrice,
+    List<BookingAddOn>? addOns,
+    double? baseServiceFee,
+    double? platformFee,
+    double? extraPartsTotal,
   }) {
     return Booking(
       id: id,
@@ -135,12 +162,23 @@ class Booking extends Equatable {
       workerName: workerName ?? this.workerName,
       address: address,
       scheduledAt: scheduledAt,
+      addOns: addOns ?? this.addOns,
+      baseServiceFee: baseServiceFee ?? this.baseServiceFee,
+      platformFee: platformFee ?? this.platformFee,
+      extraPartsTotal: extraPartsTotal ?? this.extraPartsTotal,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [id, serviceId, serviceTitle, status, estimatedPrice, workerId];
+  List<Object?> get props => [
+        id,
+        serviceId,
+        serviceTitle,
+        status,
+        estimatedPrice,
+        workerId,
+        addOns,
+      ];
 }
 
 enum JobStatus { incoming, active, completed }

@@ -103,16 +103,26 @@ class AppStrings {
   String get aiHelper => isHi ? 'AI सहायक' : 'AI Helper';
   String get homeBooking => isHi ? 'घरेलू बुकिंग' : 'Home Booking';
   String get searchHint => isHi ? 'सेवाएं खोजें...' : 'Search services...';
+  String get servicesInCategory =>
+      isHi ? 'इस श्रेणी में उपलब्ध सेवाएं' : 'Services in this category';
   String get noServicesFound => isHi ? 'कोई सेवा नहीं मिली' : 'No services found';
 
   // Shared / profile
   String get settings => isHi ? 'सेटिंग्स' : 'Settings';
   String get hindiLanguage => isHi ? 'हिन्दी भाषा' : 'Hindi language';
   String get appearance => isHi ? 'दिखावट' : 'Appearance';
+  String get theme => isHi ? 'थीम' : 'Theme';
   String get themeSystem => isHi ? 'सिस्टम' : 'System';
   String get themeLight => isHi ? 'लाइट' : 'Light';
   String get themeDark => isHi ? 'डार्क' : 'Dark';
   String get pushNotifications => isHi ? 'पुश सूचनाएं' : 'Push notifications';
+  String get pushNotificationsHint => isHi
+      ? 'बुकिंग अपडेट और ऑफ़र के लिए सूचनाएं'
+      : 'Booking updates and offers';
+  String get updateYourDetails =>
+      isHi ? 'नाम और फ़ोन अपडेट करें' : 'Update your name and phone';
+  String get notificationsOn => isHi ? 'सूचनाएं चालू' : 'Notifications on';
+  String get notificationsOff => isHi ? 'सूचनाएं बंद' : 'Notifications off';
   String get notificationPreferences =>
       isHi ? 'सूचना प्राथमिकताएं' : 'Notification preferences';
   String get privacySecurity => isHi ? 'गोपनीयता और सुरक्षा' : 'Privacy & security';

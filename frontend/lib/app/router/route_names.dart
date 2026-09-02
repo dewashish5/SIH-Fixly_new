@@ -10,9 +10,14 @@ abstract final class RouteNames {
 
   static const customerHome = '/customer/home';
   static const customerSearch = '/customer/search';
+  static const customerCategorySearch =
+      '/customer/home/category-search/:categoryId';
+
+  static String customerCategorySearchPath(String categoryId) =>
+      '/customer/home/category-search/$categoryId';
   static const customerOrders = '/customer/orders';
   static const customerProfileTab = '/customer/profile';
-  static const customerCategories = '/customer/categories';
+  static const customerCategories = '/customer/home/categories';
   static const customerService = '/customer/service/:id';
   static const customerBooking = '/customer/booking';
   static const customerPriceEstimate = '/customer/price-estimate';

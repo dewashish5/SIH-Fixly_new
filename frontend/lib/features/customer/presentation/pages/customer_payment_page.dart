@@ -20,12 +20,43 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
   String _method = 'upi';
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<BookingFlowCubit>().refreshBooking();
+    });
+  }
+
+  Future<void> _handlePay(BuildContext context) async {
+    final cubit = context.read<BookingFlowCubit>();
+
+    final success = _method == 'cash'
+        ? await cubit.completeCashPayment()
+        : await cubit.payWithRazorpay();
+
+    if (!context.mounted) return;
+
+    if (success) {
+      context.push(RouteNames.customerRating);
+      return;
+    }
+
+    final error = cubit.state.errorMessage;
+    if (error != null && error.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AppScaffold(
       title: context.l10n.payment,
       body: BlocBuilder<BookingFlowCubit, BookingFlowState>(
         builder: (context, state) {
           final amount = state.displayPrice;
+          final booking = state.booking;
 
           return SingleChildScrollView(
             child: Column(
@@ -54,6 +85,37 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
                         ),
                   ),
                 ),
+                if (booking != null &&
+                    (booking.extraPartsTotal ?? 0) > 0) ...[
+                  const SizedBox(height: 16),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Invoice',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        if (booking.baseServiceFee != null)
+                          _InvoiceRow(
+                            'Base service',
+                            booking.baseServiceFee!,
+                          ),
+                        if (booking.extraPartsTotal != null)
+                          _InvoiceRow(
+                            'Extra parts',
+                            booking.extraPartsTotal!,
+                          ),
+                        if (booking.platformFee != null)
+                          _InvoiceRow(
+                            'Platform fee',
+                            booking.platformFee!,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 32),
                 Text(
                   'Payment Method',
@@ -63,40 +125,58 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
                 _PaymentOption(
                   icon: Icons.account_balance,
                   label: 'UPI',
-                  subtitle: 'Google Pay, PhonePe, Paytm',
+                  subtitle: 'Google Pay, PhonePe, Paytm via Razorpay',
                   selected: _method == 'upi',
                   onTap: () => setState(() => _method = 'upi'),
                 ),
                 _PaymentOption(
                   icon: Icons.credit_card,
                   label: 'Card',
-                  subtitle: 'Visa, Mastercard, RuPay',
+                  subtitle: 'Visa, Mastercard, RuPay via Razorpay',
                   selected: _method == 'card',
                   onTap: () => setState(() => _method = 'card'),
                 ),
                 _PaymentOption(
                   icon: Icons.money,
                   label: 'Cash',
-                  subtitle: 'Pay after service',
+                  subtitle: 'Pay worker after service',
                   selected: _method == 'cash',
                   onTap: () => setState(() => _method = 'cash'),
                 ),
                 const SizedBox(height: 32),
                 PrimaryButton(
-                  label: 'Pay ₹${amount.toInt()}',
+                  label: _method == 'cash'
+                      ? 'Confirm cash payment'
+                      : 'Pay ₹${amount.toInt()}',
                   loading: state.isLoading,
-                  onPressed: () async {
-                    await context.read<BookingFlowCubit>().completePayment();
-                    if (context.mounted) {
-                      context.push(RouteNames.customerRating);
-                    }
-                  },
+                  onPressed: state.isLoading ? null : () => _handlePay(context),
                 ),
                 const SizedBox(height: 24),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _InvoiceRow extends StatelessWidget {
+  const _InvoiceRow(this.label, this.amount);
+
+  final String label;
+  final double amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          Text('₹${amount.toInt()}'),
+        ],
       ),
     );
   }

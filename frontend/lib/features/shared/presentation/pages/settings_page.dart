@@ -12,6 +12,7 @@ import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
+import '../../../../shared/models/models.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -48,71 +49,55 @@ class SettingsPage extends StatelessWidget {
         final cubit = context.read<AppSessionCubit>();
         final user = MockRepository.instance.currentUser;
         final theme = Theme.of(context);
+        final scheme = context.scheme;
 
         return AppScaffold(
           title: l10n.settings,
           body: ListView(
             children: [
               if (user != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: context.scheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                    border: Border.all(
-                      color: context.scheme.primary.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: context.scheme.primary,
-                        child: Text(
-                          user.name.isNotEmpty
-                              ? user.name[0].toUpperCase()
-                              : '?',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: context.scheme.onPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user.name,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: context.scheme.onPrimaryContainer,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              user.phone.isNotEmpty
-                                  ? user.phone
-                                  : (session.email ?? ''),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: context.scheme.onPrimaryContainer
-                                    .withValues(alpha: 0.8),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                _AccountHeroCard(
+                  user: user,
+                  email: session.email ?? user.email,
+                  onEdit: () => context.push(RouteNames.sharedEditProfile),
                 ),
                 const SizedBox(height: AppSpacing.xl),
               ],
+              _SectionLabel(l10n.account),
+              _SettingsCard(
+                child: Column(
+                  children: [
+                    _QuickActionTile(
+                      icon: Icons.person_outline_rounded,
+                      label: l10n.editProfile,
+                      subtitle: l10n.updateYourDetails,
+                      onTap: () => context.push(RouteNames.sharedEditProfile),
+                    ),
+                    const Divider(height: 1),
+                    _QuickActionTile(
+                      icon: Icons.notifications_outlined,
+                      label: l10n.notificationPreferences,
+                      subtitle: session.notificationsEnabled
+                          ? l10n.notificationsOn
+                          : l10n.notificationsOff,
+                      onTap: () => context.push(RouteNames.sharedNotifications),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
               _SectionLabel(l10n.appearance),
               _SettingsCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    Text(
+                      l10n.theme,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
                     SegmentedButton<ThemeMode>(
                       segments: [
                         ButtonSegment(
@@ -156,7 +141,7 @@ class SettingsPage extends StatelessWidget {
                       contentPadding: EdgeInsets.zero,
                       leading: Icon(
                         Icons.language_rounded,
-                        color: AppColors.primary,
+                        color: scheme.primary,
                       ),
                       title: Text(l10n.language),
                       subtitle: Text(
@@ -186,10 +171,11 @@ class SettingsPage extends StatelessWidget {
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       secondary: Icon(
-                        Icons.notifications_outlined,
-                        color: AppColors.primary,
+                        Icons.notifications_active_outlined,
+                        color: scheme.primary,
                       ),
                       title: Text(l10n.pushNotifications),
+                      subtitle: Text(l10n.pushNotificationsHint),
                       value: session.notificationsEnabled,
                       onChanged: cubit.setNotificationsEnabled,
                     ),
@@ -202,9 +188,9 @@ class SettingsPage extends StatelessWidget {
                 child: Column(
                   children: [
                     _NavTile(
-                      icon: Icons.notifications_outlined,
-                      label: l10n.notificationPreferences,
-                      onTap: () => context.push(RouteNames.sharedNotifications),
+                      icon: Icons.support_agent_outlined,
+                      label: l10n.support,
+                      onTap: () => context.push(RouteNames.sharedSupportChat),
                     ),
                     _NavTile(
                       icon: Icons.security_outlined,
@@ -261,6 +247,118 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
+class _AccountHeroCard extends StatelessWidget {
+  const _AccountHeroCard({
+    required this.user,
+    required this.email,
+    required this.onEdit,
+  });
+
+  final AppUser user;
+  final String email;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = context.scheme;
+    final roleLabel = user.role == UserRole.worker
+        ? context.l10n.worker
+        : context.l10n.customer;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            scheme.primary,
+            scheme.primary.withValues(alpha: 0.82),
+          ],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: scheme.onPrimary,
+                child: Text(
+                  user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.name,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: scheme.onPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      email,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onPrimary.withValues(alpha: 0.88),
+                      ),
+                    ),
+                    if (user.phone.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        user.phone,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onPrimary.withValues(alpha: 0.88),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              IconButton.filledTonal(
+                onPressed: onEdit,
+                style: IconButton.styleFrom(
+                  backgroundColor: scheme.onPrimary.withValues(alpha: 0.18),
+                  foregroundColor: scheme.onPrimary,
+                  minimumSize: const Size(48, 48),
+                ),
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: context.l10n.editProfile,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: scheme.onPrimary.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(AppRadius.full),
+            ),
+            child: Text(
+              roleLabel,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: scheme.onPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
 
@@ -305,6 +403,32 @@ class _SettingsCard extends StatelessWidget {
   }
 }
 
+class _QuickActionTile extends StatelessWidget {
+  const _QuickActionTile({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: context.scheme.primary),
+      title: Text(label),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.chevron_right_rounded),
+      onTap: onTap,
+    );
+  }
+}
+
 class _NavTile extends StatelessWidget {
   const _NavTile({
     required this.icon,
@@ -326,7 +450,7 @@ class _NavTile extends StatelessWidget {
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: Icon(icon, color: iconColor ?? AppColors.primary),
+          leading: Icon(icon, color: iconColor ?? context.scheme.primary),
           title: Text(label),
           trailing: const Icon(Icons.chevron_right_rounded),
           onTap: onTap,

@@ -9,6 +9,7 @@ class BookingFlowState extends Equatable {
     this.scheduledAt,
     this.isLoading = false,
     this.estimatedPrice,
+    this.priceEstimate,
     this.errorMessage,
   });
 
@@ -19,10 +20,18 @@ class BookingFlowState extends Equatable {
   final DateTime? scheduledAt;
   final bool isLoading;
   final double? estimatedPrice;
+  final PriceEstimate? priceEstimate;
   final String? errorMessage;
 
-  double get displayPrice =>
-      estimatedPrice ?? booking?.estimatedPrice ?? service?.priceFrom ?? 0;
+  double get displayPrice {
+    if (booking != null && booking!.estimatedPrice > 0) {
+      return booking!.estimatedPrice;
+    }
+    if (priceEstimate != null && priceEstimate!.maxTotal > 0) {
+      return priceEstimate!.maxTotal;
+    }
+    return estimatedPrice ?? service?.priceFrom ?? 0;
+  }
 
   BookingFlowState copyWith({
     ServiceItem? service,
@@ -32,6 +41,7 @@ class BookingFlowState extends Equatable {
     DateTime? scheduledAt,
     bool? isLoading,
     double? estimatedPrice,
+    PriceEstimate? priceEstimate,
     String? errorMessage,
     bool clearError = false,
   }) {
@@ -43,6 +53,7 @@ class BookingFlowState extends Equatable {
       scheduledAt: scheduledAt ?? this.scheduledAt,
       isLoading: isLoading ?? this.isLoading,
       estimatedPrice: estimatedPrice ?? this.estimatedPrice,
+      priceEstimate: priceEstimate ?? this.priceEstimate,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
@@ -56,6 +67,7 @@ class BookingFlowState extends Equatable {
         scheduledAt,
         isLoading,
         estimatedPrice,
+        priceEstimate,
         errorMessage,
       ];
 }

@@ -47,3 +47,5 @@ app.*.map.json
 # Local secrets (Mapbox token, etc.)
 dart_defines.json
 assets/config/mapbox.json
+# Widget Preview related
+.widget_preview/

@@ -102,7 +102,34 @@ GoRouter createAppRouter() {
         branches: [
           StatefulShellBranch(
             routes: [
-              _page(RouteNames.customerHome, (_, s) => const CustomerHomePage()),
+              GoRoute(
+                path: RouteNames.customerHome,
+                pageBuilder: (context, state) => transitPage(
+                  state: state,
+                  child: const CustomerHomePage(),
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'categories',
+                    parentNavigatorKey: rootNavigatorKey,
+                    pageBuilder: (context, state) => transitPage(
+                      state: state,
+                      child: const CustomerCategoriesPage(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'category-search/:categoryId',
+                    parentNavigatorKey: rootNavigatorKey,
+                    pageBuilder: (context, state) => transitPage(
+                      state: state,
+                      child: CustomerSearchPage(
+                        categoryId: state.pathParameters['categoryId'],
+                        showBack: true,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
           StatefulShellBranch(
@@ -232,16 +259,11 @@ GoRouter createAppRouter() {
         ],
       ),
 
-      _page(
-        RouteNames.customerCategories,
-        (_, s) => const CustomerCategoriesPage(),
-        overlay: true,
-      ),
       GoRoute(
         path: RouteNames.customerService,
         parentNavigatorKey: rootNavigatorKey,
         pageBuilder: (context, state) => transitPage(
-          key: state.pageKey,
+          state: state,
           child: CustomerServiceDetailPage(
             serviceId: state.pathParameters['id']!,
           ),
@@ -271,7 +293,7 @@ GoRouter createAppRouter() {
         path: RouteNames.customerWorkerProfile,
         parentNavigatorKey: rootNavigatorKey,
         pageBuilder: (context, state) => transitPage(
-          key: state.pageKey,
+          state: state,
           child: CustomerWorkerProfilePage(
             workerId: state.pathParameters['id']!,
           ),
@@ -322,7 +344,7 @@ GoRouter createAppRouter() {
         path: RouteNames.workerJobDetail,
         parentNavigatorKey: rootNavigatorKey,
         pageBuilder: (context, state) => transitPage(
-          key: state.pageKey,
+          state: state,
           child: BlocProvider(
             create: (_) => JobFeedCubit()..load(),
             child: WorkerOrderDetailPage(jobId: state.pathParameters['id']!),
@@ -414,7 +436,7 @@ GoRouter createAppRouter() {
         path: RouteNames.systemState,
         parentNavigatorKey: rootNavigatorKey,
         pageBuilder: (context, state) => transitPage(
-          key: state.pageKey,
+          state: state,
           child: SystemStatePage(typeParam: state.pathParameters['type']!),
         ),
       ),
@@ -431,7 +453,7 @@ GoRoute _page(
     path: path,
     parentNavigatorKey: overlay ? rootNavigatorKey : null,
     pageBuilder: (context, state) => transitPage(
-      key: state.pageKey,
+      state: state,
       child: builder(context, state),
     ),
   );

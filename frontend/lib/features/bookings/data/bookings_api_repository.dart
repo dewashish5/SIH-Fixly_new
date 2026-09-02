@@ -5,14 +5,22 @@ import '../../../shared/models/models.dart';
 
 class PriceEstimate {
   const PriceEstimate({
+    required this.laborMin,
+    required this.laborMax,
+    required this.materialsMin,
+    required this.materialsMax,
+    required this.serviceFee,
     required this.minTotal,
     required this.maxTotal,
-    required this.serviceFee,
   });
 
+  final double laborMin;
+  final double laborMax;
+  final double materialsMin;
+  final double materialsMax;
+  final double serviceFee;
   final double minTotal;
   final double maxTotal;
-  final double serviceFee;
 }
 
 class BookingsApiRepository {
@@ -33,11 +41,17 @@ class BookingsApiRepository {
       throw ApiException(res['message']?.toString() ?? 'Estimate failed');
     }
     final est = res['estimate'] as Map<String, dynamic>? ?? {};
+    final labor = est['laborEstimate'] as Map<String, dynamic>? ?? {};
+    final materials = est['materialsParts'] as Map<String, dynamic>? ?? {};
     final total = est['totalEstimate'] as Map<String, dynamic>? ?? {};
     return PriceEstimate(
+      laborMin: (labor['min'] as num?)?.toDouble() ?? 0,
+      laborMax: (labor['max'] as num?)?.toDouble() ?? 0,
+      materialsMin: (materials['min'] as num?)?.toDouble() ?? 0,
+      materialsMax: (materials['max'] as num?)?.toDouble() ?? 0,
+      serviceFee: (est['serviceFee'] as num?)?.toDouble() ?? 0,
       minTotal: (total['min'] as num?)?.toDouble() ?? 0,
       maxTotal: (total['max'] as num?)?.toDouble() ?? 0,
-      serviceFee: (est['serviceFee'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -59,12 +73,11 @@ class BookingsApiRepository {
     }
     final res = await _api.post('/api/bookings/', data: {
       'serviceId': serviceId,
-      if (workerId != null) 'workerId': workerId,
-      if (problemDescription != null) 'problemDescription': problemDescription,
+      'workerId': ?workerId,
+      'problemDescription': ?problemDescription,
       'addressLine': addressLine,
       'coordinates': [useLng, useLat],
-      if (scheduledTime != null)
-        'scheduledTime': scheduledTime.toUtc().toIso8601String(),
+      'scheduledTime': ?scheduledTime?.toUtc().toIso8601String(),
     });
     if (res['success'] != true || res['booking'] == null) {
       throw ApiException(res['message']?.toString() ?? 'Booking failed');
@@ -188,10 +201,31 @@ class BookingsApiRepository {
 
     final invoice = json['invoice'];
     double price = 0;
+    double? baseServiceFee;
+    double? platformFee;
+    double? extraPartsTotal;
     if (invoice is Map) {
+      baseServiceFee = (invoice['baseServiceFee'] as num?)?.toDouble();
+      platformFee = (invoice['platformFee'] as num?)?.toDouble();
+      extraPartsTotal = (invoice['extraPartsTotal'] as num?)?.toDouble();
       price = (invoice['totalAmount'] as num?)?.toDouble() ??
           (invoice['baseServiceFee'] as num?)?.toDouble() ??
           0;
+    }
+
+    final addOnsRaw = json['addOns'];
+    final addOns = <BookingAddOn>[];
+    if (addOnsRaw is List) {
+      for (final item in addOnsRaw) {
+        if (item is! Map) continue;
+        addOns.add(
+          BookingAddOn(
+            title: (item['title'] as String?) ?? 'Part',
+            price: (item['price'] as num?)?.toDouble() ?? 0,
+            quantity: (item['quantity'] as num?)?.toInt() ?? 1,
+          ),
+        );
+      }
     }
 
     final scheduled = json['scheduledTime'];
@@ -210,6 +244,10 @@ class BookingsApiRepository {
       workerName: workerName,
       address: addressLine,
       scheduledAt: scheduledAt,
+      addOns: addOns,
+      baseServiceFee: baseServiceFee,
+      platformFee: platformFee,
+      extraPartsTotal: extraPartsTotal,
     );
   }
 

@@ -221,6 +221,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           >
             9
           </div>
+        </div>
       </aside>
     </>
   );
