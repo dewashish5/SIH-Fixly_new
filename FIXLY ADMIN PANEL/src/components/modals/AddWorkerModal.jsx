@@ -32,21 +32,26 @@ export default function AddWorkerModal({ isOpen, onClose }) {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
-    addWorker({
-      ...formData,
-      skills: formData.skills.split(',').map((s) => s.trim()),
-      certifications: formData.certifications
-        ? formData.certifications.split(',').map((c) => c.trim())
-        : ['Skill India Verified Candidate'],
-      verification: 'Verified',
-      location: `${formData.address}, ${formData.city}`,
-    });
-
-    onClose();
+    try {
+      await addWorker({
+        name: formData.name,
+        email: formData.email || `${formData.name.toLowerCase().replace(/\s+/g, '')}@gigworker.com`,
+        phone: formData.phone,
+        password: 'WorkerPass123!',
+        category: formData.service || 'Plumbing',
+        hourlyRate: parseInt(formData.hourlyRate.replace(/\D/g, ''), 10) || 50,
+        experienceYears: parseInt(formData.experience.replace(/\D/g, ''), 10) || 1,
+        bio: `Professional ${formData.service} worker in ${formData.city}`,
+        skills: formData.skills ? formData.skills.split(',').map((s) => s.trim()) : ['General Service']
+      });
+      onClose();
+    } catch (err) {
+      console.error('Failed to add worker modal:', err);
+    }
   };
 
   return (

@@ -22,7 +22,37 @@ export default function CustomerDetailPage() {
   const { customers, bookings, toggleCustomerBlock } = useApp();
 
   const customer = customers.find((c) => c.id === id) || customers[0];
-  const customerBookings = bookings.filter((b) => b.customer === customer.name);
+
+  if (!customer) {
+    return (
+      <div style={{ padding: '32px' }}>
+        <button
+          onClick={() => navigate('/customers')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            borderRadius: '8px',
+            backgroundColor: '#ffffff',
+            border: '1px solid var(--border-light)',
+            color: '#475569',
+            fontSize: '13px',
+            fontWeight: '600',
+            cursor: 'pointer'
+          }}
+        >
+          <ArrowLeft size={15} />
+          <span>Back to Customers Directory</span>
+        </button>
+        <div style={{ marginTop: '24px', fontSize: '14px', color: '#64748b' }}>
+          Customer details loading or not found.
+        </div>
+      </div>
+    );
+  }
+
+  const customerBookings = bookings.filter((b) => b && (b.customer === customer.name || b.customerId === customer.id));
 
   return (
     <div style={{ padding: '0 32px 32px 32px', animation: 'fadeIn 0.2s ease', maxWidth: '1050px' }}>

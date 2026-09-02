@@ -21,20 +21,35 @@ import {
 import AddServiceModal from '../../components/modals/AddServiceModal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Badge from '../../components/common/Badge';
+import Pagination from '../../components/common/Pagination';
 
 export default function ServicesPage() {
-  const { services, deleteService, updateService } = useApp();
+  const { services, servicesPagination, fetchServices, deleteService, updateService } = useApp();
 
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState(null);
   const [serviceToEdit, setServiceToEdit] = useState(null);
+  const pageSize = 10;
 
-  const filtered = services.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.category.toLowerCase().includes(search.toLowerCase()) ||
-    s.description.toLowerCase().includes(search.toLowerCase())
-  );
+  React.useEffect(() => {
+    fetchServices({
+      page: currentPage,
+      limit: pageSize,
+      search
+    });
+  }, [fetchServices, currentPage, search]);
+
+  let filtered = [...services];
+  if (search && search.trim() !== '') {
+    const q = search.toLowerCase().trim();
+    filtered = filtered.filter(s => 
+      (s.title || s.name || '').toLowerCase().includes(q) || 
+      (s.category || s.categoryName || '').toLowerCase().includes(q) ||
+      (s.description || '').toLowerCase().includes(q)
+    );
+  }
 
   const getServiceIcon = (iconName, color) => {
     switch (iconName) {
@@ -148,20 +163,36 @@ export default function ServicesPage() {
               {/* Card Header */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div
-                    style={{
-                      width: '46px',
-                      height: '46px',
-                      borderRadius: '12px',
-                      backgroundColor: s.bg || '#f0fdf4',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {getServiceIcon(s.icon, s.iconColor)}
-                  </div>
+                  {s.image ? (
+                    <img
+                      src={s.image}
+                      alt={s.name}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                      style={{
+                        width: '46px',
+                        height: '46px',
+                        borderRadius: '12px',
+                        objectFit: 'cover',
+                        border: '1px solid #e2e8f0',
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '46px',
+                        height: '46px',
+                        borderRadius: '12px',
+                        backgroundColor: s.bg || '#f0fdf4',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {getServiceIcon(s.icon, s.iconColor)}
+                    </div>
+                  )}
                   <div>
                     <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#111827' }}>
                       {s.name}
@@ -255,6 +286,15 @@ export default function ServicesPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div style={{ marginTop: '20px' }}>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={servicesPagination?.total || filtered.length}
+          pageSize={pageSize}
+          onPageChange={(p) => setCurrentPage(p)}
+        />
       </div>
 
       <AddServiceModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />

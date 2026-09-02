@@ -11,9 +11,27 @@ import {
 } from 'lucide-react';
 
 export default function ReportsPage() {
-  const { bookings, workers, customers, services, payments } = useApp();
+  const {
+    bookings,
+    workers,
+    customers,
+    services,
+    payments,
+    fetchBookings,
+    fetchWorkers,
+    fetchCustomers,
+    fetchPayments
+  } = useApp();
+
   const [selectedRange, setSelectedRange] = useState('This Month');
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  React.useEffect(() => {
+    fetchBookings({ limit: 100 });
+    fetchWorkers({ limit: 100 });
+    fetchCustomers({ limit: 100 });
+    fetchPayments({ limit: 100 });
+  }, [fetchBookings, fetchWorkers, fetchCustomers, fetchPayments]);
 
   const reportTypes = [
     {
@@ -24,7 +42,7 @@ export default function ReportsPage() {
       format: 'CSV / Excel',
       dataGenerator: () =>
         ['ID,Customer,Service,Worker,Amount,Status,Date'].concat(
-          bookings.map((b) => `${b.id},${b.customer},${b.service},${b.worker},${b.amount},${b.status},${b.date}`)
+          bookings.map((b) => `${b.id || b._id},${b.customer},${b.service},${b.worker},${b.amount},${b.status},${b.date}`)
         ).join('\n'),
     },
     {
@@ -35,7 +53,7 @@ export default function ReportsPage() {
       format: 'CSV / PDF',
       dataGenerator: () =>
         ['TxnID,Customer,Worker,Gross,WelfareSplit,WorkerNet,Status'].concat(
-          payments.map((p) => `${p.id},${p.customer},${p.worker},${p.amount},${p.welfareCut},${p.workerPayout},${p.status}`)
+          payments.map((p) => `${p.id || p._id},${p.customer},${p.worker},${p.amount},${p.welfareCut},${p.workerPayout},${p.status}`)
         ).join('\n'),
     },
     {
@@ -46,7 +64,7 @@ export default function ReportsPage() {
       format: 'CSV / Excel',
       dataGenerator: () =>
         ['WorkerID,Name,Service,City,Rating,Jobs,Status'].concat(
-          workers.map((w) => `${w.id},${w.name},${w.service},${w.city},${w.rating},${w.completedJobs},${w.verification}`)
+          workers.map((w) => `${w.id || w._id},${w.name},${w.category || w.service},${w.location || w.city},${w.rating},${w.totalJobs || w.completedJobs},${w.status || w.verification}`)
         ).join('\n'),
     },
     {
@@ -57,7 +75,7 @@ export default function ReportsPage() {
       format: 'CSV / Excel',
       dataGenerator: () =>
         ['CustomerID,Name,Phone,Bookings,Spent,Status'].concat(
-          customers.map((c) => `${c.id},${c.name},${c.phone},${c.totalBookings},${c.totalSpent},${c.status}`)
+          customers.map((c) => `${c.id || c._id},${c.name},${c.phone},${c.totalBookings},${c.totalSpent},${c.status}`)
         ).join('\n'),
     },
   ];
@@ -170,42 +188,25 @@ export default function ReportsPage() {
             </div>
 
             {/* Actions */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-              <button
-                onClick={() => window.print()}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: '#ffffff',
-                  fontSize: '12.5px',
-                  fontWeight: '600',
-                  color: '#334155',
-                }}
-              >
-                <Printer size={14} />
-                <span>Print</span>
-              </button>
-
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
               <button
                 onClick={() => handleExport(rep)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '8px 18px',
+                  padding: '9px 18px',
                   borderRadius: '8px',
-                  backgroundColor: 'var(--primary-brand)',
+                  backgroundColor: '#15803d',
                   color: '#ffffff',
-                  fontSize: '12.5px',
+                  fontSize: '13px',
                   fontWeight: '600',
-                  boxShadow: 'var(--shadow-pill)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(21, 128, 61, 0.2)',
                 }}
               >
-                <Download size={14} />
+                <Download size={15} />
                 <span>Export CSV Report</span>
               </button>
             </div>

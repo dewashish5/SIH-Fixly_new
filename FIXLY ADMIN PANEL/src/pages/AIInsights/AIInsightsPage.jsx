@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BrainCircuit,
   Sparkles,
@@ -11,14 +11,104 @@ import {
   Layers,
   ArrowRight
 } from 'lucide-react';
-import { aiInsightsData } from '../../data/aiInsights';
+import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 
 export default function AIInsightsPage() {
   const { showToast } = useToast();
+  const [aiData, setAiData] = useState({
+    summary: {
+      confidenceScore: '94.8%',
+      predictedSurgeCategory: 'Plumbing & AC Repair',
+      peakDemandWindow: '11:00 AM – 02:00 PM & 06:00 PM – 09:00 PM',
+      deficitRiskArea: 'Moderate in Mumbai Bandra Sector',
+      recommendedStandby: 15
+    },
+    directives: [
+      {
+        id: 'dir-1',
+        title: 'Dynamic Surge Dispatch in East Delhi',
+        priority: 'Immediate',
+        priorityColor: '#dc2626',
+        description: 'AI model detects a 3.4x uptick in plumbing calls due to municipal water line maintenance in Sector 18 & Mayur Vihar.',
+        impact: 'Prevents 45+ min wait time delays',
+        actionLabel: 'Deploy 15 Standby Workers'
+      },
+      {
+        id: 'dir-2',
+        title: 'Weekend HVAC Technician Balancing in Pune',
+        priority: 'Medium',
+        priorityColor: '#d97706',
+        description: 'Predicted 38°C weekend temperature forecast likely to increase AC breakdown tickets by +34%.',
+        impact: 'Guarantees SLA completion rate above 98%',
+        actionLabel: 'Pre-Schedule 20 Tech Shifts'
+      },
+      {
+        id: 'dir-3',
+        title: 'Fair Gig Allocation Equalizer Alert',
+        priority: 'Low',
+        priorityColor: '#2563eb',
+        description: 'Algorithm detected 8 newly onboarded carpentry members with 0 assignments in past 48h.',
+        impact: 'Enhances worker retention and earnings parity',
+        actionLabel: 'Trigger Priority Fair Rotation'
+      }
+    ],
+    demandForecast: [
+      {
+        category: 'Plumbing',
+        currentDemand: 'High',
+        predictedTrend: '+18% Surge',
+        expectedBookingsToday: 25,
+        peakHours: '08:00 AM - 11:30 AM',
+        action: 'Pre-allocate 25 on-standby plumbers in Noida & East Delhi zones.'
+      },
+      {
+        category: 'Electrical',
+        currentDemand: 'Moderate',
+        predictedTrend: '+12% Increase',
+        expectedBookingsToday: 18,
+        peakHours: '04:00 PM - 07:30 PM',
+        action: 'Shift 18 electricians towards Indira Nagar & Gachibowli clusters.'
+      },
+      {
+        category: 'AC Repair & Jet Service',
+        currentDemand: 'Critical',
+        predictedTrend: '+45% Spike',
+        expectedBookingsToday: 30,
+        peakHours: '12:00 PM - 04:00 PM',
+        action: 'Activate emergency surge fee discount for non-peak slot bookings.'
+      },
+      {
+        category: 'Cleaning & Sanitization',
+        currentDemand: 'Normal',
+        predictedTrend: 'Stable',
+        expectedBookingsToday: 12,
+        peakHours: '07:00 AM - 10:00 AM',
+        action: 'Maintain standard dispatch queue without additional incentive bonus.'
+      }
+    ]
+  });
 
-  const handleExecuteRecommendation = (rec) => {
-    showToast('success', `AI Directive Executed: ${rec.actionLabel}`);
+  useEffect(() => {
+    const fetchAI = async () => {
+      try {
+        const res = await api.getAIInsights();
+        if (res.success && res.summary) {
+          setAiData({
+            summary: res.summary,
+            directives: res.directives || [],
+            demandForecast: res.demandForecast || []
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load AI Insights:', err);
+      }
+    };
+    fetchAI();
+  }, []);
+
+  const handleExecuteRecommendation = (actionLabel) => {
+    showToast('success', `AI Directive Executed: ${actionLabel}`);
   };
 
   return (
@@ -61,7 +151,7 @@ export default function AIInsightsPage() {
         </div>
 
         <div style={{ fontSize: '12px', color: '#15803d', fontWeight: '600', backgroundColor: '#eaf8ef', padding: '6px 12px', borderRadius: '8px' }}>
-          🧠 Predictive Accuracy: <strong>{aiInsightsData.summary.confidenceScore}</strong>
+          🧠 Predictive Accuracy: <strong>{aiData.summary.confidenceScore}</strong>
         </div>
       </div>
 
@@ -73,7 +163,7 @@ export default function AIInsightsPage() {
             <span>Highest Surge Predicted</span>
           </div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginTop: '6px' }}>
-            {aiInsightsData.summary.predictedSurgeCategory}
+            {aiData.summary.predictedSurgeCategory}
           </div>
           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>
             Spike expected due to high afternoon temperatures
@@ -86,10 +176,10 @@ export default function AIInsightsPage() {
             <span>Peak Demand Window</span>
           </div>
           <div style={{ fontSize: '18px', fontWeight: '800', color: '#111827', marginTop: '6px' }}>
-            {aiInsightsData.summary.peakDemandWindow}
+            {aiData.summary.peakDemandWindow}
           </div>
           <div style={{ fontSize: '12px', color: '#15803d', fontWeight: '600', marginTop: '3px' }}>
-            Recommendation: Stage 45 standby workers
+            Recommendation: Stage {aiData.summary.recommendedStandby || 15} standby workers
           </div>
         </div>
 
@@ -99,7 +189,7 @@ export default function AIInsightsPage() {
             <span>Workforce Deficit Risk</span>
           </div>
           <div style={{ fontSize: '18px', fontWeight: '800', color: '#111827', marginTop: '6px' }}>
-            {aiInsightsData.summary.workforceDeficitRisk}
+            {aiData.summary.deficitRiskArea}
           </div>
           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>
             Proactive re-routing active
@@ -114,7 +204,7 @@ export default function AIInsightsPage() {
         </h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {aiInsightsData.recommendations.map((rec) => (
+          {aiData.directives.map((rec) => (
             <div
               key={rec.id}
               style={{
@@ -157,15 +247,15 @@ export default function AIInsightsPage() {
                         fontWeight: '700',
                         padding: '2px 8px',
                         borderRadius: '4px',
-                        backgroundColor: rec.urgency === 'Immediate' ? '#fee2e2' : '#fef3c7',
-                        color: rec.urgency === 'Immediate' ? '#dc2626' : '#b45309',
+                        backgroundColor: rec.priority === 'Immediate' ? '#fee2e2' : '#fef3c7',
+                        color: rec.priority === 'Immediate' ? '#dc2626' : '#b45309',
                       }}
                     >
-                      {rec.urgency}
+                      {rec.priority}
                     </span>
                   </div>
                   <p style={{ fontSize: '13px', color: '#475569', marginTop: '3px' }}>
-                    {rec.detail}
+                    {rec.description}
                   </p>
                   <div style={{ fontSize: '12px', color: '#15803d', fontWeight: '600', marginTop: '4px' }}>
                     Impact: {rec.impact}
@@ -174,18 +264,20 @@ export default function AIInsightsPage() {
               </div>
 
               <button
-                onClick={() => handleExecuteRecommendation(rec)}
+                onClick={() => handleExecuteRecommendation(rec.actionLabel)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
                   padding: '9px 18px',
-                  backgroundColor: 'var(--primary-brand)',
+                  backgroundColor: '#15803d',
                   color: '#ffffff',
                   borderRadius: '8px',
                   fontSize: '13px',
                   fontWeight: '600',
-                  boxShadow: 'var(--shadow-pill)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(21, 128, 61, 0.2)',
                 }}
               >
                 <span>{rec.actionLabel}</span>
@@ -213,10 +305,10 @@ export default function AIInsightsPage() {
             </tr>
           </thead>
           <tbody>
-            {aiInsightsData.demandForecasts.map((fc, i) => (
+            {aiData.demandForecast.map((fc, i) => (
               <tr key={i} style={{ borderBottom: '1px solid #f1f5f3', fontSize: '13px' }}>
                 <td style={{ padding: '14px 18px', fontWeight: '700', color: '#111827' }}>
-                  {fc.service}
+                  {fc.category}
                 </td>
                 <td style={{ padding: '14px 18px' }}>
                   <span
@@ -225,8 +317,8 @@ export default function AIInsightsPage() {
                       borderRadius: '4px',
                       fontSize: '11.5px',
                       fontWeight: '700',
-                      backgroundColor: fc.currentDemand.includes('High') ? '#fee2e2' : '#fef3c7',
-                      color: fc.currentDemand.includes('High') ? '#dc2626' : '#b45309',
+                      backgroundColor: fc.currentDemand.includes('High') || fc.currentDemand.includes('Critical') ? '#fee2e2' : '#fef3c7',
+                      color: fc.currentDemand.includes('High') || fc.currentDemand.includes('Critical') ? '#dc2626' : '#b45309',
                     }}
                   >
                     {fc.currentDemand}
@@ -242,7 +334,7 @@ export default function AIInsightsPage() {
                   {fc.peakHours}
                 </td>
                 <td style={{ padding: '14px 18px', color: '#1e293b', fontSize: '12.5px' }}>
-                  {fc.recommendedAction}
+                  {fc.action}
                 </td>
               </tr>
             ))}

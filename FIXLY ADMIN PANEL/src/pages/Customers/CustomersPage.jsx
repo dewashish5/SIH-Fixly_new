@@ -17,24 +17,25 @@ import Pagination from '../../components/common/Pagination';
 
 export default function CustomersPage() {
   const navigate = useNavigate();
-  const { customers, toggleCustomerBlock } = useApp();
+  const { customers, customersPagination, fetchCustomers, toggleCustomerBlock } = useApp();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [sortField, setSortField] = useState('rawSpent');
   const [sortAsc, setSortAsc] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 6;
+  const pageSize = 10;
 
-  let filtered = customers.filter((c) => {
-    const matchStatus = statusFilter === 'All' || c.status === statusFilter;
-    const matchSearch =
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.phone.includes(search) ||
-      c.email.toLowerCase().includes(search.toLowerCase()) ||
-      c.address.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchSearch;
-  });
+  React.useEffect(() => {
+    fetchCustomers({
+      page: currentPage,
+      limit: pageSize,
+      search,
+      isVerified: statusFilter === 'Active' ? 'true' : (statusFilter === 'Blocked' ? 'false' : '')
+    });
+  }, [fetchCustomers, currentPage, search, statusFilter]);
+
+  let filtered = [...customers];
 
   filtered.sort((a, b) => {
     let valA = a[sortField] || '';
@@ -44,7 +45,7 @@ export default function CustomersPage() {
     return 0;
   });
 
-  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginated = filtered;
 
   const toggleSort = (field) => {
     if (sortField === field) {
@@ -232,7 +233,7 @@ export default function CustomersPage() {
                     </button>
 
                     <button
-                      onClick={() => toggleCustomerBlock(c.id)}
+                      onClick={() => toggleCustomerBlock(c.id, c.isVerified)}
                       title={c.status === 'Blocked' ? 'Unblock Customer' : 'Block Customer'}
                       style={{
                         padding: '6px 8px',
@@ -253,7 +254,7 @@ export default function CustomersPage() {
 
         <Pagination
           currentPage={currentPage}
-          totalItems={filtered.length}
+          totalItems={customersPagination?.total || filtered.length}
           pageSize={pageSize}
           onPageChange={(p) => setCurrentPage(p)}
         />

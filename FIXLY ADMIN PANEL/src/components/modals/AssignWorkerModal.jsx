@@ -9,9 +9,9 @@ export default function AssignWorkerModal({ booking, isOpen, onClose }) {
 
   if (!booking) return null;
 
-  // Filter workers matching booking service
+  // Available verified workers
   const matchingWorkers = workers.filter(
-    (w) => w.service.toLowerCase() === booking.service.toLowerCase() && w.verification === 'Verified'
+    (w) => w.isVerified || w.verification === 'Verified'
   );
 
   const handleAssign = () => {

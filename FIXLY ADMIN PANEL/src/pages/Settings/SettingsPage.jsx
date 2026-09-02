@@ -16,16 +16,46 @@ import {
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { settings, updateSettings } = useApp();
+  const { settings, fetchSettings, updateSettings } = useApp();
   const { language, setLanguage } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState('platform'); // 'profile', 'platform', 'notifications', 'payments', 'security', 'roles'
-  const [formState, setFormState] = useState({ ...settings });
+  const [activeTab, setActiveTab] = useState('platform');
+  const [formState, setFormState] = useState({
+    platformCommissionPercent: 5,
+    cooperativeWelfarePercent: 5,
+    autoDispatchEnabled: true,
+    emergencyHotline: '+91 98765 43210',
+    emailNotifications: true,
+    smsAlerts: true,
+    payoutSchedule: 'Instant Automated UPI',
+    twoFactorAuth: false,
+    ...settings
+  });
+
+  React.useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  React.useEffect(() => {
+    if (settings && Object.keys(settings).length > 0) {
+      setFormState((prev) => ({
+        ...prev,
+        ...settings,
+        platformCommissionPercent: settings.platformCommissionPercent ?? 5,
+        cooperativeWelfarePercent: settings.cooperativeWelfarePercent ?? 5,
+        emergencyHotline: settings.emergencyHotline || '+91 98765 43210'
+      }));
+    }
+  }, [settings]);
 
   const handleSave = (e) => {
     e.preventDefault();
     updateSettings(formState);
   };
+
+  const platformComm = Number(formState.platformCommissionPercent ?? 5);
+  const welfarePercent = Number(formState.cooperativeWelfarePercent ?? 5);
+  const workerNetPercent = Math.max(0, 100 - (platformComm + welfarePercent));
 
   return (
     <div style={{ padding: '0 32px 32px 32px', animation: 'fadeIn 0.2s ease', maxWidth: '900px' }}>
@@ -35,7 +65,7 @@ export default function SettingsPage() {
           Platform Settings & Governance
         </h2>
         <p style={{ fontSize: '13px', color: '#64748b' }}>
-          Cooperative bylaws, welfare allocation rates, security policies, and notification channels
+          Cooperative bylaws, platform commission, welfare allocation rates, security policies, and notification channels
         </p>
       </div>
 
@@ -54,6 +84,7 @@ export default function SettingsPage() {
           return (
             <button
               key={tab.key}
+              type="button"
               onClick={() => setActiveTab(tab.key)}
               style={{
                 display: 'flex',
@@ -62,8 +93,11 @@ export default function SettingsPage() {
                 padding: '10px 16px',
                 fontSize: '13px',
                 fontWeight: isActive ? '700' : '500',
-                color: isActive ? 'var(--primary-brand)' : '#64748b',
-                borderBottom: isActive ? '2.5px solid var(--primary-brand)' : 'none',
+                color: isActive ? '#15803d' : '#64748b',
+                borderBottom: isActive ? '2.5px solid #15803d' : 'none',
+                backgroundColor: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
                 marginBottom: '-1px',
                 whiteSpace: 'nowrap',
               }}
@@ -80,21 +114,30 @@ export default function SettingsPage() {
         {/* Tab 1: Platform & Bylaws */}
         {activeTab === 'platform' && (
           <>
+            {/* 1. Platform Commission Split */}
             <div style={{ backgroundColor: '#ffffff', padding: '22px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                <Percent size={18} color="var(--primary-brand)" />
+                <Percent size={18} color="#15803d" />
                 <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#111827' }}>
-                  Cooperative Welfare Reserve Split
+                  Platform Commission Fee (%)
                 </h3>
               </div>
               <p style={{ fontSize: '12.5px', color: '#64748b', marginBottom: '14px', lineHeight: '1.4' }}>
-                Percentage of each booking automatically routed to the Worker Health, Accidental Insurance, and Emergency Pension Pool.
+                Percentage of each booking transaction retained for Platform Infrastructure, Cloud Hosting, Maintenance, and Support.
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <input
                   type="number"
-                  value={formState.cooperativeWelfarePercent}
-                  onChange={(e) => setFormState({ ...formState, cooperativeWelfarePercent: Number(e.target.value) })}
+                  min="0"
+                  max="50"
+                  value={formState.platformCommissionPercent === '' ? '' : formState.platformCommissionPercent}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormState({
+                      ...formState,
+                      platformCommissionPercent: val === '' ? '' : Number(val)
+                    });
+                  }}
                   style={{
                     width: '90px',
                     padding: '8px 12px',
@@ -105,8 +148,48 @@ export default function SettingsPage() {
                   }}
                 />
                 <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>%</span>
-                <span style={{ fontSize: '12px', color: '#15803d', fontWeight: '600' }}>
-                  (Remaining 95% goes directly to the service provider via instant UPI)
+                <span style={{ fontSize: '12px', color: '#2563eb', fontWeight: '600' }}>
+                  Platform Commission
+                </span>
+              </div>
+            </div>
+
+            {/* 2. Cooperative Welfare Reserve Split */}
+            <div style={{ backgroundColor: '#ffffff', padding: '22px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <Percent size={18} color="#15803d" />
+                <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#111827' }}>
+                  Cooperative Welfare Reserve Split (%)
+                </h3>
+              </div>
+              <p style={{ fontSize: '12.5px', color: '#64748b', marginBottom: '14px', lineHeight: '1.4' }}>
+                Percentage of each booking automatically routed to the Worker Health, Accidental Insurance, and Emergency Pension Pool.
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <input
+                  type="number"
+                  min="0"
+                  max="50"
+                  value={formState.cooperativeWelfarePercent === '' ? '' : formState.cooperativeWelfarePercent}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormState({
+                      ...formState,
+                      cooperativeWelfarePercent: val === '' ? '' : Number(val)
+                    });
+                  }}
+                  style={{
+                    width: '90px',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                  }}
+                />
+                <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>%</span>
+                <span style={{ fontSize: '12px', color: '#15803d', fontWeight: '700' }}>
+                  (Remaining {workerNetPercent}% goes directly to the service provider via instant UPI)
                 </span>
               </div>
             </div>
@@ -287,12 +370,14 @@ export default function SettingsPage() {
               alignItems: 'center',
               gap: '6px',
               padding: '10px 24px',
-              backgroundColor: 'var(--primary-brand)',
+              backgroundColor: '#15803d',
               color: '#ffffff',
               borderRadius: '8px',
               fontSize: '13.5px',
               fontWeight: '700',
-              boxShadow: 'var(--shadow-pill)',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 2px 4px rgba(21, 128, 61, 0.2)',
             }}
           >
             <Save size={15} />

@@ -25,7 +25,7 @@ import RescheduleBookingModal from '../../components/modals/RescheduleBookingMod
 import EmergencyDispatchModal from '../../components/modals/EmergencyDispatchModal';
 
 export default function BookingsPage() {
-  const { bookings, cancelBooking, updateBookingStatus } = useApp();
+  const { bookings, bookingsPagination, fetchBookings, cancelBooking, updateBookingStatus } = useApp();
 
   // Filter & Search states
   const [search, setSearch] = useState('');
@@ -34,7 +34,16 @@ export default function BookingsPage() {
   const [sortField, setSortField] = useState('date');
   const [sortAsc, setSortAsc] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 6;
+  const pageSize = 10;
+
+  React.useEffect(() => {
+    fetchBookings({
+      page: currentPage,
+      limit: pageSize,
+      search,
+      status: statusFilter !== 'All' ? statusFilter : ''
+    });
+  }, [fetchBookings, currentPage, search, statusFilter]);
 
   // Modals state
   const [selectedBookingForView, setSelectedBookingForView] = useState(null);
@@ -43,17 +52,44 @@ export default function BookingsPage() {
   const [selectedBookingForCancel, setSelectedBookingForCancel] = useState(null);
   const [selectedEmergency, setSelectedEmergency] = useState(null);
 
-  // Filter logic
-  let filtered = bookings.filter((b) => {
-    const matchStatus = statusFilter === 'All' || b.status === statusFilter;
-    const matchService = serviceFilter === 'All' || b.service === serviceFilter;
-    const matchSearch =
-      b.id.toLowerCase().includes(search.toLowerCase()) ||
-      b.customer.toLowerCase().includes(search.toLowerCase()) ||
-      b.worker.toLowerCase().includes(search.toLowerCase()) ||
-      b.service.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchService && matchSearch;
-  });
+  let filtered = [...bookings];
+
+  // Status Filter Pill Logic
+  if (statusFilter && statusFilter !== 'All') {
+    const targetStatus = statusFilter.toUpperCase();
+    filtered = filtered.filter((b) => {
+      const bStatus = (b.status || '').toUpperCase();
+      if (targetStatus === 'CONFIRMED') return bStatus === 'CONFIRMED' || bStatus === 'ACCEPTED' || bStatus === 'BOOKED';
+      if (targetStatus === 'PENDING') return bStatus === 'PENDING';
+      if (targetStatus === 'IN PROGRESS') return bStatus === 'IN_PROGRESS' || bStatus === 'IN PROGRESS' || bStatus === 'ACCEPTED' || bStatus === 'ASSIGNED';
+      if (targetStatus === 'COMPLETED') return bStatus === 'COMPLETED';
+      if (targetStatus === 'CANCELLED') return bStatus === 'CANCELLED' || bStatus === 'REJECTED';
+      if (targetStatus === 'EMERGENCY') return b.isEmergency === true || bStatus === 'EMERGENCY' || b.category === 'Emergency';
+      return bStatus === targetStatus;
+    });
+  }
+
+  // Service Category Filter
+  if (serviceFilter && serviceFilter !== 'All' && serviceFilter !== 'All Services') {
+    const sTerm = serviceFilter.toLowerCase();
+    filtered = filtered.filter((b) => {
+      const title = (b.serviceTitle || b.service || b.title || '').toLowerCase();
+      const cat = (b.category || b.serviceCategory || '').toLowerCase();
+      return title.includes(sTerm) || cat.includes(sTerm);
+    });
+  }
+
+  // Search Filter
+  if (search && search.trim() !== '') {
+    const q = search.toLowerCase().trim();
+    filtered = filtered.filter((b) => {
+      const id = (b.id || b._id || b.bookingId || '').toLowerCase();
+      const cust = (b.customerName || b.customer || '').toLowerCase();
+      const worker = (b.workerName || b.assignedWorker || '').toLowerCase();
+      const title = (b.serviceTitle || b.service || b.title || '').toLowerCase();
+      return id.includes(q) || cust.includes(q) || worker.includes(q) || title.includes(q);
+    });
+  }
 
   // Sort logic
   filtered.sort((a, b) => {
@@ -68,8 +104,7 @@ export default function BookingsPage() {
     return 0;
   });
 
-  // Pagination slice
-  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginated = filtered;
 
   const toggleSort = (field) => {
     if (sortField === field) {
@@ -377,7 +412,7 @@ export default function BookingsPage() {
         {/* Pagination */}
         <Pagination
           currentPage={currentPage}
-          totalItems={filtered.length}
+          totalItems={bookingsPagination?.total || filtered.length}
           pageSize={pageSize}
           onPageChange={(p) => setCurrentPage(p)}
         />

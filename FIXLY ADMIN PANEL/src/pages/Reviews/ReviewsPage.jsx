@@ -12,24 +12,43 @@ import {
 } from 'lucide-react';
 import Badge from '../../components/common/Badge';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { reviewSummary } from '../../data/reviews';
+import Pagination from '../../components/common/Pagination';
+import { reviewSummary as mockReviewSummary } from '../../data/reviews';
 
 export default function ReviewsPage() {
-  const { reviews, deleteReview } = useApp();
+  const { reviews = [], reviewsPagination, ratingStats, fetchReviews, deleteReview } = useApp();
 
   const [search, setSearch] = useState('');
   const [starFilter, setStarFilter] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
   const [reviewToDelete, setReviewToDelete] = useState(null);
+  const pageSize = 10;
 
-  const filtered = reviews.filter((r) => {
-    const matchStar = starFilter === 'All' || r.rating === Number(starFilter);
-    const matchSearch =
-      r.customer.toLowerCase().includes(search.toLowerCase()) ||
-      r.worker.toLowerCase().includes(search.toLowerCase()) ||
-      r.service.toLowerCase().includes(search.toLowerCase()) ||
-      r.comment.toLowerCase().includes(search.toLowerCase());
-    return matchStar && matchSearch;
-  });
+  React.useEffect(() => {
+    fetchReviews({
+      page: currentPage,
+      limit: pageSize,
+      rating: starFilter !== 'All' ? starFilter : ''
+    });
+  }, [fetchReviews, currentPage, starFilter]);
+
+  const reviewsList = Array.isArray(reviews) ? reviews : [];
+  
+  let filtered = [...reviewsList];
+  if (search && search.trim() !== '') {
+    const q = search.toLowerCase().trim();
+    filtered = filtered.filter((r) => {
+      const comm = (r.comment || r.feedback || '').toLowerCase();
+      const cust = (r.customer || r.customerName || '').toLowerCase();
+      const wrk = (r.worker || r.workerName || '').toLowerCase();
+      const svc = (r.service || '').toLowerCase();
+      return comm.includes(q) || cust.includes(q) || wrk.includes(q) || svc.includes(q);
+    });
+  }
+
+  const totalReviewsCount = ratingStats?.totalReviews || reviewsPagination?.total || reviewsList.length || 0;
+  const avgRatingScore = ratingStats?.averageRating || 4.8;
+  const starPercents = ratingStats?.percents || { 5: 80, 4: 20, 3: 0, 2: 0, 1: 0 };
 
   return (
     <div style={{ padding: '0 32px 32px 32px', animation: 'fadeIn 0.2s ease' }}>
@@ -61,23 +80,22 @@ export default function ReviewsPage() {
         {/* Left: Big Score */}
         <div style={{ textAlign: 'center', borderRight: '1px solid var(--border-light)', paddingRight: '20px' }}>
           <div style={{ fontSize: '48px', fontWeight: '800', color: '#15803d', lineHeight: '1' }}>
-            {reviewSummary.averageRating}
+            {avgRatingScore}
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', margin: '8px 0' }}>
             {[1, 2, 3, 4, 5].map((s) => (
-              <Star key={s} size={18} fill="#ca8a04" color="#ca8a04" />
+              <Star key={s} size={18} fill={s <= Math.round(avgRatingScore) ? '#ca8a04' : '#cbd5e1'} color={s <= Math.round(avgRatingScore) ? '#ca8a04' : '#cbd5e1'} />
             ))}
           </div>
           <div style={{ fontSize: '12.5px', color: '#64748b' }}>
-            Based on <strong>{reviewSummary.totalReviews.toLocaleString()}</strong> verified ratings
+            Based on <strong>{totalReviewsCount.toLocaleString()}</strong> verified ratings
           </div>
         </div>
 
         {/* Right: Star percentage bars */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {[5, 4, 3, 2, 1].map((stars) => {
-            const count = reviewSummary.stars[stars];
-            const pct = Math.round((count / reviewSummary.totalReviews) * 100);
+            const pct = starPercents[stars] || 0;
             return (
               <div key={stars} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px' }}>
                 <span style={{ width: '50px', fontWeight: '600', color: '#475569' }}>{stars} Stars</span>
@@ -161,33 +179,40 @@ export default function ReviewsPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r) => (
-              <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f3', fontSize: '13px' }}>
-                <td style={{ padding: '14px 18px', fontWeight: '700', color: '#1e293b' }}>
-                  {r.customer}
-                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Order: {r.bookingId}</div>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan="7" style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                  No customer reviews found.
                 </td>
+              </tr>
+            ) : (
+              filtered.map((r) => (
+                <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f3', fontSize: '13px' }}>
+                  <td style={{ padding: '14px 18px', fontWeight: '700', color: '#1e293b' }}>
+                    {r.customer || r.customerName || 'Customer'}
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>Order: {r.bookingId || 'Booking'}</div>
+                  </td>
 
-                <td style={{ padding: '14px 18px' }}>
-                  <div style={{ fontWeight: '600', color: '#1e293b' }}>{r.worker}</div>
-                  <div style={{ fontSize: '11.5px', color: '#64748b' }}>{r.service}</div>
-                </td>
+                  <td style={{ padding: '14px 18px' }}>
+                    <div style={{ fontWeight: '600', color: '#1e293b' }}>{r.worker || r.workerName || 'Worker'}</div>
+                    <div style={{ fontSize: '11.5px', color: '#64748b' }}>{r.service || 'Service'}</div>
+                  </td>
 
-                <td style={{ padding: '14px 18px', fontWeight: '700', color: '#ca8a04' }}>
-                  ★ {r.rating} / 5
-                </td>
+                  <td style={{ padding: '14px 18px', fontWeight: '700', color: '#ca8a04' }}>
+                    ★ {r.rating || 5} / 5
+                  </td>
 
-                <td style={{ padding: '14px 18px', color: '#334155', maxWidth: '340px', lineHeight: '1.4' }}>
-                  "{r.comment}"
-                </td>
+                  <td style={{ padding: '14px 18px', color: '#334155', maxWidth: '340px', lineHeight: '1.4' }}>
+                    "{r.comment || r.feedback || 'Great service'}"
+                  </td>
 
-                <td style={{ padding: '14px 18px', color: '#64748b' }}>
-                  {r.date}
-                </td>
+                  <td style={{ padding: '14px 18px', color: '#64748b' }}>
+                    {r.date || 'Recent'}
+                  </td>
 
-                <td style={{ padding: '14px 18px' }}>
-                  <Badge status={r.status} />
-                </td>
+                  <td style={{ padding: '14px 18px' }}>
+                    <Badge status={r.status || 'Published'} />
+                  </td>
 
                 <td style={{ padding: '14px 18px', textAlign: 'right' }}>
                   <button
@@ -204,9 +229,17 @@ export default function ReviewsPage() {
                   </button>
                 </td>
               </tr>
-            ))}
+            ))
+          )}
           </tbody>
         </table>
+
+        <Pagination
+          currentPage={currentPage}
+          totalItems={reviewsPagination?.total || filtered.length}
+          pageSize={pageSize}
+          onPageChange={(p) => setCurrentPage(p)}
+        />
       </div>
 
       {/* Delete Confirmation */}

@@ -17,25 +17,56 @@ import Pagination from '../../components/common/Pagination';
 import InvoiceModal from '../../components/modals/InvoiceModal';
 
 export default function PaymentsPage() {
-  const { payments } = useApp();
+  const { payments, paymentsPagination, fetchPayments, paymentStats } = useApp();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedPaymentForInvoice, setSelectedPaymentForInvoice] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const pageSize = 10;
 
-  let filtered = payments.filter((p) => {
-    const matchStatus = statusFilter === 'All' || p.status === statusFilter;
-    const matchSearch =
-      p.id.toLowerCase().includes(search.toLowerCase()) ||
-      p.bookingId.toLowerCase().includes(search.toLowerCase()) ||
-      p.customer.toLowerCase().includes(search.toLowerCase()) ||
-      p.worker.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchSearch;
-  });
+  React.useEffect(() => {
+    fetchPayments({
+      page: currentPage,
+      limit: pageSize,
+      status: statusFilter === 'Completed' ? 'success' : (statusFilter === 'Failed' ? 'failed' : '')
+    });
+  }, [fetchPayments, currentPage, statusFilter]);
 
-  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  // Calculate dynamic financial stats with Indian Rupee formatting (en-IN)
+  const totalVolume = paymentStats?.totalVolume || payments.reduce((acc, p) => acc + (p.rawAmount || 0), 0);
+  const completedSettlements = paymentStats?.workerSettlements || Math.round(totalVolume * 0.95);
+  const welfarePool = paymentStats?.welfareFundPool || Math.round(totalVolume * 0.05);
+  const escrowPending = paymentStats?.totalPending || 0;
+  const refundsProcessed = paymentStats?.totalFailed || 0;
+
+  const formatINR = (val) => `₹${Number(val || 0).toLocaleString('en-IN')}`;
+
+  let filtered = [...payments];
+
+  if (statusFilter && statusFilter !== 'All') {
+    const tStat = statusFilter.toUpperCase();
+    filtered = filtered.filter((p) => {
+      const s = (p.status || '').toUpperCase();
+      if (tStat === 'COMPLETED' || tStat === 'SUCCESS') return s === 'COMPLETED' || s === 'SUCCESS' || s === 'PAID';
+      if (tStat === 'PENDING') return s === 'PENDING';
+      if (tStat === 'REFUNDED' || tStat === 'FAILED') return s === 'REFUNDED' || s === 'FAILED';
+      return s === tStat;
+    });
+  }
+
+  if (search && search.trim() !== '') {
+    const q = search.toLowerCase().trim();
+    filtered = filtered.filter((p) => {
+      const id = (p.id || p._id || '').toLowerCase();
+      const bId = (p.bookingId || '').toLowerCase();
+      const cust = (p.customer || p.customerName || '').toLowerCase();
+      const wrk = (p.worker || p.workerName || '').toLowerCase();
+      return id.includes(q) || bId.includes(q) || cust.includes(q) || wrk.includes(q);
+    });
+  }
+
+  const paginated = filtered;
 
   return (
     <div style={{ padding: '0 32px 32px 32px', animation: 'fadeIn 0.2s ease' }}>
@@ -95,35 +126,35 @@ export default function PaymentsPage() {
         </button>
       </div>
 
-      {/* 5 Financial Summary KPI Cards */}
+      {/* 5 Financial Summary KPI Cards (Dynamic Indian Rupee Values) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '14px', marginBottom: '22px' }}>
         <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '11.5px', color: '#64748b' }}>Total Processed GTV</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginTop: '3px' }}>₹0</div>
-          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', marginTop: '2px' }}>- (MoM)</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginTop: '3px' }}>{formatINR(totalVolume)}</div>
+          <div style={{ fontSize: '11px', color: '#15803d', fontWeight: '600', marginTop: '2px' }}>↑ Live Treasury</div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '11.5px', color: '#64748b' }}>Completed Settlements</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#15803d', marginTop: '3px' }}>₹0</div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Direct UPI to Workers</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#15803d', marginTop: '3px' }}>{formatINR(completedSettlements)}</div>
+          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Direct Worker UPI</div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '11.5px', color: '#64748b' }}>Escrow Pending</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#d97706', marginTop: '3px' }}>₹0</div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Under Service Verification</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#d97706', marginTop: '3px' }}>{formatINR(escrowPending)}</div>
+          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Under Verification</div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '11.5px', color: '#64748b' }}>Welfare Fund Pool (5%)</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#0284c7', marginTop: '3px' }}>₹0</div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Worker Insurance & Aid</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#0284c7', marginTop: '3px' }}>{formatINR(welfarePool)}</div>
+          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Worker Insurance Aid</div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '11.5px', color: '#64748b' }}>Refunds Processed</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#dc2626', marginTop: '3px' }}>₹0</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#dc2626', marginTop: '3px' }}>{formatINR(refundsProcessed)}</div>
           <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>0% Refund Rate</div>
         </div>
       </div>
@@ -269,7 +300,7 @@ export default function PaymentsPage() {
 
         <Pagination
           currentPage={currentPage}
-          totalItems={filtered.length}
+          totalItems={paymentsPagination?.total || filtered.length}
           pageSize={pageSize}
           onPageChange={(p) => setCurrentPage(p)}
         />

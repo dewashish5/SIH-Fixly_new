@@ -33,6 +33,8 @@ export default function Header({ onOpenMobileMenu }) {
     markAllNotificationsRead,
     selectedDateRange,
     setSelectedDateRange,
+    logoutAdmin,
+    adminUser,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -705,7 +707,7 @@ export default function Header({ onOpenMobileMenu }) {
 
               <button
                 onClick={() => {
-                  alert('Signed out successfully.');
+                  logoutAdmin();
                   setIsProfileOpen(false);
                 }}
                 style={{
