@@ -16,12 +16,17 @@ import SendNotificationModal from '../../components/modals/SendNotificationModal
 export default function NotificationsPage() {
   const {
     notifications,
+    fetchNotifications,
     markAllNotificationsRead,
     deleteNotification,
   } = useApp();
 
   const [filter, setFilter] = useState('All');
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+
+  React.useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const filtered = notifications.filter((n) => {
     if (filter === 'All') return true;
@@ -111,80 +116,101 @@ export default function NotificationsPage() {
 
       {/* Notifications List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {filtered.map((n) => (
+        {filtered.length === 0 ? (
           <div
-            key={n.id}
             style={{
-              backgroundColor: n.unread ? '#f6fbf8' : '#ffffff',
+              backgroundColor: '#ffffff',
               borderRadius: '14px',
-              border: `1.5px solid ${n.unread ? '#bbf7d0' : 'var(--border-light)'}`,
-              padding: '18px 20px',
-              boxShadow: 'var(--shadow-card)',
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
-              gap: '16px',
+              border: '1px solid var(--border-light)',
+              padding: '40px 20px',
+              textAlign: 'center',
+              color: '#64748b',
+              fontSize: '13.5px',
             }}
           >
-            <div style={{ display: 'flex', gap: '14px' }}>
-              <div
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
-                  backgroundColor:
-                    n.category === 'Emergency' ? '#fee2e2' : n.category === 'Payments' ? '#eaf8ef' : '#eff6ff',
-                  color: n.category === 'Emergency' ? '#dc2626' : n.category === 'Payments' ? '#15803d' : '#2563eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                {n.category === 'Emergency' && <AlertTriangle size={20} />}
-                {n.category === 'Payments' && <CreditCard size={20} />}
-                {n.category === 'System' && <Bell size={20} />}
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <h4 style={{ fontSize: '14.5px', fontWeight: '700', color: '#111827' }}>
-                    {n.title}
-                  </h4>
-                  {n.unread && (
-                    <span style={{ fontSize: '10.5px', backgroundColor: '#15803d', color: '#ffffff', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
-                      NEW
-                    </span>
-                  )}
-                </div>
-
-                <p style={{ fontSize: '13px', color: '#475569', marginTop: '4px', lineHeight: '1.4' }}>
-                  {n.message}
-                </p>
-
-                <div style={{ display: 'flex', gap: '14px', marginTop: '8px', fontSize: '11.5px', color: '#64748b' }}>
-                  <span>Audience: <strong>{n.targetAudience || 'All Users'}</strong></span>
-                  <span>•</span>
-                  <span>Priority: <strong>{n.priority || 'Normal'}</strong></span>
-                  <span>•</span>
-                  <span>{n.time} ({n.date})</span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => deleteNotification(n.id)}
-              style={{
-                padding: '6px',
-                borderRadius: '6px',
-                color: '#94a3b8',
-              }}
-              title="Delete Notification"
-            >
-              <Trash2 size={16} />
-            </button>
+            <Bell size={28} color="#94a3b8" style={{ margin: '0 auto 10px auto', display: 'block' }} />
+            <div style={{ fontWeight: '600', color: '#1e293b' }}>No notifications found</div>
+            <div style={{ fontSize: '12.5px', marginTop: '2px' }}>Your notification feed is completely clear.</div>
           </div>
-        ))}
+        ) : (
+          filtered.map((n) => (
+            <div
+              key={n.id}
+              style={{
+                backgroundColor: n.unread ? '#f6fbf8' : '#ffffff',
+                borderRadius: '14px',
+                border: `1.5px solid ${n.unread ? '#bbf7d0' : 'var(--border-light)'}`,
+                padding: '18px 20px',
+                boxShadow: 'var(--shadow-card)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: '16px',
+              }}
+            >
+              <div style={{ display: 'flex', gap: '14px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    backgroundColor:
+                      n.category === 'Emergency' ? '#fee2e2' : n.category === 'Payments' ? '#eaf8ef' : '#eff6ff',
+                    color: n.category === 'Emergency' ? '#dc2626' : n.category === 'Payments' ? '#15803d' : '#2563eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {n.category === 'Emergency' && <AlertTriangle size={20} />}
+                  {n.category === 'Payments' && <CreditCard size={20} />}
+                  {n.category === 'System' && <Bell size={20} />}
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h4 style={{ fontSize: '14.5px', fontWeight: '700', color: '#111827' }}>
+                      {n.title}
+                    </h4>
+                    {n.unread && (
+                      <span style={{ fontSize: '10.5px', backgroundColor: '#15803d', color: '#ffffff', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                        NEW
+                      </span>
+                    )}
+                  </div>
+
+                  <p style={{ fontSize: '13px', color: '#475569', marginTop: '4px', lineHeight: '1.4' }}>
+                    {n.message}
+                  </p>
+
+                  <div style={{ display: 'flex', gap: '14px', marginTop: '8px', fontSize: '11.5px', color: '#64748b' }}>
+                    <span>Audience: <strong>{n.targetAudience || 'All Users'}</strong></span>
+                    <span>•</span>
+                    <span>Priority: <strong>{n.priority || 'Normal'}</strong></span>
+                    <span>•</span>
+                    <span>{n.time} ({n.date})</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => deleteNotification(n.id)}
+                style={{
+                  padding: '6px',
+                  borderRadius: '6px',
+                  color: '#94a3b8',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                }}
+                title="Delete Notification"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))
+        )}
       </div>
 
       <SendNotificationModal isOpen={isSendModalOpen} onClose={() => setIsSendModalOpen(false)} />

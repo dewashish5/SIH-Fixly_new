@@ -17,7 +17,10 @@ import Modal from '../../components/common/Modal';
 import { welfarePrograms } from '../../data/insurance';
 
 export default function InsurancePage() {
-  const { insurancePolicies, welfareClaims } = useApp();
+  const { insurancePolicies = [], welfareClaims = [] } = useApp();
+
+  const policiesList = Array.isArray(insurancePolicies) ? insurancePolicies : [];
+  const claimsList = Array.isArray(welfareClaims) ? welfareClaims : [];
 
   const [activeTab, setActiveTab] = useState('policies'); // 'policies', 'claims', 'welfare'
   const [selectedPolicyForView, setSelectedPolicyForView] = useState(null);
@@ -84,8 +87,8 @@ export default function InsurancePage() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-light)', marginBottom: '18px' }}>
         {[
-          { key: 'policies', label: `Active Policies (${insurancePolicies.length})` },
-          { key: 'claims', label: `Emergency Claims (${welfareClaims.length})` },
+          { key: 'policies', label: `Active Policies (${policiesList.length})` },
+          { key: 'claims', label: `Emergency Claims (${claimsList.length})` },
           { key: 'welfare', label: 'Welfare Programs & Health Camps' },
         ].map((t) => (
           <button
@@ -121,14 +124,14 @@ export default function InsurancePage() {
               </tr>
             </thead>
             <tbody>
-              {insurancePolicies.length === 0 ? (
+              {policiesList.length === 0 ? (
                 <tr>
                   <td colSpan="7" style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
                     No active policies found.
                   </td>
                 </tr>
               ) : (
-                insurancePolicies.map((pol) => (
+                policiesList.map((pol) => (
                   <tr key={pol.id} style={{ borderBottom: '1px solid #f1f5f3', fontSize: '13px' }}>
                     <td style={{ padding: '14px 18px' }}>
                       <div style={{ fontWeight: '700', color: '#1e293b' }}>{pol.worker}</div>
@@ -188,14 +191,14 @@ export default function InsurancePage() {
               </tr>
             </thead>
             <tbody>
-              {welfareClaims.length === 0 ? (
+              {claimsList.length === 0 ? (
                 <tr>
                   <td colSpan="7" style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
                     No claims have been filed yet.
                   </td>
                 </tr>
               ) : (
-                welfareClaims.map((c) => (
+                claimsList.map((c) => (
                   <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f3', fontSize: '13px' }}>
                     <td style={{ padding: '14px 18px', fontWeight: '700', color: '#2563eb' }}>{c.id}</td>
                     <td style={{ padding: '14px 18px', fontWeight: '600', color: '#1e293b' }}>{c.worker}</td>

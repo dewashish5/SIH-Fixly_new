@@ -34,7 +34,7 @@ import EmergencyDispatchModal from '../../components/modals/EmergencyDispatchMod
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { workers, bookings, services, notifications } = useApp();
+  const { dashboardStats, recentBookings, workers, bookings, services, notifications } = useApp();
 
   // Modal controls
   const [isAddWorkerOpen, setIsAddWorkerOpen] = useState(false);
@@ -42,39 +42,53 @@ export default function DashboardPage() {
   const [isSendNotifOpen, setIsSendNotifOpen] = useState(false);
   const [emergencyBooking, setEmergencyBooking] = useState(null);
 
-  // Top stats matching screenshot
+  const totalBookingsVal = dashboardStats?.totalBookings !== undefined ? dashboardStats.totalBookings.toLocaleString() : (bookings?.length || 0).toLocaleString();
+  const totalRevenueVal = dashboardStats?.totalRevenue !== undefined ? `₹${dashboardStats.totalRevenue.toLocaleString('en-IN')}` : '₹0';
+  const totalWorkersVal = dashboardStats?.totalWorkers !== undefined ? dashboardStats.totalWorkers.toLocaleString() : (workers?.length || 0).toLocaleString();
+  const totalCustomersVal = dashboardStats?.totalCustomers !== undefined ? dashboardStats.totalCustomers.toLocaleString() : '0';
+
+  // Top stats matching backend API
   const statCards = [
     {
       id: 'bookings',
       title: 'Total Bookings',
-      value: '8,789',
-      trend: '12.3%',
+      value: totalBookingsVal,
+      trend: '+0%',
       icon: User,
     },
     {
       id: 'revenue',
       title: 'Total Revenue',
-      value: '₹2,45,67,890',
-      trend: '15.7%',
+      value: totalRevenueVal,
+      trend: '+0%',
       icon: IndianRupee,
     },
     {
       id: 'workers',
       title: 'Active Workers',
-      value: '12,458',
-      trend: '10.3%',
+      value: totalWorkersVal,
+      trend: '+0%',
       icon: IdCard,
     },
     {
       id: 'customers',
       title: 'Total Customers',
-      value: '9,876',
-      trend: '8.4%',
+      value: totalCustomersVal,
+      trend: '+0%',
       icon: Users,
     },
   ];
 
-  const recentThreeBookings = bookings.slice(0, 3);
+  const displayRecentBookings = recentBookings && recentBookings.length > 0 
+    ? recentBookings.slice(0, 5).map(b => ({
+        id: b.bookingId || b._id,
+        customer: b.customer?.name || 'Customer',
+        service: b.service?.title || 'Gig Service',
+        worker: b.worker?.name || 'Unassigned',
+        status: b.status || 'SEARCHING'
+      })) 
+    : bookings.slice(0, 5);
+
   const activeEmergency = bookings.find((b) => b.status === 'Emergency');
 
   return (
@@ -316,33 +330,41 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentThreeBookings.map((b) => (
-                  <tr
-                    key={b.id}
-                    onClick={() => navigate(`/bookings`)}
-                    style={{ borderBottom: '1px solid #f5f8f6', fontSize: '13px', cursor: 'pointer' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f9fbf9')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    <td style={{ padding: '12px 12px 12px 4px' }}>
-                      <span style={{ color: 'var(--text-link)', fontWeight: '600' }}>
-                        {b.id}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px', fontWeight: '500', color: '#203227' }}>
-                      {b.customer}
-                    </td>
-                    <td style={{ padding: '12px', color: '#556b5e', fontWeight: '500' }}>
-                      {b.service}
-                    </td>
-                    <td style={{ padding: '12px', color: '#203227', fontWeight: '500' }}>
-                      {b.worker}
-                    </td>
-                    <td style={{ padding: '12px 4px 12px 12px', textAlign: 'right' }}>
-                      <Badge status={b.status} />
+                {displayRecentBookings.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                      No recent bookings found in database.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  displayRecentBookings.map((b) => (
+                    <tr
+                      key={b.id}
+                      onClick={() => navigate(`/bookings`)}
+                      style={{ borderBottom: '1px solid #f5f8f6', fontSize: '13px', cursor: 'pointer' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f9fbf9')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <td style={{ padding: '12px 12px 12px 4px' }}>
+                        <span style={{ color: 'var(--text-link)', fontWeight: '600' }}>
+                          {b.id}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px', fontWeight: '500', color: '#203227' }}>
+                        {b.customer}
+                      </td>
+                      <td style={{ padding: '12px', color: '#556b5e', fontWeight: '500' }}>
+                        {b.service}
+                      </td>
+                      <td style={{ padding: '12px', color: '#203227', fontWeight: '500' }}>
+                        {b.worker}
+                      </td>
+                      <td style={{ padding: '12px 4px 12px 12px', textAlign: 'right' }}>
+                        <Badge status={b.status} />
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -390,7 +412,7 @@ export default function DashboardPage() {
                   backgroundColor: '#15803d',
                 }}
               />
-              <span>12,458 Online</span>
+              <span>{totalWorkersVal} Online</span>
             </div>
           </div>
 

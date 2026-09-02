@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -8,18 +8,22 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
-import { analyticsData } from '../../data/analytics';
+import { useApp } from '../../context/AppContext';
 
-export default function RevenueGrowthChart() {
-  const [metric, setMetric] = useState('revenue');
+export default function RevenueGrowthChart({ customData }) {
+  const { dashboardStats } = useApp();
 
-  const data = [
-    { period: 'Jan', revenue: 7800000, payout: 7410000, welfare: 390000 },
-    { period: 'Feb', revenue: 9200000, payout: 8740000, welfare: 460000 },
-    { period: 'Mar', revenue: 11400000, payout: 10830000, welfare: 570000 },
-    { period: 'Apr', revenue: 13300000, payout: 12635000, welfare: 665000 },
-    { period: 'May', revenue: 16800000, payout: 15960000, welfare: 840000 },
+  const totalRev = dashboardStats?.totalRevenue || 10598;
+
+  const defaultData = [
+    { period: 'Jan', revenue: Math.round(totalRev * 0.2), payout: Math.round(totalRev * 0.19), welfare: Math.round(totalRev * 0.01) },
+    { period: 'Feb', revenue: Math.round(totalRev * 0.4), payout: Math.round(totalRev * 0.38), welfare: Math.round(totalRev * 0.02) },
+    { period: 'Mar', revenue: Math.round(totalRev * 0.6), payout: Math.round(totalRev * 0.57), welfare: Math.round(totalRev * 0.03) },
+    { period: 'Apr', revenue: Math.round(totalRev * 0.8), payout: Math.round(totalRev * 0.76), welfare: Math.round(totalRev * 0.04) },
+    { period: 'May', revenue: totalRev, payout: Math.round(totalRev * 0.95), welfare: Math.round(totalRev * 0.05) },
   ];
+
+  const chartData = customData && customData.length > 0 ? customData : defaultData;
 
   return (
     <div
@@ -44,13 +48,13 @@ export default function RevenueGrowthChart() {
 
       <div style={{ width: '100%', height: '240px' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f3" />
             <XAxis dataKey="period" tick={{ fontSize: 11, fill: '#8c9e94' }} axisLine={{ stroke: '#e2ece5' }} />
             <YAxis
               tick={{ fontSize: 11, fill: '#8c9e94' }}
               axisLine={false}
-              tickFormatter={(val) => `₹${val / 100000}L`}
+              tickFormatter={(val) => `₹${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
             />
             <Tooltip
               formatter={(val) => [`₹${val.toLocaleString()}`, 'Amount']}

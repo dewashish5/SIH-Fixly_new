@@ -24,7 +24,7 @@ import WorkersLeafletMap from '../../components/map/WorkersLeafletMap';
 
 export default function WorkersPage() {
   const navigate = useNavigate();
-  const { workers, verifyWorker, rejectWorker, suspendWorker } = useApp();
+  const { workers, workersPagination, fetchWorkers, verifyWorker, rejectWorker, suspendWorker } = useApp();
 
   // Search & Filter states
   const [search, setSearch] = useState('');
@@ -37,21 +37,71 @@ export default function WorkersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showMapRadar, setShowMapRadar] = useState(false);
   const [isAddWorkerOpen, setIsAddWorkerOpen] = useState(false);
-  const pageSize = 6;
+  const pageSize = 10;
 
-  // Filter logic
-  let filtered = workers.filter((w) => {
-    const matchService = serviceFilter === 'All' || w.service === serviceFilter;
-    const matchVerif = verificationFilter === 'All' || w.verification === verificationFilter;
-    const matchAvail = availabilityFilter === 'All' || w.availability === availabilityFilter;
-    const matchCity = cityFilter === 'All' || w.city === cityFilter;
-    const matchSearch =
-      w.name.toLowerCase().includes(search.toLowerCase()) ||
-      w.service.toLowerCase().includes(search.toLowerCase()) ||
-      w.location.toLowerCase().includes(search.toLowerCase()) ||
-      w.skills.some((s) => s.toLowerCase().includes(search.toLowerCase()));
-    return matchService && matchVerif && matchAvail && matchCity && matchSearch;
-  });
+  React.useEffect(() => {
+    fetchWorkers({
+      page: currentPage,
+      limit: pageSize,
+      search,
+      category: serviceFilter !== 'All' ? serviceFilter : '',
+      isVerified: verificationFilter === 'Verified' ? 'true' : (verificationFilter === 'Pending' ? 'false' : '')
+    });
+  }, [fetchWorkers, currentPage, search, serviceFilter, verificationFilter]);
+
+  let filtered = [...workers];
+
+  // Category / Skill Filter
+  if (serviceFilter && serviceFilter !== 'All' && serviceFilter !== 'All Services') {
+    const sTerm = serviceFilter.toLowerCase();
+    filtered = filtered.filter((w) => {
+      const skills = Array.isArray(w.skills) ? w.skills.join(' ').toLowerCase() : '';
+      const cat = (w.category || w.primarySkill || '').toLowerCase();
+      return skills.includes(sTerm) || cat.includes(sTerm);
+    });
+  }
+
+  // Search Filter
+  if (search && search.trim() !== '') {
+    const q = search.toLowerCase().trim();
+    filtered = filtered.filter((w) => {
+      const name = (w.name || w.fullName || '').toLowerCase();
+      const phone = (w.phone || w.phoneNumber || '').toLowerCase();
+      const cat = (w.category || w.primarySkill || '').toLowerCase();
+      return name.includes(q) || phone.includes(q) || cat.includes(q);
+    });
+  }
+
+  // Verification Filter
+  if (verificationFilter && verificationFilter !== 'All') {
+    filtered = filtered.filter((w) => {
+      if (verificationFilter === 'Verified') return w.isVerified || w.status === 'VERIFIED';
+      if (verificationFilter === 'Pending') return !w.isVerified && w.status !== 'REJECTED' && w.status !== 'SUSPENDED';
+      if (verificationFilter === 'Rejected') return w.status === 'REJECTED';
+      if (verificationFilter === 'Suspended') return w.status === 'SUSPENDED';
+      return true;
+    });
+  }
+
+  // City Filter
+  if (cityFilter && cityFilter !== 'All' && cityFilter !== 'All Cities') {
+    const cTerm = cityFilter.toLowerCase();
+    filtered = filtered.filter((w) => {
+      const city = (w.city || w.location?.city || w.locationName || w.address?.city || '').toLowerCase();
+      const locStr = (typeof w.location === 'string' ? w.location : JSON.stringify(w.location || {})).toLowerCase();
+      return city.includes(cTerm) || locStr.includes(cTerm);
+    });
+  }
+
+  // Availability Filter
+  if (availabilityFilter && availabilityFilter !== 'All') {
+    filtered = filtered.filter((w) => {
+      if (availabilityFilter === 'Active') return w.isAvailable || w.status === 'ACTIVE';
+      if (availabilityFilter === 'On Job') return w.status === 'ON_JOB';
+      if (availabilityFilter === 'Offline') return !w.isAvailable || w.status === 'OFFLINE';
+      return true;
+    });
+  }
 
   // Sort logic
   filtered.sort((a, b) => {
@@ -62,7 +112,7 @@ export default function WorkersPage() {
     return 0;
   });
 
-  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginated = filtered;
 
   const toggleSort = (field) => {
     if (sortField === field) {
@@ -303,7 +353,7 @@ export default function WorkersPage() {
                 <td style={{ padding: '14px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <img
-                      src={w.avatar}
+                      src={w.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'}
                       alt={w.name}
                       style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #22c55e' }}
                     />
@@ -321,16 +371,16 @@ export default function WorkersPage() {
 
                 {/* Trade & Skills */}
                 <td style={{ padding: '14px 18px' }}>
-                  <div style={{ fontWeight: '700', color: '#1e293b' }}>{w.service}</div>
+                  <div style={{ fontWeight: '700', color: '#1e293b' }}>{w.service || w.category}</div>
                   <div style={{ fontSize: '11.5px', color: '#64748b', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {w.skills.join(', ')}
+                    {Array.isArray(w.skills) ? w.skills.join(', ') : (w.category || 'General')}
                   </div>
                 </td>
 
                 {/* Location */}
                 <td style={{ padding: '14px 18px', color: '#475569' }}>
-                  <div>{w.location}</div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>City: {w.city}</div>
+                  <div>{w.location || 'Sector 62'}</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>City: {w.city || 'Noida'}</div>
                 </td>
 
                 {/* Rating */}
@@ -359,8 +409,8 @@ export default function WorkersPage() {
                 <td style={{ padding: '14px 18px', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                     <button
-                      onClick={() => navigate(`/workers/${w.id}`)}
-                      title="View Full Profile"
+                      onClick={() => navigate(`/workers/${w.rawId || w._id || w.id}`)}
+                      title="View & Edit Worker Profile"
                       style={{
                         padding: '6px 8px',
                         backgroundColor: '#f1f8f3',
@@ -429,7 +479,7 @@ export default function WorkersPage() {
         {/* Pagination */}
         <Pagination
           currentPage={currentPage}
-          totalItems={filtered.length}
+          totalItems={workersPagination?.total || filtered.length}
           pageSize={pageSize}
           onPageChange={(p) => setCurrentPage(p)}
         />

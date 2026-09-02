@@ -204,23 +204,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             justifyContent: 'space-between',
           }}
         >
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              border: '2px solid #1e7e45',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: '800',
-              fontSize: '14.5px',
-              color: '#1e7e45',
-              backgroundColor: '#f4fbf6',
-            }}
-          >
-            9
-          </div>
         </div>
       </aside>
     </>
