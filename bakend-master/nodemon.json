@@ -1,7 +1,0 @@
-{
-  "watch": ["."],
-  "ext": "js,json",
-  "ignore": ["node_modules/**", "swagger-output.json"],
-  "exec": "node server.js",
-  "delay": 500
-}

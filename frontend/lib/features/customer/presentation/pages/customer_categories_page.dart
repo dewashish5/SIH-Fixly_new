@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/route_names.dart';
+import '../../../../core/navigation/customer_navigation.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/core_widgets.dart';
@@ -33,10 +33,7 @@ class CustomerCategoriesPage extends StatelessWidget {
             child: CategoryIconTile(
               category: cat,
               locale: locale,
-              onTap: () => context.push(
-                RouteNames.customerSearch,
-                extra: cat.id,
-              ),
+              onTap: () => context.openCategorySearch(cat.id),
             ),
           );
         },

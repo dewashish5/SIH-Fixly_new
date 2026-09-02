@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/models/models.dart';
 import '../../../home/data/home_api_repository.dart';
 
@@ -66,5 +67,16 @@ class SearchCubit extends Cubit<SearchState> {
         )
         .toList();
     emit(state.copyWith(results: results, isSearching: false));
+  }
+
+  Future<void> refresh() async {
+    _all = const [];
+    final q = state.query.trim();
+    final isCategory = ServiceCategories.all.any((c) => c.id == q);
+    if (isCategory) {
+      await filterByCategory(q);
+    } else {
+      await search(q);
+    }
   }
 }

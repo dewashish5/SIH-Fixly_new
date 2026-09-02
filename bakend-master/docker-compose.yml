@@ -1,43 +1,5 @@
 services:
   redis:
-    image: redis:7-alpine
+    image: redis
     ports:
       - "6379:6379"
-    restart: unless-stopped
-
-  mongo:
-    image: mongo:7
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    restart: unless-stopped
-
-  api:
-    build: .
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      # In-compose Redis + Mongo (overrides localhost from .env)
-      REDIS_URL: redis://redis:6379
-      MONGO_URI: mongodb://mongo:27017/Fixly
-      PORT: "8000"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      redis:
-        condition: service_started
-      mongo:
-        condition: service_healthy
-    restart: unless-stopped
-
-volumes:
-  mongo_data:

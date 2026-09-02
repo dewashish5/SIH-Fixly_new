@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
+import '../../../../core/navigation/customer_navigation.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/l10n/locale_scope.dart';
@@ -65,6 +66,13 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
     }
   }
 
+  Future<void> _refreshAll() async {
+    await Future.wait([
+      _refreshLocation(),
+      context.read<CustomerHomeCubit>().load(),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -86,12 +94,16 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
       ],
       body: BlocBuilder<CustomerHomeCubit, CustomerHomeState>(
         builder: (context, state) {
-          if (state.status == CustomerHomeStatus.loading) {
+          if (state.status == CustomerHomeStatus.loading &&
+              state.categories.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
+          return AppRefreshIndicator(
+            onRefresh: _refreshAll,
+            child: ListView(
+              physics: appRefreshScrollPhysics,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
               _LocationBar(
                 label: _locationLabel,
                 loading: _locating,
@@ -104,12 +116,11 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
               ),
               const SizedBox(height: 12),
               _CategoryGrid(
-                categories: state.categories,
+                categories: state.categories
+                    .take(AppConstants.homeCategoryPreviewCount)
+                    .toList(),
                 locale: locale,
-                onCategoryTap: (id) => context.push(
-                  RouteNames.customerSearch,
-                  extra: id,
-                ),
+                onCategoryTap: context.openCategorySearch,
               ),
               const SizedBox(height: 8),
               Align(
@@ -129,7 +140,7 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   TextButton(
-                    onPressed: () => context.go(RouteNames.customerAiHelper),
+                    onPressed: () => context.goCustomerTab(2),
                     child: Text(
                       l10n.aiHelper,
                       style: const TextStyle(color: AppColors.accent),
@@ -155,7 +166,8 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
                     context.push(RouteNames.customerHomeBooking),
               ),
               const SizedBox(height: 24),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -256,10 +268,10 @@ class _CategoryGrid extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 5,
+        crossAxisCount: 4,
         mainAxisSpacing: 10,
-        crossAxisSpacing: 4,
-        childAspectRatio: 0.72,
+        crossAxisSpacing: 8,
+        childAspectRatio: 0.78,
       ),
       itemCount: categories.length,
       itemBuilder: (context, index) {

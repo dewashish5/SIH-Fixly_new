@@ -91,7 +91,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       final email = 'google_$device@fixly.local';
       final session = await _auth.googleLogin(
         email: email,
-        name: 'Google User',
+        name: 'Fixly Member',
         role: state.role,
       );
       _applySession(session);

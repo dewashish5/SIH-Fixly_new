@@ -51,6 +51,10 @@ class _ProfileHubPageState extends State<ProfileHubPage> {
     context.go(RouteNames.login);
   }
 
+  Future<void> _refreshProfile() async {
+    await context.read<ProfileCubit>().load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -59,8 +63,11 @@ class _ProfileHubPageState extends State<ProfileHubPage> {
         return AppScaffold(
           title: l10n.profile,
           showBack: false,
-          body: ListView(
-            children: [
+          body: AppRefreshIndicator(
+            onRefresh: _refreshProfile,
+            child: ListView(
+              physics: appRefreshScrollPhysics,
+              children: [
               _ProfileHeader(
                 name: state.name,
                 phone: state.phone,
@@ -74,7 +81,12 @@ class _ProfileHubPageState extends State<ProfileHubPage> {
                   _HubTile(
                     icon: Icons.edit_outlined,
                     label: l10n.editProfile,
-                    onTap: () => context.push(RouteNames.sharedEditProfile),
+                    onTap: () async {
+                      await context.push(RouteNames.sharedEditProfile);
+                      if (context.mounted) {
+                        context.read<ProfileCubit>().load();
+                      }
+                    },
                   ),
                   _HubTile(
                     icon: Icons.settings_outlined,
@@ -128,7 +140,8 @@ class _ProfileHubPageState extends State<ProfileHubPage> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-            ],
+              ],
+            ),
           ),
         );
       },
