@@ -61,6 +61,12 @@
 		</array>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Fixly uses your location to show nearby workers and navigation.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>Fixly needs camera access to capture Aadhaar, PAN, and selfie photos for KYC.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Fixly needs photo library access so you can upload Aadhaar and PAN images.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>Fixly may save captured KYC photos to your library when needed.</string>
 		<key>MBXAccessToken</key>
 		<string>pk.eyJ1IjoiZGV3YXNoaXNoIiwiYSI6ImNtbmQydmlybjE1bTMyd3BqNzB5NzBtbWYifQ.1pPZzeZwPl3IWciYjWL_-g</string>
 		<key>UISupportedInterfaceOrientations~ipad</key>
@@ -70,7 +76,23 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
-		<key>UIStatusBarHidden</key>
-		<false/>
+	<key>UIStatusBarHidden</key>
+	<false/>
+	<!-- GOOGLE_SIGN_IN_URL_SCHEME -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta</string>
+			</array>
+		</dict>
+	</array>
+	<key>GIDClientID</key>
+	<string>343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta.apps.googleusercontent.com</string>
+	<key>GIDServerClientID</key>
+	<string>343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta.apps.googleusercontent.com</string>
 	</dict>
 </plist>

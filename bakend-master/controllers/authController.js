@@ -291,7 +291,7 @@ export const updateUserProfile = async (req, res) => {
 // 5. GOOGLE AUTH
 export const googleLogin = async (req, res) => {
     try {
-        const { email, name, avatar, role, deviceId, location } = req.body;
+        const { email, name, avatar, role, deviceId, location, phone } = req.body;
 
         let userDoc = await User.findOne({ email }).select('-password');
 
@@ -303,6 +303,7 @@ export const googleLogin = async (req, res) => {
                 role: role || 'customer',
                 authProvider: 'google',
                 isVerified: true,
+                phone: phone || null,
                 location: location || undefined
             });
         }

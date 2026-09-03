@@ -73,12 +73,23 @@ class _SplashPageState extends State<SplashPage>
       await LocationService.instance.ensureOnAppOpen(context);
     }
 
-    if (mounted) {
-      final session = context.read<AppSessionCubit>().state;
-      context.go(
-        session.languageSelected ? RouteNames.login : RouteNames.language,
-      );
+    if (!mounted) return;
+
+    final cubit = context.read<AppSessionCubit>();
+    // Wait for refresh-token → /me (started early from App bootstrap).
+    await cubit.restoreSession();
+    if (!mounted) return;
+
+    final session = cubit.state;
+    if (!session.languageSelected) {
+      context.go(RouteNames.language);
+      return;
     }
+    if (session.status == AppSessionStatus.authenticated) {
+      context.go(cubit.postAuthRoute());
+      return;
+    }
+    context.go(RouteNames.login);
   }
 
   Future<void> _initMaps() async {

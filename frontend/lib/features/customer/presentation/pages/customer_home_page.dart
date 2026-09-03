@@ -109,12 +109,28 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
                 loading: _locating,
                 onRefresh: _refreshLocation,
               ),
-              const SizedBox(height: 20),
-              Text(
-                l10n.categories,
-                style: Theme.of(context).textTheme.titleLarge,
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.categories,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(48, 40),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: () =>
+                        context.push(RouteNames.customerCategories),
+                    child: Text(l10n.viewAll),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               _CategoryGrid(
                 categories: state.categories
                     .take(AppConstants.homeCategoryPreviewCount)
@@ -122,24 +138,21 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
                 locale: locale,
                 onCategoryTap: context.openCategorySearch,
               ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () =>
-                      context.push(RouteNames.customerCategories),
-                  child: Text(l10n.viewAll),
-                ),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    l10n.popularServices,
-                    style: Theme.of(context).textTheme.titleLarge,
+                  Expanded(
+                    child: Text(
+                      l10n.popularServices,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
                   TextButton(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(48, 40),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                     onPressed: () => context.goCustomerTab(2),
                     child: Text(
                       l10n.aiHelper,
@@ -269,9 +282,9 @@ class _CategoryGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 8,
-        childAspectRatio: 0.78,
+        mainAxisSpacing: 6,
+        crossAxisSpacing: 6,
+        childAspectRatio: 0.92,
       ),
       itemCount: categories.length,
       itemBuilder: (context, index) {

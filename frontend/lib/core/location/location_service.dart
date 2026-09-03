@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -11,6 +12,11 @@ class LocationService {
   LocationService._();
   static final LocationService instance = LocationService._();
 
+  /// Connaught Place, New Delhi — debug/simulator when GPS unavailable.
+  static const double debugFallbackLat = 28.6139;
+  static const double debugFallbackLng = 77.2090;
+  static const String debugFallbackAddress = 'New Delhi (debug fallback)';
+
   final Geocoding _geocoder = Geocoding();
   bool _refreshing = false;
 
@@ -19,15 +25,39 @@ class LocationService {
     if (_refreshing) return AppLocation.instance.hasFix;
     _refreshing = true;
     try {
+      if (!await _ensureLocationServices(context)) {
+        AppLocation.instance.permissionGranted = false;
+        return _finishWithOptionalDebugFallback('location services off');
+      }
+      if (!context.mounted) {
+        return _finishWithOptionalDebugFallback('context unmounted');
+      }
       final granted = await _ensurePermission(context);
       if (!granted) {
         AppLocation.instance.permissionGranted = false;
-        return false;
+        return _finishWithOptionalDebugFallback('permission denied');
       }
       return await refreshCurrentPosition();
     } finally {
       _refreshing = false;
     }
+  }
+
+  /// Sign-up / register — GPS on, permission granted, then fix for API body.
+  Future<bool> ensureForSignup(BuildContext context) async {
+    if (!context.mounted) {
+      return _finishWithOptionalDebugFallback('signup context unmounted');
+    }
+    if (!await _ensureLocationServices(context)) {
+      return _finishWithOptionalDebugFallback('signup location services off');
+    }
+    if (!context.mounted) {
+      return _finishWithOptionalDebugFallback('signup context unmounted');
+    }
+    if (!await _ensurePermission(context)) {
+      return _finishWithOptionalDebugFallback('signup permission denied');
+    }
+    return refreshCurrentPosition();
   }
 
   /// GPS-only refresh (permission already granted). Safe without context.
@@ -36,12 +66,12 @@ class LocationService {
       final serviceOn = await Geolocator.isLocationServiceEnabled();
       if (!serviceOn) {
         debugPrint('LocationService: device location services off');
-        return false;
+        return _finishWithOptionalDebugFallback('services off on refresh');
       }
 
       final status = await Permission.locationWhenInUse.status;
       if (!status.isGranted) {
-        return false;
+        return _finishWithOptionalDebugFallback('permission missing on refresh');
       }
 
       final position = await Geolocator.getCurrentPosition(
@@ -72,8 +102,32 @@ class LocationService {
       return true;
     } catch (e) {
       debugPrint('LocationService: position failed: $e');
-      return false;
+      return _finishWithOptionalDebugFallback('position error: $e');
     }
+  }
+
+  /// Debug-only: seed Delhi so API/maps work without simulator GPS.
+  bool _finishWithOptionalDebugFallback(String reason) {
+    if (AppLocation.instance.hasFix) return true;
+    if (!kDebugMode) return false;
+    AppLocation.instance.update(
+      latitude: debugFallbackLat,
+      longitude: debugFallbackLng,
+      address: debugFallbackAddress,
+    );
+    debugPrint('LocationService: debug fallback Delhi — $reason');
+    return true;
+  }
+
+  Future<bool> _ensureLocationServices(BuildContext context) async {
+    if (await Geolocator.isLocationServiceEnabled()) return true;
+    if (!context.mounted) return false;
+
+    final open = await LocationPermissionDialogs.showLocationServicesOff(context);
+    if (!open) return false;
+
+    await Geolocator.openLocationSettings();
+    return Geolocator.isLocationServiceEnabled();
   }
 
   Future<bool> _ensurePermission(BuildContext context) async {

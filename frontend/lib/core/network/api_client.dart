@@ -63,6 +63,7 @@ class ApiClient {
   final Dio _dio;
   final TokenStorage _tokens;
   final DeviceId _deviceId;
+  Future<bool>? _refreshInFlight;
 
   Dio get dio => _dio;
 
@@ -76,11 +77,26 @@ class ApiClient {
         path.contains('/api/auth/google');
   }
 
-  Future<bool> _tryRefresh() async {
+  Future<bool> _tryRefresh() {
+    final inflight = _refreshInFlight;
+    if (inflight != null) return inflight;
+    final next = _doRefresh().whenComplete(() {
+      _refreshInFlight = null;
+    });
+    _refreshInFlight = next;
+    return next;
+  }
+
+  Future<bool> _doRefresh() async {
     final refresh = await _tokens.refreshToken;
     final userId = await _tokens.userId;
     final device = await _deviceId.getOrCreate();
-    if (refresh == null || userId == null) return false;
+    if (refresh == null ||
+        refresh.isEmpty ||
+        userId == null ||
+        userId.isEmpty) {
+      return false;
+    }
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '/api/auth/refresh-token',
@@ -92,9 +108,15 @@ class ApiClient {
         options: Options(extra: {'retried': true}),
       );
       final data = res.data;
-      final access = data?['accessToken'] as String?;
+      if (data == null || data['success'] != true) return false;
+      final access = data['accessToken'] as String?;
       if (access == null || access.isEmpty) return false;
-      await _tokens.saveAccessToken(access);
+      // Backend rotates refresh token — must store the new one or next restore fails.
+      final newRefresh = data['refreshToken'] as String?;
+      await _tokens.saveTokens(
+        accessToken: access,
+        refreshToken: newRefresh,
+      );
       return true;
     } catch (_) {
       return false;
@@ -146,6 +168,18 @@ class ApiClient {
   }) async {
     try {
       final res = await _dio.patch<Map<String, dynamic>>(path, data: data);
+      return res.data ?? {};
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> put(
+    String path, {
+    Object? data,
+  }) async {
+    try {
+      final res = await _dio.put<Map<String, dynamic>>(path, data: data);
       return res.data ?? {};
     } on DioException catch (e) {
       throw _mapError(e);

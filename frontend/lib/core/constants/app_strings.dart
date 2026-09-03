@@ -31,6 +31,13 @@ class AppStrings {
   String get createAccount => isHi ? 'खाता बनाएं' : 'Create account';
   String get sendOtp => isHi ? 'OTP भेजें' : 'Send OTP';
   String get verifyOtp => isHi ? 'OTP सत्यापित करें' : 'Verify OTP';
+  String get otpSentTo => isHi ? 'OTP भेजा गया' : 'OTP sent to';
+  String get resendOtp => isHi ? 'OTP दोबारा भेजें' : 'Resend OTP';
+  String resendOtpIn(int seconds) =>
+      isHi ? '$seconds सेकंड में दोबारा भेजें' : 'Resend in ${seconds}s';
+  String get otpResent => isHi ? 'नया OTP भेज दिया गया' : 'A new OTP has been sent';
+  String get fullName => isHi ? 'पूरा नाम' : 'Full name';
+  String get fullNameHint => isHi ? 'अपना नाम दर्ज करें' : 'Enter your name';
   String get email => isHi ? 'ईमेल' : 'Email';
   String get password => isHi ? 'पासवर्ड' : 'Password';
   String get passwordHint => isHi ? 'अपना पासवर्ड दर्ज करें' : 'Enter your password';
@@ -38,7 +45,29 @@ class AppStrings {
   String get phoneHint => isHi ? '10 अंकों का मोबाइल नंबर' : '10-digit mobile number';
   String get continueWithGoogle => isHi ? 'Google' : 'Google';
   String get continueWithFacebook => isHi ? 'Facebook' : 'Facebook';
-  String get orContinueWith => isHi ? 'या ईमेल / फ़ोन' : 'Or email / phone';
+  String get orContinueWith => isHi ? 'या ईमेल से' : 'Or continue with email';
+  String get locationRequiredForSignup => isHi
+      ? 'साइन अप के लिए GPS चालू करें और स्थान की अनुमति दें'
+      : 'Enable GPS and allow location access to sign up';
+  String get locationServicesOffTitle =>
+      isHi ? 'स्थान बंद है' : 'Location is off';
+  String get locationServicesOffBody => isHi
+      ? 'साइन अप के लिए फ़ोन की सेटिंग में GPS चालू करें, फिर वापस आकर दोबारा कोशिश करें।'
+      : 'Turn on location in your phone settings so we can send your area with sign-up, then try again.';
+  String get turnOnLocation => isHi ? 'स्थान चालू करें' : 'Turn on location';
+  String get locationPermissionBlockedTitle =>
+      isHi ? 'स्थान अनुमति बंद' : 'Location blocked';
+  String get locationPermissionBlockedBody => isHi
+      ? 'Fixly को स्थान की अनुमति चाहिए। सेटिंग्स में जाकर चालू करें।'
+      : 'Fixly needs location access. Open Settings to enable it.';
+  String get openSettings => isHi ? 'सेटिंग्स खोलें' : 'Open Settings';
+  String get locationEnableTitle =>
+      isHi ? 'स्थान चालू करें' : 'Enable location';
+  String get locationEnableBody => isHi
+      ? 'Fixly को पास के कार्यकर्ता और बुकिंग पता दिखाने के लिए आपका स्थान चाहिए।'
+      : 'Fixly needs your location to find nearby workers and set booking addresses.';
+  String get notNow => isHi ? 'अभी नहीं' : 'Not now';
+  String get allow => isHi ? 'अनुमति दें' : 'Allow';
   String get dontHaveAccount =>
       isHi ? 'खाता नहीं है?' : "Don't have an account?";
   String get alreadyHaveAccount =>
@@ -215,7 +244,7 @@ class AppStrings {
   String get reliabilityScore => isHi ? 'विश्वसनीयता स्कोर' : 'Reliability score';
 
   // Worker onboarding
-  String get identityKyc => isHi ? 'पहचान और KYC' : 'Identity & KYC';
+  String get identityKyc => isHi ? 'पहचान और सत्यापन' : 'Identity & verification';
   String get workProfile => isHi ? 'कौशल और क्षेत्र' : 'Skills & area';
   String get payoutWelfare => isHi ? 'भुगतान और कल्याण' : 'Payout & welfare';
   String get personalDetails => isHi ? 'व्यक्तिगत विवरण' : 'Personal details';
@@ -230,16 +259,36 @@ class AppStrings {
   String get otherSkillsHint => isHi
       ? 'कौशल लिखें, कॉमा से अलग करें'
       : 'Type a skill, then comma to add more';
-  String get serviceArea => isHi ? 'सेवा क्षेत्र' : 'Service area';
+  String get serviceArea => isHi ? 'आपका स्थान' : 'Your location';
   String get serviceAreaHint => isHi
-      ? 'नौकरियों के लिए आप कितनी दूर जा सकते हैं, सेट करें।'
-      : 'Set how far you are willing to travel for jobs.';
+      ? 'मानचित्र पर अपना वर्तमान स्थान देखें। पैन करके आसपास देखें।'
+      : 'See your current location on the map. Pan around to explore nearby.';
+  String get yourRates => isHi ? 'आपकी दरें' : 'Your rates';
+  String get yourRatesHint => isHi
+      ? 'प्रत्येक चुने कौशल के लिए प्रति घंटा दर (₹) सेट करें।'
+      : 'Set an hourly rate (₹) for each skill you selected.';
+  String get experienceYears =>
+      isHi ? 'अनुभव (वर्ष)' : 'Years of experience';
+  String get workerBio => isHi ? 'संक्षिप्त परिचय' : 'Short bio';
+  String get workerBioHint => isHi
+      ? 'ग्राहकों को अपने अनुभव के बारे में बताएं'
+      : 'Tell customers about your experience';
+  String get hourlyRateLabel => isHi ? 'प्रति घंटा दर (₹)' : 'Hourly rate (₹)';
+  String get selectSkillsFirstForRates => isHi
+      ? 'पहले कौशल चुनें, फिर दरें जोड़ें।'
+      : 'Select skills above to set rates.';
   String get largerRadiusHint => isHi
       ? 'बड़ा क्षेत्र = अधिक नज़दीकी नौकरियां'
       : 'Larger radius = more nearby jobs';
+  String get locationOnMap => isHi ? 'मानचित्र पर स्थान' : 'Location on map';
+  String get youAreHere => isHi ? 'आप यहाँ हैं' : 'You are here';
+  String get waitingForLocation =>
+      isHi ? 'स्थान की प्रतीक्षा…' : 'Waiting for location…';
+  String get refreshLocation => isHi ? 'स्थान रीफ़्रेश करें' : 'Refresh location';
   String get welfareInsurance => isHi ? 'कल्याण और बीमा' : 'Welfare & insurance';
   String get bankUpi => isHi ? 'बैंक और UPI' : 'Bank & UPI';
-  String get kycStatus => isHi ? 'KYC स्थिति' : 'KYC status';
+  String get kycStatus =>
+      isHi ? 'आवेदन सत्यापन' : 'Application verification';
 
   // Payment methods
   String get upi => 'UPI';
@@ -274,11 +323,13 @@ class AppStrings {
   String get otpFailed => isHi ? 'OTP विफल' : 'OTP verification failed';
   String get paymentFailed => isHi ? 'भुगतान विफल' : 'Payment failed';
   String get bookingFailed => isHi ? 'बुकिंग विफल' : 'Booking failed';
-  String get kycFailed => isHi ? 'KYC विफल' : 'KYC verification failed';
+  String get kycFailed =>
+      isHi ? 'सत्यापन विफल' : 'Verification failed';
   String get serverError => isHi ? 'कुछ गलत हुआ' : 'Something went wrong';
   String get sessionExpired => isHi ? 'सत्र समाप्त' : 'Session expired';
   String get paymentSuccessful => isHi ? 'भुगतान सफल' : 'Payment successful';
-  String get kycSubmitted => isHi ? 'KYC जमा' : 'KYC submitted';
+  String get kycSubmitted =>
+      isHi ? 'आवेदन जमा' : 'Application submitted';
   String get profileUpdated => isHi ? 'प्रोफ़ाइल अपडेट' : 'Profile updated';
   String get ratingSubmitted => isHi ? 'रेटिंग जमा' : 'Rating submitted';
   String get complaintSubmitted => isHi ? 'शिकायत जमा' : 'Complaint submitted';

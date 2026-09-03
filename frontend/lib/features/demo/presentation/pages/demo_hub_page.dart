@@ -42,7 +42,7 @@ class DemoHubPage extends StatelessWidget {
     _DemoPhase(
       title: 'Worker Onboarding',
       routes: [
-        _DemoRoute('Identity & KYC', RouteNames.workerOnboardingIdentity),
+        _DemoRoute('Identity & verification', RouteNames.workerOnboardingIdentity),
         _DemoRoute('Skills & area', RouteNames.workerOnboardingWork),
         _DemoRoute('Payout & welfare', RouteNames.workerOnboardingPayout),
         _DemoRoute('Status', RouteNames.workerOnboardingStatus),
@@ -79,7 +79,7 @@ class DemoHubPage extends StatelessWidget {
         _DemoRoute('No Internet', '/system/noInternet'),
         _DemoRoute('Booking Confirmed', '/system/bookingConfirmed'),
         _DemoRoute('Payment Failed', '/system/paymentFailed'),
-        _DemoRoute('KYC Submitted', '/system/kycSubmitted'),
+        _DemoRoute('Application submitted', '/system/kycSubmitted'),
         _DemoRoute('No Workers', '/system/noWorkersNearby'),
       ],
     ),

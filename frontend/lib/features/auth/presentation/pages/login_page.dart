@@ -20,8 +20,6 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _phoneController = TextEditingController();
-  AuthInputMethod _method = AuthInputMethod.email;
   bool _obscurePassword = true;
   bool _workerMode = false;
 
@@ -37,7 +35,6 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
@@ -45,41 +42,42 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _handleSocial(Future<bool> Function() signIn) async {
     final success = await signIn();
-    if (!mounted || !success) return;
+    if (!mounted || !success) {
+      final msg = _cubit.state.errorMessage;
+      if (mounted && msg != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return;
+    }
     context.go(_cubit.postAuthRoute());
   }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_method == AuthInputMethod.email) {
-      final success = await _cubit.signInWithEmail(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-      if (!mounted) return;
-      if (!success) {
-        final msg = _cubit.state.errorMessage;
-        if (msg != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-        }
-        return;
-      }
-      context.go(_cubit.postAuthRoute());
-      return;
-    }
-
-    final phone = _phoneController.text.replaceAll(RegExp(r'\D'), '');
-    await _cubit.sendOtp(phone);
+    final success = await _cubit.signInWithEmail(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
     if (!mounted) return;
-    final msg = _cubit.state.errorMessage;
-    if (msg != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    if (!success) {
+      final msg = _cubit.state.errorMessage;
+      if (msg != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
       return;
     }
-    if (_cubit.state.status == AppSessionStatus.otpSent) {
-      context.push(RouteNames.otp);
-    }
+    context.go(_cubit.postAuthRoute());
   }
 
   void _toggleWorkerMode() {
@@ -126,37 +124,23 @@ class _LoginPageState extends State<LoginPage> {
                 AuthSocialRow(
                   onGoogle:
                       loading ? null : () => _handleSocial(_cubit.signInWithGoogle),
-                  onFacebook: loading
-                      ? null
-                      : () => _handleSocial(_cubit.signInWithFacebook),
                 ),
                 const SizedBox(height: 20),
                 AuthDivider(label: l10n.orContinueWith),
                 const SizedBox(height: 20),
-                AuthMethodSwitcher(
-                  method: _method,
-                  emailLabel: l10n.authEmailTab,
-                  phoneLabel: l10n.authPhoneTab,
-                  onChanged: (method) => setState(() => _method = method),
-                ),
-                const SizedBox(height: 18),
                 AuthCredentialsFields(
-                  method: _method,
                   emailController: _emailController,
                   passwordController: _passwordController,
-                  phoneController: _phoneController,
                   obscurePassword: _obscurePassword,
                   onTogglePassword: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
                   emailLabel: l10n.email,
                   passwordLabel: l10n.password,
                   passwordHint: l10n.passwordHint,
-                  phoneLabel: l10n.phoneNumber,
-                  phoneHint: l10n.phoneHint,
                 ),
                 const SizedBox(height: 24),
                 PrimaryButton(
-                  label: _method == AuthInputMethod.phone ? l10n.sendOtp : l10n.login,
+                  label: l10n.login,
                   loading: loading,
                   onPressed: loading ? null : _login,
                 ),

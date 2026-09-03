@@ -47,6 +47,17 @@ class TokenStorage {
   Future<void> saveAccessToken(String token) =>
       _storage.write(key: _kAccess, value: token);
 
+  /// Persist rotated tokens from `/api/auth/refresh-token`.
+  Future<void> saveTokens({
+    required String accessToken,
+    String? refreshToken,
+  }) async {
+    await _storage.write(key: _kAccess, value: accessToken);
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      await _storage.write(key: _kRefresh, value: refreshToken);
+    }
+  }
+
   Future<void> saveProfile({String? name, String? phone}) async {
     await Future.wait([
       if (name != null) _storage.write(key: _kName, value: name),

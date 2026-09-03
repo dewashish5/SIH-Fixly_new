@@ -30,15 +30,8 @@ class AuthApiRepository {
   final TokenStorage _tokens;
   final DeviceId _deviceId;
 
-  static Map<String, dynamic> _locationBody() {
-    final loc = AppLocation.instance;
-    if (!loc.hasFix) {
-      throw ApiException('Location required — enable GPS and try again');
-    }
-    return {
-      'type': 'Point',
-      'coordinates': [loc.requireLng, loc.requireLat],
-    };
+  static Map<String, dynamic>? _locationBody() {
+    return AppLocation.instance.toGeoJsonPointOrNull();
   }
 
   Future<void> register({
@@ -46,14 +39,14 @@ class AuthApiRepository {
     required String email,
     required String password,
     required String role,
-    String? phone,
+    required String phone,
   }) async {
     final res = await _api.post('/api/auth/register', data: {
       'name': name,
       'email': email,
       'password': password,
       'role': role,
-      if (phone != null && phone.isNotEmpty) 'phone': phone,
+      'phone': phone,
       'location': _locationBody(),
     });
     if (res['success'] != true) {
@@ -91,15 +84,21 @@ class AuthApiRepository {
   Future<AuthSession> googleLogin({
     required String email,
     required String name,
+    required String phone,
     String? avatar,
     required String role,
   }) async {
     final device = await _deviceId.getOrCreate();
+    final effectiveAvatar = (avatar != null && avatar.trim().isNotEmpty)
+        ? avatar.trim()
+        : 'https://lh3.googleusercontent.com/a/default-user';
+
     final res = await _api.post('/api/auth/google', data: {
       'email': email,
       'name': name,
-      if (avatar != null) 'avatar': avatar,
+      'avatar': effectiveAvatar,
       'role': role,
+      'phone': phone,
       'deviceId': device,
       'location': _locationBody(),
     });
@@ -119,10 +118,14 @@ class AuthApiRepository {
       'refreshToken': refresh,
     });
     final access = res['accessToken'] as String?;
-    if (res['success'] != true || access == null) {
+    if (res['success'] != true || access == null || access.isEmpty) {
       throw ApiException(res['message']?.toString() ?? 'Refresh failed');
     }
-    await _tokens.saveAccessToken(access);
+    final newRefresh = res['refreshToken'] as String?;
+    await _tokens.saveTokens(
+      accessToken: access,
+      refreshToken: newRefresh,
+    );
     return access;
   }
 
@@ -169,14 +172,19 @@ class AuthApiRepository {
   Future<AuthSession?> restoreSession() async {
     final refresh = await _tokens.refreshToken;
     final userId = await _tokens.userId;
-    if (refresh == null || userId == null) return null;
+    if (refresh == null ||
+        refresh.isEmpty ||
+        userId == null ||
+        userId.isEmpty) {
+      return null;
+    }
     try {
       await refreshAccessToken();
       final user = await fetchMe();
       return AuthSession(
         user: user,
         accessToken: (await _tokens.accessToken) ?? '',
-        refreshToken: refresh,
+        refreshToken: (await _tokens.refreshToken) ?? refresh,
       );
     } catch (_) {
       await _tokens.clearSession();
@@ -185,13 +193,96 @@ class AuthApiRepository {
   }
 
   Future<AppUser> fetchMe() async {
+    final userJson = await fetchMeUserJson();
+    final user = mapUser(userJson);
+    await _tokens.saveProfile(name: user.name, phone: user.phone);
+    return user;
+  }
+
+  /// Full `/api/auth/me` user object (includes workerProfile / KYC fields).
+  Future<Map<String, dynamic>> fetchMeUserJson() async {
     final res = await _api.get('/api/auth/me');
     if (res['success'] != true || res['user'] == null) {
       throw ApiException(res['message']?.toString() ?? 'Profile fetch failed');
     }
-    final user = mapUser(Map<String, dynamic>.from(res['user'] as Map));
-    await _tokens.saveProfile(name: user.name, phone: user.phone);
-    return user;
+    return Map<String, dynamic>.from(res['user'] as Map);
+  }
+
+  /// Map application verification tracker from `/api/auth/me` user payload.
+  static KycReviewStatus mapKycStatus(Map<String, dynamic> user) {
+    if (user['isVerified'] == true) {
+      return KycReviewStatus.approved;
+    }
+
+    final profileRaw = user['workerProfile'];
+    final profile = profileRaw is Map
+        ? Map<String, dynamic>.from(profileRaw)
+        : <String, dynamic>{};
+
+    final raw = (user['kycStatus'] ??
+            user['verificationStatus'] ??
+            profile['kycStatus'] ??
+            profile['status'] ??
+            profile['verificationStatus'] ??
+            profile['profileStatus'] ??
+            '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll(' ', '_')
+        .replaceAll('-', '_');
+
+    switch (raw) {
+      case 'approved':
+      case 'verified':
+      case 'active':
+      case 'completed':
+        return KycReviewStatus.approved;
+      case 'in_review':
+      case 'inreview':
+      case 'pending':
+      case 'under_review':
+      case 'review':
+        return KycReviewStatus.inReview;
+      case 'submitted':
+      case 'pending_review':
+      case 'pendingreview':
+        return KycReviewStatus.submitted;
+    }
+
+    final badges = profile['badges'];
+    if (badges is List) {
+      final joined = badges.map((e) => e.toString().toLowerCase()).join(' ');
+      if (joined.contains('verified') ||
+          joined.contains('approved') ||
+          joined.contains('background checked')) {
+        return KycReviewStatus.approved;
+      }
+    }
+
+    // Docs approved on profile → still wait for user.isVerified for dashboard.
+    final docs = profile['identityDocuments'];
+    if (docs is List && docs.isNotEmpty) {
+      final allApproved = docs.every((d) {
+        if (d is! Map) return false;
+        return (d['status']?.toString().toUpperCase() ?? '') == 'APPROVED';
+      });
+      if (allApproved) return KycReviewStatus.inReview;
+      return KycReviewStatus.submitted;
+    }
+
+    if (profile.isNotEmpty) {
+      final selfieOk = profile['selfieVerified'] == true;
+      final hasDocs = profile['aadhaarNumber'] != null ||
+          profile['panNumber'] != null ||
+          profile['govermentIdNumber'] != null ||
+          (profile['identityDocuments'] is List &&
+              (profile['identityDocuments'] as List).isNotEmpty);
+      if (selfieOk && hasDocs) return KycReviewStatus.inReview;
+      return KycReviewStatus.submitted;
+    }
+
+    return KycReviewStatus.submitted;
   }
 
   Future<AppUser> updateProfile({
@@ -238,6 +329,8 @@ class AuthApiRepository {
 
   static AppUser mapUser(Map<String, dynamic> json) {
     final roleStr = (json['role'] as String?) ?? 'customer';
+    final profileRaw = json['workerProfile'];
+    final hasProfile = profileRaw is Map && profileRaw.isNotEmpty;
     return AppUser(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       name: (json['name'] as String?) ?? 'Fixly User',
@@ -245,6 +338,8 @@ class AuthApiRepository {
       email: (json['email'] as String?) ?? '',
       role: roleStr == 'worker' ? UserRole.worker : UserRole.customer,
       avatar: json['avatar'] as String?,
+      isVerified: json['isVerified'] == true,
+      hasWorkerProfile: hasProfile,
     );
   }
 }

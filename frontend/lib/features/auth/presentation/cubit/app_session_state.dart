@@ -13,6 +13,8 @@ class AppSessionState extends Equatable {
     this.role = 'customer',
     this.phone,
     this.email,
+    this.pendingSignupName,
+    this.pendingSignupPassword,
     this.status = AppSessionStatus.initial,
     this.authFlow = AuthFlow.login,
     this.errorMessage,
@@ -25,6 +27,8 @@ class AppSessionState extends Equatable {
   final String role;
   final String? phone;
   final String? email;
+  final String? pendingSignupName;
+  final String? pendingSignupPassword;
   final AppSessionStatus status;
   final AuthFlow authFlow;
   final String? errorMessage;
@@ -37,6 +41,8 @@ class AppSessionState extends Equatable {
     String? role,
     String? phone,
     String? email,
+    String? pendingSignupName,
+    String? pendingSignupPassword,
     AppSessionStatus? status,
     AuthFlow? authFlow,
     String? errorMessage,
@@ -51,6 +57,9 @@ class AppSessionState extends Equatable {
       role: role ?? this.role,
       phone: phone ?? this.phone,
       email: email ?? this.email,
+      pendingSignupName: pendingSignupName ?? this.pendingSignupName,
+      pendingSignupPassword:
+          pendingSignupPassword ?? this.pendingSignupPassword,
       status: status ?? this.status,
       authFlow: authFlow ?? this.authFlow,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
@@ -66,6 +75,8 @@ class AppSessionState extends Equatable {
         role,
         phone,
         email,
+        pendingSignupName,
+        pendingSignupPassword,
         status,
         authFlow,
         errorMessage,

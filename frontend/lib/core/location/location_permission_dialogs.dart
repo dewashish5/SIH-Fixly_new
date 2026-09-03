@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../../../app/theme/app_colors.dart';
+import '../../app/theme/app_colors.dart';
+import '../constants/app_strings.dart';
 
 /// App-themed location permission / settings prompts.
 abstract final class LocationPermissionDialogs {
   static Future<bool> showRationale(BuildContext context) async {
+    final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
     final result = await showDialog<bool>(
       context: context,
@@ -16,14 +18,13 @@ abstract final class LocationPermissionDialogs {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           icon: Icon(Icons.location_on_rounded, color: scheme.primary, size: 36),
           title: Text(
-            'Enable location',
+            l10n.locationEnableTitle,
             style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
                   color: scheme.onSurface,
                 ),
           ),
           content: Text(
-            'Fixly needs your current location to find nearby workers, '
-            'set booking addresses, and show live maps.',
+            l10n.locationEnableBody,
             style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -33,7 +34,7 @@ abstract final class LocationPermissionDialogs {
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
               child: Text(
-                'Not now',
+                l10n.notNow,
                 style: TextStyle(color: scheme.onSurfaceVariant),
               ),
             ),
@@ -47,7 +48,57 @@ abstract final class LocationPermissionDialogs {
                 ),
               ),
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Allow'),
+              child: Text(l10n.allow),
+            ),
+          ],
+        );
+      },
+    );
+    return result == true;
+  }
+
+  static Future<bool> showLocationServicesOff(BuildContext context) async {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: scheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          icon: Icon(Icons.gps_off_rounded, color: scheme.primary, size: 36),
+          title: Text(
+            l10n.locationServicesOffTitle,
+            style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                  color: scheme.onSurface,
+                ),
+          ),
+          content: Text(
+            l10n.locationServicesOffBody,
+            style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(
+                l10n.notNow,
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: scheme.primary,
+                foregroundColor: scheme.onPrimary,
+                minimumSize: const Size(48, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(l10n.turnOnLocation),
             ),
           ],
         );
@@ -57,6 +108,7 @@ abstract final class LocationPermissionDialogs {
   }
 
   static Future<bool> showOpenSettings(BuildContext context) async {
+    final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
     final result = await showDialog<bool>(
       context: context,
@@ -70,13 +122,13 @@ abstract final class LocationPermissionDialogs {
             size: 36,
           ),
           title: Text(
-            'Location blocked',
+            l10n.locationPermissionBlockedTitle,
             style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
                   color: scheme.onSurface,
                 ),
           ),
           content: Text(
-            'Location permission is off. Open Settings to enable it for Fixly.',
+            l10n.locationPermissionBlockedBody,
             style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -86,7 +138,7 @@ abstract final class LocationPermissionDialogs {
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
               child: Text(
-                'Cancel',
+                l10n.notNow,
                 style: TextStyle(color: scheme.onSurfaceVariant),
               ),
             ),
@@ -100,7 +152,7 @@ abstract final class LocationPermissionDialogs {
                 ),
               ),
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Open Settings'),
+              child: Text(l10n.openSettings),
             ),
           ],
         );
