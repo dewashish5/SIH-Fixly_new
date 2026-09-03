@@ -190,8 +190,27 @@ class ApiClient {
   ApiException _mapError(DioException e) {
     final data = e.response?.data;
     String message = e.message ?? 'Network error';
+    final lower = message.toLowerCase();
     if (data is Map && data['message'] != null) {
       message = data['message'].toString();
+    } else if (data is String &&
+        (data.contains('Cloudflare Tunnel error') ||
+            data.contains('Error 1033'))) {
+      message =
+          'API tunnel is down. Ask host to restart cloudflared + backend.';
+    } else if (e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        lower.contains('socketexception') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('connection refused') ||
+        lower.contains('network is unreachable') ||
+        lower.contains('no internet') ||
+        lower.contains('connection errored')) {
+      final host = ApiConfig.baseUrl;
+      message =
+          'Cannot reach API ($host). Check Wi‑Fi/data and that the server is online.';
     }
     return ApiException(message, statusCode: e.response?.statusCode);
   }
@@ -210,5 +229,7 @@ class ApiServices {
     deviceId = DeviceId(tokens);
     await deviceId.getOrCreate();
     client = ApiClient(tokenStorage: tokens, deviceId: deviceId);
+    // ignore: avoid_print — intentional boot diagnostic for DevTools Network failures
+    print('Fixly API_BASE_URL=${ApiConfig.baseUrl}');
   }
 }

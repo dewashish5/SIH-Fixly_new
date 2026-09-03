@@ -17,7 +17,7 @@ import Modal from '../../components/common/Modal';
 import { welfarePrograms } from '../../data/insurance';
 
 export default function InsurancePage() {
-  const { insurancePolicies = [], welfareClaims = [] } = useApp();
+  const { insurancePolicies = [], welfareClaims = [], workers = [], dashboardStats } = useApp();
 
   const policiesList = Array.isArray(insurancePolicies) ? insurancePolicies : [];
   const claimsList = Array.isArray(welfareClaims) ? welfareClaims : [];
@@ -25,6 +25,11 @@ export default function InsurancePage() {
   const [activeTab, setActiveTab] = useState('policies'); // 'policies', 'claims', 'welfare'
   const [selectedPolicyForView, setSelectedPolicyForView] = useState(null);
   const [selectedClaimForView, setSelectedClaimForView] = useState(null);
+
+  const insuredCount = workers.filter((w) => w.isVerified || w.verification === 'Verified').length;
+  const totalCount = workers.length;
+  const enrollPct = totalCount > 0 ? Math.round((insuredCount / totalCount) * 100) : 0;
+  const welfarePool = dashboardStats?.totalRevenue ? Math.round(dashboardStats.totalRevenue * 0.05) : 0;
 
   return (
     <div style={{ padding: '0 32px 32px 32px', animation: 'fadeIn 0.2s ease' }}>
@@ -54,15 +59,15 @@ export default function InsurancePage() {
         <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '12px', color: '#64748b' }}>Insured Workers</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#15803d', marginTop: '3px' }}>
-            0 / 0
+            {insuredCount} / {totalCount}
           </div>
-          <div style={{ fontSize: '11px', color: '#15803d', fontWeight: '600' }}>0% Policy Enrollment</div>
+          <div style={{ fontSize: '11px', color: '#15803d', fontWeight: '600' }}>{enrollPct}% Policy Enrollment</div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '12px', color: '#64748b' }}>Standard Accidental Cover</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginTop: '3px' }}>
-            ₹5,00,000 / Worker
+            ₹5,00,000 / Member
           </div>
           <div style={{ fontSize: '11px', color: '#64748b' }}>Zero Deductible</div>
         </div>
@@ -70,15 +75,15 @@ export default function InsurancePage() {
         <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '12px', color: '#64748b' }}>Settled Welfare Claims</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#0284c7', marginTop: '3px' }}>
-            ₹0 (YTD)
+            {claimsList.length} Claims
           </div>
-          <div style={{ fontSize: '11px', color: '#64748b' }}>Avg 48h Disbursal SLA</div>
+          <div style={{ fontSize: '11px', color: '#64748b' }}>Fast 48h Disbursal SLA</div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '12px', color: '#64748b' }}>Active Welfare Pool Reserve</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', marginTop: '3px' }}>
-            ₹0
+            ₹{welfarePool.toLocaleString('en-IN')}
           </div>
           <div style={{ fontSize: '11px', color: '#64748b' }}>5% Continuous Allocation</div>
         </div>

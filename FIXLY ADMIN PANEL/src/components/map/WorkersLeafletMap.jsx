@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Navigation, Radio, Phone, Star, User } from 'lucide-react';
+import Avatar from '../common/Avatar';
 
 export default function WorkersLeafletMap({
   height = '420px',
@@ -142,10 +143,10 @@ export default function WorkersLeafletMap({
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <img
+              <Avatar
                 src={activeWorkerPopup.avatar}
-                alt={activeWorkerPopup.name}
-                style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
+                name={activeWorkerPopup.name}
+                size={36}
               />
               <div>
                 <div style={{ fontSize: '13.5px', fontWeight: '700', color: '#111827' }}>

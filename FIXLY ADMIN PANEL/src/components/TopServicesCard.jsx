@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 export default function TopServicesCard({ onSelectService }) {
-  const { services, topServices: apiTopServices } = useApp();
+  const { services = [], bookings = [], topServices: apiTopServices } = useApp();
 
   const getCategoryMeta = (catName) => {
     const name = (catName || '').toLowerCase();
@@ -36,48 +36,68 @@ export default function TopServicesCard({ onSelectService }) {
     }
   };
 
-  // Build dynamic list from DB services grouped by Category
-  const buildDynamicCategories = () => {
-    if (!services || services.length === 0) return [];
+  // Build real dynamic breakdown from actual booking requests or services catalog
+  const buildRealServiceBreakdown = () => {
+    // 1. If bookings exist, compute breakdown from real customer orders
+    if (bookings && bookings.length > 0) {
+      const categoryCounts = {};
+      bookings.forEach((b) => {
+        const cat = b.serviceCategory || b.service || 'General';
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      });
 
-    const categoryCounts = {};
-    services.forEach((s) => {
-      const cat = s.category || 'Others';
-      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-    });
+      const totalBookings = bookings.length;
+      return Object.keys(categoryCounts)
+        .map((cat) => {
+          const meta = getCategoryMeta(cat);
+          const count = categoryCounts[cat];
+          const pct = Math.min(100, Math.max(1, Math.round((count / totalBookings) * 100)));
+          return {
+            id: cat,
+            name: meta.name,
+            count,
+            percentage: pct,
+            color: meta.color,
+            bg: meta.bg,
+            icon: meta.icon,
+          };
+        })
+        .sort((a, b) => b.percentage - a.percentage)
+        .slice(0, 5);
+    }
 
-    const total = services.length;
-    const items = Object.keys(categoryCounts).map((cat) => {
-      const meta = getCategoryMeta(cat);
-      const pct = Math.round((categoryCounts[cat] / total) * 100);
-      return {
-        id: cat,
-        name: meta.name,
-        percentage: pct,
-        color: meta.color,
-        bg: meta.bg,
-        icon: meta.icon
-      };
-    });
+    // 2. Otherwise compute from active services catalog
+    if (services && services.length > 0) {
+      const categoryCounts = {};
+      services.forEach((s) => {
+        const cat = s.category || 'General';
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      });
 
-    return items.sort((a, b) => b.percentage - a.percentage).slice(0, 5);
+      const totalServices = services.length;
+      return Object.keys(categoryCounts)
+        .map((cat) => {
+          const meta = getCategoryMeta(cat);
+          const count = categoryCounts[cat];
+          const pct = Math.min(100, Math.max(1, Math.round((count / totalServices) * 100)));
+          return {
+            id: cat,
+            name: meta.name,
+            count,
+            percentage: pct,
+            color: meta.color,
+            bg: meta.bg,
+            icon: meta.icon,
+          };
+        })
+        .sort((a, b) => b.percentage - a.percentage)
+        .slice(0, 5);
+    }
+
+    return [];
   };
 
-  const rawList = (apiTopServices && apiTopServices.length > 0)
-    ? apiTopServices 
-    : buildDynamicCategories();
-
-  const displayList = rawList.map((item) => {
-    const meta = getCategoryMeta(item.name || item._id || item.category);
-    return {
-      id: item.id || item._id || meta.name,
-      name: item.name || meta.name,
-      percentage: Number(item.percentage) || 20,
-      icon: item.icon || meta.icon,
-      color: item.color || meta.color,
-      bg: item.bg || meta.bg
-    };
-  });
+  const displayList = buildRealServiceBreakdown();
 
   return (
     <div
@@ -140,96 +160,102 @@ export default function TopServicesCard({ onSelectService }) {
             No active services found in database.
           </div>
         ) : (
-          displayList.map((service) => (
-            <div
-              key={service.id}
-              onClick={() => onSelectService && onSelectService(service)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                padding: '4px 6px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'background 0.15s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8faf9')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              {/* Icon + Category Name (Original Layout matching Screenshot 1) */}
+          displayList.map((service) => {
+            const cleanPercentage = Math.min(100, Math.max(0, service.percentage));
+
+            return (
               <div
+                key={service.id}
+                onClick={() => onSelectService && onSelectService(service)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
-                  width: '105px',
-                  flexShrink: 0,
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  padding: '4px 6px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease',
                 }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8faf9')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
+                {/* Icon + Category Name */}
                 <div
                   style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '7px',
-                    backgroundColor: service.bg || '#f0fdf4',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    gap: '10px',
+                    width: '115px',
                     flexShrink: 0,
                   }}
                 >
-                  {renderCategoryIcon(service.icon, service.color)}
+                  <div
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '7px',
+                      backgroundColor: service.bg || '#f0fdf4',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {renderCategoryIcon(service.icon, service.color)}
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: '#28392f',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {service.name}
+                  </span>
                 </div>
-                <span
-                  style={{
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    color: '#28392f',
-                  }}
-                >
-                  {service.name}
-                </span>
-              </div>
 
-              {/* Progress Bar Container */}
-              <div
-                style={{
-                  flex: 1,
-                  height: '7px',
-                  backgroundColor: '#e6ede8',
-                  borderRadius: '999px',
-                  overflow: 'hidden',
-                  position: 'relative',
-                }}
-              >
+                {/* Progress Bar Container with Exact Percentage Fill */}
                 <div
                   style={{
-                    width: `${service.percentage * 3.2}%`,
-                    maxWidth: '100%',
-                    height: '100%',
-                    backgroundColor: '#22864c',
+                    flex: 1,
+                    height: '8px',
+                    backgroundColor: '#e6ede8',
                     borderRadius: '999px',
-                    transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                    overflow: 'hidden',
+                    position: 'relative',
                   }}
-                />
-              </div>
+                >
+                  <div
+                    style={{
+                      width: `${cleanPercentage}%`,
+                      height: '100%',
+                      backgroundColor: '#1e7e45',
+                      borderRadius: '999px',
+                      transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                    }}
+                  />
+                </div>
 
-              {/* Percentage Text */}
-              <div
-                style={{
-                  width: '38px',
-                  textAlign: 'right',
-                  fontSize: '12.5px',
-                  fontWeight: '600',
-                  color: '#495a50',
-                  flexShrink: 0,
-                }}
-              >
-                {service.percentage}%
+                {/* Percentage Text */}
+                <div
+                  style={{
+                    width: '40px',
+                    textAlign: 'right',
+                    fontSize: '12.5px',
+                    fontWeight: '700',
+                    color: '#15803d',
+                    flexShrink: 0,
+                  }}
+                >
+                  {cleanPercentage}%
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

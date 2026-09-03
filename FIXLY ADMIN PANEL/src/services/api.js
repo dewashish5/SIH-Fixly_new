@@ -49,6 +49,10 @@ export const api = {
     const res = await adminApi.get('/me');
     return res.data;
   },
+  updateProfile: async (data) => {
+    const res = await adminApi.put('/me', data);
+    return res.data;
+  },
 
   // Dashboard
   getDashboardStats: async () => {

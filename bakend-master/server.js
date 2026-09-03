@@ -26,6 +26,7 @@ import reviewRoutes from './routes/review-routes.js';
 import homeRoutes from './routes/home-routes.js';
 import aiRoutes from './routes/ai-routes.js';
 import uploadRoutes from './routes/upload-routes.js';
+import adminRoutes from './routes/admin-routes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -89,6 +90,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/home', homeRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/upload', apiLimiter, uploadRoutes);
+app.use('/api/admin', apiLimiter, adminRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

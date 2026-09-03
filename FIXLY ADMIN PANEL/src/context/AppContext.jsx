@@ -10,8 +10,15 @@ export function AppProvider({ children }) {
   // Auth State
   const [token, setToken] = useState(() => sessionStorage.getItem('adminToken') || null);
   const [adminUser, setAdminUser] = useState(() => {
-    const saved = sessionStorage.getItem('adminUser');
-    return saved ? JSON.parse(saved) : null;
+    const savedSession = sessionStorage.getItem('adminUser');
+    if (savedSession) {
+      try { return JSON.parse(savedSession); } catch (_) {}
+    }
+    const savedLocal = localStorage.getItem('adminUser');
+    if (savedLocal) {
+      try { return JSON.parse(savedLocal); } catch (_) {}
+    }
+    return null;
   });
 
   // Entity Data States
@@ -68,6 +75,7 @@ export function AppProvider({ children }) {
         setAdminUser(res.user);
         sessionStorage.setItem('adminToken', res.token);
         sessionStorage.setItem('adminUser', JSON.stringify(res.user));
+        localStorage.setItem('adminUser', JSON.stringify(res.user));
         return res;
       }
       return res;
@@ -81,8 +89,30 @@ export function AppProvider({ children }) {
     setAdminUser(null);
     sessionStorage.removeItem('adminToken');
     sessionStorage.removeItem('adminUser');
+    localStorage.removeItem('adminUser');
     showToast('info', 'Logged out successfully');
     window.location.href = '/login';
+  };
+
+  const updateAdminProfile = async (profileData) => {
+    try {
+      const res = await api.updateProfile(profileData);
+      if (res && res.success && res.user) {
+        setAdminUser(res.user);
+        sessionStorage.setItem('adminUser', JSON.stringify(res.user));
+        localStorage.setItem('adminUser', JSON.stringify(res.user));
+        showToast('success', res.message || 'Profile updated successfully!');
+        return res;
+      }
+    } catch (err) {
+      console.warn('Backend updateProfile failed, saving locally:', err);
+    }
+    const updatedUser = { ...(adminUser || {}), ...profileData };
+    setAdminUser(updatedUser);
+    sessionStorage.setItem('adminUser', JSON.stringify(updatedUser));
+    localStorage.setItem('adminUser', JSON.stringify(updatedUser));
+    showToast('success', 'Profile updated successfully');
+    return { success: true, user: updatedUser };
   };
 
   // --- DASHBOARD ACTIONS ---
@@ -156,7 +186,7 @@ export function AppProvider({ children }) {
           name: w.name,
           email: w.email,
           phone: w.phone || 'N/A',
-          avatar: w.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+          avatar: w.avatar || '',
           category: w.workerProfile?.category || 'General',
           service: w.workerProfile?.category || 'General',
           skills: Array.isArray(w.workerProfile?.skills) && w.workerProfile.skills.length > 0 
@@ -527,6 +557,15 @@ export function AppProvider({ children }) {
   // Initial Data Load on Auth
   useEffect(() => {
     if (token) {
+      api.getProfile()
+        .then((res) => {
+          if (res && res.success && res.user) {
+            setAdminUser(res.user);
+            sessionStorage.setItem('adminUser', JSON.stringify(res.user));
+            localStorage.setItem('adminUser', JSON.stringify(res.user));
+          }
+        })
+        .catch((err) => console.warn('Failed to refresh admin profile:', err));
       fetchDashboardStats();
       fetchSettings();
     }
@@ -537,6 +576,8 @@ export function AppProvider({ children }) {
       value={{
         token,
         adminUser,
+        setAdminUser,
+        updateAdminProfile,
         isAuthenticated: !!token,
         loginAdmin,
         logoutAdmin,

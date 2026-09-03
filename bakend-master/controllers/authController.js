@@ -175,8 +175,11 @@ export const verifyOTP = async (req, res) => {
         const user = await User.findOne({ email: emailNormalized });
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-        user.isVerified = true;
+        // Email OTP ≠ worker KYC. Workers stay isVerified=false until admin approves.
         user.isEmailVerified = true;
+        if (user.role !== 'worker') {
+            user.isVerified = true;
+        }
         await user.save();
 
         const userObj = user.toObject();

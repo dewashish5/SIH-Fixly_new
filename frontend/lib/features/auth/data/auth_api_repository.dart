@@ -210,14 +210,17 @@ class AuthApiRepository {
 
   /// Map application verification tracker from `/api/auth/me` user payload.
   static KycReviewStatus mapKycStatus(Map<String, dynamic> user) {
-    if (user['isVerified'] == true) {
-      return KycReviewStatus.approved;
-    }
-
     final profileRaw = user['workerProfile'];
     final profile = profileRaw is Map
         ? Map<String, dynamic>.from(profileRaw)
         : <String, dynamic>{};
+    final hasProfile = profile.isNotEmpty;
+
+    // KYC approved only when email/KYC flag set AND worker finished setup.
+    if (user['isVerified'] == true && hasProfile) {
+      return KycReviewStatus.approved;
+    }
+
     final kycDocsRaw = user['kycDocuments'];
     final kycDocs = kycDocsRaw is Map
         ? Map<String, dynamic>.from(kycDocsRaw)

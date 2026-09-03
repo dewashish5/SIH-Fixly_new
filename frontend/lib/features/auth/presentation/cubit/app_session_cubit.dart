@@ -309,7 +309,8 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       return RouteNames.customerHome;
     }
     final user = _repo.currentUser;
-    if (user?.isVerified == true) {
+    // isVerified = KYC approved (not email OTP). Needs profile + approval → dashboard.
+    if (user?.isVerified == true && user?.hasWorkerProfile == true) {
       return RouteNames.workerDashboard;
     }
     if (user?.hasWorkerProfile == true) {

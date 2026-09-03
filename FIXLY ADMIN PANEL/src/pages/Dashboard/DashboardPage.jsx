@@ -45,7 +45,7 @@ export default function DashboardPage() {
   const totalBookingsVal = dashboardStats?.totalBookings !== undefined ? dashboardStats.totalBookings.toLocaleString() : (bookings?.length || 0).toLocaleString();
   const totalRevenueVal = dashboardStats?.totalRevenue !== undefined ? `₹${dashboardStats.totalRevenue.toLocaleString('en-IN')}` : '₹0';
   const totalWorkersVal = dashboardStats?.totalWorkers !== undefined ? dashboardStats.totalWorkers.toLocaleString() : (workers?.length || 0).toLocaleString();
-  const totalCustomersVal = dashboardStats?.totalCustomers !== undefined ? dashboardStats.totalCustomers.toLocaleString() : '0';
+  const totalCustomersVal = dashboardStats?.totalCustomers !== undefined ? dashboardStats.totalCustomers.toLocaleString() : (customers?.length || 0).toLocaleString();
 
   // Top stats matching backend API
   const statCards = [
@@ -53,28 +53,28 @@ export default function DashboardPage() {
       id: 'bookings',
       title: 'Total Bookings',
       value: totalBookingsVal,
-      trend: '+0%',
+      trend: 'Real-time',
       icon: User,
     },
     {
       id: 'revenue',
       title: 'Total Revenue',
       value: totalRevenueVal,
-      trend: '+0%',
+      trend: 'Gross Value',
       icon: IndianRupee,
     },
     {
       id: 'workers',
       title: 'Active Workers',
       value: totalWorkersVal,
-      trend: '+0%',
+      trend: 'Onboarded',
       icon: IdCard,
     },
     {
       id: 'customers',
       title: 'Total Customers',
       value: totalCustomersVal,
-      trend: '+0%',
+      trend: 'Registered',
       icon: Users,
     },
   ];

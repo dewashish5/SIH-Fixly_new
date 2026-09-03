@@ -13,6 +13,13 @@ export const translations = {
     aiInsights: 'AI Insights',
     notifications: 'Notifications',
     settings: 'Settings',
+
+    // Section Titles
+    overviewSection: 'Overview',
+    servicesSection: 'Services & Operations',
+    usersSection: 'Manage Users',
+    financeSection: 'Finance & Safety',
+    settingsSection: 'System & Settings',
     
     welcomeBack: 'Welcome back, Admin!',
     tagline: 'Together we build stronger communities.',
@@ -64,6 +71,13 @@ export const translations = {
     aiInsights: 'एआई पूर्वानुमान',
     notifications: 'सूचनाएं',
     settings: 'सेटिंग्स',
+
+    // Section Titles
+    overviewSection: 'अवलोकन (Overview)',
+    servicesSection: 'सेवाएं व संचालन',
+    usersSection: 'उपयोगकर्ता प्रबंधन',
+    financeSection: 'वित्त व कल्याण कोष',
+    settingsSection: 'सिस्टम व सेटिंग्स',
     
     welcomeBack: 'स्वागत है, व्यवस्थापक!',
     tagline: 'मिलकर हम सशक्त समाज और समुदाय का निर्माण करते हैं।',
@@ -99,56 +113,5 @@ export const translations = {
     sendNotification: 'सूचना भेजें',
     exportCsv: 'CSV डाउनलोड करें',
     saveChanges: 'परिवर्तन सहेजें',
-  },
-
-  mr: {
-    dashboard: 'डॅशबोर्ड',
-    bookings: 'बुकिंग्ज',
-    workers: 'कामगार (श्रमिक)',
-    customers: 'ग्राहक',
-    services: 'सेवा सूची',
-    payments: 'पेमेंट्स व लेजर',
-    insurance: 'विमा व कल्याण निधी',
-    reviews: 'अभिप्राय व पुनरावलोकन',
-    reports: 'अहवाल (रिपोर्ट्स)',
-    analytics: 'विश्लेषण (एनालिटिक्स)',
-    aiInsights: 'एआय अंदाज व अंतर्दृष्टी',
-    notifications: 'सूचना (नोटिफिकेशन्स)',
-    settings: 'सेटिंग्ज',
-    
-    welcomeBack: 'पुन्हा स्वागत आहे, प्रशासक!',
-    tagline: 'एकत्रितपणे आपण अधिक मजबूत समुदाय घडवूया.',
-    searchPlaceholder: 'कामगार, ग्राहक, बुकिंग किंवा सेवा शोधा... (⌘K)',
-    totalBookings: 'एकूण बुकिंग्ज',
-    totalRevenue: 'एकूण महसूल',
-    activeWorkers: 'सक्रिय कामगार',
-    totalCustomers: 'एकूण ग्राहक',
-    avgRating: 'सरासरी रेटिंग',
-    
-    bookingsOverview: 'बुकिंग्ज आढावा',
-    topServices: 'प्रमुख सेवा',
-    recentBookings: 'अलीकडील बुकिंग्ज',
-    workersOnMap: 'नकाशावर थेट कार्यरत कामगार',
-    viewMap: 'नकाशा पहा',
-    viewAll: 'सर्व पहा',
-    actions: 'कृती',
-    status: 'स्थिती',
-    today: 'आज',
-    thisWeek: 'या आठवड्यात',
-    thisMonth: 'या महिन्यात',
-    thisYear: 'या वर्षी',
-    
-    confirmed: 'निश्चित',
-    pending: 'प्रलंबित',
-    inProgress: 'प्रगतीपथावर',
-    completed: 'पूर्ण',
-    cancelled: 'रद्द',
-    emergency: 'तातडीची सेवा',
-    
-    addWorker: 'नवीन कामगार जोडा',
-    addService: 'नवीन सेवा जोडा',
-    sendNotification: 'सूचना पाठवा',
-    exportCsv: 'CSV डाउनलोड',
-    saveChanges: 'बदल जतन करा',
   }
 };

@@ -4,7 +4,16 @@ import { translations } from '../data/translations';
 const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState('en'); // 'en', 'hi', 'mr'
+  const [language, setLanguageState] = useState(() => {
+    const saved = localStorage.getItem('adminLang');
+    return saved === 'hi' ? 'hi' : 'en';
+  });
+
+  const setLanguage = (lang) => {
+    const valid = lang === 'hi' ? 'hi' : 'en';
+    setLanguageState(valid);
+    localStorage.setItem('adminLang', valid);
+  };
 
   const t = (key) => {
     const langDict = translations[language] || translations.en;

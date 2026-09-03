@@ -20,7 +20,7 @@ import {
 import Badge from '../../components/common/Badge';
 import Pagination from '../../components/common/Pagination';
 import AddWorkerModal from '../../components/modals/AddWorkerModal';
-import WorkersLeafletMap from '../../components/map/WorkersLeafletMap';
+import Avatar from '../../components/common/Avatar';
 
 export default function WorkersPage() {
   const navigate = useNavigate();
@@ -35,7 +35,6 @@ export default function WorkersPage() {
   const [sortField, setSortField] = useState('rating');
   const [sortAsc, setSortAsc] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [showMapRadar, setShowMapRadar] = useState(false);
   const [isAddWorkerOpen, setIsAddWorkerOpen] = useState(false);
   const pageSize = 10;
 
@@ -147,25 +146,6 @@ export default function WorkersPage() {
 
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
-            onClick={() => setShowMapRadar(!showMapRadar)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '9px 14px',
-              backgroundColor: showMapRadar ? '#eaf7ee' : '#ffffff',
-              color: showMapRadar ? '#15803d' : '#334155',
-              border: `1px solid ${showMapRadar ? '#86efac' : 'var(--border-light)'}`,
-              borderRadius: '8px',
-              fontSize: '13px',
-              fontWeight: '600',
-            }}
-          >
-            <MapPin size={15} />
-            <span>{showMapRadar ? 'Hide GPS Map Radar' : 'Live GPS Map Radar'}</span>
-          </button>
-
-          <button
             onClick={() => setIsAddWorkerOpen(true)}
             style={{
               display: 'flex',
@@ -185,13 +165,6 @@ export default function WorkersPage() {
           </button>
         </div>
       </div>
-
-      {/* Map Radar collapsible section */}
-      {showMapRadar && (
-        <div style={{ marginBottom: '20px', animation: 'fadeIn 0.2s ease' }}>
-          <WorkersLeafletMap height="360px" selectedService={serviceFilter} />
-        </div>
-      )}
 
       {/* Filters Bar */}
       <div
@@ -352,10 +325,10 @@ export default function WorkersPage() {
                 {/* Profile & Name */}
                 <td style={{ padding: '14px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <img
-                      src={w.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'}
-                      alt={w.name}
-                      style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #22c55e' }}
+                    <Avatar
+                      src={w.avatar}
+                      name={w.name}
+                      size={38}
                     />
                     <div>
                       <div

@@ -57,7 +57,7 @@ export default function AddServiceModal({ isOpen, onClose }) {
       await addService({
         title: formData.name,
         category: formData.category || 'Plumbing',
-        image: formData.image || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500&auto=format&fit=crop&q=80',
+        image: formData.image || '',
         basePrice: parseInt(formData.basePrice.replace(/\D/g, ''), 10) || 100,
         estimatedTime: '1 Hour',
         whatsIncluded: formData.description ? [formData.description] : ['Professional Service'],

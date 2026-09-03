@@ -12,31 +12,52 @@ import { useApp } from '../../context/AppContext';
 import { ChevronDown } from 'lucide-react';
 
 export default function BookingsOverviewChart() {
-  const { dashboardStats, bookings } = useApp();
+  const { dashboardStats, bookings = [] } = useApp();
   const [timeRange, setTimeRange] = useState('This Week');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const hasData = (dashboardStats?.totalBookings || 0) > 0 || (bookings && bookings.length > 0);
+  // Generate 7 real daily buckets from actual database bookings
+  const chartData = React.useMemo(() => {
+    const daysCount = timeRange === 'Today' ? 1 : (timeRange === 'This Month' ? 14 : 7);
+    const buckets = [];
+    for (let i = daysCount - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateLabel = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 
-  const dates = ['20 May', '21 May', '22 May', '23 May', '24 May', '25 May', '26 May'];
-  const baseBookings = [520, 1040, 680, 1280, 1620, 1080, 1940];
-  const baseRevenues = [15400, 31200, 20400, 38400, 48600, 32400, 58200];
+      const dayItems = bookings.filter((b) => {
+        const rawDate = b.createdAt || b.date;
+        if (!rawDate) return false;
+        const bDate = new Date(rawDate);
+        if (isNaN(bDate.getTime())) return false;
+        return (
+          bDate.getDate() === d.getDate() &&
+          bDate.getMonth() === d.getMonth() &&
+          bDate.getFullYear() === d.getFullYear()
+        );
+      });
 
-  const totalB = dashboardStats?.totalBookings || bookings?.length || 0;
-  const totalR = dashboardStats?.totalRevenue || 0;
+      const dayBookings = dayItems.length;
+      const dayRevenue = dayItems.reduce((acc, cur) => acc + (cur.rawAmount || 0), 0);
 
-  const chartData = dates.map((d, i) => {
-    if (!hasData) {
-      return { date: d, bookings: 0, revenue: 0 };
+      buckets.push({
+        date: dateLabel,
+        bookings: dayBookings,
+        revenue: dayRevenue
+      });
     }
-    // Scale proportionally if custom data, or use exact curve matching Image 2
-    const scaleFactor = totalB > 0 ? (totalB / 8789 || 1) : 1;
-    return {
-      date: d,
-      bookings: totalB > 10 ? Math.round(baseBookings[i] * scaleFactor) : (i === 1 ? totalB : Math.max(1, Math.round(totalB * (baseBookings[i] / 2000)))),
-      revenue: totalR > 0 ? Math.round(baseRevenues[i] * (totalR / 24567890 || 1)) : baseRevenues[i]
-    };
-  });
+
+    // If bookings array is populated with at least 1 item but dates don't match (e.g. today's entries),
+    // distribute the real totalBookings gracefully across the active bucket
+    const totalBookingsCount = bookings.length;
+    const bucketsSum = buckets.reduce((acc, cur) => acc + cur.bookings, 0);
+    if (totalBookingsCount > 0 && bucketsSum === 0) {
+      buckets[buckets.length - 1].bookings = totalBookingsCount;
+      buckets[buckets.length - 1].revenue = dashboardStats?.totalRevenue || 0;
+    }
+
+    return buckets;
+  }, [bookings, timeRange, dashboardStats]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Modal from '../common/Modal';
+import Avatar from '../common/Avatar';
 import { useApp } from '../../context/AppContext';
 import { AlertCircle, Zap, MapPin, Phone, ShieldAlert, CheckCircle2 } from 'lucide-react';
 
@@ -114,10 +115,10 @@ export default function EmergencyDispatchModal({ emergencyBooking, isOpen, onClo
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <img
+                  <Avatar
                     src={w.avatar}
-                    alt={w.name}
-                    style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }}
+                    name={w.name}
+                    size={38}
                   />
                   <div>
                     <div style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b' }}>

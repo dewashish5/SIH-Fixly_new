@@ -18,7 +18,7 @@ export default function AddWorkerModal({ isOpen, onClose }) {
     availability: 'Available',
     hourlyRate: '₹350/hr',
     idProof: 'Aadhaar Card',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+    avatar: '',
   });
 
   const [errors, setErrors] = useState({});
