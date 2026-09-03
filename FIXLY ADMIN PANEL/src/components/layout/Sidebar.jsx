@@ -14,6 +14,7 @@ import {
   BrainCircuit,
   Bell,
   Settings,
+  ClipboardCheck,
   X
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
@@ -41,6 +42,7 @@ export const navigationSections = [
     title: 'Manage Users',
     sectionKey: 'usersSection',
     items: [
+      { path: '/approvals', key: 'approvals', icon: ClipboardCheck },
       { path: '/workers', key: 'workers', icon: Users },
       { path: '/customers', key: 'customers', icon: UserCheck },
     ]
@@ -95,7 +97,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           borderRight: '1px solid var(--border-subtle)',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
           padding: '20px 14px 18px 16px',
           zIndex: 45,
           transition: 'transform 0.3s ease',
@@ -118,44 +119,26 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               to="/dashboard"
               style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
             >
-              <div
+              <img
+                src="/app_icon.png"
+                alt="Fixly"
                 style={{
                   width: '38px',
                   height: '38px',
                   borderRadius: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#eaf7ee',
+                  objectFit: 'cover',
                   flexShrink: 0,
                 }}
+              />
+              <div
+                style={{
+                  fontWeight: '700',
+                  fontSize: '16px',
+                  color: '#12251a',
+                  letterSpacing: '-0.2px',
+                }}
               >
-                <img
-                  src="/logo.svg"
-                  alt="Cooperative Logo"
-                  style={{ width: '28px', height: '28px', objectFit: 'contain' }}
-                />
-              </div>
-              <div style={{ lineHeight: '1.2' }}>
-                <div
-                  style={{
-                    fontWeight: '700',
-                    fontSize: '14.5px',
-                    color: '#12251a',
-                    letterSpacing: '-0.2px',
-                  }}
-                >
-                  Fixly Cooperative
-                </div>
-                <div
-                  style={{
-                    fontSize: '11.5px',
-                    color: '#55695e',
-                    fontWeight: '500',
-                  }}
-                >
-                  Admin Control Panel
-                </div>
+                Fixly
               </div>
             </NavLink>
 
@@ -248,34 +231,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               </div>
             ))}
           </nav>
-        </div>
-
-        {/* Bottom Status Badge */}
-        <div
-          style={{
-            paddingLeft: '6px',
-            paddingTop: '12px',
-            borderTop: '1px solid var(--border-subtle)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            fontSize: '11px',
-            color: '#7a8e81',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span
-              style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                backgroundColor: '#22c55e',
-                boxShadow: '0 0 6px #22c55e',
-              }}
-            />
-            <span style={{ fontWeight: '600' }}>Fixly Live</span>
-          </div>
-          <span style={{ fontSize: '10px', color: '#94a3b8' }}>v2.4.0</span>
         </div>
       </aside>
     </>

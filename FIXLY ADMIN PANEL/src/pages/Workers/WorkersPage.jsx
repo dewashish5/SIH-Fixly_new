@@ -1,52 +1,75 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import {
-  Users,
   Search,
   Plus,
-  Filter,
-  ShieldCheck,
   Star,
   MapPin,
-  CheckCircle,
-  XCircle,
   Ban,
   Eye,
   ArrowUpDown,
   Phone,
-  Battery
+  Battery,
+  Map as MapIcon,
 } from 'lucide-react';
 import Badge from '../../components/common/Badge';
 import Pagination from '../../components/common/Pagination';
 import AddWorkerModal from '../../components/modals/AddWorkerModal';
+import LiveMapModal from '../../components/LiveMapModal';
 import Avatar from '../../components/common/Avatar';
 
 export default function WorkersPage() {
   const navigate = useNavigate();
-  const { workers, workersPagination, fetchWorkers, verifyWorker, rejectWorker, suspendWorker } = useApp();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { workers, workersPagination, fetchWorkers, suspendWorker } = useApp();
 
   // Search & Filter states
   const [search, setSearch] = useState('');
   const [serviceFilter, setServiceFilter] = useState('All');
-  const [verificationFilter, setVerificationFilter] = useState('All');
   const [availabilityFilter, setAvailabilityFilter] = useState('All');
   const [cityFilter, setCityFilter] = useState('All');
   const [sortField, setSortField] = useState('rating');
   const [sortAsc, setSortAsc] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddWorkerOpen, setIsAddWorkerOpen] = useState(false);
+  const [isMapOpen, setIsMapOpen] = useState(() => searchParams.get('map') === '1');
   const pageSize = 10;
 
   React.useEffect(() => {
+    if (searchParams.get('map') === '1') {
+      setIsMapOpen(true);
+    }
+  }, [searchParams]);
+
+  const openMap = () => {
+    setIsMapOpen(true);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('map', '1');
+      return next;
+    });
+  };
+
+  const closeMap = () => {
+    setIsMapOpen(false);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('map');
+      return next;
+    });
+  };
+
+  React.useEffect(() => {
+    // Workers tab = approved members only. Pending KYC lives under Verification.
     fetchWorkers({
       page: currentPage,
       limit: pageSize,
-      search,
+      q: search || undefined,
       category: serviceFilter !== 'All' ? serviceFilter : '',
-      isVerified: verificationFilter === 'Verified' ? 'true' : (verificationFilter === 'Pending' ? 'false' : '')
+      isVerified: 'true',
     });
-  }, [fetchWorkers, currentPage, search, serviceFilter, verificationFilter]);
+  }, [fetchWorkers, currentPage, search, serviceFilter]);
 
   let filtered = [...workers];
 
@@ -68,17 +91,6 @@ export default function WorkersPage() {
       const phone = (w.phone || w.phoneNumber || '').toLowerCase();
       const cat = (w.category || w.primarySkill || '').toLowerCase();
       return name.includes(q) || phone.includes(q) || cat.includes(q);
-    });
-  }
-
-  // Verification Filter
-  if (verificationFilter && verificationFilter !== 'All') {
-    filtered = filtered.filter((w) => {
-      if (verificationFilter === 'Verified') return w.isVerified || w.status === 'VERIFIED';
-      if (verificationFilter === 'Pending') return !w.isVerified && w.status !== 'REJECTED' && w.status !== 'SUSPENDED';
-      if (verificationFilter === 'Rejected') return w.status === 'REJECTED';
-      if (verificationFilter === 'Suspended') return w.status === 'SUSPENDED';
-      return true;
     });
   }
 
@@ -137,14 +149,34 @@ export default function WorkersPage() {
       >
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#111827' }}>
-            Gig Workers & Cooperative Members ({workers.length})
+            Verified workers ({workersPagination?.total ?? workers.length})
           </h2>
           <p style={{ fontSize: '13px', color: '#64748b' }}>
-            Member verification, skill profiling, telemetry tracking, and welfare status
+            Approved cooperative members only. Pending KYC is under Verification.
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={openMap}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '9px 16px',
+              backgroundColor: '#ffffff',
+              color: '#15803d',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: '600',
+              border: '1px solid #bbf7d0',
+              cursor: 'pointer',
+            }}
+          >
+            <MapIcon size={16} />
+            <span>Map</span>
+          </button>
           <button
             onClick={() => setIsAddWorkerOpen(true)}
             style={{
@@ -234,29 +266,6 @@ export default function WorkersPage() {
             <option value="Caregiving">Caregiving</option>
             <option value="Painting">Painting</option>
             <option value="Driving">Driving</option>
-          </select>
-
-          {/* Verification filter */}
-          <select
-            value={verificationFilter}
-            onChange={(e) => {
-              setVerificationFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            style={{
-              padding: '7px 10px',
-              borderRadius: '8px',
-              border: '1px solid #cbd5e1',
-              fontSize: '12.5px',
-              fontWeight: '600',
-              backgroundColor: '#ffffff',
-            }}
-          >
-            <option value="All">All Verification</option>
-            <option value="Verified">Verified</option>
-            <option value="Pending">Pending Review</option>
-            <option value="Rejected">Rejected</option>
-            <option value="Suspended">Suspended</option>
           </select>
 
           {/* City filter */}
@@ -395,53 +404,19 @@ export default function WorkersPage() {
                       <Eye size={14} />
                     </button>
 
-                    {w.verification !== 'Verified' && (
-                      <button
-                        onClick={() => verifyWorker(w.id)}
-                        title="Approve & Verify Member"
-                        style={{
-                          padding: '6px 8px',
-                          backgroundColor: '#eaf8ef',
-                          color: '#15803d',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                        }}
-                      >
-                        <CheckCircle size={14} />
-                      </button>
-                    )}
-
-                    {w.verification === 'Pending' && (
-                      <button
-                        onClick={() => rejectWorker(w.id)}
-                        title="Reject Verification"
-                        style={{
-                          padding: '6px 8px',
-                          backgroundColor: '#fef2f2',
-                          color: '#dc2626',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                        }}
-                      >
-                        <XCircle size={14} />
-                      </button>
-                    )}
-
-                    {w.verification === 'Verified' && (
-                      <button
-                        onClick={() => suspendWorker(w.id)}
-                        title="Suspend Account"
-                        style={{
-                          padding: '6px 8px',
-                          backgroundColor: '#fef2f2',
-                          color: '#dc2626',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                        }}
-                      >
-                        <Ban size={14} />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => suspendWorker(w.id)}
+                      title="Suspend Account"
+                      style={{
+                        padding: '6px 8px',
+                        backgroundColor: '#fef2f2',
+                        color: '#dc2626',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                      }}
+                    >
+                      <Ban size={14} />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -459,6 +434,7 @@ export default function WorkersPage() {
       </div>
 
       <AddWorkerModal isOpen={isAddWorkerOpen} onClose={() => setIsAddWorkerOpen(false)} />
+      <LiveMapModal isOpen={isMapOpen} onClose={closeMap} />
     </div>
   );
 }

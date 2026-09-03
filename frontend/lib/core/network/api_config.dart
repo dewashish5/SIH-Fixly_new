@@ -5,6 +5,6 @@ class ApiConfig {
 
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://ventures-sanyo-amazing-assessed.trycloudflare.com',
+    defaultValue: 'https://hardware-tried-transcripts-profit.trycloudflare.com',
   );
 }

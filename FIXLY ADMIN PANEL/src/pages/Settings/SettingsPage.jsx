@@ -15,6 +15,7 @@ import {
   User,
   CreditCard,
   CheckCircle2,
+  MessageSquareText,
   Upload,
   Trash2,
   Camera,
@@ -42,6 +43,11 @@ export default function SettingsPage() {
     smsAlerts: true,
     payoutSchedule: 'Instant Automated UPI',
     twoFactorAuth: false,
+    workerDeclineTemplates: [
+      'Your request to join as a worker has been declined.',
+      'Documents unclear or incomplete. Please re-upload clear Aadhaar and PAN photos.',
+      'Identity details do not match our records. Please correct and resubmit.',
+    ],
     ...settings
   });
 
@@ -143,6 +149,7 @@ export default function SettingsPage() {
         {[
           { key: 'platform', label: 'Platform & Cooperative Bylaws', icon: Sliders },
           { key: 'profile', label: 'Admin Profile', icon: User },
+          { key: 'decline', label: 'Worker Decline Messages', icon: MessageSquareText },
           { key: 'notifications', label: 'Notification Channels', icon: Bell },
           { key: 'payments', label: 'Payout & Escrow Rules', icon: CreditCard },
           { key: 'security', label: 'Security & Two-Factor', icon: Lock },
@@ -321,6 +328,113 @@ export default function SettingsPage() {
             >
               <Save size={15} />
               <span>Save Platform Preferences</span>
+            </button>
+          </div>
+        </form>
+      )}
+
+      {activeTab === 'decline' && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const cleaned = (formState.workerDeclineTemplates || [])
+              .map((t) => String(t || '').trim())
+              .filter(Boolean);
+            updateSettings({ ...formState, workerDeclineTemplates: cleaned.length ? cleaned : formState.workerDeclineTemplates });
+          }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}
+        >
+          <div style={{ backgroundColor: '#ffffff', padding: '22px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+              <MessageSquareText size={18} color="#1e7e45" />
+              <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#111827' }}>
+                Worker decline message templates
+              </h3>
+            </div>
+            <p style={{ fontSize: '12.5px', color: '#64748b', marginBottom: '14px', lineHeight: 1.45 }}>
+              Shown as quick picks on Approvals → Decline. Admin can still edit the text before confirming. Flutter verification screen shows the final message.
+            </p>
+            {(formState.workerDeclineTemplates || []).map((text, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <textarea
+                  value={text}
+                  onChange={(e) => {
+                    const next = [...(formState.workerDeclineTemplates || [])];
+                    next[idx] = e.target.value;
+                    setFormState({ ...formState, workerDeclineTemplates: next });
+                  }}
+                  rows={2}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: '1px solid #cbd5e1',
+                    fontSize: 13,
+                    fontFamily: 'inherit',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = (formState.workerDeclineTemplates || []).filter((_, i) => i !== idx);
+                    setFormState({ ...formState, workerDeclineTemplates: next });
+                  }}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    border: '1px solid #fecaca',
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    cursor: 'pointer',
+                    height: 'fit-content',
+                  }}
+                  aria-label="Remove template"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() =>
+                setFormState({
+                  ...formState,
+                  workerDeclineTemplates: [...(formState.workerDeclineTemplates || []), ''],
+                })
+              }
+              style={{
+                padding: '8px 12px',
+                borderRadius: 8,
+                border: '1px dashed #94a3b8',
+                background: '#f8fafc',
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#475569',
+                cursor: 'pointer',
+              }}
+            >
+              + Add template
+            </button>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="submit"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '10px 24px',
+                backgroundColor: '#15803d',
+                color: '#fff',
+                borderRadius: 8,
+                fontSize: 13.5,
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <Save size={15} />
+              Save decline templates
             </button>
           </div>
         </form>

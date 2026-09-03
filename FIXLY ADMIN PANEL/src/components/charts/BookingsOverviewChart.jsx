@@ -12,11 +12,14 @@ import { useApp } from '../../context/AppContext';
 import { ChevronDown } from 'lucide-react';
 
 export default function BookingsOverviewChart() {
-  const { dashboardStats, bookings = [] } = useApp();
+  const { dashboardStats, bookings = [], recentBookings = [] } = useApp();
   const [timeRange, setTimeRange] = useState('This Week');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Generate 7 real daily buckets from actual database bookings
+  // Prefer full bookings list; else dashboard recentBookings — never invent fake points
+  const sourceBookings = bookings.length > 0 ? bookings : recentBookings;
+
+  // Generate daily buckets from actual database bookings
   const chartData = React.useMemo(() => {
     const daysCount = timeRange === 'Today' ? 1 : (timeRange === 'This Month' ? 14 : 7);
     const buckets = [];
@@ -25,7 +28,7 @@ export default function BookingsOverviewChart() {
       d.setDate(d.getDate() - i);
       const dateLabel = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 
-      const dayItems = bookings.filter((b) => {
+      const dayItems = sourceBookings.filter((b) => {
         const rawDate = b.createdAt || b.date;
         if (!rawDate) return false;
         const bDate = new Date(rawDate);
@@ -38,7 +41,10 @@ export default function BookingsOverviewChart() {
       });
 
       const dayBookings = dayItems.length;
-      const dayRevenue = dayItems.reduce((acc, cur) => acc + (cur.rawAmount || 0), 0);
+      const dayRevenue = dayItems.reduce(
+        (acc, cur) => acc + (Number(cur.rawAmount ?? cur.invoice?.totalAmount ?? cur.service?.basePrice) || 0),
+        0
+      );
 
       buckets.push({
         date: dateLabel,
@@ -47,17 +53,8 @@ export default function BookingsOverviewChart() {
       });
     }
 
-    // If bookings array is populated with at least 1 item but dates don't match (e.g. today's entries),
-    // distribute the real totalBookings gracefully across the active bucket
-    const totalBookingsCount = bookings.length;
-    const bucketsSum = buckets.reduce((acc, cur) => acc + cur.bookings, 0);
-    if (totalBookingsCount > 0 && bucketsSum === 0) {
-      buckets[buckets.length - 1].bookings = totalBookingsCount;
-      buckets[buckets.length - 1].revenue = dashboardStats?.totalRevenue || 0;
-    }
-
     return buckets;
-  }, [bookings, timeRange, dashboardStats]);
+  }, [sourceBookings, timeRange]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {

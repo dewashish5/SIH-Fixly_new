@@ -106,30 +106,47 @@ export const updateAdminMe = async (req, res) => {
 
 export const getDashboard = async (req, res) => {
     try {
-        const [totalCustomers, totalWorkers, totalBookings, revenueAgg, recentBookings, topServices] =
-            await Promise.all([
-                User.countDocuments({ role: 'customer' }),
-                User.countDocuments({ role: 'worker' }),
-                Booking.countDocuments(),
-                Transaction.aggregate([
-                    { $match: { status: 'success' } },
-                    { $group: { _id: null, total: { $sum: '$amount' } } },
-                ]),
-                Booking.find()
-                    .sort({ createdAt: -1 })
-                    .limit(10)
-                    .populate('customer', 'name email phone')
-                    .populate('worker', 'name email phone')
-                    .populate('service', 'title category basePrice')
-                    .lean(),
-                Service.find({ isActive: true }).sort({ basePrice: -1 }).limit(5).lean(),
-            ]);
+        const [
+            totalCustomers,
+            totalWorkers,
+            pendingApprovals,
+            totalBookings,
+            revenueAgg,
+            recentBookings,
+            topServices,
+        ] = await Promise.all([
+            User.countDocuments({ role: 'customer' }),
+            // Workers tab = verified only
+            User.countDocuments({ role: 'worker', isVerified: true }),
+            User.countDocuments({
+                role: 'worker',
+                isVerified: { $ne: true },
+                $or: [
+                    { 'kycDocuments.status': 'submitted' },
+                    { workerProfile: { $ne: null } },
+                ],
+            }),
+            Booking.countDocuments(),
+            Transaction.aggregate([
+                { $match: { status: 'success' } },
+                { $group: { _id: null, total: { $sum: '$amount' } } },
+            ]),
+            Booking.find()
+                .sort({ createdAt: -1 })
+                .limit(10)
+                .populate('customer', 'name email phone')
+                .populate('worker', 'name email phone')
+                .populate('service', 'title category basePrice')
+                .lean(),
+            Service.find({ isActive: true }).sort({ basePrice: -1 }).limit(5).lean(),
+        ]);
 
         return res.status(200).json({
             success: true,
             stats: {
                 totalCustomers,
                 totalWorkers,
+                pendingApprovals,
                 totalBookings,
                 totalRevenue: revenueAgg[0]?.total || 0,
             },
@@ -199,6 +216,24 @@ export const listWorkers = async (req, res) => {
                 { phone: new RegExp(q, 'i') },
             ];
         }
+        if (req.query.pendingApproval === 'true' || req.query.pendingApproval === '1') {
+            filter.isVerified = { $ne: true };
+            // Submitted KYC OR finished app onboarding profile (legacy rows may lack kycDocuments)
+            filter.$and = [
+                ...(filter.$or ? [{ $or: filter.$or }] : []),
+                {
+                    $or: [
+                        { 'kycDocuments.status': 'submitted' },
+                        { workerProfile: { $ne: null } },
+                    ],
+                },
+            ];
+            delete filter.$or;
+        } else if (req.query.kycStatus) {
+            filter['kycDocuments.status'] = String(req.query.kycStatus);
+        }
+        if (req.query.isVerified === 'true') filter.isVerified = true;
+        if (req.query.isVerified === 'false') filter.isVerified = false;
         const [total, data] = await Promise.all([
             User.countDocuments(filter),
             User.find(filter).select('-password -activeDeviceId').sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
@@ -213,7 +248,43 @@ export const getWorkerById = async (req, res) => {
     try {
         const user = await User.findOne({ _id: req.params.id, role: 'worker' }).select('-password');
         if (!user) return res.status(404).json({ success: false, message: 'Worker not found' });
-        return res.status(200).json({ success: true, data: user });
+
+        // Legacy Flutter rows sometimes stored docs only under workerProfile.identityDocuments
+        const plain = user.toObject();
+        if (!plain.kycDocuments?.status || plain.kycDocuments.status === 'none') {
+            const docs = plain.workerProfile?.identityDocuments || [];
+            const aadhaar = docs.find((d) => /aadhaar/i.test(d.docType || ''));
+            const pan = docs.find((d) => /pan/i.test(d.docType || ''));
+            if (docs.length || plain.workerProfile) {
+                plain.kycDocuments = {
+                    ...(plain.kycDocuments || {}),
+                    aadhaarNumber: plain.kycDocuments?.aadhaarNumber || aadhaar?.docNumber || null,
+                    aadhaarFrontPhoto: plain.kycDocuments?.aadhaarFrontPhoto || aadhaar?.frontPhotoUrl || null,
+                    aadhaarBackPhoto: plain.kycDocuments?.aadhaarBackPhoto || aadhaar?.backPhotoUrl || null,
+                    panNumber: plain.kycDocuments?.panNumber || pan?.docNumber || null,
+                    panFrontPhoto: plain.kycDocuments?.panFrontPhoto || pan?.frontPhotoUrl || null,
+                    panBackPhoto: plain.kycDocuments?.panBackPhoto || pan?.backPhotoUrl || null,
+                    selfieImageUrl:
+                        plain.kycDocuments?.selfieImageUrl ||
+                        plain.workerProfile?.selfieImageUrl ||
+                        plain.avatar ||
+                        null,
+                    certificateUrl:
+                        plain.kycDocuments?.certificateUrl ||
+                        (Array.isArray(plain.workerProfile?.certifications)
+                            ? plain.workerProfile.certifications[0]
+                            : null),
+                    status: plain.isVerified
+                        ? 'approved'
+                        : docs.length || plain.workerProfile
+                          ? 'submitted'
+                          : plain.kycDocuments?.status || 'none',
+                    declineReason: plain.kycDocuments?.declineReason || null,
+                };
+            }
+        }
+
+        return res.status(200).json({ success: true, data: plain });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
@@ -241,8 +312,45 @@ export const updateWorker = async (req, res) => {
 export const updateWorkerStatus = async (req, res) => {
     try {
         const patch = {};
-        if (req.body.isVerified !== undefined) patch.isVerified = Boolean(req.body.isVerified);
-        if (req.body.kycStatus) patch['kycDocuments.status'] = req.body.kycStatus;
+        const kycStatus = req.body.kycStatus ? String(req.body.kycStatus) : null;
+        const declineReason =
+            req.body.declineReason !== undefined ? String(req.body.declineReason).trim() : undefined;
+
+        if (req.body.isVerified === true || kycStatus === 'approved') {
+            patch.isVerified = true;
+            patch['kycDocuments.status'] = 'approved';
+            patch['kycDocuments.declineReason'] = null;
+        } else if (kycStatus === 'rejected' || req.body.isVerified === false) {
+            if (kycStatus === 'rejected') {
+                if (!declineReason) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'declineReason required when rejecting worker',
+                    });
+                }
+                patch.isVerified = false;
+                patch['kycDocuments.status'] = 'rejected';
+                patch['kycDocuments.declineReason'] = declineReason;
+            } else {
+                // Legacy suspend / unverify without KYC reject text
+                patch.isVerified = false;
+                if (kycStatus) patch['kycDocuments.status'] = kycStatus;
+                if (declineReason !== undefined) {
+                    patch['kycDocuments.declineReason'] = declineReason || null;
+                }
+            }
+        } else {
+            if (req.body.isVerified !== undefined) patch.isVerified = Boolean(req.body.isVerified);
+            if (kycStatus) patch['kycDocuments.status'] = kycStatus;
+            if (declineReason !== undefined) {
+                patch['kycDocuments.declineReason'] = declineReason || null;
+            }
+        }
+
+        if (Object.keys(patch).length === 0) {
+            return res.status(400).json({ success: false, message: 'No status fields provided' });
+        }
+
         const user = await User.findOneAndUpdate(
             { _id: req.params.id, role: 'worker' },
             patch,
@@ -500,6 +608,12 @@ let settingsStore = {
     smsAlerts: true,
     payoutSchedule: 'Instant Automated UPI',
     twoFactorAuth: false,
+    // Canned texts for Approvals → Decline (admin can edit; still overridable per reject)
+    workerDeclineTemplates: [
+        'Your request to join as a worker has been declined.',
+        'Documents unclear or incomplete. Please re-upload clear Aadhaar and PAN photos.',
+        'Identity details do not match our records. Please correct and resubmit.',
+    ],
 };
 
 export const getSettings = async (_req, res) => {

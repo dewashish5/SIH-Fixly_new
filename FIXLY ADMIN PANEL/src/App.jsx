@@ -10,6 +10,7 @@ import DashboardPage from './pages/Dashboard/DashboardPage';
 import BookingsPage from './pages/Bookings/BookingsPage';
 import WorkersPage from './pages/Workers/WorkersPage';
 import WorkerDetailPage from './pages/Workers/WorkerDetailPage';
+import ApprovalsPage from './pages/Approvals/ApprovalsPage';
 import CustomersPage from './pages/Customers/CustomersPage';
 import CustomerDetailPage from './pages/Customers/CustomerDetailPage';
 import ServicesPage from './pages/Services/ServicesPage';
@@ -56,6 +57,7 @@ export default function App() {
                 <Route path="bookings" element={<BookingsPage />} />
                 <Route path="workers" element={<WorkersPage />} />
                 <Route path="workers/:id" element={<WorkerDetailPage />} />
+                <Route path="approvals" element={<ApprovalsPage />} />
                 <Route path="customers" element={<CustomersPage />} />
                 <Route path="customers/:id" element={<CustomerDetailPage />} />
                 <Route path="services" element={<ServicesPage />} />

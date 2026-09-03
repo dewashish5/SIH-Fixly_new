@@ -144,7 +144,9 @@ const userSchema = new mongoose.Schema({
             type: String,
             enum: ['none', 'submitted', 'approved', 'rejected'],
             default: 'none'
-        }
+        },
+        // Admin message shown on Flutter verification screen when rejected
+        declineReason: { type: String, default: null },
     },
 
     payoutDetails: { type: mongoose.Schema.Types.Mixed, default: null },

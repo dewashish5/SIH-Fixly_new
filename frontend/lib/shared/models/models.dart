@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 
 enum UserRole { customer, worker }
 
-enum KycReviewStatus { submitted, inReview, approved }
+enum KycReviewStatus { submitted, inReview, approved, rejected }
 
 class AppUser extends Equatable {
   const AppUser({

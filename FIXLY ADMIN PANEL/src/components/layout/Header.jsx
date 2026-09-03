@@ -150,16 +150,6 @@ export default function Header({ onOpenMobileMenu }) {
           >
             {t('welcomeBack')} <span style={{ fontSize: '22px' }}>👋</span>
           </h1>
-          <p
-            style={{
-              fontSize: '13px',
-              color: 'var(--text-secondary)',
-              fontWeight: '500',
-              marginTop: '1px',
-            }}
-          >
-            {t('tagline')}
-          </p>
         </div>
       </div>
 

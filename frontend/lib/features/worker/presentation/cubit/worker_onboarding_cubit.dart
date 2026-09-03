@@ -362,6 +362,7 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
     try {
       final userJson = await _authApi.fetchMeUserJson();
       final next = AuthApiRepository.mapKycStatus(userJson);
+      final decline = AuthApiRepository.mapDeclineReason(userJson);
       final mapped = AuthApiRepository.mapUser(userJson);
       _repo.kycReviewStatus = next;
       _repo.currentUser = mapped;
@@ -369,6 +370,8 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
         state.copyWith(
           status: WorkerOnboardingStatus.loaded,
           kycStatus: next,
+          declineReason: decline,
+          clearDeclineReason: decline == null,
           errorMessage: null,
         ),
       );

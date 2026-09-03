@@ -2,6 +2,7 @@ export const translations = {
   en: {
     dashboard: 'Dashboard',
     bookings: 'Bookings',
+    approvals: 'Verification',
     workers: 'Workers',
     customers: 'Customers',
     services: 'Services',
@@ -60,6 +61,7 @@ export const translations = {
   hi: {
     dashboard: 'डैशबोर्ड',
     bookings: 'बुकिंग्स',
+    approvals: 'सत्यापन',
     workers: 'कार्यकर्ता (श्रमिक)',
     customers: 'ग्राहक',
     services: 'सेवाएं',

@@ -216,11 +216,6 @@ class AuthApiRepository {
         : <String, dynamic>{};
     final hasProfile = profile.isNotEmpty;
 
-    // KYC approved only when email/KYC flag set AND worker finished setup.
-    if (user['isVerified'] == true && hasProfile) {
-      return KycReviewStatus.approved;
-    }
-
     final kycDocsRaw = user['kycDocuments'];
     final kycDocs = kycDocsRaw is Map
         ? Map<String, dynamic>.from(kycDocsRaw)
@@ -239,6 +234,19 @@ class AuthApiRepository {
         .toLowerCase()
         .replaceAll(' ', '_')
         .replaceAll('-', '_');
+
+    // Decline must win over profile heuristics.
+    if (raw == 'rejected' ||
+        raw == 'declined' ||
+        raw == 'denied' ||
+        raw == 'rejected_by_admin') {
+      return KycReviewStatus.rejected;
+    }
+
+    // KYC approved only when email/KYC flag set AND worker finished setup.
+    if (user['isVerified'] == true && hasProfile) {
+      return KycReviewStatus.approved;
+    }
 
     switch (raw) {
       case 'approved':
@@ -291,6 +299,15 @@ class AuthApiRepository {
     }
 
     return KycReviewStatus.submitted;
+  }
+
+  /// Admin decline text from `/api/auth/me` (`kycDocuments.declineReason`).
+  static String? mapDeclineReason(Map<String, dynamic> user) {
+    final kycDocsRaw = user['kycDocuments'];
+    if (kycDocsRaw is! Map) return null;
+    final reason = kycDocsRaw['declineReason']?.toString().trim();
+    if (reason == null || reason.isEmpty) return null;
+    return reason;
   }
 
   Future<AppUser> updateProfile({

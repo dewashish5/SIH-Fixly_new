@@ -271,6 +271,7 @@ class MockRepository {
       KycReviewStatus.submitted => KycReviewStatus.inReview,
       KycReviewStatus.inReview => KycReviewStatus.approved,
       KycReviewStatus.approved => KycReviewStatus.approved,
+      KycReviewStatus.rejected => KycReviewStatus.rejected,
     };
     return kycReviewStatus;
   }

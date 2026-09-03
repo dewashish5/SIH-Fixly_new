@@ -8,6 +8,7 @@ class WorkerOnboardingState extends Equatable {
     required this.formData,
     this.status = WorkerOnboardingStatus.initial,
     this.kycStatus = KycReviewStatus.submitted,
+    this.declineReason,
     this.verifyingPayout = false,
     this.errorMessage,
   });
@@ -16,6 +17,8 @@ class WorkerOnboardingState extends Equatable {
   final OnboardingFormData formData;
   final WorkerOnboardingStatus status;
   final KycReviewStatus kycStatus;
+  /// Admin message when [kycStatus] is [KycReviewStatus.rejected].
+  final String? declineReason;
   final bool verifyingPayout;
   final String? errorMessage;
 
@@ -24,6 +27,8 @@ class WorkerOnboardingState extends Equatable {
     OnboardingFormData? formData,
     WorkerOnboardingStatus? status,
     KycReviewStatus? kycStatus,
+    String? declineReason,
+    bool clearDeclineReason = false,
     bool? verifyingPayout,
     String? errorMessage,
   }) {
@@ -32,6 +37,8 @@ class WorkerOnboardingState extends Equatable {
       formData: formData ?? this.formData,
       status: status ?? this.status,
       kycStatus: kycStatus ?? this.kycStatus,
+      declineReason:
+          clearDeclineReason ? null : (declineReason ?? this.declineReason),
       verifyingPayout: verifyingPayout ?? this.verifyingPayout,
       errorMessage: errorMessage,
     );
@@ -43,6 +50,7 @@ class WorkerOnboardingState extends Equatable {
         formData,
         status,
         kycStatus,
+        declineReason,
         verifyingPayout,
         errorMessage,
       ];
