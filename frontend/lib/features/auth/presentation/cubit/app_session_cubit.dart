@@ -39,15 +39,35 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   final AppPreferences _prefs;
   final AuthApiRepository _auth;
 
-  Future<void> restoreSession() async {
+  AppUser? get currentUser => _repo.currentUser;
+
+  Future<void>? _restoreInFlight;
+
+  /// Idempotent — splash + App bootstrap can both await the same run.
+  Future<void> restoreSession() {
+    final inflight = _restoreInFlight;
+    if (inflight != null) return inflight;
+    final next = _restoreSessionBody().whenComplete(() {
+      _restoreInFlight = null;
+    });
+    _restoreInFlight = next;
+    return next;
+  }
+
+  Future<void> _restoreSessionBody() async {
+    emit(state.copyWith(status: AppSessionStatus.loading, clearError: true));
     final session = await _auth.restoreSession();
-    if (session == null) return;
+    if (session == null) {
+      emit(state.copyWith(status: AppSessionStatus.initial));
+      return;
+    }
     _repo.currentUser = session.user;
     _repo.selectedRole = session.user.role;
     emit(
       state.copyWith(
         role: session.user.role == UserRole.worker ? 'worker' : 'customer',
         email: session.user.email,
+        phone: session.user.phone,
         status: AppSessionStatus.authenticated,
         clearError: true,
       ),
@@ -281,10 +301,17 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   }
 
   String postAuthRoute() {
-    if (state.role == 'worker') {
-      return RouteNames.workerOnboardingIdentity;
+    if (state.role != 'worker') {
+      return RouteNames.customerHome;
     }
-    return RouteNames.customerHome;
+    final user = _repo.currentUser;
+    if (user?.isVerified == true) {
+      return RouteNames.workerDashboard;
+    }
+    if (user?.hasWorkerProfile == true) {
+      return RouteNames.workerOnboardingStatus;
+    }
+    return RouteNames.workerOnboardingIdentity;
   }
 
   Future<void> signOut() async {

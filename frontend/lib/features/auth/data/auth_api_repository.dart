@@ -118,10 +118,14 @@ class AuthApiRepository {
       'refreshToken': refresh,
     });
     final access = res['accessToken'] as String?;
-    if (res['success'] != true || access == null) {
+    if (res['success'] != true || access == null || access.isEmpty) {
       throw ApiException(res['message']?.toString() ?? 'Refresh failed');
     }
-    await _tokens.saveAccessToken(access);
+    final newRefresh = res['refreshToken'] as String?;
+    await _tokens.saveTokens(
+      accessToken: access,
+      refreshToken: newRefresh,
+    );
     return access;
   }
 
@@ -168,14 +172,19 @@ class AuthApiRepository {
   Future<AuthSession?> restoreSession() async {
     final refresh = await _tokens.refreshToken;
     final userId = await _tokens.userId;
-    if (refresh == null || userId == null) return null;
+    if (refresh == null ||
+        refresh.isEmpty ||
+        userId == null ||
+        userId.isEmpty) {
+      return null;
+    }
     try {
       await refreshAccessToken();
       final user = await fetchMe();
       return AuthSession(
         user: user,
         accessToken: (await _tokens.accessToken) ?? '',
-        refreshToken: refresh,
+        refreshToken: (await _tokens.refreshToken) ?? refresh,
       );
     } catch (_) {
       await _tokens.clearSession();
@@ -199,8 +208,12 @@ class AuthApiRepository {
     return Map<String, dynamic>.from(res['user'] as Map);
   }
 
-  /// Map KYC tracker state from `/api/auth/me` user payload.
+  /// Map application verification tracker from `/api/auth/me` user payload.
   static KycReviewStatus mapKycStatus(Map<String, dynamic> user) {
+    if (user['isVerified'] == true) {
+      return KycReviewStatus.approved;
+    }
+
     final profileRaw = user['workerProfile'];
     final profile = profileRaw is Map
         ? Map<String, dynamic>.from(profileRaw)
@@ -247,12 +260,24 @@ class AuthApiRepository {
       }
     }
 
-    // Profile exists after onboarding → at least submitted; prefer in-review.
+    // Docs approved on profile → still wait for user.isVerified for dashboard.
+    final docs = profile['identityDocuments'];
+    if (docs is List && docs.isNotEmpty) {
+      final allApproved = docs.every((d) {
+        if (d is! Map) return false;
+        return (d['status']?.toString().toUpperCase() ?? '') == 'APPROVED';
+      });
+      if (allApproved) return KycReviewStatus.inReview;
+      return KycReviewStatus.submitted;
+    }
+
     if (profile.isNotEmpty) {
       final selfieOk = profile['selfieVerified'] == true;
       final hasDocs = profile['aadhaarNumber'] != null ||
           profile['panNumber'] != null ||
-          profile['govermentIdNumber'] != null;
+          profile['govermentIdNumber'] != null ||
+          (profile['identityDocuments'] is List &&
+              (profile['identityDocuments'] as List).isNotEmpty);
       if (selfieOk && hasDocs) return KycReviewStatus.inReview;
       return KycReviewStatus.submitted;
     }
@@ -304,6 +329,8 @@ class AuthApiRepository {
 
   static AppUser mapUser(Map<String, dynamic> json) {
     final roleStr = (json['role'] as String?) ?? 'customer';
+    final profileRaw = json['workerProfile'];
+    final hasProfile = profileRaw is Map && profileRaw.isNotEmpty;
     return AppUser(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       name: (json['name'] as String?) ?? 'Fixly User',
@@ -311,6 +338,8 @@ class AuthApiRepository {
       email: (json['email'] as String?) ?? '',
       role: roleStr == 'worker' ? UserRole.worker : UserRole.customer,
       avatar: json['avatar'] as String?,
+      isVerified: json['isVerified'] == true,
+      hasWorkerProfile: hasProfile,
     );
   }
 }

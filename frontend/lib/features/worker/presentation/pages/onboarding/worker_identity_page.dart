@@ -1,21 +1,22 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../app/router/route_names.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/theme_x.dart';
-import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/constants/app_strings.dart';
 import '../../../../../core/network/api_exception.dart';
 import '../../../../../core/utils/input_formatters.dart';
 import '../../../../../core/utils/validators.dart';
 import '../../../../../core/widgets/core_widgets.dart';
-import '../../../../../shared/data/mock/mock_repository.dart';
 import '../../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../../cubit/worker_onboarding_cubit.dart';
 import 'worker_identity_photo_widgets.dart';
@@ -42,7 +43,7 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
     super.initState();
     final cubit = context.read<WorkerOnboardingCubit>();
     final session = context.read<AppSessionCubit>().state;
-    final user = MockRepository.instance.currentUser;
+    final user = context.read<AppSessionCubit>().currentUser;
 
     cubit.seedFromSession(
       name: (user?.name.isNotEmpty ?? false)
@@ -97,6 +98,17 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
     if (picked == null || !mounted) return;
     cubit.updateDateOfBirth(picked);
     _dobController.text = DateFormat('dd MMM yyyy').format(picked);
+  }
+
+  Future<void> _captureSelfie(WorkerOnboardingCubit cubit) async {
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      preferredCameraDevice: CameraDevice.front,
+      maxWidth: 1280,
+      imageQuality: 85,
+    );
+    if (file == null || !mounted) return;
+    cubit.captureSelfie(imageUrl: file.path);
   }
 
   void _continue() {
@@ -162,7 +174,7 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
               children: [
                 _stagger(
                   Text(
-                    'Confirm your details and upload ID photos for KYC.',
+                    'Confirm your details and upload ID photos for verification.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   0,
@@ -362,20 +374,30 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
                           child: captured &&
                                   imageUrl != null &&
                                   imageUrl.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: imageUrl,
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, _) => const Center(
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                  errorWidget: (_, _, _) => Icon(
-                                    Icons.face_retouching_natural,
-                                    size: 56,
-                                    color: AppColors.textMuted,
-                                  ),
-                                )
+                              ? (imageUrl.startsWith('http')
+                                  ? CachedNetworkImage(
+                                      imageUrl: imageUrl,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, _) => const Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                      errorWidget: (_, _, _) => Icon(
+                                        Icons.face_retouching_natural,
+                                        size: 56,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    )
+                                  : Image.file(
+                                      File(imageUrl),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, _, _) => Icon(
+                                        Icons.face_retouching_natural,
+                                        size: 56,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ))
                               : Icon(
                                   Icons.face_retouching_natural,
                                   size: 56,
@@ -387,16 +409,7 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
                           label: captured ? 'Retake selfie' : 'Capture selfie',
                           onPressed: captured
                               ? cubit.clearSelfie
-                              : () {
-                                  cubit.captureSelfie(
-                                    imageUrl: AppImages.demoSelfie,
-                                  );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Selfie captured (mock)'),
-                                    ),
-                                  );
-                                },
+                              : () => _captureSelfie(cubit),
                         ),
                       ],
                     ),

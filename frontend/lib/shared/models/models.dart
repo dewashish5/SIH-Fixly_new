@@ -14,6 +14,8 @@ class AppUser extends Equatable {
     this.avatar,
     this.eshramUan,
     this.insured = false,
+    this.isVerified = false,
+    this.hasWorkerProfile = false,
   });
 
   final String id;
@@ -24,10 +26,23 @@ class AppUser extends Equatable {
   final String? avatar;
   final String? eshramUan;
   final bool insured;
+  final bool isVerified;
+  /// True when API returned a non-empty workerProfile (onboarding submitted).
+  final bool hasWorkerProfile;
 
   @override
-  List<Object?> get props =>
-      [id, name, phone, email, role, avatar, eshramUan, insured];
+  List<Object?> get props => [
+        id,
+        name,
+        phone,
+        email,
+        role,
+        avatar,
+        eshramUan,
+        insured,
+        isVerified,
+        hasWorkerProfile,
+      ];
 }
 
 class WorkerProfile extends Equatable {
@@ -277,6 +292,8 @@ class OnboardingFormData extends Equatable {
     this.bankVerified = false,
     this.upiVerified = false,
     this.certificateUploaded = false,
+    this.certificatePath,
+    this.certificateFileName,
     this.selfieVerified = false,
     this.selfieImageUrl,
   });
@@ -308,6 +325,8 @@ class OnboardingFormData extends Equatable {
   final bool bankVerified;
   final bool upiVerified;
   final bool certificateUploaded;
+  final String? certificatePath;
+  final String? certificateFileName;
   final bool selfieVerified;
   final String? selfieImageUrl;
 
@@ -366,6 +385,8 @@ class OnboardingFormData extends Equatable {
     bool? bankVerified,
     bool? upiVerified,
     bool? certificateUploaded,
+    Object? certificatePath = _unset,
+    Object? certificateFileName = _unset,
     bool? selfieVerified,
     Object? selfieImageUrl = _unset,
   }) {
@@ -406,6 +427,12 @@ class OnboardingFormData extends Equatable {
       bankVerified: bankVerified ?? this.bankVerified,
       upiVerified: upiVerified ?? this.upiVerified,
       certificateUploaded: certificateUploaded ?? this.certificateUploaded,
+      certificatePath: identical(certificatePath, _unset)
+          ? this.certificatePath
+          : certificatePath as String?,
+      certificateFileName: identical(certificateFileName, _unset)
+          ? this.certificateFileName
+          : certificateFileName as String?,
       selfieVerified: selfieVerified ?? this.selfieVerified,
       selfieImageUrl: identical(selfieImageUrl, _unset)
           ? this.selfieImageUrl
@@ -441,6 +468,8 @@ class OnboardingFormData extends Equatable {
         bankVerified,
         upiVerified,
         certificateUploaded,
+        certificatePath,
+        certificateFileName,
         selfieVerified,
         selfieImageUrl,
       ];

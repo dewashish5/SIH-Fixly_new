@@ -8,7 +8,7 @@ import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/theme_x.dart';
 import '../../../../../shared/models/models.dart';
 
-/// Cream guidelines card matching KYC photo tips.
+/// Cream guidelines card for ID photo tips.
 class PhotoGuidelinesCard extends StatelessWidget {
   const PhotoGuidelinesCard({super.key});
 

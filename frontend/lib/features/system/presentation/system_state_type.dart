@@ -150,7 +150,7 @@ extension SystemStateTypeX on SystemStateType {
       case SystemStateType.bookingFailed:
         return 'Booking failed';
       case SystemStateType.kycFailed:
-        return 'KYC verification failed';
+        return 'Verification failed';
       case SystemStateType.serverError:
         return 'Something went wrong';
       case SystemStateType.sessionExpired:
@@ -164,7 +164,7 @@ extension SystemStateTypeX on SystemStateType {
       case SystemStateType.paymentSuccessful:
         return 'Payment successful';
       case SystemStateType.kycSubmitted:
-        return 'KYC submitted';
+        return 'Application submitted';
       case SystemStateType.profileUpdated:
         return 'Profile updated';
       case SystemStateType.ratingSubmitted:

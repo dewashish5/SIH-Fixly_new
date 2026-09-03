@@ -326,6 +326,30 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       fit: StackFit.expand,
       children: [
         mapCore,
+        // sprite icons (marker-15) often missing — center pin always visible for location maps
+        if (widget.showDestinationPin &&
+            widget.routeEnd == null &&
+            _mapError == null &&
+            MapConstants.hasToken)
+          IgnorePointer(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 28),
+                child: Icon(
+                  Icons.location_on_rounded,
+                  size: 48,
+                  color: AppColors.accent,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         if (widget.routeEnd != null && _mapError == null && MapConstants.hasToken)
           const Positioned(
             top: 12,

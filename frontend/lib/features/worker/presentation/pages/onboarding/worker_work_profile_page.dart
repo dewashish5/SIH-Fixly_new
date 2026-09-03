@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -135,6 +136,34 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
     _commitTypedSkills(keepRemainder: true);
   }
 
+  Future<void> _pickCertificate() async {
+    final file = await FilePicker.pickFile(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
+    );
+    if (file == null || !mounted) return;
+    final path = file.path;
+    if (path == null || path.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not read that file. Try again.')),
+      );
+      return;
+    }
+    final bytes = file.lengthSync() ?? await file.length();
+    if (bytes > 5 * 1024 * 1024) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('File must be 5 MB or smaller.')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    context.read<WorkerOnboardingCubit>().updateCertificate(
+          path: path,
+          fileName: file.name,
+        );
+  }
+
   void _continue() {
     _commitTypedSkills(keepRemainder: false);
     final cubit = context.read<WorkerOnboardingCubit>();
@@ -218,23 +247,18 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
                       const SizedBox(height: AppSpacing.sm),
                       Text(
                         state.formData.certificateUploaded
-                            ? 'certificate.pdf uploaded'
+                            ? (state.formData.certificateFileName ??
+                                'Certificate selected')
                             : 'PDF or JPG up to 5 MB',
                         style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       SecondaryButton(
                         label: state.formData.certificateUploaded
                             ? 'Replace file'
                             : 'Upload certificate',
-                        onPressed: () {
-                          cubit.updateCertificateUploaded(true);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Certificate uploaded (mock)'),
-                            ),
-                          );
-                        },
+                        onPressed: _pickCertificate,
                       ),
                     ],
                   ),

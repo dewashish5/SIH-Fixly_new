@@ -40,6 +40,11 @@ class _WorkerOnboardingStatusPageState
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
+      return;
+    }
+    // Only leave this screen when API says user.isVerified.
+    if (cubit.state.kycStatus == KycReviewStatus.approved) {
+      context.go(RouteNames.workerDashboard);
     }
   }
 
@@ -47,8 +52,9 @@ class _WorkerOnboardingStatusPageState
   Widget build(BuildContext context) {
     return BlocBuilder<WorkerOnboardingCubit, WorkerOnboardingState>(
       builder: (context, state) {
-        final kyc = state.kycStatus;
+        final status = state.kycStatus;
         final loading = state.status == WorkerOnboardingStatus.loading;
+        final verified = status == KycReviewStatus.approved;
 
         return AppScaffold(
           title: context.l10n.kycStatus,
@@ -56,16 +62,16 @@ class _WorkerOnboardingStatusPageState
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                kyc == KycReviewStatus.approved
-                    ? 'You are approved'
+                verified
+                    ? 'You are verified'
                     : 'Application under review',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
               Text(
-                kyc == KycReviewStatus.approved
-                    ? 'Your KYC is verified. Set availability to start receiving jobs.'
-                    : 'Review usually takes 24–48 hours. Pull refresh or tap below to check status.',
+                verified
+                    ? 'Your application is verified. Continue to your worker dashboard.'
+                    : 'We are reviewing your application. This usually takes 24–48 hours. Pull refresh or tap below — you can enter the app only after verification.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 32),
@@ -75,30 +81,29 @@ class _WorkerOnboardingStatusPageState
                     KycTrackerStep(
                       label: 'Submitted',
                       isCompleted:
-                          kyc.index >= KycReviewStatus.submitted.index,
-                      isActive: kyc == KycReviewStatus.submitted,
+                          status.index >= KycReviewStatus.submitted.index,
+                      isActive: status == KycReviewStatus.submitted,
                     ),
                     const SizedBox(height: 16),
                     KycTrackerStep(
                       label: 'In review',
-                      isCompleted: kyc == KycReviewStatus.approved,
-                      isActive: kyc == KycReviewStatus.inReview,
+                      isCompleted: verified,
+                      isActive: status == KycReviewStatus.inReview,
                     ),
                     const SizedBox(height: 16),
                     KycTrackerStep(
-                      label: 'Approved',
-                      isCompleted: kyc == KycReviewStatus.approved,
+                      label: 'Verified',
+                      isCompleted: verified,
                       isActive: false,
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-              if (kyc != KycReviewStatus.approved)
-                SecondaryButton(
-                  label: loading ? 'Checking…' : 'Refresh status',
-                  onPressed: loading ? null : _refresh,
-                ),
+              SecondaryButton(
+                label: loading ? 'Checking…' : 'Refresh status',
+                onPressed: loading ? null : _refresh,
+              ),
               if (loading) ...[
                 const SizedBox(height: 16),
                 const Center(
@@ -110,15 +115,9 @@ class _WorkerOnboardingStatusPageState
                 ),
               ],
               const Spacer(),
-              if (kyc == KycReviewStatus.approved)
+              if (verified)
                 PrimaryButton(
-                  label: 'Set availability',
-                  onPressed: () =>
-                      context.push(RouteNames.workerOnboardingAvailability),
-                )
-              else
-                PrimaryButton(
-                  label: 'Back to home',
+                  label: 'Go to dashboard',
                   onPressed: () => context.go(RouteNames.workerDashboard),
                 ),
             ],

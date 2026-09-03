@@ -4,6 +4,7 @@ class ApiConfig {
 
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://shirt-phentermine-promising-price.trycloudflare.com',
+    defaultValue:
+        'https://perspective-employ-moments-accepts.trycloudflare.com',
   );
 }

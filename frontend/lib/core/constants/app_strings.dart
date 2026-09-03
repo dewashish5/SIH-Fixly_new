@@ -244,7 +244,7 @@ class AppStrings {
   String get reliabilityScore => isHi ? 'विश्वसनीयता स्कोर' : 'Reliability score';
 
   // Worker onboarding
-  String get identityKyc => isHi ? 'पहचान और KYC' : 'Identity & KYC';
+  String get identityKyc => isHi ? 'पहचान और सत्यापन' : 'Identity & verification';
   String get workProfile => isHi ? 'कौशल और क्षेत्र' : 'Skills & area';
   String get payoutWelfare => isHi ? 'भुगतान और कल्याण' : 'Payout & welfare';
   String get personalDetails => isHi ? 'व्यक्तिगत विवरण' : 'Personal details';
@@ -287,7 +287,8 @@ class AppStrings {
   String get refreshLocation => isHi ? 'स्थान रीफ़्रेश करें' : 'Refresh location';
   String get welfareInsurance => isHi ? 'कल्याण और बीमा' : 'Welfare & insurance';
   String get bankUpi => isHi ? 'बैंक और UPI' : 'Bank & UPI';
-  String get kycStatus => isHi ? 'KYC स्थिति' : 'KYC status';
+  String get kycStatus =>
+      isHi ? 'आवेदन सत्यापन' : 'Application verification';
 
   // Payment methods
   String get upi => 'UPI';
@@ -322,11 +323,13 @@ class AppStrings {
   String get otpFailed => isHi ? 'OTP विफल' : 'OTP verification failed';
   String get paymentFailed => isHi ? 'भुगतान विफल' : 'Payment failed';
   String get bookingFailed => isHi ? 'बुकिंग विफल' : 'Booking failed';
-  String get kycFailed => isHi ? 'KYC विफल' : 'KYC verification failed';
+  String get kycFailed =>
+      isHi ? 'सत्यापन विफल' : 'Verification failed';
   String get serverError => isHi ? 'कुछ गलत हुआ' : 'Something went wrong';
   String get sessionExpired => isHi ? 'सत्र समाप्त' : 'Session expired';
   String get paymentSuccessful => isHi ? 'भुगतान सफल' : 'Payment successful';
-  String get kycSubmitted => isHi ? 'KYC जमा' : 'KYC submitted';
+  String get kycSubmitted =>
+      isHi ? 'आवेदन जमा' : 'Application submitted';
   String get profileUpdated => isHi ? 'प्रोफ़ाइल अपडेट' : 'Profile updated';
   String get ratingSubmitted => isHi ? 'रेटिंग जमा' : 'Rating submitted';
   String get complaintSubmitted => isHi ? 'शिकायत जमा' : 'Complaint submitted';

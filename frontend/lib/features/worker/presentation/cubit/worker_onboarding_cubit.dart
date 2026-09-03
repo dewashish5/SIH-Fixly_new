@@ -119,6 +119,26 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
     _emitForm(state.formData.copyWith(certificateUploaded: uploaded));
   }
 
+  void updateCertificate({required String path, required String fileName}) {
+    _emitForm(
+      state.formData.copyWith(
+        certificateUploaded: true,
+        certificatePath: path,
+        certificateFileName: fileName,
+      ),
+    );
+  }
+
+  void clearCertificate() {
+    _emitForm(
+      state.formData.copyWith(
+        certificateUploaded: false,
+        certificatePath: null,
+        certificateFileName: null,
+      ),
+    );
+  }
+
   void toggleSkill(String skillId) {
     final skills = List<String>.from(state.formData.skills);
     final rates = Map<String, int>.from(state.formData.categoryRates);
@@ -236,17 +256,8 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
             Validators.ifsc(data.ifscCode);
     if (error != null) return error;
 
-    emit(state.copyWith(verifyingPayout: true));
-    await Future<void>.delayed(const Duration(milliseconds: 700));
-    if (isClosed) return 'Verification cancelled';
-    // Mock: reject obviously fake accounts.
-    final account = state.formData.bankAccount.replaceAll(RegExp(r'\D'), '');
-    if (account.startsWith('000')) {
-      emit(state.copyWith(verifyingPayout: false));
-      return 'Could not verify this account. Check details and try again.';
-    }
+    // Client-side format check only — server validates on setup-profile submit.
     _emitForm(state.formData.copyWith(bankVerified: true));
-    emit(state.copyWith(verifyingPayout: false));
     return null;
   }
 
@@ -254,15 +265,8 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
     final error = Validators.upi(state.formData.upiId);
     if (error != null) return error;
 
-    emit(state.copyWith(verifyingPayout: true));
-    await Future<void>.delayed(const Duration(milliseconds: 700));
-    if (isClosed) return 'Verification cancelled';
-    if (state.formData.upiId.toLowerCase().contains('invalid')) {
-      emit(state.copyWith(verifyingPayout: false));
-      return 'UPI ID not found. Please check and try again.';
-    }
+    // Client-side format check only — server validates on setup-profile submit.
     _emitForm(state.formData.copyWith(upiVerified: true));
-    emit(state.copyWith(verifyingPayout: false));
     return null;
   }
 
@@ -286,7 +290,8 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
             (data.hasPanPhotos ? null : 'Add PAN front and back photos') ??
             (data.selfieVerified ? null : 'Please capture a selfie');
       case 2:
-        if (!data.certificateUploaded) {
+        if (!data.certificateUploaded ||
+            (data.certificatePath == null || data.certificatePath!.isEmpty)) {
           return 'Please upload your certificate';
         }
         if (data.skills.isEmpty) return 'Select at least one skill';
@@ -357,7 +362,9 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
     try {
       final userJson = await _authApi.fetchMeUserJson();
       final next = AuthApiRepository.mapKycStatus(userJson);
+      final mapped = AuthApiRepository.mapUser(userJson);
       _repo.kycReviewStatus = next;
+      _repo.currentUser = mapped;
       emit(
         state.copyWith(
           status: WorkerOnboardingStatus.loaded,

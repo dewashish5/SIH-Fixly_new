@@ -42,8 +42,14 @@ abstract final class WorkerSetupProfileMapper {
       'step2_workProfile': {
         'certificateUploaded': data.certificateUploaded,
         'certifications': data.certificateUploaded
-            ? <String>['certificate.pdf']
+            ? <String>[
+                data.certificateFileName ??
+                    data.certificatePath?.split('/').last ??
+                    'certificate',
+              ]
             : <String>[],
+        if (data.certificatePath != null && data.certificatePath!.isNotEmpty)
+          'certificateFile': data.certificatePath,
         'categories': categories,
         'category': primaryCategory,
         'skills': data.skills,
