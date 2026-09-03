@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/navigation/customer_navigation.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/widgets/category_icon_tile.dart';
 
@@ -34,7 +35,7 @@ class CustomerCategoriesPage extends StatelessWidget {
               locale: locale,
               onTap: () => context.openCategorySearch(cat.id),
             ),
-          );
+          ).appListEnter(context, index: index, id: cat.id);
         },
       ),
     );

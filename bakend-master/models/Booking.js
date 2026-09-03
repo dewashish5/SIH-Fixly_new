@@ -48,6 +48,8 @@ const bookingSchema = new mongoose.Schema({
     jobCompletedAt: { type: Date, default: null },
 
     isReviewed: { type: Boolean, default: false },
+    declineReason: { type: String, default: null },
+    declinedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
     invoice: {
         baseServiceFee: { type: Number, default: 0 },

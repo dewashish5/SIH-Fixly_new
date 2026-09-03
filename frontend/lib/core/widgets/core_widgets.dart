@@ -54,7 +54,11 @@ class AppScaffold extends StatelessWidget {
                           icon: const Icon(Icons.arrow_back_rounded),
                           tooltip: context.l10n.goBack,
                           onPressed: () {
-                            if (context.canPop()) context.pop();
+                            if (context.canPop()) {
+                              context.pop();
+                            } else {
+                              Navigator.of(context).maybePop();
+                            }
                           },
                         )
                       : null),
@@ -197,6 +201,7 @@ class AppTextField extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
     this.onTap,
+    this.maxLines = 1,
   });
 
   final TextEditingController controller;
@@ -209,6 +214,7 @@ class AppTextField extends StatelessWidget {
   final bool readOnly;
   final bool enabled;
   final int? maxLength;
+  final int maxLines;
   final FocusNode? focusNode;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
@@ -235,6 +241,7 @@ class AppTextField extends StatelessWidget {
           focusNode: focusNode,
           enabled: enabled,
           readOnly: readOnly,
+          maxLines: maxLines,
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,
           textInputAction: textInputAction,

@@ -55,7 +55,17 @@ const workerProfileSchema = new mongoose.Schema({
     },
     upi: {
         upiId: { type: String }
-    }
+    },
+    isOnline: { type: Boolean, default: false },
+    lastActiveAt: { type: Date, default: null },
+    serviceRadiusKm: { type: Number, default: 10 },
+    availabilitySchedule: {
+        days: { type: [Number], default: [] },
+        startTime: { type: String, default: '09:00' },
+        endTime: { type: String, default: '18:00' },
+    },
+    walletBalance: { type: Number, default: 0 },
+    totalEarnings: { type: Number, default: 0 },
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({
@@ -150,6 +160,13 @@ const userSchema = new mongoose.Schema({
     },
 
     payoutDetails: { type: mongoose.Schema.Types.Mixed, default: null },
+    preferredLanguage: { type: String, default: 'en' },
+    emergencyContact: {
+        name: { type: String, default: null },
+        phone: { type: String, default: null },
+        relation: { type: String, default: null },
+    },
+    pushTokens: [{ type: String }],
 
     // Single-device login security tracking
     activeDeviceId: {

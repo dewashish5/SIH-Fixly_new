@@ -311,25 +311,6 @@ class MockRepository {
   }
 }
 
-class WalletTransaction extends Equatable {
-  const WalletTransaction({
-    required this.id,
-    required this.label,
-    required this.amount,
-    required this.isCredit,
-    this.date,
-  });
-
-  final String id;
-  final String label;
-  final double amount;
-  final bool isCredit;
-  final DateTime? date;
-
-  @override
-  List<Object?> get props => [id, label, amount, isCredit, date];
-}
-
 class SupportMessage extends Equatable {
   const SupportMessage({
     required this.id,

@@ -37,6 +37,25 @@ import {
     updateSettings,
     adminUpload,
 } from '../controllers/adminController.js';
+import {
+    adminGetWorkerVerification,
+    adminReviewWorkerVerification,
+    adminListCertificates,
+    adminReviewCertificate,
+} from '../controllers/workerCertificateController.js';
+import {
+    adminListTickets,
+    getTicket,
+    adminPatchTicket,
+    addTicketMessage,
+} from '../controllers/supportController.js';
+import {
+    adminGetCooperative,
+    adminUpdateCooperative,
+    adminCooperativeMembers,
+} from '../controllers/cooperativeController.js';
+import { adminWelfareSummary } from '../controllers/welfareController.js';
+import { adminListPayouts } from '../controllers/workerWalletController.js';
 
 const router = express.Router();
 
@@ -87,5 +106,21 @@ router.get('/settings', getSettings);
 router.put('/settings', updateSettings);
 
 router.post('/upload', upload.single('file'), adminUpload);
+
+router.get('/workers/:id/verification', adminGetWorkerVerification);
+router.patch('/workers/:id/verification', adminReviewWorkerVerification);
+router.get('/workers/:workerId/certificates', adminListCertificates);
+router.patch('/workers/:workerId/certificates/:certificateId', adminReviewCertificate);
+
+router.get('/support/tickets', adminListTickets);
+router.get('/support/tickets/:id', getTicket);
+router.patch('/support/tickets/:id', adminPatchTicket);
+router.post('/support/tickets/:id/messages', addTicketMessage);
+
+router.get('/cooperative', adminGetCooperative);
+router.put('/cooperative', adminUpdateCooperative);
+router.get('/cooperative/members', adminCooperativeMembers);
+router.get('/welfare/summary', adminWelfareSummary);
+router.get('/worker-payouts', adminListPayouts);
 
 export default router;

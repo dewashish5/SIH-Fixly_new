@@ -42,12 +42,16 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   AppUser? get currentUser => _repo.currentUser;
 
   Future<void>? _restoreInFlight;
+  bool _restoreCompleted = false;
 
-  /// Idempotent — splash + App bootstrap can both await the same run.
+  /// Idempotent. App bootstrap starts restore; splash only awaits it.
+  /// After the first run finishes, later calls no-op (do not refresh again).
   Future<void> restoreSession() {
+    if (_restoreCompleted) return Future.value();
     final inflight = _restoreInFlight;
     if (inflight != null) return inflight;
     final next = _restoreSessionBody().whenComplete(() {
+      _restoreCompleted = true;
       _restoreInFlight = null;
     });
     _restoreInFlight = next;
@@ -322,6 +326,8 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   Future<void> signOut() async {
     await _auth.logout();
     _repo.currentUser = null;
+    _restoreCompleted = false;
+    _restoreInFlight = null;
     emit(
       state.copyWith(
         status: AppSessionStatus.initial,

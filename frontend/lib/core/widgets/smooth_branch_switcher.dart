@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
-/// Keeps shell branches alive and fades/slides between tabs without
-/// [Opacity] saveLayers or rebuilding hidden branches every tick.
+import 'app_motion.dart';
+
+/// Keeps shell branches alive and fades/slides between tabs.
 class SmoothBranchSwitcher extends StatefulWidget {
   const SmoothBranchSwitcher({
     required this.currentIndex,
@@ -18,11 +20,7 @@ class SmoothBranchSwitcher extends StatefulWidget {
 
 class _SmoothBranchSwitcherState extends State<SmoothBranchSwitcher>
     with SingleTickerProviderStateMixin {
-  static const _duration = Duration(milliseconds: 280);
-  static const _slide = 0.04;
-
   late final AnimationController _controller;
-  late final Animation<double> _curved;
   late int _fromIndex;
   late int _toIndex;
 
@@ -31,8 +29,10 @@ class _SmoothBranchSwitcherState extends State<SmoothBranchSwitcher>
     super.initState();
     _fromIndex = widget.currentIndex;
     _toIndex = widget.currentIndex;
-    _controller = AnimationController(vsync: this, duration: _duration);
-    _curved = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _controller = AnimationController(
+      vsync: this,
+      duration: AppMotion.tab,
+    );
     _controller.value = 1;
     _controller.addStatusListener(_onStatus);
   }
@@ -65,29 +65,16 @@ class _SmoothBranchSwitcherState extends State<SmoothBranchSwitcher>
   @override
   Widget build(BuildContext context) {
     final dir = (_toIndex - _fromIndex).sign.toDouble();
-    final incoming = Tween<Offset>(
-      begin: Offset(dir * _slide, 0),
-      end: Offset.zero,
-    ).animate(_curved);
-    final outgoing = Tween<Offset>(
-      begin: Offset.zero,
-      end: Offset(-dir * _slide, 0),
-    ).animate(_curved);
-
     return Stack(
       fit: StackFit.expand,
       children: [
         for (var i = 0; i < widget.children.length; i++)
-          _slot(i, incoming, outgoing),
+          _slot(context, i, dir),
       ],
     );
   }
 
-  Widget _slot(
-    int i,
-    Animation<Offset> incoming,
-    Animation<Offset> outgoing,
-  ) {
+  Widget _slot(BuildContext context, int i, double dir) {
     final isTo = i == _toIndex;
     final isFrom = i == _fromIndex && _fromIndex != _toIndex;
     final child = RepaintBoundary(child: widget.children[i]);
@@ -99,21 +86,51 @@ class _SmoothBranchSwitcherState extends State<SmoothBranchSwitcher>
       );
     }
 
-    if (isTo && !isFrom) {
+    if (AppMotion.reduced(context) || (isTo && !isFrom)) {
       return child;
     }
 
     if (isTo) {
-      return FadeTransition(
-        opacity: _curved,
-        child: SlideTransition(position: incoming, child: child),
+      return Animate(
+        controller: _controller,
+        autoPlay: false,
+        effects: [
+          FadeEffect(
+            begin: 0,
+            end: 1,
+            duration: AppMotion.tab,
+            curve: Curves.easeOutCubic,
+          ),
+          SlideEffect(
+            begin: Offset(dir * AppMotion.tabSlide, 0),
+            end: Offset.zero,
+            duration: AppMotion.tab,
+            curve: Curves.easeOutCubic,
+          ),
+        ],
+        child: child,
       );
     }
 
     return IgnorePointer(
-      child: FadeTransition(
-        opacity: ReverseAnimation(_curved),
-        child: SlideTransition(position: outgoing, child: child),
+      child: Animate(
+        controller: _controller,
+        autoPlay: false,
+        effects: [
+          FadeEffect(
+            begin: 1,
+            end: 0,
+            duration: AppMotion.tab,
+            curve: Curves.easeOutCubic,
+          ),
+          SlideEffect(
+            begin: Offset.zero,
+            end: Offset(-dir * AppMotion.tabSlide, 0),
+            duration: AppMotion.tab,
+            curve: Curves.easeOutCubic,
+          ),
+        ],
+        child: child,
       ),
     );
   }

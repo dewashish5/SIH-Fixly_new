@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../../../workers/data/workers_api_repository.dart';
@@ -75,6 +76,10 @@ class _CustomerWorkersPageState extends State<CustomerWorkersPage> {
                       worker: worker,
                       onTap: () =>
                           context.push('/customer/worker/${worker.id}'),
+                    ).appListEnter(
+                      context,
+                      index: index,
+                      id: worker.id,
                     );
                   },
                 ),

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/notifications_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -29,6 +30,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       builder: (context, state) {
         return AppScaffold(
           title: context.l10n.notifications,
+          showBack: true,
           actions: [
             TextButton(
               onPressed: state.items.isEmpty
@@ -88,6 +90,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
                               ),
                             ],
                           ),
+                        ).appListEnter(
+                          context,
+                          index: index,
+                          id: item.id,
                         );
                       },
                     ),

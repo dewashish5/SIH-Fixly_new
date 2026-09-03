@@ -8,11 +8,18 @@ class DeviceId {
 
   final TokenStorage _storage;
 
+  String? _cached;
+
   Future<String> getOrCreate() async {
+    if (_cached != null && _cached!.isNotEmpty) return _cached!;
     final existing = await _storage.deviceId;
-    if (existing != null && existing.isNotEmpty) return existing;
+    if (existing != null && existing.isNotEmpty) {
+      _cached = existing;
+      return existing;
+    }
     final id = _uuidV4();
     await _storage.saveDeviceId(id);
+    _cached = id;
     return id;
   }
 

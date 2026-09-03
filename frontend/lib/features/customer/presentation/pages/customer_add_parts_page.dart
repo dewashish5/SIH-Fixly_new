@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../cubit/booking_flow_cubit.dart';
@@ -95,6 +96,10 @@ class _CustomerAddPartsPageState extends State<CustomerAddPartsPage> {
                                     ],
                                   ),
                                 ),
+                              ).appListEnter(
+                                context,
+                                index: index,
+                                id: part.title,
                               );
                             },
                           ),

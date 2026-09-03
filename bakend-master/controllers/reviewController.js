@@ -49,3 +49,44 @@ export const submitReview = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
+export const getWorkerReviews = async (req, res) => {
+    try {
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+        const workerId = req.params.workerId;
+        const [reviews, total, all] = await Promise.all([
+            Review.find({ worker: workerId })
+                .populate('customer', 'name avatar')
+                .sort({ createdAt: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit),
+            Review.countDocuments({ worker: workerId }),
+            Review.find({ worker: workerId }).select('rating'),
+        ]);
+        const avg = all.length ? all.reduce((s, r) => s + r.rating, 0) / all.length : 0;
+        return res.status(200).json({
+            success: true,
+            data: reviews,
+            reviews,
+            summary: { count: total, average: Number(avg.toFixed(1)) },
+            page,
+            limit,
+            total,
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const getBookingReview = async (req, res) => {
+    try {
+        const review = await Review.findOne({ booking: req.params.bookingId })
+            .populate('customer', 'name avatar')
+            .populate('worker', 'name');
+        if (!review) return res.status(404).json({ success: false, code: 'NOT_FOUND', message: 'Review not found' });
+        return res.status(200).json({ success: true, data: review, review });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};

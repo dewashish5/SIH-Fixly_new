@@ -64,6 +64,34 @@ class WorkersApiRepository {
     return res;
   }
 
+  Future<Map<String, dynamic>> fetchReliability(String workerId) async {
+    final res = await _api.get('/api/workers/$workerId/reliability');
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Reliability failed');
+    }
+    return Map<String, dynamic>.from((res['data'] ?? res['reliability'] ?? {}) as Map);
+  }
+
+  Future<Map<String, dynamic>> fetchAvailability() async {
+    final res = await _api.get('/api/workers/me/availability');
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Availability failed');
+    }
+    return Map<String, dynamic>.from(res['data'] as Map? ?? res);
+  }
+
+  Future<bool> setOnline(bool isOnline) async {
+    final res = await _api.patch('/api/workers/me/availability', data: {
+      'isOnline': isOnline,
+    });
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Availability update failed');
+    }
+    final data = res['data'];
+    if (data is Map) return data['isOnline'] == true;
+    return isOnline;
+  }
+
   static WorkerProfile mapWorker(Map<String, dynamic> json) {
     final profile = json['workerProfile'];
     final profileMap = profile is Map

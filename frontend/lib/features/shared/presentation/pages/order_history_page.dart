@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../../../../shared/widgets/shared_widgets.dart';
@@ -9,7 +10,9 @@ import '../../../../core/constants/app_strings.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
 
 class OrderHistoryPage extends StatefulWidget {
-  const OrderHistoryPage({super.key});
+  const OrderHistoryPage({super.key, this.showBack = true});
+
+  final bool showBack;
 
   @override
   State<OrderHistoryPage> createState() => _OrderHistoryPageState();
@@ -39,7 +42,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
     return AppScaffold(
       title: context.l10n.orderHistory,
-      showBack: false,
+      showBack: widget.showBack,
       body: AppRefreshIndicator(
         onRefresh: _onRefresh,
         child: FutureBuilder<List<Booking>>(
@@ -57,52 +60,180 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
             final orders = snap.data ?? const [];
             if (orders.isEmpty) {
+              final scheme = Theme.of(context).colorScheme;
               return ListView(
                 physics: appRefreshScrollPhysics,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                 children: [
-                  SizedBox(height: MediaQuery.sizeOf(context).height * 0.25),
-                  Center(child: Text(context.l10n.noOrdersYet)),
+                  SizedBox(height: MediaQuery.sizeOf(context).height * 0.15),
+                  Center(
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: scheme.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.receipt_long_rounded,
+                        size: 40,
+                        color: scheme.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Center(
+                    child: Text(
+                      context.l10n.noOrdersYet,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Text(
+                      'Your completed and ongoing bookings will show up here.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).textTheme.bodySmall?.color,
+                          ),
+                    ),
+                  ),
                 ],
               );
             }
 
             return ListView.separated(
               physics: appRefreshScrollPhysics,
+              padding: const EdgeInsets.symmetric(vertical: 12),
               itemCount: orders.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final order = orders[index];
-                return AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              order.serviceTitle,
-                              style: Theme.of(context).textTheme.titleMedium,
+                final scheme = Theme.of(context).colorScheme;
+                final statusColor = _statusColor(order.status);
+
+                return Material(
+                  color: Theme.of(context).cardColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: scheme.outline.withValues(alpha: 0.2)),
+                  ),
+                  elevation: 0,
+                  clipBehavior: Clip.antiAlias,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: scheme.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.handyman_outlined,
+                                size: 22,
+                                color: scheme.primary,
+                              ),
                             ),
-                          ),
-                          StatusBadge(
-                            label: _statusLabel(order.status),
-                            color: _statusColor(order.status),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    order.serviceTitle,
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                  if (order.scheduledAt != null) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      dateFormat.format(order.scheduledAt!),
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Theme.of(context).hintColor,
+                                          ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.fromBorderSide(
+                                  BorderSide(color: statusColor.withValues(alpha: 0.4)),
+                                ),
+                              ),
+                              child: Text(
+                                _statusLabel(order.status),
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: statusColor,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (order.address != null && order.address!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.location_on_outlined,
+                                size: 16,
+                                color: Theme.of(context).hintColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  order.address!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Theme.of(context).hintColor,
+                                      ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 8),
-                      if (order.address != null) Text(order.address!),
-                      if (order.scheduledAt != null)
-                        Text(dateFormat.format(order.scheduledAt!)),
-                      const SizedBox(height: 8),
-                      Text(
-                        '₹${order.estimatedPrice.toStringAsFixed(0)}',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: AppColors.primary,
+                        const SizedBox(height: 12),
+                        const Divider(height: 1),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Total Amount',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
                             ),
-                      ),
-                    ],
+                            Text(
+                              '₹${order.estimatedPrice.toStringAsFixed(0)}',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
+                ).appListEnter(
+                  context,
+                  index: index,
+                  id: order.id,
                 );
               },
             );

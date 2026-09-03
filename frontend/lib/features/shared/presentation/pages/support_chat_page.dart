@@ -42,6 +42,7 @@ class _SupportChatPageState extends State<SupportChatPage> {
       builder: (context, state) {
         return AppScaffold(
           title: context.l10n.supportChat,
+          showBack: true,
           body: Column(
             children: [
               Expanded(

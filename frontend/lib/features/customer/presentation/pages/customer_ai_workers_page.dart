@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -53,6 +54,10 @@ class _CustomerAiWorkersPageState extends State<CustomerAiWorkersPage> {
                 worker: worker,
                 matchScore: matchScore,
                 onTap: () => context.push('/customer/worker/${worker.id}'),
+              ).appListEnter(
+                context,
+                index: index,
+                id: worker.id,
               );
             },
           );

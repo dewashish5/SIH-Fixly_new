@@ -167,9 +167,22 @@ class AuthApiRepository {
       }
     }
     await _tokens.clearSession();
+    _api.clearGetCache();
   }
 
-  Future<AuthSession?> restoreSession() async {
+  Future<AuthSession?>? _restoreInFlight;
+
+  Future<AuthSession?> restoreSession() {
+    final inflight = _restoreInFlight;
+    if (inflight != null) return inflight;
+    final next = _restoreSessionBody().whenComplete(() {
+      _restoreInFlight = null;
+    });
+    _restoreInFlight = next;
+    return next;
+  }
+
+  Future<AuthSession?> _restoreSessionBody() async {
     final refresh = await _tokens.refreshToken;
     final userId = await _tokens.userId;
     if (refresh == null ||
@@ -179,7 +192,7 @@ class AuthApiRepository {
       return null;
     }
     try {
-      await refreshAccessToken();
+      // Access token first. Interceptor refreshes only on 401.
       final user = await fetchMe();
       return AuthSession(
         user: user,
@@ -188,6 +201,7 @@ class AuthApiRepository {
       );
     } catch (_) {
       await _tokens.clearSession();
+      _api.clearGetCache();
       return null;
     }
   }
@@ -313,15 +327,76 @@ class AuthApiRepository {
   Future<AppUser> updateProfile({
     required String name,
     required String phone,
+    String? avatar,
+    String? preferredLanguage,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelation,
+    String? bio,
+    String? category,
+    List<String>? categories,
+    List<String>? skills,
+    double? hourlyRate,
+    int? experienceYears,
+    String? workAddress,
+    String? gender,
+    String? upiId,
+    String? homeCity,
+    String? homePincode,
+    bool isWorker = false,
   }) async {
-    final res = await _api.patch('/api/auth/me', data: {
+    final payload = <String, dynamic>{
       'name': name,
       'phone': phone,
-    });
-    if (res['success'] != true || res['user'] == null) {
+    };
+    if (avatar != null) payload['avatar'] = avatar;
+    if (preferredLanguage != null) payload['preferredLanguage'] = preferredLanguage;
+
+    if (emergencyContactName != null || emergencyContactPhone != null || emergencyContactRelation != null) {
+      payload['emergencyContact'] = {
+        'name': emergencyContactName ?? '',
+        'phone': emergencyContactPhone ?? '',
+        'relation': emergencyContactRelation ?? '',
+      };
+    }
+
+    if (isWorker) {
+      if (bio != null) payload['bio'] = bio;
+      if (category != null) payload['category'] = category;
+      if (categories != null) payload['categories'] = categories;
+      if (skills != null) payload['skills'] = skills;
+      if (hourlyRate != null) payload['hourlyRate'] = hourlyRate;
+      if (experienceYears != null) payload['experienceYears'] = experienceYears;
+      if (workAddress != null) payload['workAddress'] = workAddress;
+      if (gender != null) payload['gender'] = gender;
+      if (upiId != null) payload['upiId'] = upiId;
+    } else if (workAddress != null) {
+      payload['savedAddresses'] = [
+        {
+          'label': 'Home',
+          'addressLine': workAddress,
+          if (homeCity != null) 'city': homeCity,
+          if (homePincode != null) 'pincode': homePincode,
+          'location': {
+            'type': 'Point',
+            'coordinates': [0, 0],
+          },
+        },
+      ];
+    }
+
+    Map<String, dynamic> res;
+    try {
+      res = await _api.patch('/api/auth/me', data: payload);
+    } catch (_) {
+      res = await _api.put('/api/users/me', data: payload);
+    }
+
+    final userJson = res['user'] ?? res['data'];
+    if (res['success'] != true || userJson == null) {
       throw ApiException(res['message']?.toString() ?? 'Profile update failed');
     }
-    final user = mapUser(Map<String, dynamic>.from(res['user'] as Map));
+    final user = mapUser(Map<String, dynamic>.from(userJson as Map));
     await _tokens.saveProfile(name: user.name, phone: user.phone);
     return user;
   }
@@ -355,7 +430,38 @@ class AuthApiRepository {
   static AppUser mapUser(Map<String, dynamic> json) {
     final roleStr = (json['role'] as String?) ?? 'customer';
     final profileRaw = json['workerProfile'];
-    final hasProfile = profileRaw is Map && profileRaw.isNotEmpty;
+    final profile = profileRaw is Map
+        ? Map<String, dynamic>.from(profileRaw)
+        : <String, dynamic>{};
+    final hasProfile = profile.isNotEmpty;
+
+    final emRaw = json['emergencyContact'];
+    final em = emRaw is Map
+        ? Map<String, dynamic>.from(emRaw)
+        : <String, dynamic>{};
+
+    final addrsRaw = json['savedAddresses'];
+    Map<String, dynamic>? homeAddr;
+    if (addrsRaw is List && addrsRaw.isNotEmpty && addrsRaw.first is Map) {
+      homeAddr = Map<String, dynamic>.from(addrsRaw.first as Map);
+    }
+
+    final rawCategories = profile['categories'];
+    final categories = rawCategories is List
+        ? rawCategories.map((e) => e.toString()).toList()
+        : <String>[];
+
+    final rawSkills = profile['skills'];
+    final skills = rawSkills is List
+        ? rawSkills.map((e) => e.toString()).toList()
+        : <String>[];
+
+    final upiRaw = profile['upi'];
+    final upiId = upiRaw is Map ? upiRaw['upiId']?.toString() : null;
+
+    final rateNum = profile['hourlyRate'] ?? profile['rate'] ?? 0;
+    final expNum = profile['experienceYears'] ?? 0;
+
     return AppUser(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       name: (json['name'] as String?) ?? 'Fixly User',
@@ -365,6 +471,21 @@ class AuthApiRepository {
       avatar: json['avatar'] as String?,
       isVerified: json['isVerified'] == true,
       hasWorkerProfile: hasProfile,
+      bio: profile['bio'] as String?,
+      workAddress: (profile['workAddress'] as String?) ??
+          (homeAddr?['addressLine'] as String?),
+      category: profile['category'] as String?,
+      categories: categories,
+      skills: skills,
+      hourlyRate: (rateNum as num).toDouble(),
+      experienceYears: (expNum as num).toInt(),
+      gender: profile['gender'] as String?,
+      upiId: upiId,
+      emergencyName: em['name'] as String?,
+      emergencyPhone: em['phone'] as String?,
+      emergencyRelation: em['relation'] as String?,
+      homeCity: homeAddr?['city'] as String?,
+      homePincode: homeAddr?['pincode'] as String?,
     );
   }
 }

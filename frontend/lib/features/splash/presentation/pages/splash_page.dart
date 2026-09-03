@@ -76,7 +76,7 @@ class _SplashPageState extends State<SplashPage>
     if (!mounted) return;
 
     final cubit = context.read<AppSessionCubit>();
-    // Wait for refresh-token → /me (started early from App bootstrap).
+    // Same restore started in App bootstrap — no second refresh-token /me.
     await cubit.restoreSession();
     if (!mounted) return;
 

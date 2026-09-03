@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../cubit/search_cubit.dart';
@@ -155,6 +156,10 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                         locale: locale,
                         onTap: () =>
                             context.push('/customer/service/${service.id}'),
+                      ).appListEnter(
+                        context,
+                        index: index,
+                        id: service.id,
                       );
                     },
                     childCount: state.results.length,

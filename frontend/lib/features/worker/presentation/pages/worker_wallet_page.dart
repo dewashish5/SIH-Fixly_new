@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/wallet_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -94,17 +95,23 @@ class _WorkerWalletPageState extends State<WorkerWalletPage> {
                                 ),
                               ],
                             ),
+                          ).appListEnter(
+                            context,
+                            index: index,
+                            id: tx.id,
                           );
                         },
                       ),
                     ),
                     PrimaryButton(
-                      label: 'Withdraw (mock)',
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Withdrawal initiated')),
-                        );
-                      },
+                      label: 'Withdraw',
+                      onPressed: state.balance <= 0
+                          ? null
+                          : () {
+                              context.read<WalletCubit>().withdraw(
+                                    state.balance,
+                                  );
+                            },
                     ),
                   ],
                 ),

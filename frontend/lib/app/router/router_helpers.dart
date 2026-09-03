@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:transit_kit/transit_kit.dart';
 
-import '../../core/constants/app_constants.dart';
+import '../../core/widgets/app_motion.dart';
 
 Page<T> transitPage<T>({
   required GoRouterState state,
   required Widget child,
-  TransitType type = TransitType.fadeSlideRight,
 }) {
-  return TransitPage<T>(
+  return CustomTransitionPage<T>(
     key: ValueKey<String>('transit:${state.uri}'),
-    type: type,
-    duration: const Duration(milliseconds: AppConstants.transitionDurationMs),
-    reverseDuration:
-        const Duration(milliseconds: AppConstants.transitionDurationMs),
+    transitionDuration: AppMotion.route,
+    reverseTransitionDuration: AppMotion.routeReverse,
     child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return RouteMotion(animation: animation, child: child);
+    },
   );
 }

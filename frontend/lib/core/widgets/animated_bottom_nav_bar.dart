@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/theme_x.dart';
+import 'app_motion.dart';
 
 class NavBarItem {
   const NavBarItem({
@@ -120,16 +122,7 @@ class _NavSlot extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedScale(
-              scale: selected ? 1.12 : 1.0,
-              duration: AnimatedBottomNavBar._anim,
-              curve: Curves.easeOutCubic,
-              child: Icon(
-                selected ? item.activeIcon : item.icon,
-                size: 24,
-                color: target,
-              ),
-            ),
+            _NavIcon(selected: selected, item: item, color: target),
             const SizedBox(height: 5),
             AnimatedDefaultTextStyle(
               duration: AnimatedBottomNavBar._anim,
@@ -151,5 +144,35 @@ class _NavSlot extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _NavIcon extends StatelessWidget {
+  const _NavIcon({
+    required this.selected,
+    required this.item,
+    required this.color,
+  });
+
+  final bool selected;
+  final NavBarItem item;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = Icon(
+      selected ? item.activeIcon : item.icon,
+      size: 24,
+      color: color,
+    );
+    if (AppMotion.reduced(context)) return icon;
+    return icon
+        .animate(target: selected ? 1 : 0)
+        .scaleXY(
+          begin: 1,
+          end: 1.12,
+          duration: AnimatedBottomNavBar._anim,
+          curve: Curves.easeOutCubic,
+        );
   }
 }

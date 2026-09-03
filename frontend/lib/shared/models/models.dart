@@ -16,6 +16,20 @@ class AppUser extends Equatable {
     this.insured = false,
     this.isVerified = false,
     this.hasWorkerProfile = false,
+    this.bio,
+    this.workAddress,
+    this.category,
+    this.categories = const [],
+    this.skills = const [],
+    this.hourlyRate = 0,
+    this.experienceYears = 0,
+    this.gender,
+    this.upiId,
+    this.emergencyName,
+    this.emergencyPhone,
+    this.emergencyRelation,
+    this.homeCity,
+    this.homePincode,
   });
 
   final String id;
@@ -29,6 +43,20 @@ class AppUser extends Equatable {
   final bool isVerified;
   /// True when API returned a non-empty workerProfile (onboarding submitted).
   final bool hasWorkerProfile;
+  final String? bio;
+  final String? workAddress;
+  final String? category;
+  final List<String> categories;
+  final List<String> skills;
+  final double hourlyRate;
+  final int experienceYears;
+  final String? gender;
+  final String? upiId;
+  final String? emergencyName;
+  final String? emergencyPhone;
+  final String? emergencyRelation;
+  final String? homeCity;
+  final String? homePincode;
 
   @override
   List<Object?> get props => [
@@ -42,6 +70,20 @@ class AppUser extends Equatable {
         insured,
         isVerified,
         hasWorkerProfile,
+        bio,
+        workAddress,
+        category,
+        categories,
+        skills,
+        hourlyRate,
+        experienceYears,
+        gender,
+        upiId,
+        emergencyName,
+        emergencyPhone,
+        emergencyRelation,
+        homeCity,
+        homePincode,
       ];
 }
 
@@ -231,6 +273,25 @@ class WorkerJob extends Equatable {
 
   @override
   List<Object?> get props => [id, title, pay, status];
+}
+
+class WalletTransaction extends Equatable {
+  const WalletTransaction({
+    required this.id,
+    required this.label,
+    required this.amount,
+    required this.isCredit,
+    this.date,
+  });
+
+  final String id;
+  final String label;
+  final double amount;
+  final bool isCredit;
+  final DateTime? date;
+
+  @override
+  List<Object?> get props => [id, label, amount, isCredit, date];
 }
 
 class NotificationItem extends Equatable {

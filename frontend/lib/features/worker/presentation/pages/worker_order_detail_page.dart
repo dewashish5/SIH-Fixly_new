@@ -5,24 +5,69 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
-import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
+import '../../../bookings/data/bookings_api_repository.dart';
 import '../cubit/job_feed_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
 
-class WorkerOrderDetailPage extends StatelessWidget {
+class WorkerOrderDetailPage extends StatefulWidget {
   const WorkerOrderDetailPage({required this.jobId, super.key});
 
   final String jobId;
 
   @override
-  Widget build(BuildContext context) {
-    final job = MockRepository.instance.jobById(jobId);
+  State<WorkerOrderDetailPage> createState() => _WorkerOrderDetailPageState();
+}
 
+class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
+  WorkerJob? _job;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  Future<void> _resolve() async {
+    final fromFeed = context.read<JobFeedCubit>().jobById(widget.jobId);
+    if (fromFeed != null) {
+      setState(() {
+        _job = fromFeed;
+        _loading = false;
+      });
+      return;
+    }
+    try {
+      final job = await BookingsApiRepository().workerJobById(widget.jobId);
+      if (!mounted) return;
+      setState(() {
+        _job = job;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return AppScaffold(
+        title: context.l10n.orderDetails,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    final job = _job;
     if (job == null) {
       return AppScaffold(
         title: context.l10n.orderDetails,
-        body: const Center(child: Text('Job not found')),
+        body: Center(child: Text(_error ?? 'Job not found')),
       );
     }
 
@@ -42,11 +87,6 @@ class WorkerOrderDetailPage extends StatelessWidget {
                 _DetailRow(icon: Icons.location_on_outlined, text: job.address),
                 const SizedBox(height: 12),
                 _DetailRow(
-                  icon: Icons.social_distance,
-                  text: '${job.distanceKm.toStringAsFixed(1)} km away',
-                ),
-                const SizedBox(height: 12),
-                _DetailRow(
                   icon: Icons.currency_rupee,
                   text: '₹${job.pay.toStringAsFixed(0)} payout',
                   valueColor: AppColors.accent,
@@ -55,7 +95,7 @@ class WorkerOrderDetailPage extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          if (job.status == JobStatus.incoming)
+          if (job.status == JobStatus.incoming) ...[
             PrimaryButton(
               label: 'Accept job',
               onPressed: () async {
@@ -64,8 +104,16 @@ class WorkerOrderDetailPage extends StatelessWidget {
                   context.go(RouteNames.workerActiveJob);
                 }
               },
-            )
-          else
+            ),
+            const SizedBox(height: 8),
+            SecondaryButton(
+              label: 'Decline',
+              onPressed: () async {
+                await context.read<JobFeedCubit>().declineJob(job.id);
+                if (context.mounted) context.pop();
+              },
+            ),
+          ] else
             SecondaryButton(
               label: 'View active job',
               onPressed: () => context.push(RouteNames.workerActiveJob),
@@ -91,15 +139,12 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: AppColors.primary),
-        const SizedBox(width: 12),
+        Icon(icon, size: 20, color: valueColor ?? AppColors.primary),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: valueColor,
-                  fontWeight: valueColor != null ? FontWeight.w600 : null,
-                ),
+            style: TextStyle(color: valueColor),
           ),
         ),
       ],

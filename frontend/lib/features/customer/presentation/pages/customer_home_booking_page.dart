@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/location/app_location.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../shared/models/models.dart';
@@ -169,6 +170,10 @@ class _CustomerHomeBookingPageState extends State<CustomerHomeBookingPage> {
                                   ),
                                 ),
                               ),
+                            ).appListEnter(
+                              context,
+                              index: index,
+                              id: cat.id,
                             );
                           },
                         ),

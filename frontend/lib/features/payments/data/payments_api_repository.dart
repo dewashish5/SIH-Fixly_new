@@ -90,24 +90,59 @@ class PaymentsApiRepository {
     return res['success'] == true;
   }
 
-  Future<WalletSnapshot> walletHistory() async {
-    try {
-      final res = await _api.get('/api/payments/wallet-history');
-      if (res['success'] != true) {
-        return const WalletSnapshot(balance: 0, history: []);
-      }
-      final history = res['history'];
-      return WalletSnapshot(
-        balance: (res['walletBalance'] as num?)?.toDouble() ?? 0,
-        history: history is List
-            ? history
-                .whereType<Map>()
-                .map((e) => Map<String, dynamic>.from(e))
-                .toList()
-            : const [],
-      );
-    } catch (_) {
-      return const WalletSnapshot(balance: 0, history: []);
+  Future<WalletSnapshot> workerWallet() async {
+    final res = await _api.get('/api/workers/me/wallet');
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Wallet failed');
     }
+    final data = res['data'] is Map
+        ? Map<String, dynamic>.from(res['data'] as Map)
+        : res;
+    final history = data['transactions'] ?? res['transactions'];
+    return WalletSnapshot(
+      balance: (data['availableBalance'] as num?)?.toDouble() ??
+          (res['walletBalance'] as num?)?.toDouble() ??
+          0,
+      history: history is List
+          ? history
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
+          : const [],
+    );
+  }
+
+  Future<Map<String, dynamic>> workerEarningsSummary() async {
+    final res = await _api.get('/api/workers/me/earnings/summary');
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Earnings failed');
+    }
+    return Map<String, dynamic>.from(res['data'] as Map? ?? res);
+  }
+
+  Future<void> withdraw(double amount) async {
+    final res = await _api.post('/api/workers/me/withdraw', data: {
+      'amount': amount,
+    });
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Withdraw failed');
+    }
+  }
+
+  Future<WalletSnapshot> walletHistory() async {
+    final res = await _api.get('/api/payments/wallet-history');
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Wallet failed');
+    }
+    final history = res['history'];
+    return WalletSnapshot(
+      balance: (res['walletBalance'] as num?)?.toDouble() ?? 0,
+      history: history is List
+          ? history
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
+          : const [],
+    );
   }
 }

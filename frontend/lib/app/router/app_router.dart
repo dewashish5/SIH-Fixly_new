@@ -144,7 +144,7 @@ GoRouter createAppRouter() {
           ),
           StatefulShellBranch(
             routes: [
-              _page(RouteNames.customerOrders, (_, s) => const OrderHistoryPage()),
+              _page(RouteNames.customerOrders, (_, s) => const OrderHistoryPage(showBack: false)),
             ],
           ),
           StatefulShellBranch(

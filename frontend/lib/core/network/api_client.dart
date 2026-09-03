@@ -5,6 +5,7 @@ import '../auth/token_storage.dart';
 import 'api_config.dart';
 import 'api_exception.dart';
 
+/// Shared Dio client: single-flight GET, short TTL GET cache, one refresh lock.
 class ApiClient {
   ApiClient({
     required TokenStorage tokenStorage,
@@ -18,8 +19,11 @@ class ApiClient {
                 baseUrl: ApiConfig.baseUrl,
                 connectTimeout: const Duration(seconds: 20),
                 sendTimeout: const Duration(seconds: 120),
-                receiveTimeout: const Duration(seconds: 120),
-                headers: {'Content-Type': 'application/json'},
+                receiveTimeout: const Duration(seconds: 30),
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json',
+                },
               ),
             ) {
     _dio.interceptors.add(
@@ -50,10 +54,12 @@ class ApiClient {
                 return handler.resolve(response);
               } catch (_) {
                 await _tokens.clearSession();
+                clearGetCache();
                 return handler.next(error);
               }
             }
             await _tokens.clearSession();
+            clearGetCache();
           }
           handler.next(error);
         },
@@ -61,12 +67,22 @@ class ApiClient {
     );
   }
 
+  static const _getTtl = Duration(seconds: 20);
+
   final Dio _dio;
   final TokenStorage _tokens;
   final DeviceId _deviceId;
   Future<bool>? _refreshInFlight;
 
+  final Map<String, Future<Map<String, dynamic>>> _getInFlight = {};
+  final Map<String, _CachedGet> _getCache = {};
+
   Dio get dio => _dio;
+
+  void clearGetCache() {
+    _getCache.clear();
+    _getInFlight.clear();
+  }
 
   static bool _isAuthPath(String path) {
     return path.contains('/api/auth/login') ||
@@ -112,7 +128,6 @@ class ApiClient {
       if (data == null || data['success'] != true) return false;
       final access = data['accessToken'] as String?;
       if (access == null || access.isEmpty) return false;
-      // Backend rotates refresh token — must store the new one or next restore fails.
       final newRefresh = data['refreshToken'] as String?;
       await _tokens.saveTokens(
         accessToken: access,
@@ -124,12 +139,53 @@ class ApiClient {
     }
   }
 
+  String _getKey(String path, Map<String, dynamic>? query) {
+    if (query == null || query.isEmpty) return 'GET $path';
+    final keys = query.keys.toList()..sort();
+    final q = keys.map((k) => '$k=${query[k]}').join('&');
+    return 'GET $path?$q';
+  }
+
   Future<Map<String, dynamic>> get(
     String path, {
     Map<String, dynamic>? query,
+    bool forceNetwork = false,
   }) async {
+    final key = _getKey(path, query);
+    if (!forceNetwork) {
+      final cached = _getCache[key];
+      if (cached != null && !cached.isExpired) {
+        return Map<String, dynamic>.from(cached.body);
+      }
+      final inflight = _getInFlight[key];
+      if (inflight != null) {
+        return Map<String, dynamic>.from(await inflight);
+      }
+    }
+
+    final future = _getNetwork(path, query);
+    _getInFlight[key] = future;
     try {
-      final res = await _dio.get<Map<String, dynamic>>(path, queryParameters: query);
+      final body = await future;
+      _getCache[key] = _CachedGet(
+        Map<String, dynamic>.from(body),
+        DateTime.now().add(_getTtl),
+      );
+      return Map<String, dynamic>.from(body);
+    } finally {
+      _getInFlight.remove(key);
+    }
+  }
+
+  Future<Map<String, dynamic>> _getNetwork(
+    String path,
+    Map<String, dynamic>? query,
+  ) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        path,
+        queryParameters: query,
+      );
       return res.data ?? {};
     } on DioException catch (e) {
       throw _mapError(e);
@@ -141,6 +197,7 @@ class ApiClient {
     Object? data,
     Options? options,
   }) async {
+    clearGetCache();
     try {
       final opts = options ?? Options();
       if (data is FormData) {
@@ -167,6 +224,7 @@ class ApiClient {
     String path, {
     Object? data,
   }) async {
+    clearGetCache();
     try {
       final res = await _dio.patch<Map<String, dynamic>>(path, data: data);
       return res.data ?? {};
@@ -179,6 +237,7 @@ class ApiClient {
     String path, {
     Object? data,
   }) async {
+    clearGetCache();
     try {
       final res = await _dio.put<Map<String, dynamic>>(path, data: data);
       return res.data ?? {};
@@ -214,6 +273,15 @@ class ApiClient {
     }
     return ApiException(message, statusCode: e.response?.statusCode);
   }
+}
+
+class _CachedGet {
+  _CachedGet(this.body, this.expiresAt);
+
+  final Map<String, dynamic> body;
+  final DateTime expiresAt;
+
+  bool get isExpired => DateTime.now().isAfter(expiresAt);
 }
 
 /// App-wide singletons bootstrapped in [main].

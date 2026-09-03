@@ -11,10 +11,13 @@ import {
     logoutUser,
     getMe
 } from '../controllers/authController.js';
+import { updateMyProfile } from '../controllers/userController.js';
 
 const router = express.Router();
 
 router.get('/me', protect, getMe);
+router.patch('/me', protect, updateMyProfile);
+router.put('/me', protect, updateMyProfile);
 router.post('/register', registerUser);
 router.post('/verify-otp', verifyOTP);
 router.post('/login', loginUser);

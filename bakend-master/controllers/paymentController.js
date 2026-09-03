@@ -175,11 +175,11 @@ export const getCustomerWalletAndHistory = async (req, res) => {
 
         const successfulTxs = transactions.filter(t => t.status === 'success');
         const totalSpent = successfulTxs.reduce((acc, curr) => acc + curr.amount, 0);
-        const fakeWalletBalance = 5000 - totalSpent;
 
         res.status(200).json({
             success: true,
-            walletBalance: fakeWalletBalance >= 0 ? fakeWalletBalance : 0,
+            walletBalance: 0,
+            totalSpent,
             history: transactions
         });
     } catch (error) {

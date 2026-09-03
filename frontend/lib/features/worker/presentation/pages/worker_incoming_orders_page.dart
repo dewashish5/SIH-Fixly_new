@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/widgets/shared_widgets.dart';
 import '../../../../shared/models/models.dart';
@@ -64,6 +65,10 @@ class _WorkerIncomingOrdersPageState extends State<WorkerIncomingOrdersPage> {
                                 RouteNames.workerJobDetail
                                     .replaceFirst(':id', job.id),
                               ),
+                            ).appListEnter(
+                              context,
+                              index: index,
+                              id: job.id,
                             );
                           },
                         ),

@@ -11,6 +11,7 @@ import '../../../../core/constants/app_strings.dart';
 import '../../../../core/l10n/locale_scope.dart';
 import '../../../../core/location/app_location.dart';
 import '../../../../core/location/location_service.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
@@ -69,7 +70,7 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
   Future<void> _refreshAll() async {
     await Future.wait([
       _refreshLocation(),
-      context.read<CustomerHomeCubit>().load(),
+      context.read<CustomerHomeCubit>().load(forceNetwork: true),
     ]);
   }
 
@@ -293,7 +294,7 @@ class _CategoryGrid extends StatelessWidget {
           category: cat,
           locale: locale,
           onTap: () => onCategoryTap(cat.id),
-        );
+        ).appListEnter(context, index: index, id: cat.id);
       },
     );
   }
@@ -403,6 +404,6 @@ class _ServiceTile extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ).appListEnter(context, index: index, id: service.id);
   }
 }

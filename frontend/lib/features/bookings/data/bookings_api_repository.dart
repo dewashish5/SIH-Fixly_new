@@ -187,11 +187,10 @@ class BookingsApiRepository {
     }
   }
 
-  /// Stub endpoint — always empty from backend.
   Future<List<Booking>> history() async {
     try {
       final res = await _api.get('/api/bookings/history');
-      final data = res['data'];
+      final data = res['data'] ?? res['bookings'];
       if (data is! List) return const [];
       return data
           .whereType<Map>()
@@ -200,6 +199,87 @@ class BookingsApiRepository {
     } catch (_) {
       return const [];
     }
+  }
+
+  Future<WorkerJob> workerJobById(String bookingId) async {
+    final res = await _api.get('/api/bookings/$bookingId');
+    if (res['success'] != true || res['booking'] == null) {
+      throw ApiException(res['message']?.toString() ?? 'Job not found');
+    }
+    return mapWorkerJob(Map<String, dynamic>.from(res['booking'] as Map));
+  }
+
+  Future<List<WorkerJob>> workerIncoming() =>
+      _workerJobs('/api/bookings/worker/incoming', JobStatus.incoming);
+
+  Future<List<WorkerJob>> workerActive() =>
+      _workerJobs('/api/bookings/worker/active', JobStatus.active);
+
+  Future<List<WorkerJob>> workerCompleted() =>
+      _workerJobs('/api/bookings/worker/completed', JobStatus.completed);
+
+  Future<List<WorkerJob>> _workerJobs(String path, JobStatus status) async {
+    final res = await _api.get(path);
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Jobs failed');
+    }
+    final data = res['data'] ?? res['bookings'];
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map((e) => mapWorkerJob(Map<String, dynamic>.from(e), fallbackStatus: status))
+        .toList();
+  }
+
+  Future<void> accept(String bookingId) async {
+    final res = await _api.post('/api/bookings/$bookingId/accept');
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Accept failed');
+    }
+  }
+
+  Future<void> decline(String bookingId, {String reason = 'OTHER'}) async {
+    final res = await _api.post('/api/bookings/$bookingId/decline', data: {
+      'reason': reason,
+    });
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Decline failed');
+    }
+  }
+
+  Future<void> startJob(String bookingId) async {
+    final res = await _api.post('/api/bookings/$bookingId/start-job');
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Start failed');
+    }
+  }
+
+  static WorkerJob mapWorkerJob(
+    Map<String, dynamic> json, {
+    JobStatus fallbackStatus = JobStatus.incoming,
+  }) {
+    final booking = mapBooking(json);
+    final customer = json['customer'];
+    var customerName = 'Customer';
+    if (customer is Map) {
+      customerName = (customer['name'] as String?) ?? customerName;
+    }
+    final statusRaw = (json['status'] ?? '').toString().toUpperCase();
+    final status = switch (statusRaw) {
+      'SEARCHING' => JobStatus.incoming,
+      'COMPLETED' => JobStatus.completed,
+      'CANCELLED' => JobStatus.completed,
+      _ => JobStatus.active,
+    };
+    return WorkerJob(
+      id: booking.id,
+      title: booking.serviceTitle,
+      customerName: customerName,
+      address: booking.address ?? '',
+      pay: booking.estimatedPrice,
+      status: status == JobStatus.incoming ? fallbackStatus : status,
+      distanceKm: 0,
+    );
   }
 
   static Booking mapBooking(

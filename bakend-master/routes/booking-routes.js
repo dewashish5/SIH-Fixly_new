@@ -7,7 +7,11 @@ import {
     getLiveTracking,
     getBookingInvoice,
     triggerSosAlert,
-    getBookingHistory
+    getBookingHistory,
+    listWorkerIncoming,
+    listWorkerActive,
+    listWorkerCompleted,
+    declineBooking,
 } from '../controllers/bookingController.js';
 import {
     verifyArrivalOtp,
@@ -18,15 +22,21 @@ import {
 } from '../controllers/activeJobController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import upload from '../middleware/uploadMiddleware.js';
+import { getBookingReview } from '../controllers/reviewController.js';
 
 const router = express.Router();
 
 // Search & Booking Creation
 router.get('/history', protect, getBookingHistory);
+router.get('/worker/incoming', protect, listWorkerIncoming);
+router.get('/worker/active', protect, listWorkerActive);
+router.get('/worker/completed', protect, listWorkerCompleted);
 router.post('/estimate', protect, calculateEstimate);
 router.post('/', protect, upload.array('photos', 5), createBooking);
+router.get('/:bookingId/review', protect, getBookingReview);
 router.get('/:bookingId', protect, getBookingDetails);
 router.patch('/:bookingId/cancel', protect, cancelBooking);
+router.post('/:bookingId/decline', protect, declineBooking);
 
 // Verification & Live Tracking
 router.get('/:bookingId/track', protect, getLiveTracking);

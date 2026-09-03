@@ -27,6 +27,14 @@ import homeRoutes from './routes/home-routes.js';
 import aiRoutes from './routes/ai-routes.js';
 import uploadRoutes from './routes/upload-routes.js';
 import adminRoutes from './routes/admin-routes.js';
+import userRoutes from './routes/user-routes.js';
+import verificationRoutes from './routes/verification-routes.js';
+import workerCertificateRoutes from './routes/worker-certificate-routes.js';
+import workerWalletRoutes from './routes/worker-wallet-routes.js';
+import notificationRoutes from './routes/notification-routes.js';
+import supportRoutes from './routes/support-routes.js';
+import cooperativeRoutes from './routes/cooperative-routes.js';
+import welfareRoutes from './routes/welfare-routes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -91,6 +99,14 @@ app.use('/api/home', homeRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/upload', apiLimiter, uploadRoutes);
 app.use('/api/admin', apiLimiter, adminRoutes);
+app.use('/api/users', apiLimiter, userRoutes);
+app.use('/api/verification', apiLimiter, verificationRoutes);
+app.use('/api/worker-certificates', apiLimiter, workerCertificateRoutes);
+app.use('/api/worker-wallet', apiLimiter, workerWalletRoutes);
+app.use('/api/notifications', apiLimiter, notificationRoutes);
+app.use('/api/support', apiLimiter, supportRoutes);
+app.use('/api/cooperative', apiLimiter, cooperativeRoutes);
+app.use('/api/welfare', apiLimiter, welfareRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

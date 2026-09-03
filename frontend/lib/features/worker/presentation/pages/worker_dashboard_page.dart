@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
-import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/widgets/shared_widgets.dart';
 import '../cubit/worker_dashboard_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -27,8 +27,10 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final userName =
-        MockRepository.instance.currentUser?.name ?? l10n.guestUser;
+    final userName = context.select(
+      (WorkerDashboardCubit c) =>
+          c.state.workerName.isEmpty ? l10n.guestUser : c.state.workerName,
+    );
 
     return BlocBuilder<WorkerDashboardCubit, WorkerDashboardState>(
       builder: (context, state) {
@@ -54,6 +56,7 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
                             label: 'Today',
                             value: '₹${state.todayEarnings.toStringAsFixed(0)}',
                             icon: Icons.currency_rupee,
+                            index: 0,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -62,6 +65,7 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
                             label: 'Jobs done',
                             value: '${state.completedJobs}',
                             icon: Icons.work_outline,
+                            index: 1,
                           ),
                         ),
                       ],
@@ -74,6 +78,7 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
                             label: 'Reliability',
                             value: '${state.reliabilityScore}%',
                             icon: Icons.verified_outlined,
+                            index: 2,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -82,6 +87,7 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
                             label: 'Incoming',
                             value: '${state.incomingCount}',
                             icon: Icons.inbox_outlined,
+                            index: 3,
                           ),
                         ),
                       ],
@@ -113,6 +119,10 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
                         pay: state.activeJob!.pay,
                         distanceKm: state.activeJob!.distanceKm,
                         onTap: () => context.push(RouteNames.workerActiveJob),
+                      ).appListEnter(
+                        context,
+                        index: 0,
+                        id: state.activeJob!.id,
                       ),
                     ],
                     const Spacer(),
@@ -138,11 +148,13 @@ class _StatCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.icon,
+    required this.index,
   });
 
   final String label;
   final String value;
   final IconData icon;
+  final int index;
 
   @override
   Widget build(BuildContext context) {
@@ -156,6 +168,6 @@ class _StatCard extends StatelessWidget {
           Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
-    );
+    ).appListEnter(context, index: index, id: label);
   }
 }

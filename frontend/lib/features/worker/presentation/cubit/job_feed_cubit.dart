@@ -1,38 +1,56 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../shared/data/mock/mock_repository.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../shared/models/models.dart';
+import '../../../bookings/data/bookings_api_repository.dart';
 
 part 'job_feed_state.dart';
 
 class JobFeedCubit extends Cubit<JobFeedState> {
-  JobFeedCubit({MockRepository? repository})
-      : _repo = repository ?? MockRepository.instance,
+  JobFeedCubit({BookingsApiRepository? bookings})
+      : _bookings = bookings ?? BookingsApiRepository(),
         super(const JobFeedState());
 
-  final MockRepository _repo;
+  final BookingsApiRepository _bookings;
 
   Future<void> load() async {
-    emit(state.copyWith(status: JobFeedStatus.loading));
-    await _repo.mockDelay();
-    emit(
-      JobFeedState(
-        status: JobFeedStatus.loaded,
-        jobs: _repo.jobs,
-      ),
-    );
+    emit(state.copyWith(status: JobFeedStatus.loading, clearError: true));
+    try {
+      final jobs = await _bookings.workerIncoming();
+      emit(JobFeedState(status: JobFeedStatus.loaded, jobs: jobs));
+    } on ApiException catch (e) {
+      emit(state.copyWith(status: JobFeedStatus.failure, error: e.message));
+    }
+  }
+
+  WorkerJob? jobById(String id) {
+    try {
+      return state.jobs.firstWhere((j) => j.id == id);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> acceptJob(String id) async {
     emit(state.copyWith(status: JobFeedStatus.loading));
-    await _repo.mockDelay();
-    _repo.acceptJob(id);
-    emit(
-      JobFeedState(
-        status: JobFeedStatus.loaded,
-        jobs: _repo.jobs,
-      ),
-    );
+    try {
+      await _bookings.accept(id);
+      final jobs = await _bookings.workerIncoming();
+      emit(JobFeedState(status: JobFeedStatus.loaded, jobs: jobs));
+    } on ApiException catch (e) {
+      emit(state.copyWith(status: JobFeedStatus.failure, error: e.message));
+    }
+  }
+
+  Future<void> declineJob(String id) async {
+    emit(state.copyWith(status: JobFeedStatus.loading));
+    try {
+      await _bookings.decline(id);
+      final jobs = await _bookings.workerIncoming();
+      emit(JobFeedState(status: JobFeedStatus.loaded, jobs: jobs));
+    } on ApiException catch (e) {
+      emit(state.copyWith(status: JobFeedStatus.failure, error: e.message));
+    }
   }
 }

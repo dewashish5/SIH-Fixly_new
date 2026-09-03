@@ -15,29 +15,25 @@ class CustomerHomeCubit extends Cubit<CustomerHomeState> {
 
   final HomeApiRepository _home;
 
-  Future<void> load() async {
+  Future<void> load({bool forceNetwork = false}) async {
     emit(state.copyWith(status: CustomerHomeStatus.loading));
     try {
-      // Prefer authenticated home bundle; fall back to public categories.
       try {
-        final bundle = await _home.fetchHome();
+        final bundle = await _home.fetchHome(forceNetwork: forceNetwork);
         emit(
           state.copyWith(
             status: CustomerHomeStatus.loaded,
             categories: _displayCategories(bundle.categories),
-            popularServices: bundle.topServices.isNotEmpty
-                ? bundle.topServices
-                : await _home.fetchAllServices(),
+            popularServices: bundle.topServices,
           ),
         );
       } on ApiException {
         final categories = await _home.fetchCategories();
-        final services = await _home.fetchAllServices();
         emit(
           state.copyWith(
             status: CustomerHomeStatus.loaded,
             categories: _displayCategories(categories),
-            popularServices: services,
+            popularServices: const [],
           ),
         );
       }
@@ -46,7 +42,7 @@ class CustomerHomeCubit extends Cubit<CustomerHomeState> {
     }
   }
 
-  void refresh() => load();
+  void refresh() => load(forceNetwork: true);
 
   static List<ServiceCategory> _displayCategories(
     List<ServiceCategory> fromApi,

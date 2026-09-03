@@ -22,8 +22,8 @@ class HomeApiRepository {
 
   final ApiClient _api;
 
-  Future<HomeBundle> fetchHome() async {
-    final res = await _api.get('/api/home/home');
+  Future<HomeBundle> fetchHome({bool forceNetwork = false}) async {
+    final res = await _api.get('/api/home/home', forceNetwork: forceNetwork);
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Home failed');
     }
