@@ -3,10 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_strings.dart';
-import '../../../../core/widgets/core_widgets.dart';
+import '../../../../core/utils/validators.dart';
 import '../cubit/app_session_cubit.dart';
-import '../widgets/auth_credentials_fields.dart';
 import '../widgets/auth_screen_layout.dart';
 
 class LoginPage extends StatefulWidget {
@@ -90,6 +90,29 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _forgotPassword() async {
+    final l10n = context.l10n;
+    final email = _emailController.text.trim();
+    if (Validators.email(email) != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.forgotPasswordHint)),
+      );
+      return;
+    }
+    try {
+      await _cubit.requestPasswordReset(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.forgotPasswordSent)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.forgotPasswordSent)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AppSessionCubit, AppSessionState>(
@@ -97,52 +120,92 @@ class _LoginPageState extends State<LoginPage> {
         final l10n = context.l10n;
         final loading = state.status == AppSessionStatus.loading;
 
-        return AuthScreenLayout(
-          title: l10n.login,
-          subtitle: l10n.loginSubtitle,
-          showBack: false,
-          footer: Column(
-            children: [
-              AuthWorkerChip(
-                label: l10n.signInAsWorker,
-                active: _workerMode,
-                onTap: _toggleWorkerMode,
-              ),
-              const SizedBox(height: 12),
-              AuthLinkRow(
-                prompt: l10n.dontHaveAccount,
-                actionLabel: l10n.signUp,
-                onTap: () => context.push(RouteNames.signup),
-              ),
-            ],
-          ),
+        return AuthCurvedShell(
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AuthSocialRow(
-                  onGoogle:
-                      loading ? null : () => _handleSocial(_cubit.signInWithGoogle),
+                AuthPageTitle(l10n.login),
+                const SizedBox(height: 28),
+                AuthUnderlineField(
+                  controller: _emailController,
+                  label: l10n.username,
+                  hint: l10n.usernameHint,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  validator: Validators.email,
                 ),
-                const SizedBox(height: 20),
-                AuthDivider(label: l10n.orContinueWith),
-                const SizedBox(height: 20),
-                AuthCredentialsFields(
-                  emailController: _emailController,
-                  passwordController: _passwordController,
-                  obscurePassword: _obscurePassword,
-                  onTogglePassword: () =>
-                      setState(() => _obscurePassword = !_obscurePassword),
-                  emailLabel: l10n.email,
-                  passwordLabel: l10n.password,
-                  passwordHint: l10n.passwordHint,
+                const SizedBox(height: 28),
+                AuthUnderlineField(
+                  controller: _passwordController,
+                  label: l10n.password,
+                  hint: l10n.passwordHint,
+                  obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) {
+                    if (!loading) _login();
+                  },
+                  validator: (value) => Validators.requiredField(
+                    value,
+                    label: l10n.password,
+                  ),
+                  suffix: IconButton(
+                    tooltip: _obscurePassword
+                        ? l10n.showPassword
+                        : l10n.hidePassword,
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: context.muted,
+                    ),
+                    onPressed: () => setState(
+                      () => _obscurePassword = !_obscurePassword,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 24),
-                PrimaryButton(
-                  label: l10n.login,
+                AuthDarkButton(
+                  label: l10n.signIn,
                   loading: loading,
                   onPressed: loading ? null : _login,
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: loading ? null : _forgotPassword,
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.ink,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 0,
+                        vertical: 8,
+                      ),
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                    child: Text(l10n.forgotPassword),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                AuthGoogleSquare(
+                  onPressed: loading
+                      ? null
+                      : () => _handleSocial(_cubit.signInWithGoogle),
+                ),
+                const SizedBox(height: 28),
+                AuthWorkerChip(
+                  label: l10n.signInAsWorker,
+                  active: _workerMode,
+                  onTap: _toggleWorkerMode,
+                ),
+                const SizedBox(height: 8),
+                AuthLinkRow(
+                  prompt: l10n.dontHaveAccount,
+                  actionLabel: l10n.signUp,
+                  onTap: () => context.push(RouteNames.signup),
                 ),
               ],
             ),

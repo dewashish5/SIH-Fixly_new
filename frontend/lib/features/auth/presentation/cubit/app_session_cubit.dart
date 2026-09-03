@@ -181,6 +181,10 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     }
   }
 
+  Future<void> requestPasswordReset(String email) async {
+    await _auth.forgotPassword(email);
+  }
+
   /// Register then expect OTP verify (email).
   Future<bool> signUpWithEmail({
     required String name,

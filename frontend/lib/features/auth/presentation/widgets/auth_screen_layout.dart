@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -360,7 +361,8 @@ class AuthLinkRow extends StatelessWidget {
         TextButton(
           onPressed: onTap,
           style: TextButton.styleFrom(
-            foregroundColor: AppColors.primary,
+            foregroundColor:
+                context.isDark ? Colors.white : AppColors.primary,
             textStyle: const TextStyle(fontWeight: FontWeight.w700),
           ),
           child: Text(actionLabel),
@@ -421,6 +423,451 @@ class AuthWorkerChip extends StatelessWidget {
                 color: active ? AppColors.success : context.muted,
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shared curved auth shell (login / signup).
+class AuthCurvedShell extends StatelessWidget {
+  const AuthCurvedShell({
+    required this.child,
+    this.compact = false,
+    this.scrollable = true,
+    super.key,
+  });
+
+  final Widget child;
+  final bool compact;
+  final bool scrollable;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.scheme;
+    final topPad = MediaQuery.paddingOf(context).top;
+    final l10n = context.l10n;
+    final headerExtra = compact ? 156.0 : 236.0;
+    final iconSize = compact ? 80.0 : 96.0;
+    final curve = compact ? 60.0 : 72.0;
+    final pad = compact
+        ? const EdgeInsets.fromLTRB(26, 26, 26, 16)
+        : const EdgeInsets.fromLTRB(28, 40, 28, 28);
+
+    final body = scrollable
+        ? SingleChildScrollView(padding: pad, child: child)
+        : Padding(
+            padding: pad,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    width: constraints.maxWidth,
+                    child: child,
+                  ),
+                );
+              },
+            ),
+          );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: scheme.surface,
+        systemNavigationBarIconBrightness:
+            context.isDark ? Brightness.light : Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: AppColors.primaryDark,
+        resizeToAvoidBottomInset: true,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: topPad + headerExtra,
+              child: ColoredBox(
+                color: AppColors.primaryDark,
+                child: Padding(
+                  padding: EdgeInsets.only(left: 28, right: 28, top: topPad),
+                  child: Align(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(compact ? 18 : 20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.28),
+                            blurRadius: compact ? 16 : 20,
+                            offset: Offset(0, compact ? 8 : 10),
+                          ),
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            blurRadius: 8,
+                            offset: const Offset(0, -2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(compact ? 18 : 20),
+                        child: Image.asset(
+                          'assets/app_icon.png',
+                          width: iconSize,
+                          height: iconSize,
+                          fit: BoxFit.cover,
+                          semanticLabel: l10n.appName,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: ColoredBox(
+                color: AppColors.primaryDark,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(curve),
+                      topRight: Radius.circular(curve),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(curve),
+                      topRight: Radius.circular(curve),
+                    ),
+                    child: body,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AuthPageTitle extends StatelessWidget {
+  const AuthPageTitle(this.title, {this.compact = false, super.key});
+
+  final String title;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = compact
+        ? Theme.of(context).textTheme.headlineMedium
+        : Theme.of(context).textTheme.headlineLarge;
+    return Text(
+      title,
+      style: base?.copyWith(
+        color: context.isDark ? Colors.white : AppColors.primaryDark,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.6,
+        height: 1.1,
+      ),
+    );
+  }
+}
+
+/// Compact customer/worker toggle (no long subtitles).
+class AuthRoleToggle extends StatelessWidget {
+  const AuthRoleToggle({
+    required this.selectedRole,
+    required this.customerLabel,
+    required this.workerLabel,
+    required this.onChanged,
+    this.enabled = true,
+    super.key,
+  });
+
+  final String selectedRole;
+  final String customerLabel;
+  final String workerLabel;
+  final ValueChanged<String> onChanged;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: Row(
+        children: [
+          Expanded(
+            child: _RoleChip(
+              label: customerLabel,
+              selected: selectedRole == 'customer',
+              onTap: enabled ? () => onChanged('customer') : null,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _RoleChip(
+              label: workerLabel,
+              selected: selectedRole == 'worker',
+              onTap: enabled ? () => onChanged('worker') : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoleChip extends StatelessWidget {
+  const _RoleChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected
+          ? context.scheme.primary.withValues(alpha: context.isDark ? 0.22 : 0.1)
+          : context.scheme.surface,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? context.scheme.primary : context.hairline,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: selected ? context.scheme.primary : context.ink,
+                  ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AuthUnderlineField extends StatelessWidget {
+  const AuthUnderlineField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    this.obscureText = false,
+    this.keyboardType,
+    this.textInputAction,
+    this.validator,
+    this.suffix,
+    this.prefix,
+    this.maxLength,
+    this.onFieldSubmitted,
+    this.textCapitalization = TextCapitalization.none,
+    this.dense = false,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final String? Function(String?)? validator;
+  final Widget? suffix;
+  final Widget? prefix;
+  final int? maxLength;
+  final ValueChanged<String>? onFieldSubmitted;
+  final TextCapitalization textCapitalization;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final baseBorder = UnderlineInputBorder(
+      borderSide: BorderSide(color: context.hairline, width: 1.2),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: context.ink,
+                fontSize: dense ? 12.5 : null,
+                height: 1.25,
+              ),
+        ),
+        const SizedBox(height: 2),
+        TextFormField(
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          textInputAction: textInputAction,
+          textCapitalization: textCapitalization,
+          validator: validator,
+          maxLength: maxLength,
+          onFieldSubmitted: onFieldSubmitted,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: context.ink,
+                fontSize: dense ? 15 : null,
+                height: 1.35,
+              ),
+          decoration: InputDecoration(
+            hintText: hint,
+            counterText: maxLength == null ? null : '',
+            hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: context.muted,
+                  fontSize: dense ? 14.5 : null,
+                  height: 1.35,
+                ),
+            border: baseBorder,
+            enabledBorder: baseBorder,
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: context.scheme.primary, width: 1.8),
+            ),
+            errorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: context.scheme.error, width: 1.2),
+            ),
+            focusedErrorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: context.scheme.error, width: 1.8),
+            ),
+            // Balanced vertical padding so text sits near underline, not floating up.
+            contentPadding: EdgeInsets.only(
+              top: dense ? 8 : 10,
+              bottom: dense ? 10 : 10,
+            ),
+            // prefixIcon stays visible even when empty/unfocused (unlike prefix).
+            prefixIcon: prefix == null
+                ? null
+                : Padding(
+                    padding: const EdgeInsets.only(left: 0, right: 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: 1,
+                      heightFactor: 1,
+                      child: prefix,
+                    ),
+                  ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 0,
+              minHeight: 0,
+            ),
+            suffixIcon: suffix,
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 36,
+            ),
+            isDense: true,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class AuthDarkButton extends StatelessWidget {
+  const AuthDarkButton({
+    required this.label,
+    required this.onPressed,
+    this.loading = false,
+    this.compact = false,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool loading;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = compact ? 46.0 : 48.0;
+    return SizedBox(
+      height: h,
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: loading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primaryDark,
+          foregroundColor: Colors.white,
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
+          elevation: 0,
+          minimumSize: Size.fromHeight(h),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: compact ? 14 : 15,
+          ),
+        ),
+        child: loading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(label),
+      ),
+    );
+  }
+}
+
+class AuthGoogleSquare extends StatelessWidget {
+  const AuthGoogleSquare({
+    required this.onPressed,
+    this.compact = false,
+    super.key,
+  });
+
+  final VoidCallback? onPressed;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = compact ? 48.0 : 56.0;
+    return Semantics(
+      button: true,
+      label: context.l10n.continueWithGoogle,
+      child: Material(
+        color: context.scheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(14),
+          child: Ink(
+            height: h,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: context.hairline, width: 1.2),
+            ),
+            child: Center(
+              child: SvgPicture.asset(
+                'assets/icons/google.svg',
+                width: compact ? 22 : 26,
+                height: compact ? 22 : 26,
+              ),
+            ),
           ),
         ),
       ),

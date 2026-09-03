@@ -17,4 +17,4 @@ python3 "<skill-root>/scripts/search.py" "<query>" --stack flutter
 
 3. Before delivering app UI, follow `references/pro-rules.md` checklist — especially **light/dark contrast**, semantic tokens, and touch targets.
 4. Prefer `Theme.of(context).colorScheme` / `textTheme` over hardcoded light-only `AppColors` surface/text/border aliases.
-5. Keep Fixly brand: primary blue `#01668F`, accent orange `#FD6E01` sparingly; dark mode = desaturated/lighter tonal variants, not inverted light UI.
+5. Keep Fixly brand: primary royal blue `#2563EB`; accent = same blue family (orange `#F59E0B` = warning only); dark mode = desaturated/lighter tonal variants, not inverted light UI.

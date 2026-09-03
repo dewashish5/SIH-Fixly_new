@@ -27,6 +27,22 @@ class AppStrings {
   String get tagline => isHi ? 'सहकारी गिग सेवाएं' : 'Cooperative Gig Services';
   String get continueLabel => isHi ? 'जारी रखें' : 'Continue';
   String get login => isHi ? 'लॉगिन' : 'Login';
+  String get signIn => isHi ? 'साइन इन' : 'Sign In';
+  String get username => isHi ? 'उपयोगकर्ता नाम' : 'Username';
+  String get usernameHint =>
+      isHi ? 'यूज़र ID या ईमेल दर्ज करें' : 'Enter User ID or Email';
+  String get forgotPassword => isHi ? 'पासवर्ड भूल गए' : 'Forgot Password';
+  String get rememberMe => isHi ? 'मुझे याद रखें' : 'Remember Me';
+  String get orShort => isHi ? 'या' : 'or';
+  String get appleSignInUnavailable => isHi
+      ? 'Apple साइन इन अभी उपलब्ध नहीं'
+      : 'Apple Sign In is not available yet';
+  String get forgotPasswordHint => isHi
+      ? 'रीसेट के लिए ईमेल दर्ज करें'
+      : 'Enter your email to reset password';
+  String get forgotPasswordSent => isHi
+      ? 'यदि खाता मौजूद है तो रीसेट लिंक भेज दिया गया'
+      : 'If an account exists, a reset link has been sent';
   String get signUp => isHi ? 'साइन अप' : 'Sign up';
   String get createAccount => isHi ? 'खाता बनाएं' : 'Create account';
   String get sendOtp => isHi ? 'OTP भेजें' : 'Send OTP';

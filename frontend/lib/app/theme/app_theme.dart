@@ -218,7 +218,7 @@ abstract final class AppTheme {
         activeTrackColor: AppColors.primary,
         inactiveTrackColor: sliderInactive,
         thumbColor: AppColors.primary,
-        overlayColor: const Color(0x1A01668F),
+        overlayColor: const Color(0x1A2563EB),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.primary,

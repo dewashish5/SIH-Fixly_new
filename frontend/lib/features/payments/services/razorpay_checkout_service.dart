@@ -75,7 +75,7 @@ class RazorpayCheckoutService {
           if (email != null && email.isNotEmpty) 'email': email,
           if (phone != null && phone.isNotEmpty) 'contact': phone,
         },
-      'theme': {'color': '#01668F'},
+      'theme': {'color': '#2563EB'},
     };
 
     _razorpay!.open(options);
