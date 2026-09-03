@@ -84,9 +84,9 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _workerMode = !_workerMode);
     _cubit.setRole(_workerMode ? 'worker' : 'customer');
     if (_workerMode) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.signInAsWorkerHint)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.signInAsWorkerHint)));
     }
   }
 
@@ -94,22 +94,22 @@ class _LoginPageState extends State<LoginPage> {
     final l10n = context.l10n;
     final email = _emailController.text.trim();
     if (Validators.email(email) != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.forgotPasswordHint)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.forgotPasswordHint)));
       return;
     }
     try {
       await _cubit.requestPasswordReset(email);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.forgotPasswordSent)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.forgotPasswordSent)));
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.forgotPasswordSent)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.forgotPasswordSent)));
     }
   }
 
@@ -121,13 +121,18 @@ class _LoginPageState extends State<LoginPage> {
         final loading = state.status == AppSessionStatus.loading;
 
         return AuthCurvedShell(
+          footer: AuthLinkRow(
+            prompt: l10n.dontHaveAccount,
+            actionLabel: l10n.signUp,
+            onTap: () => context.push(RouteNames.signup),
+          ),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 AuthPageTitle(l10n.login),
-                const SizedBox(height: 28),
+                const SizedBox(height: 20),
                 AuthUnderlineField(
                   controller: _emailController,
                   label: l10n.username,
@@ -136,7 +141,7 @@ class _LoginPageState extends State<LoginPage> {
                   textInputAction: TextInputAction.next,
                   validator: Validators.email,
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 18),
                 AuthUnderlineField(
                   controller: _passwordController,
                   label: l10n.password,
@@ -146,10 +151,8 @@ class _LoginPageState extends State<LoginPage> {
                   onFieldSubmitted: (_) {
                     if (!loading) _login();
                   },
-                  validator: (value) => Validators.requiredField(
-                    value,
-                    label: l10n.password,
-                  ),
+                  validator: (value) =>
+                      Validators.requiredField(value, label: l10n.password),
                   suffix: IconButton(
                     tooltip: _obscurePassword
                         ? l10n.showPassword
@@ -158,14 +161,13 @@ class _LoginPageState extends State<LoginPage> {
                       _obscurePassword
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
-                      color: context.muted,
+                      color: context.ink.withValues(alpha: 0.55),
                     ),
-                    onPressed: () => setState(
-                      () => _obscurePassword = !_obscurePassword,
-                    ),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 AuthDarkButton(
                   label: l10n.signIn,
                   loading: loading,
@@ -176,9 +178,10 @@ class _LoginPageState extends State<LoginPage> {
                   child: TextButton(
                     onPressed: loading ? null : _forgotPassword,
                     style: TextButton.styleFrom(
-                      foregroundColor: context.ink,
+                      foregroundColor: context.scheme.primary,
+                      minimumSize: const Size(48, 44),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 0,
+                        horizontal: 4,
                         vertical: 8,
                       ),
                       textStyle: const TextStyle(
@@ -189,23 +192,17 @@ class _LoginPageState extends State<LoginPage> {
                     child: Text(l10n.forgotPassword),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 AuthGoogleSquare(
                   onPressed: loading
                       ? null
                       : () => _handleSocial(_cubit.signInWithGoogle),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 16),
                 AuthWorkerChip(
                   label: l10n.signInAsWorker,
                   active: _workerMode,
                   onTap: _toggleWorkerMode,
-                ),
-                const SizedBox(height: 8),
-                AuthLinkRow(
-                  prompt: l10n.dontHaveAccount,
-                  actionLabel: l10n.signUp,
-                  onTap: () => context.push(RouteNames.signup),
                 ),
               ],
             ),

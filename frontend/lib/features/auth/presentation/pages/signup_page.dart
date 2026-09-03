@@ -95,11 +95,15 @@ class _SignupPageState extends State<SignupPage> {
       builder: (context, state) {
         final l10n = context.l10n;
         final loading = state.status == AppSessionStatus.loading;
-        final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
 
         return AuthCurvedShell(
           compact: true,
-          scrollable: keyboardOpen,
+          scrollable: true,
+          footer: AuthLinkRow(
+            prompt: l10n.alreadyHaveAccount,
+            actionLabel: l10n.login,
+            onTap: () => context.pop(),
+          ),
           child: Form(
             key: _formKey,
             child: Column(
@@ -155,7 +159,7 @@ class _SignupPageState extends State<SignupPage> {
                       Icon(
                         Icons.phone_outlined,
                         size: 18,
-                        color: context.muted,
+                        color: context.ink.withValues(alpha: 0.55),
                       ),
                     ],
                   ),
@@ -193,7 +197,7 @@ class _SignupPageState extends State<SignupPage> {
                       _obscurePassword
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
-                      color: context.muted,
+                      color: context.ink.withValues(alpha: 0.55),
                       size: 20,
                     ),
                     onPressed: () => setState(
@@ -214,12 +218,6 @@ class _SignupPageState extends State<SignupPage> {
                   onPressed: loading
                       ? null
                       : () => _handleSocial(_cubit.signInWithGoogle),
-                ),
-                const SizedBox(height: 4),
-                AuthLinkRow(
-                  prompt: l10n.alreadyHaveAccount,
-                  actionLabel: l10n.login,
-                  onTap: () => context.pop(),
                 ),
               ],
             ),

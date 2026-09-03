@@ -26,8 +26,7 @@ class AuthScreenLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canPop =
-        showBack && (ModalRoute.of(context)?.canPop ?? false);
+    final canPop = showBack && (ModalRoute.of(context)?.canPop ?? false);
 
     return Scaffold(
       backgroundColor: context.canvas,
@@ -54,12 +53,13 @@ class AuthScreenLayout extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      title,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
-                          ),
-                    )
+                          title,
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.5,
+                              ),
+                        )
                         .animate()
                         .fadeIn(duration: 280.ms)
                         .slideY(begin: 0.08, end: 0, curve: Curves.easeOut),
@@ -67,31 +67,31 @@ class AuthScreenLayout extends StatelessWidget {
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: context.muted,
-                            height: 1.4,
-                          ),
+                        color: context.muted,
+                        height: 1.4,
+                      ),
                     ).animate().fadeIn(delay: 60.ms, duration: 280.ms),
                     const SizedBox(height: 28),
                     Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: context.card,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: context.hairline.withValues(alpha: 0.6),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: context.scheme.primary.withValues(
-                              alpha: context.isDark ? 0.12 : 0.06,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: context.card,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: context.hairline.withValues(alpha: 0.6),
                             ),
-                            blurRadius: 32,
-                            offset: const Offset(0, 12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: context.scheme.primary.withValues(
+                                  alpha: context.isDark ? 0.12 : 0.06,
+                                ),
+                                blurRadius: 32,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: child,
-                    )
+                          child: child,
+                        )
                         .animate()
                         .fadeIn(delay: 100.ms, duration: 320.ms)
                         .slideY(begin: 0.06, end: 0, curve: Curves.easeOut),
@@ -111,10 +111,7 @@ class AuthScreenLayout extends StatelessWidget {
 }
 
 class AuthSocialRow extends StatelessWidget {
-  const AuthSocialRow({
-    required this.onGoogle,
-    super.key,
-  });
+  const AuthSocialRow({required this.onGoogle, super.key});
 
   final VoidCallback? onGoogle;
 
@@ -157,11 +154,7 @@ class _SocialTag extends StatelessWidget {
               border: Border.all(color: context.hairline),
             ),
             child: Center(
-              child: SvgPicture.asset(
-                asset,
-                width: 24,
-                height: 24,
-              ),
+              child: SvgPicture.asset(asset, width: 24, height: 24),
             ),
           ),
         ),
@@ -197,9 +190,9 @@ class AuthRoleSelector extends StatelessWidget {
       children: [
         Text(
           context.l10n.chooseRole,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
         Row(
@@ -251,7 +244,9 @@ class _RoleTile extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: selected
-            ? context.scheme.primary.withValues(alpha: context.isDark ? 0.18 : 0.06)
+            ? context.scheme.primary.withValues(
+                alpha: context.isDark ? 0.18 : 0.06,
+              )
             : context.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
@@ -287,9 +282,9 @@ class _RoleTile extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   label,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -297,9 +292,9 @@ class _RoleTile extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: context.muted,
-                        height: 1.3,
-                      ),
+                    color: context.muted,
+                    height: 1.3,
+                  ),
                 ),
               ],
             ),
@@ -324,9 +319,9 @@ class AuthDivider extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: context.muted,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: context.muted),
           ),
         ),
         const Expanded(child: Divider()),
@@ -349,25 +344,35 @@ class AuthLinkRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          prompt,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: context.muted,
-              ),
-        ),
-        TextButton(
-          onPressed: onTap,
-          style: TextButton.styleFrom(
-            foregroundColor:
-                context.isDark ? Colors.white : AppColors.primary,
-            textStyle: const TextStyle(fontWeight: FontWeight.w700),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(
+            prompt,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: context.ink.withValues(alpha: 0.72),
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          child: Text(actionLabel),
-        ),
-      ],
+          TextButton(
+            onPressed: onTap,
+            style: TextButton.styleFrom(
+              foregroundColor: context.scheme.primary,
+              minimumSize: const Size(48, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+              ),
+            ),
+            child: Text(actionLabel),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -399,7 +404,10 @@ class AuthWorkerChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: active ? AppColors.success : context.hairline,
+              color: active
+                  ? AppColors.success
+                  : context.ink.withValues(alpha: context.isDark ? 0.4 : 0.22),
+              width: active ? 1.5 : 1.3,
             ),
           ),
           child: Row(
@@ -413,13 +421,15 @@ class AuthWorkerChip extends StatelessWidget {
                 child: Text(
                   label,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: active ? AppColors.success : context.ink,
-                      ),
+                    fontWeight: FontWeight.w600,
+                    color: active ? AppColors.success : context.ink,
+                  ),
                 ),
               ),
               Icon(
-                active ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
+                active
+                    ? Icons.check_circle_rounded
+                    : Icons.chevron_right_rounded,
                 color: active ? AppColors.success : context.muted,
               ),
             ],
@@ -434,29 +444,51 @@ class AuthWorkerChip extends StatelessWidget {
 class AuthCurvedShell extends StatelessWidget {
   const AuthCurvedShell({
     required this.child,
+    this.footer,
     this.compact = false,
     this.scrollable = true,
     super.key,
   });
 
   final Widget child;
+
+  /// Pinned below scroll (e.g. sign-up link) so home indicator never clips it.
+  final Widget? footer;
   final bool compact;
   final bool scrollable;
 
   @override
   Widget build(BuildContext context) {
     final scheme = context.scheme;
-    final topPad = MediaQuery.paddingOf(context).top;
+    final media = MediaQuery.of(context);
+    final topPad = media.padding.top;
+    final bottomPad = media.padding.bottom;
+    final keyboard = media.viewInsets.bottom;
     final l10n = context.l10n;
-    final headerExtra = compact ? 156.0 : 236.0;
-    final iconSize = compact ? 80.0 : 96.0;
-    final curve = compact ? 60.0 : 72.0;
-    final pad = compact
-        ? const EdgeInsets.fromLTRB(26, 26, 26, 16)
-        : const EdgeInsets.fromLTRB(28, 40, 28, 28);
+    // Short screens → auto-compact so form + CTA fit without clipping.
+    final useCompact = compact || media.size.height < 820;
+    final headerExtra = useCompact ? 132.0 : 168.0;
+    final iconSize = useCompact ? 72.0 : 88.0;
+    final curve = useCompact ? 48.0 : 56.0;
+    final scrollBottom = footer == null
+        ? (useCompact ? 20.0 : 28.0) + bottomPad + keyboard
+        : (useCompact ? 12.0 : 16.0) + keyboard;
+    final pad = EdgeInsets.fromLTRB(
+      useCompact ? 24 : 28,
+      useCompact ? 20 : 28,
+      useCompact ? 24 : 28,
+      scrollBottom,
+    );
 
     final body = scrollable
-        ? SingleChildScrollView(padding: pad, child: child)
+        ? SingleChildScrollView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: pad,
+            child: child,
+          )
         : Padding(
             padding: pad,
             child: LayoutBuilder(
@@ -464,10 +496,7 @@ class AuthCurvedShell extends StatelessWidget {
                 return FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.topCenter,
-                  child: SizedBox(
-                    width: constraints.maxWidth,
-                    child: child,
-                  ),
+                  child: SizedBox(width: constraints.maxWidth, child: child),
                 );
               },
             ),
@@ -479,8 +508,9 @@ class AuthCurvedShell extends StatelessWidget {
         statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.dark,
         systemNavigationBarColor: scheme.surface,
-        systemNavigationBarIconBrightness:
-            context.isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarIconBrightness: context.isDark
+            ? Brightness.light
+            : Brightness.dark,
       ),
       child: Scaffold(
         backgroundColor: AppColors.primaryDark,
@@ -497,12 +527,14 @@ class AuthCurvedShell extends StatelessWidget {
                   child: Align(
                     child: Container(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(compact ? 18 : 20),
+                        borderRadius: BorderRadius.circular(
+                          useCompact ? 16 : 18,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.28),
-                            blurRadius: compact ? 16 : 20,
-                            offset: Offset(0, compact ? 8 : 10),
+                            blurRadius: useCompact ? 14 : 18,
+                            offset: Offset(0, useCompact ? 6 : 8),
                           ),
                           BoxShadow(
                             color: Colors.white.withValues(alpha: 0.12),
@@ -512,7 +544,9 @@ class AuthCurvedShell extends StatelessWidget {
                         ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(compact ? 18 : 20),
+                        borderRadius: BorderRadius.circular(
+                          useCompact ? 16 : 18,
+                        ),
                         child: Image.asset(
                           'assets/app_icon.png',
                           width: iconSize,
@@ -542,7 +576,26 @@ class AuthCurvedShell extends StatelessWidget {
                       topLeft: Radius.circular(curve),
                       topRight: Radius.circular(curve),
                     ),
-                    child: body,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(child: body),
+                        if (footer != null)
+                          SafeArea(
+                            top: false,
+                            minimum: const EdgeInsets.only(bottom: 8),
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                useCompact ? 24 : 28,
+                                4,
+                                useCompact ? 24 : 28,
+                                keyboard > 0 ? 8 : 4,
+                              ),
+                              child: footer!,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -636,7 +689,9 @@ class _RoleChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: selected
-          ? context.scheme.primary.withValues(alpha: context.isDark ? 0.22 : 0.1)
+          ? context.scheme.primary.withValues(
+              alpha: context.isDark ? 0.22 : 0.1,
+            )
           : context.scheme.surface,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
@@ -654,9 +709,9 @@ class _RoleChip extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: selected ? context.scheme.primary : context.ink,
-                  ),
+                fontWeight: FontWeight.w700,
+                color: selected ? context.scheme.primary : context.ink,
+              ),
             ),
           ),
         ),
@@ -699,8 +754,9 @@ class AuthUnderlineField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final line = context.ink.withValues(alpha: context.isDark ? 0.45 : 0.28);
     final baseBorder = UnderlineInputBorder(
-      borderSide: BorderSide(color: context.hairline, width: 1.2),
+      borderSide: BorderSide(color: line, width: 1.4),
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -708,13 +764,13 @@ class AuthUnderlineField extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: context.ink,
-                fontSize: dense ? 12.5 : null,
-                height: 1.25,
-              ),
+            fontWeight: FontWeight.w700,
+            color: context.ink,
+            fontSize: dense ? 12.5 : 14,
+            height: 1.25,
+          ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         TextFormField(
           controller: controller,
           obscureText: obscureText,
@@ -724,34 +780,36 @@ class AuthUnderlineField extends StatelessWidget {
           validator: validator,
           maxLength: maxLength,
           onFieldSubmitted: onFieldSubmitted,
+          cursorColor: context.scheme.primary,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: context.ink,
-                fontSize: dense ? 15 : null,
-                height: 1.35,
-              ),
+            color: context.ink,
+            fontWeight: FontWeight.w500,
+            fontSize: dense ? 15 : 16,
+            height: 1.35,
+          ),
           decoration: InputDecoration(
             hintText: hint,
             counterText: maxLength == null ? null : '',
             hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: context.muted,
-                  fontSize: dense ? 14.5 : null,
-                  height: 1.35,
-                ),
+              color: context.ink.withValues(alpha: 0.42),
+              fontSize: dense ? 14.5 : 15.5,
+              height: 1.35,
+            ),
             border: baseBorder,
             enabledBorder: baseBorder,
             focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: context.scheme.primary, width: 1.8),
+              borderSide: BorderSide(color: context.scheme.primary, width: 2),
             ),
             errorBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: context.scheme.error, width: 1.2),
+              borderSide: BorderSide(color: context.scheme.error, width: 1.4),
             ),
             focusedErrorBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: context.scheme.error, width: 1.8),
+              borderSide: BorderSide(color: context.scheme.error, width: 2),
             ),
             // Balanced vertical padding so text sits near underline, not floating up.
             contentPadding: EdgeInsets.only(
               top: dense ? 8 : 10,
-              bottom: dense ? 10 : 10,
+              bottom: dense ? 10 : 12,
             ),
             // prefixIcon stays visible even when empty/unfocused (unlike prefix).
             prefixIcon: prefix == null
@@ -771,8 +829,8 @@ class AuthUnderlineField extends StatelessWidget {
             ),
             suffixIcon: suffix,
             suffixIconConstraints: const BoxConstraints(
-              minWidth: 40,
-              minHeight: 36,
+              minWidth: 44,
+              minHeight: 44,
             ),
             isDense: true,
           ),
@@ -798,7 +856,7 @@ class AuthDarkButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = compact ? 46.0 : 48.0;
+    final h = compact ? 48.0 : 52.0;
     return SizedBox(
       height: h,
       width: double.infinity,
@@ -807,23 +865,28 @@ class AuthDarkButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryDark,
           foregroundColor: Colors.white,
-          disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
+          disabledBackgroundColor: AppColors.primaryDark.withValues(
+            alpha: 0.55,
+          ),
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.85),
           elevation: 0,
-          minimumSize: Size.fromHeight(h),
+          shadowColor: AppColors.primaryDark.withValues(alpha: 0.35),
+          minimumSize: Size(double.infinity, h),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           textStyle: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: compact ? 14 : 15,
+            fontWeight: FontWeight.w800,
+            fontSize: compact ? 15 : 16,
+            letterSpacing: 0.2,
           ),
         ),
         child: loading
             ? const SizedBox(
-                width: 20,
-                height: 20,
+                width: 22,
+                height: 22,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2,
+                  strokeWidth: 2.2,
                   color: Colors.white,
                 ),
               )
@@ -859,7 +922,12 @@ class AuthGoogleSquare extends StatelessWidget {
             height: h,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: context.hairline, width: 1.2),
+              border: Border.all(
+                color: context.ink.withValues(
+                  alpha: context.isDark ? 0.4 : 0.22,
+                ),
+                width: 1.4,
+              ),
             ),
             child: Center(
               child: SvgPicture.asset(
