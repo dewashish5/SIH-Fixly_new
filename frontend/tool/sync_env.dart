@@ -38,6 +38,10 @@ void main() {
     'Mapbox_api_key': token,
     'ACCESS_TOKEN': token,
   };
+  final apiBase = (values['API_BASE_URL'] ?? '').trim();
+  if (apiBase.isNotEmpty) {
+    defines['API_BASE_URL'] = apiBase;
+  }
   File('dart_defines.json').writeAsStringSync(
     '${const JsonEncoder.withIndent('  ').convert(defines)}\n',
   );

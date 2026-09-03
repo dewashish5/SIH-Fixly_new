@@ -1,4 +1,5 @@
 import Service from '../models/Service.js';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
 
 // Screen 4: AI Issue Analyzer
 export const analyzeIssue = async (req, res) => {
@@ -6,6 +7,12 @@ export const analyzeIssue = async (req, res) => {
         const { problemDescription } = req.body;
         if (!problemDescription) {
             return res.status(400).json({ success: false, message: 'Problem description required hai' });
+        }
+
+        let issueImageUrl = null;
+        if (req.file) {
+            const uploaded = await uploadToCloudinary(req.file.buffer, 'gigconnect/ai');
+            issueImageUrl = uploaded.secure_url;
         }
 
         const text = problemDescription.toLowerCase();
@@ -31,6 +38,7 @@ export const analyzeIssue = async (req, res) => {
                 category: detectedCategory,
                 estimatedHours,
                 suggestedService: suggestedService || null,
+                issueImageUrl,
                 aiNote: `Based on your query "${problemDescription}", we recommend a ${detectedCategory} specialist.`
             }
         });

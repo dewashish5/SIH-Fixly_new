@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
+
 import '../../../core/location/app_location.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
@@ -64,6 +68,7 @@ class BookingsApiRepository {
     double? lng,
     double? lat,
     String serviceTitle = 'Service',
+    List<String> photoPaths = const [],
   }) async {
     final loc = AppLocation.instance;
     final useLng = lng ?? (loc.hasFix ? loc.requireLng : null);
@@ -71,14 +76,42 @@ class BookingsApiRepository {
     if (useLng == null || useLat == null) {
       throw ApiException('Location required to create booking');
     }
-    final res = await _api.post('/api/bookings/', data: {
-      'serviceId': serviceId,
-      'workerId': ?workerId,
-      'problemDescription': ?problemDescription,
-      'addressLine': addressLine,
-      'coordinates': [useLng, useLat],
-      'scheduledTime': ?scheduledTime?.toUtc().toIso8601String(),
-    });
+
+    final Object data;
+    if (photoPaths.isEmpty) {
+      data = {
+        'serviceId': serviceId,
+        'workerId': ?workerId,
+        'problemDescription': ?problemDescription,
+        'addressLine': addressLine,
+        'coordinates': [useLng, useLat],
+        'scheduledTime': ?scheduledTime?.toUtc().toIso8601String(),
+      };
+    } else {
+      final map = <String, dynamic>{
+        'serviceId': serviceId,
+        if (workerId != null) 'workerId': workerId,
+        if (problemDescription != null) 'problemDescription': problemDescription,
+        'addressLine': addressLine,
+        'coordinates': jsonEncode([useLng, useLat]),
+        if (scheduledTime != null)
+          'scheduledTime': scheduledTime.toUtc().toIso8601String(),
+      };
+      final files = <MultipartFile>[];
+      for (final path in photoPaths) {
+        if (path.isEmpty) continue;
+        files.add(
+          await MultipartFile.fromFile(
+            path,
+            filename: path.split(RegExp(r'[/\\]')).last,
+          ),
+        );
+      }
+      map['photos'] = files;
+      data = FormData.fromMap(map);
+    }
+
+    final res = await _api.post('/api/bookings/', data: data);
     if (res['success'] != true || res['booking'] == null) {
       throw ApiException(res['message']?.toString() ?? 'Booking failed');
     }

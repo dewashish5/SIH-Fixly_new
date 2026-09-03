@@ -33,3 +33,5 @@ Thumbs.db
 # Cache
 .cache/
 .npm/
+# Ephemeral cloudflared URL
+PUBLIC_URL

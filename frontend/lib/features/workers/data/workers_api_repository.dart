@@ -50,11 +50,11 @@ class WorkersApiRepository {
     return mapWorker(Map<String, dynamic>.from(res['worker'] as Map));
   }
 
-  /// Worker onboarding final submit.
+  /// Last onboarding step: flat JSON + base64 media → setup-profile.
   Future<Map<String, dynamic>> submitSetupProfile(
     OnboardingFormData formData,
   ) async {
-    final body = WorkerSetupProfileMapper.toBody(formData);
+    final body = await WorkerSetupProfileMapper.toBody(formData);
     final res = await _api.put('/api/workers/setup-profile', data: body);
     if (res['success'] != true) {
       throw ApiException(
@@ -79,6 +79,7 @@ class WorkersApiRepository {
         0;
     final jobs =
         (profileMap['jobsCompleted'] as num?)?.toInt() ??
+        (profileMap['totalJobs'] as num?)?.toInt() ??
         (json['jobsCompleted'] as num?)?.toInt() ??
         0;
     return WorkerProfile(
@@ -88,7 +89,7 @@ class WorkersApiRepository {
       rating: rating,
       jobsCompleted: jobs,
       reliabilityScore: (rating * 20).round().clamp(0, 100),
-      avatarUrl: json['avatar'] as String?,
+      avatarUrl: (json['avatar'] ?? profileMap['selfieImageUrl']) as String?,
     );
   }
 }

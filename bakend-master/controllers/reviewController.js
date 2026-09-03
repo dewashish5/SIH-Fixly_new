@@ -1,13 +1,23 @@
 import Review from '../models/Review.js';
 import User from '../models/User.js';
 import Booking from '../models/Booking.js';
+import { uploadMulterFiles } from '../utils/cloudinary.js';
 
 // Screen: Rating & Review Submission
 export const submitReview = async (req, res) => {
-    // #swagger.tags = ['Reviews']
-    // #swagger.parameters['body'] = { in: 'body', description: 'Submit Review Input', required: true, schema: { $ref: '#/definitions/SubmitReviewInput' } }
     try {
-        const { bookingId, workerId, rating, comment, traits } = req.body;
+        const { bookingId: bodyBookingId, workerId, rating, comment, traits } = req.body;
+        const bookingId = req.params.bookingId || bodyBookingId;
+
+        let badgesGiven = traits;
+        if (typeof traits === 'string') {
+            badgesGiven = traits.split(',').map((t) => t.trim()).filter(Boolean);
+        }
+
+        let photos = [];
+        if (req.files?.length) {
+            photos = await uploadMulterFiles(req.files, 'gigconnect/reviews');
+        }
 
         const review = await Review.create({
             booking: bookingId,
@@ -15,12 +25,13 @@ export const submitReview = async (req, res) => {
             worker: workerId,
             rating,
             feedback: comment,
-            badgesGiven: traits // e.g., ['Professional', 'On Time']
+            badgesGiven: badgesGiven || [],
+            photos,
         });
 
         // MongoDB Aggregation to dynamically update worker's average rating
         const stats = await Review.aggregate([
-            { $match: { worker: workerId } },
+            { $match: { worker: review.worker } },
             { $group: { _id: '$worker', avgRating: { $avg: '$rating' }, totalJobs: { $sum: 1 } } }
         ]);
 
@@ -31,7 +42,6 @@ export const submitReview = async (req, res) => {
             });
         }
 
-        // Mark booking as reviewed
         await Booking.findByIdAndUpdate(bookingId, { isReviewed: true });
 
         return res.status(201).json({ success: true, message: 'Review submitted successfully', review });

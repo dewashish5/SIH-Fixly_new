@@ -218,9 +218,14 @@ class AuthApiRepository {
     final profile = profileRaw is Map
         ? Map<String, dynamic>.from(profileRaw)
         : <String, dynamic>{};
+    final kycDocsRaw = user['kycDocuments'];
+    final kycDocs = kycDocsRaw is Map
+        ? Map<String, dynamic>.from(kycDocsRaw)
+        : <String, dynamic>{};
 
     final raw = (user['kycStatus'] ??
             user['verificationStatus'] ??
+            kycDocs['status'] ??
             profile['kycStatus'] ??
             profile['status'] ??
             profile['verificationStatus'] ??

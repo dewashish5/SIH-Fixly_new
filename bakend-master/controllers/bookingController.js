@@ -4,6 +4,7 @@ dotenv.config();
 import Booking from '../models/Booking.js';
 import Service from '../models/Service.js';
 import User from '../models/User.js';
+import { uploadMulterFiles } from '../utils/cloudinary.js';
 
 // Screen 5 & 6: Estimate Price Breakdown
 export const calculateEstimate = async (req, res) => {
@@ -45,19 +46,47 @@ export const createBooking = async (req, res) => {
     try {
         const { serviceId, workerId, problemDescription, problemPhotos, addressLine, coordinates, scheduledTime, invoice } = req.body;
 
+        let photoUrls = [];
+        if (Array.isArray(problemPhotos)) {
+            photoUrls = problemPhotos.filter(Boolean);
+        } else if (typeof problemPhotos === 'string' && problemPhotos.trim()) {
+            // multipart may send JSON string or single URL
+            try {
+                const parsed = JSON.parse(problemPhotos);
+                photoUrls = Array.isArray(parsed) ? parsed : [problemPhotos];
+            } catch {
+                photoUrls = [problemPhotos];
+            }
+        }
+
+        if (req.files?.length) {
+            const uploaded = await uploadMulterFiles(req.files, 'gigconnect/bookings');
+            photoUrls = [...photoUrls, ...uploaded];
+        }
+
+        let coords = coordinates;
+        if (typeof coords === 'string') {
+            try { coords = JSON.parse(coords); } catch { /* keep */ }
+        }
+
         const booking = await Booking.create({
             customer: req.user.id,
             worker: workerId || null,
             service: serviceId,
             problemDescription,
-            problemPhotos: problemPhotos || [],
+            problemPhotos: photoUrls,
             serviceAddress: {
                 addressLine,
-                location: { type: 'Point', coordinates }
+                location: { type: 'Point', coordinates: coords }
             },
             scheduledTime: scheduledTime || Date.now(),
             status: workerId ? 'ACCEPTED' : 'SEARCHING',
-            invoice: invoice || {}
+            invoice: (() => {
+                if (typeof invoice === 'string') {
+                    try { return JSON.parse(invoice || '{}'); } catch { return {}; }
+                }
+                return invoice || {};
+            })()
         });
 
         return res.status(201).json({

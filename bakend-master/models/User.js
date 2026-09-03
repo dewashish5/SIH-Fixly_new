@@ -15,17 +15,47 @@ const addressSchema = new mongoose.Schema({
 });
 
 // 2. Worker Profile Schema (Sub-document)
+const categoryRateSchema = new mongoose.Schema({
+    category: { type: String },
+    rate: { type: Number }
+}, { _id: false });
+
+const identityDocSchema = new mongoose.Schema({
+    docType: { type: String },
+    docNumber: { type: String },
+    frontPhotoUrl: { type: String },
+    backPhotoUrl: { type: String },
+    status: { type: String, default: 'PENDING' }
+}, { _id: false });
+
 const workerProfileSchema = new mongoose.Schema({
-    category: { type: String, default: null }, // e.g., 'Plumbing'
+    dateOfBirth: { type: String, default: null },
+    gender: { type: String, default: null },
+    selfieImageUrl: { type: String, default: null },
+    category: { type: String, default: null },
+    categories: [{ type: String }],
+    rate: { type: Number, default: 0 },
     hourlyRate: { type: Number, default: 0 },
+    categoryRates: { type: [categoryRateSchema], default: [] },
     experienceYears: { type: Number, default: 0 },
     bio: { type: String, default: null },
     rating: { type: Number, default: 5.0 },
     totalJobs: { type: Number, default: 0 },
     recentWorkPhotos: [{ type: String }],
-    badges: [{ type: String }], // e.g., 'Background Checked', 'Top Rated'
+    badges: [{ type: String }],
     skills: [{ type: String }],
-    certifications: [{ type: String }]
+    certifications: [{ type: String }],
+    workAddress: { type: String, default: null },
+    identityDocuments: { type: [identityDocSchema], default: [] },
+    payoutMethod: { type: String, default: null },
+    bank: {
+        accountHolderName: { type: String },
+        accountNumber: { type: String },
+        ifscCode: { type: String }
+    },
+    upi: {
+        upiId: { type: String }
+    }
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({
@@ -70,6 +100,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isEmailVerified: {
+        type: Boolean,
+        default: false
+    },
 
     // GeoJSON Live Location (Optional, without defaults to prevent index errors when location is off)
     location: {
@@ -93,6 +127,27 @@ const userSchema = new mongoose.Schema({
         type: workerProfileSchema,
         default: null // Frontend check: if (user.role === 'worker' && !user.workerProfile) -> Redirect to Worker Setup Screen
     },
+
+    // KYC docs — Cloudinary URLs after Flutter /api/upload
+    kycDocuments: {
+        aadhaarNumber: { type: String, default: null },
+        aadhaarFrontPhoto: { type: String, default: null },
+        aadhaarBackPhoto: { type: String, default: null },
+        panNumber: { type: String, default: null },
+        panFrontPhoto: { type: String, default: null },
+        panBackPhoto: { type: String, default: null },
+        selfieImageUrl: { type: String, default: null },
+        certificateUrl: { type: String, default: null },
+        govermentIdType: { type: String, default: null },
+        govermentIdNumber: { type: String, default: null },
+        status: {
+            type: String,
+            enum: ['none', 'submitted', 'approved', 'rejected'],
+            default: 'none'
+        }
+    },
+
+    payoutDetails: { type: mongoose.Schema.Types.Mixed, default: null },
 
     // Single-device login security tracking
     activeDeviceId: {

@@ -25,6 +25,7 @@ import paymentRoutes from './routes/payment-routes.js';
 import reviewRoutes from './routes/review-routes.js';
 import homeRoutes from './routes/home-routes.js';
 import aiRoutes from './routes/ai-routes.js';
+import uploadRoutes from './routes/upload-routes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -36,7 +37,8 @@ app.set('trust proxy', 1);
 // Security & Utility Middleware
 app.use(helmet());
 app.use(cors());
-app.use(express.json({ limit: '10kb' }));
+// Worker setup-profile sends base64 data URIs for KYC docs
+app.use(express.json({ limit: '25mb' }));
 
 // Safe Custom NoSQL Injection Sanitizer (Compatible with Node.js v20+)
 app.use((req, res, next) => {
@@ -86,6 +88,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/home', homeRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/upload', apiLimiter, uploadRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
