@@ -36,6 +36,18 @@ const doc = {
                 coordinates: [77.2090, 28.6139]
             }
         },
+        GoogleLoginInput: {
+            email: "john.doe@example.com",
+            name: "John Doe",
+            avatar: "https://lh3.googleusercontent.com/a/default-user",
+            role: "customer",
+            phone: "+1234567890",
+            deviceId: "device-uuid-12345",
+            location: {
+                type: "Point",
+                coordinates: [77.2090, 28.6139]
+            }
+        },
         VerifyOtpInput: {
             email: "john.doe@example.com",
             otp: "123456",

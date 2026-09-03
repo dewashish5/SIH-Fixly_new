@@ -6,6 +6,7 @@ const transactionSchema = new mongoose.Schema({
     bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', required: true },
     orderId: { type: String, required: true },
     paymentId: { type: String },
+    signature: { type: String },
     amount: { type: Number, required: true },
     currency: { type: String, default: 'INR' },
     status: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
