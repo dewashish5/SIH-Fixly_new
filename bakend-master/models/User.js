@@ -2,60 +2,87 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-// 1. Saved Address Schema
+// 1. Saved Address Schema (Sub-document)
 const addressSchema = new mongoose.Schema({
-    label: { type: String, default: 'Home' }, // Home, Work, Other
+    label: { type: String, enum: ['Home', 'Work', 'Other'], default: 'Home' },
     addressLine: { type: String, required: true },
-    city: { type: String },
-    pincode: { type: String },
+    city: { type: String, required: true },
+    pincode: { type: String, required: true },
     location: {
         type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: { type: [Number], required: true, default: null } // [longitude, latitude]
+        coordinates: { type: [Number], required: true }
     }
 });
 
-// 2. Worker Profile Schema (Sub-document)
+// Wallet Transaction Schema for Worker
+const walletTransactionSchema = new mongoose.Schema({
+    transactionId: { type: String },
+    bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
+    amount: { type: Number, required: true },
+    type: { type: String, enum: ['CREDIT', 'DEBIT'], default: 'CREDIT' },
+    description: { type: String },
+    createdAt: { type: Date, default: Date.now }
+}, { _id: true });
+
+// Identity Document Sub-document Schema for Workers
+const identityDocumentSchema = new mongoose.Schema({
+    docType: { type: String, default: 'Aadhaar Card' }, // Aadhaar Card, PAN Card, Driving License, Voter ID, Passport
+    docNumber: { type: String, default: null }, // Unique ID Number
+    frontPhotoUrl: { type: String, default: null }, // Front side photo
+    backPhotoUrl: { type: String, default: null }, // Back side photo
+    status: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'PENDING' },
+    uploadedAt: { type: Date, default: Date.now }
+}, { _id: true });
+
+// Bank Details Sub-document Schema for Worker Payout
+const bankDetailsSchema = new mongoose.Schema({
+    accountHolderName: { type: String, default: null },
+    accountNumber: { type: String, default: null },
+    ifscCode: { type: String, default: null }
+}, { _id: false });
+
+// UPI Details Sub-document Schema for Worker Payout
+const upiDetailsSchema = new mongoose.Schema({
+    upiId: { type: String, default: null }
+}, { _id: false });
+
+// 2. Category Rate Schema (Per-category rate structure)
 const categoryRateSchema = new mongoose.Schema({
-    category: { type: String },
-    rate: { type: Number }
+    category: { type: String, required: true, trim: true },
+    rate: { type: Number, required: true, default: 0 }
 }, { _id: false });
 
-const identityDocSchema = new mongoose.Schema({
-    docType: { type: String },
-    docNumber: { type: String },
-    frontPhotoUrl: { type: String },
-    backPhotoUrl: { type: String },
-    status: { type: String, default: 'PENDING' }
-}, { _id: false });
-
+// 3. Worker Profile Schema (Sub-document)
 const workerProfileSchema = new mongoose.Schema({
-    dateOfBirth: { type: String, default: null },
-    gender: { type: String, default: null },
+    // Step 1: Identity & Legal Docs
+    dateOfBirth: { type: String, default: null }, // e.g. "1998-05-12"
+    gender: { type: String, enum: ['male', 'female', 'other'], default: 'male' },
     selfieImageUrl: { type: String, default: null },
-    category: { type: String, default: null },
-    categories: [{ type: String }],
-    rate: { type: Number, default: 0 },
-    hourlyRate: { type: Number, default: 0 },
-    categoryRates: { type: [categoryRateSchema], default: [] },
+    identityDocuments: { type: [identityDocumentSchema], default: [] }, // Multiple ID Documents Array (Aadhaar & PAN)
+
+    // Step 2: Work Profile & Skills
+    category: { type: String, default: null }, // e.g., 'Plumbing' (Primary)
+    categories: [{ type: String }], // Array of categories offered
+    rate: { type: Number, default: 0 }, // General / Primary minimum service rate
+    hourlyRate: { type: Number, default: 0 }, // Hourly rate alias
+    categoryRates: [categoryRateSchema], // Individual rate for each category e.g., [{ category: 'Plumbing', rate: 350 }]
     experienceYears: { type: Number, default: 0 },
     bio: { type: String, default: null },
-    rating: { type: Number, default: 5.0 },
-    totalJobs: { type: Number, default: 0 },
-    recentWorkPhotos: [{ type: String }],
-    badges: [{ type: String }],
     skills: [{ type: String }],
     certifications: [{ type: String }],
     workAddress: { type: String, default: null },
-    identityDocuments: { type: [identityDocSchema], default: [] },
-    payoutMethod: { type: String, default: null },
-    bank: {
-        accountHolderName: { type: String },
-        accountNumber: { type: String },
-        ifscCode: { type: String }
-    },
-    upi: {
-        upiId: { type: String }
-    },
+    rating: { type: Number, default: 5.0 },
+    totalJobs: { type: Number, default: 0 },
+    recentWorkPhotos: [{ type: String }],
+    badges: [{ type: String }], // e.g., 'Background Checked', 'Top Rated'
+
+    // Step 3: Payout & Welfare
+    eshramUan: { type: String, default: null },
+    payoutMethod: { type: String, enum: ['bank', 'upi'], default: 'bank' },
+    bank: { type: bankDetailsSchema, default: {} },
+    upi: { type: upiDetailsSchema, default: {} },
+
+    // Availability & Radius
     isOnline: { type: Boolean, default: false },
     lastActiveAt: { type: Date, default: null },
     serviceRadiusKm: { type: Number, default: 10 },
@@ -64,31 +91,38 @@ const workerProfileSchema = new mongoose.Schema({
         startTime: { type: String, default: '09:00' },
         endTime: { type: String, default: '18:00' },
     },
+
+    // Wallet Balances
     walletBalance: { type: Number, default: 0 },
     totalEarnings: { type: Number, default: 0 },
+    walletTransactions: { type: [walletTransactionSchema], default: [] }
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true,
+        required: [true, 'Please add a name'],
         trim: true
     },
     email: {
         type: String,
-        required: true,
+        required: [true, 'Please add an email'],
         unique: true,
-        lowercase: true,
-        trim: true,
-        match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address']
+        match: [
+            /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+            'Please add a valid email'
+        ]
+    },
+    password: {
+        type: String,
+        select: false, // Default query me password field return nahi hoga
+        minlength: 6
     },
     phone: {
         type: String,
-        sparse: true,
-        trim: true,
-        default: null // Frontend check: if (!user.phone) -> Redirect to Add Phone Screen
+        default: null
     },
-    password: {
+    avatar: {
         type: String,
         default: null
     },
@@ -102,17 +136,13 @@ const userSchema = new mongoose.Schema({
         enum: ['local', 'google'],
         default: 'local'
     },
-    avatar: {
-        type: String,
-        default: null
-    },
     isVerified: {
         type: Boolean,
-        default: false
+        default: false // Admin approval status (Must be explicitly approved by admin for workers)
     },
     isEmailVerified: {
         type: Boolean,
-        default: false
+        default: false // OTP verification status
     },
 
     // GeoJSON Live Location (Optional, without defaults to prevent index errors when location is off)
@@ -122,17 +152,14 @@ const userSchema = new mongoose.Schema({
             enum: ['Point']
         },
         coordinates: {
-            type: [Number]
+            type: [Number] // [longitude, latitude] format
         }
     },
 
-    // Saved Addresses (Khali array agar abhi tak address save nahi kiya)
-    savedAddresses: {
-        type: [addressSchema],
-        default: []
-    },
+    // Saved Addresses
+    savedAddresses: [addressSchema],
 
-    // Worker Profile: Customer ke liye null rahega, Worker ke setup karne par populate hoga
+    // Embedded Worker Details
     workerProfile: {
         type: workerProfileSchema,
         default: null // Frontend check: if (user.role === 'worker' && !user.workerProfile) -> Redirect to Worker Setup Screen

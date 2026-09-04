@@ -16,15 +16,128 @@ const doc = {
         }
     },
     definitions: {
+        CustomerRegisterInput: {
+            name: "John Customer",
+            email: "john.customer@example.com",
+            password: "SecurePassword123",
+            role: "customer",
+            phone: "+919876543210",
+            location: {
+                type: "Point",
+                coordinates: [77.2090, 28.6139]
+            }
+        },
+        WorkerRegisterInput: {
+            name: "Ramesh Worker",
+            email: "ramesh.worker@example.com",
+            password: "SecurePassword123",
+            role: "worker",
+            phone: "+919876543210",
+            location: {
+                type: "Point",
+                coordinates: [77.2090, 28.6139]
+            }
+        },
         RegisterInput: {
             name: "John Doe",
             email: "john.doe@example.com",
             password: "SecurePassword123",
             role: "customer",
-            phone: "+1234567890",
+            phone: "+919876543210",
             location: {
                 type: "Point",
                 coordinates: [77.2090, 28.6139]
+            }
+        },
+        Worker3StepOnboardingInput: {
+            step1_identity: {
+                fullName: "Dewashish Hatekar",
+                dateOfBirth: "1998-05-12",
+                gender: "male",
+                phone: "9876543210",
+                email: "dewashishhatekar05@gmail.com",
+                aadhaarNumber: "123456789012",
+                aadhaarFrontPhoto: "https://example.com/aadhaar_front.jpg",
+                aadhaarBackPhoto: "https://example.com/aadhaar_back.jpg",
+                panNumber: "ABCDE1234F",
+                panFrontPhoto: "https://example.com/pan_front.jpg",
+                panBackPhoto: "https://example.com/pan_back.jpg",
+                selfieVerified: true,
+                selfieImageUrl: "https://example.com/selfie.jpg",
+                govermentIdType: "Aadhaar Card",
+                govermentIdNumber: "123456789012"
+            },
+            step2_workProfile: {
+                certificateUploaded: true,
+                certifications: ["certificate.pdf"],
+                categories: ["plumber", "electrician"],
+                category: "plumber",
+                skills: ["plumber", "electrician", "Pipe Fitting"],
+                experienceYears: 4,
+                bio: "Experienced plumber and electrician with 4+ years of field experience.",
+                rate: 350,
+                categoryRates: [
+                    { category: "plumber", rate: 350 },
+                    { category: "electrician", rate: 500 },
+                    { category: "Pipe Fitting", rate: 300 }
+                ],
+                location: {
+                    type: "Point",
+                    coordinates: [77.2090, 28.6139],
+                    address: "Connaught Place, New Delhi"
+                }
+            },
+            step3_payoutWelfare: {
+                hasEshram: true,
+                eshramUan: "ESHRAM1234567890",
+                payoutMethod: "bank",
+                bank: {
+                    accountHolderName: "Dewashish Hatekar",
+                    accountNumber: "123456789012",
+                    confirmAccountNumber: "123456789012",
+                    ifscCode: "HDFC0001234",
+                    bankVerified: true
+                },
+                upi: {
+                    upiId: "dewashish@upi",
+                    upiVerified: false
+                }
+            }
+        },
+        WorkerProfileSetupInput: {
+            name: "Dewashish Hatekar",
+            phone: "9876543210",
+            dateOfBirth: "1998-05-12",
+            gender: "male",
+            avatar: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD...",
+            category: "electrician",
+            categories: ["electrician", "plumber"],
+            rate: 500,
+            categoryRates: [
+                { category: "electrician", rate: 500 }
+            ],
+            experienceYears: 4,
+            bio: "Experienced electrician and plumber with 4+ years of field experience.",
+            skills: ["electrician", "plumbing"],
+            certifications: [
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+                "data:application/pdf;base64,JVBERi0xLjQN..."
+            ],
+            aadhaarNumber: "123456789012",
+            aadhaarFrontPhoto: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD...",
+            aadhaarBackPhoto: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD...",
+            panNumber: "ABCDE1234F",
+            panFrontPhoto: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD...",
+            panBackPhoto: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD...",
+            workAddress: "Connaught Place, New Delhi",
+            payoutMethod: "bank",
+            bank: {
+                accountHolderName: "Dewashish Hatekar",
+                accountNumber: "123456789012",
+                ifscCode: "HDFC0001234"
+            },
+            upi: {
+                upiId: "dewashish@upi"
             }
         },
         LoginInput: {

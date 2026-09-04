@@ -32,11 +32,12 @@ import {
 } from '../controllers/welfareController.js';
 import { getWorkerReviews } from '../controllers/reviewController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
+import { upload } from '../utils/upload.js';
 
 const router = express.Router();
 
 router.get('/', protect, getNearbyWorkers);
-router.put('/setup-profile', protect, setupWorkerProfile);
+router.put('/setup-profile', protect, upload.any(), setupWorkerProfile);
 
 router.get('/me/availability', protect, authorize('worker'), getMyAvailability);
 router.patch('/me/availability', protect, authorize('worker'), patchMyAvailability);

@@ -3,7 +3,11 @@ import redis from '../config/redis.js';
 import { generateOtpEmailHtml } from '../utils/emailTemplate.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import fs from 'fs';
 import { emailQueue } from '../queues/queue.js';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
+import { queueFileUpload } from '../utils/upload.js';
+import { uploadQueueManager } from '../utils/uploadQueue.js';
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 const REDIS_VERIFIED_TTL = 86400; // 24 Hours Cache TTL
@@ -81,7 +85,6 @@ const getUserCache = async (email) => {
 // Get Current Logged-in User Profile
 export const getMe = async (req, res) => {
     try {
-        // req.user.id auth middleware se aayega jo token decode karta hai
         const user = await User.findById(req.user.id).select('-password');
 
         if (!user) {
@@ -97,7 +100,6 @@ export const getMe = async (req, res) => {
     }
 };
 
-
 // 1. REGISTER (Uses User schema pre-save hook for password hashing)
 export const registerUser = async (req, res) => {
     // #swagger.tags = ['Auth']
@@ -112,6 +114,12 @@ export const registerUser = async (req, res) => {
             return res.status(400).json({ success: false, message: 'User already exists' });
         }
 
+        const hasFullWorkerProfile = workerProfile && (
+            workerProfile.category ||
+            workerProfile.rate ||
+            (workerProfile.categoryRates && workerProfile.categoryRates.length > 0)
+        );
+
         const userPayload = {
             name,
             email: emailNormalized,
@@ -119,15 +127,14 @@ export const registerUser = async (req, res) => {
             role: role || 'customer',
             authProvider: 'local',
             phone: phone || null,
-            location: location || null, // Default to null if off
-            workerProfile: role === 'worker' ? workerProfile || {} : null
+            location: location || null,
+            workerProfile: (role === 'worker' && hasFullWorkerProfile) ? workerProfile : null
         };
 
-        let userDoc;
-        if (!existingUser) {
+        let userDoc = await User.findOne({ email: emailNormalized });
+        if (!userDoc) {
             userDoc = await User.create(userPayload);
         } else {
-            userDoc = await User.findOne({ email: emailNormalized });
             Object.assign(userDoc, userPayload);
             await userDoc.save();
         }
@@ -175,10 +182,12 @@ export const verifyOTP = async (req, res) => {
         const user = await User.findOne({ email: emailNormalized });
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-        // Email OTP ≠ worker KYC. Workers stay isVerified=false until admin approves.
         user.isEmailVerified = true;
-        if (user.role !== 'worker') {
+        if (user.role === 'customer') {
             user.isVerified = true;
+        } else {
+            // For workers, account isVerified status stays false until explicitly approved by Admin
+            user.isVerified = Boolean(user.isVerified);
         }
         await user.save();
 
@@ -227,7 +236,7 @@ export const loginUser = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
-        if (!user.isVerified) {
+        if (!user.isEmailVerified && !user.isVerified) {
             return res.status(401).json({ success: false, message: 'Please verify your email first' });
         }
 
@@ -262,32 +271,360 @@ export const loginUser = async (req, res) => {
     }
 };
 
-// 4. DYNAMIC PROFILE UPDATE
+// Helper functions for safe parsing of nested bank and upi objects
+const parseBankObj = (val) => {
+    if (!val || typeof val !== 'object') return {};
+    return {
+        accountHolderName: val.accountHolderName || null,
+        accountNumber: val.accountNumber || null,
+        ifscCode: val.ifscCode || null,
+        bankVerified: Boolean(val.bankVerified)
+    };
+};
+
+const parseUpiObj = (val) => {
+    if (!val) return {};
+    if (typeof val === 'string') return { upiId: val, upiVerified: false };
+    if (typeof val === 'object') {
+        return {
+            upiId: val.upiId || val.upi || null,
+            upiVerified: Boolean(val.upiVerified)
+        };
+    }
+    return {};
+};
+
+const parseCategoryRates = (rawInput, defaultCategory = 'General', defaultRate = 0) => {
+    if (!rawInput && rawInput !== 0) return null;
+    let input = rawInput;
+    if (typeof input === 'string') {
+        try {
+            input = JSON.parse(input);
+        } catch (e) {
+            // Not a JSON string
+        }
+    }
+
+    if (Array.isArray(input)) {
+        return input.map(item => {
+            if (typeof item === 'object' && item !== null) {
+                const cat = item.category || item.name || defaultCategory;
+                const r = Number(item.rate ?? item.price ?? defaultRate) || 0;
+                return { category: String(cat).trim(), rate: r };
+            } else if (typeof item === 'number' || (typeof item === 'string' && !isNaN(Number(item)))) {
+                return { category: String(defaultCategory).trim(), rate: Number(item) || 0 };
+            }
+            return null;
+        }).filter(Boolean);
+    }
+
+    if (typeof input === 'object' && input !== null) {
+        const cat = input.category || defaultCategory;
+        const r = Number(input.rate ?? defaultRate) || 0;
+        return [{ category: String(cat).trim(), rate: r }];
+    }
+
+    if (typeof input === 'number' || (typeof input === 'string' && input && !isNaN(Number(input)))) {
+        return [{ category: String(defaultCategory).trim(), rate: Number(input) || 0 }];
+    }
+
+    return null;
+};
+
+// Helper: Upload Base64 / File / URL to Cloudinary with Folder Support
+const uploadBase64ToCloudinary = async (inputSource, folder = 'gigconnect') => {
+    if (!inputSource) return null;
+
+    if (typeof inputSource === 'string' && (inputSource.startsWith('http://') || inputSource.startsWith('https://'))) {
+        return inputSource;
+    }
+
+    if (typeof inputSource === 'string' && (inputSource.startsWith('data:image') || inputSource.startsWith('data:application/pdf') || inputSource.startsWith('data:application/'))) {
+        try {
+            const result = await uploadToCloudinary(inputSource, folder);
+            return result.secure_url;
+        } catch (error) {
+            console.error(`Cloudinary Base64 Upload Error (${folder}):`, error);
+            throw new Error('Image upload failed. Please try again.');
+        }
+    }
+
+    if (typeof inputSource === 'object' && (inputSource.path || inputSource.buffer)) {
+        try {
+            const source = inputSource.path || inputSource.buffer;
+            const result = await uploadToCloudinary(source, folder);
+            if (inputSource.path && fs.existsSync(inputSource.path)) {
+                await fs.promises.unlink(inputSource.path).catch(() => { });
+            }
+            return result.secure_url;
+        } catch (error) {
+            console.error(`Cloudinary Multer File Upload Error (${folder}):`, error);
+            throw new Error('File upload failed. Please try again.');
+        }
+    }
+
+    if (typeof inputSource === 'string' && inputSource.trim()) {
+        const cleanPath = inputSource.replace(/^file:\/\//, '');
+        if (fs.existsSync(cleanPath)) {
+            try {
+                const result = await uploadToCloudinary(cleanPath, folder);
+                return result.secure_url;
+            } catch (error) {
+                console.error(`Cloudinary File Path Upload Error (${folder}):`, error);
+            }
+        }
+    }
+
+    return null;
+};
+
+// 4. DYNAMIC WORKER PROFILE SETUP & UPDATE (Asynchronous BullMQ & Controlled Upload Queue)
 export const updateUserProfile = async (req, res) => {
+    /*  #swagger.tags = ['Auth']
+        #swagger.summary = 'Setup & Update Worker Profile (Supports File Picker Uploads & Base64 JSON via Queue)'
+        #swagger.consumes = ['multipart/form-data', 'application/json']
+        #swagger.parameters['avatar'] = { in: 'formData', type: 'file', description: 'Profile Photo / Selfie Image' }
+        #swagger.parameters['aadhaarFrontPhoto'] = { in: 'formData', type: 'file', description: 'Aadhaar Card Front Photo' }
+        #swagger.parameters['aadhaarBackPhoto'] = { in: 'formData', type: 'file', description: 'Aadhaar Card Back Photo' }
+        #swagger.parameters['panFrontPhoto'] = { in: 'formData', type: 'file', description: 'PAN Card Front Photo' }
+        #swagger.parameters['panBackPhoto'] = { in: 'formData', type: 'file', description: 'PAN Card Back Photo' }
+        #swagger.parameters['certificate'] = { in: 'formData', type: 'file', description: 'Certificate Document / Image' }
+        #swagger.parameters['name'] = { in: 'formData', type: 'string', description: 'Full Name' }
+        #swagger.parameters['phone'] = { in: 'formData', type: 'string', description: 'Phone Number' }
+        #swagger.parameters['dateOfBirth'] = { in: 'formData', type: 'string', description: 'Date of Birth (YYYY-MM-DD)' }
+        #swagger.parameters['gender'] = { in: 'formData', type: 'string', description: 'Gender (male/female/other)' }
+        #swagger.parameters['category'] = { in: 'formData', type: 'string', description: 'Primary Category (e.g. electrician)' }
+        #swagger.parameters['categories'] = { in: 'formData', type: 'string', description: 'Categories list' }
+        #swagger.parameters['rate'] = { in: 'formData', type: 'number', description: 'Base Rate / Minimum Service Cost' }
+        #swagger.parameters['categoryRates'] = { in: 'formData', type: 'string', description: 'Category Rates array JSON' }
+        #swagger.parameters['experienceYears'] = { in: 'formData', type: 'number', description: 'Years of Experience' }
+        #swagger.parameters['bio'] = { in: 'formData', type: 'string', description: 'Worker Bio' }
+        #swagger.parameters['skills'] = { in: 'formData', type: 'string', description: 'Skills list' }
+        #swagger.parameters['aadhaarNumber'] = { in: 'formData', type: 'string', description: 'Aadhaar Card Number' }
+        #swagger.parameters['panNumber'] = { in: 'formData', type: 'string', description: 'PAN Card Number' }
+        #swagger.parameters['workAddress'] = { in: 'formData', type: 'string', description: 'Work Address' }
+        #swagger.parameters['payoutMethod'] = { in: 'formData', type: 'string', description: 'Payout Method (bank/upi)' }
+        #swagger.parameters['bank'] = { in: 'formData', type: 'string', description: 'Bank Details JSON' }
+        #swagger.parameters['upi'] = { in: 'formData', type: 'string', description: 'UPI Details JSON' }
+    */
     try {
         const userId = req.user.id;
-        const updates = req.body;
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-        delete updates.password;
-        delete updates.email;
+        // Body preprocessing (JSON string parsing for multipart form-data)
+        const body = { ...req.body };
+        ['categoryRates', 'categories', 'skills', 'certifications', 'certificates', 'location', 'bank', 'upi', 'workerProfile'].forEach(key => {
+            if (typeof body[key] === 'string') {
+                try {
+                    body[key] = JSON.parse(body[key]);
+                } catch (e) {
+                    if (['categories', 'skills', 'certifications', 'certificates'].includes(key)) {
+                        body[key] = body[key].split(',').map(s => s.trim()).filter(Boolean);
+                    }
+                }
+            }
+        });
 
+        // Helper to extract file object from req.files/req.file or fall back to body field
+        const getFileInput = (bodyField, possibleFieldNames = []) => {
+            const namesLower = possibleFieldNames.map(n => n.toLowerCase());
+            if (req.files && Array.isArray(req.files)) {
+                const found = req.files.find(f => namesLower.includes(f.fieldname.toLowerCase()));
+                if (found) return found;
+            } else if (req.files && typeof req.files === 'object') {
+                const allFiles = Object.values(req.files).flat();
+                const found = allFiles.find(f => f && f.fieldname && namesLower.includes(f.fieldname.toLowerCase()));
+                if (found) return found;
+            } else if (req.file && namesLower.includes(req.file.fieldname.toLowerCase())) {
+                return req.file;
+            }
+            return bodyField;
+        };
+
+        const avatarInput = getFileInput(body.avatar || body.avatarUrl || body.profilePhoto || body.selfie || body.selfieImageUrl, ['avatar', 'avatarUrl', 'profilePhoto', 'profilephoto', 'selfie', 'selfieImageUrl']);
+        const aadhaarFrontInput = getFileInput(body.aadhaarFrontPhoto || body.aadhaarFront, ['aadhaarFrontPhoto', 'aadhaarFront', 'aadhaar_front', 'frontphoto']);
+        const aadhaarBackInput = getFileInput(body.aadhaarBackPhoto || body.aadhaarBack, ['aadhaarBackPhoto', 'aadhaarBack', 'aadhaar_back', 'backphoto']);
+        const panFrontInput = getFileInput(body.panFrontPhoto || body.panFront, ['panFrontPhoto', 'panFront', 'pan_front']);
+        const panBackInput = getFileInput(body.panBackPhoto || body.panBack, ['panBackPhoto', 'panBack', 'pan_back']);
+
+        let certInputs = [];
+        const rawCerts = body.certifications || body.certificates || body.certificate;
+        if (Array.isArray(rawCerts)) {
+            certInputs = rawCerts;
+        } else if (rawCerts) {
+            certInputs = [rawCerts];
+        }
+        if (req.files) {
+            const certFiles = (Array.isArray(req.files) ? req.files : Object.values(req.files).flat())
+                .filter(f => f && f.fieldname && ['certificate', 'certifications', 'certificates'].includes(f.fieldname.toLowerCase()));
+            certInputs.push(...certFiles);
+        }
+
+        // 1. Process all file and image uploads via sequential uploadQueueManager
+        const [
+            avatarUrl,
+            aadhaarFrontUrl,
+            aadhaarBackUrl,
+            panFrontUrl,
+            panBackUrl,
+            uploadedCertUrls
+        ] = await Promise.all([
+            uploadQueueManager.add(avatarInput, 'gigconnect/avatars'),
+            uploadQueueManager.add(aadhaarFrontInput, 'gigconnect/documents'),
+            uploadQueueManager.add(aadhaarBackInput, 'gigconnect/documents'),
+            uploadQueueManager.add(panFrontInput, 'gigconnect/documents'),
+            uploadQueueManager.add(panBackInput, 'gigconnect/documents'),
+            Promise.all(certInputs.map(c => uploadQueueManager.add(c, 'gigconnect/certificates')))
+        ]);
+
+        const validUploadedCertUrls = (uploadedCertUrls || []).filter(Boolean);
+
+        // 2. Existing Data Retain
+        const currentProfile = user.workerProfile ? (typeof user.workerProfile.toObject === 'function' ? user.workerProfile.toObject() : user.workerProfile) : {};
+        const existingDocs = currentProfile.identityDocuments || [];
+        const existingAadhaar = existingDocs.find(d => d.docType === 'Aadhaar Card') || {};
+        const existingPan = existingDocs.find(d => d.docType === 'PAN Card') || {};
+
+        // 3. User Level Updates (Basic Info & Avatar)
+        const userUpdates = {};
+        if (body.name || body.fullName) userUpdates.name = body.name || body.fullName;
+        if (body.phone) userUpdates.phone = body.phone;
+
+        const finalAvatar = avatarUrl || user.avatar || currentProfile.selfieImageUrl || null;
+        if (finalAvatar) userUpdates.avatar = finalAvatar;
+
+        if (body.location) {
+            if (body.location.coordinates) {
+                userUpdates.location = { type: 'Point', coordinates: body.location.coordinates };
+            } else if (Array.isArray(body.location)) {
+                userUpdates.location = { type: 'Point', coordinates: body.location };
+            } else if (typeof body.location === 'object' && body.location.type === 'Point') {
+                userUpdates.location = body.location;
+            }
+        }
+
+        // 4. Category & Rates resolution
+        const categoryVal = body.category || currentProfile.category || null;
+        let categoriesVal = body.categories || currentProfile.categories || [];
+        if (!Array.isArray(categoriesVal)) {
+            categoriesVal = typeof categoriesVal === 'string' ? categoriesVal.split(',').map(s => s.trim()).filter(Boolean) : [];
+        }
+        if (categoryVal && !categoriesVal.includes(categoryVal)) {
+            categoriesVal = [categoryVal, ...categoriesVal];
+        }
+
+        const inputRate = body.rate || body.hourlyRate;
+        const finalRate = inputRate !== undefined ? Number(inputRate) : (currentProfile.rate || 0);
+
+        const resolvedCategoryRates = parseCategoryRates(body.categoryRates, categoryVal || 'General', finalRate) || currentProfile.categoryRates || [];
+
+        let skillsVal = body.skills || currentProfile.skills || [];
+        if (!Array.isArray(skillsVal)) {
+            skillsVal = typeof skillsVal === 'string' ? skillsVal.split(',').map(s => s.trim()).filter(Boolean) : [];
+        }
+
+        let finalCertifications = [...(currentProfile.certifications || [])];
+        validUploadedCertUrls.forEach(url => {
+            if (url && !finalCertifications.includes(url)) {
+                finalCertifications.push(url);
+            }
+        });
+
+        // 5. Build Worker Profile Object with resolved Cloudinary URLs
+        userUpdates.workerProfile = {
+            ...currentProfile,
+            dateOfBirth: body.dateOfBirth || body.dob || currentProfile.dateOfBirth || null,
+            gender: body.gender || currentProfile.gender || 'male',
+            selfieImageUrl: finalAvatar,
+            
+            category: categoryVal,
+            categories: categoriesVal,
+            rate: finalRate,
+            hourlyRate: finalRate,
+            categoryRates: resolvedCategoryRates,
+            experienceYears: body.experienceYears !== undefined ? Number(body.experienceYears) : (currentProfile.experienceYears || 0),
+            bio: body.bio || currentProfile.bio || null,
+            skills: skillsVal,
+            certifications: finalCertifications,
+            workAddress: body.workAddress || currentProfile.workAddress || null,
+            eshramUan: body.eshramUan || currentProfile.eshramUan || null,
+            
+            identityDocuments: [
+                {
+                    docType: 'Aadhaar Card',
+                    docNumber: body.aadhaarNumber || existingAadhaar.docNumber || null,
+                    frontPhotoUrl: aadhaarFrontUrl || existingAadhaar.frontPhotoUrl || null,
+                    backPhotoUrl: aadhaarBackUrl || existingAadhaar.backPhotoUrl || null,
+                    status: existingAadhaar.status || 'PENDING'
+                },
+                {
+                    docType: 'PAN Card',
+                    docNumber: body.panNumber || existingPan.docNumber || null,
+                    frontPhotoUrl: panFrontUrl || existingPan.frontPhotoUrl || null,
+                    backPhotoUrl: panBackUrl || existingPan.backPhotoUrl || null,
+                    status: existingPan.status || 'PENDING'
+                }
+            ],
+
+            payoutMethod: body.payoutMethod || currentProfile.payoutMethod || 'bank',
+            bank: {
+                accountHolderName: body.bank?.accountHolderName || currentProfile.bank?.accountHolderName || null,
+                accountNumber: body.bank?.accountNumber || currentProfile.bank?.accountNumber || null,
+                ifscCode: body.bank?.ifscCode || currentProfile.bank?.ifscCode || null
+            },
+            upi: {
+                upiId: body.upi?.upiId || (typeof body.upi === 'string' ? body.upi : null) || body.upiId || currentProfile.upi?.upiId || null
+            },
+
+            isOnline: currentProfile.isOnline !== undefined ? currentProfile.isOnline : false,
+            lastActiveAt: currentProfile.lastActiveAt || null,
+            serviceRadiusKm: currentProfile.serviceRadiusKm || 10,
+            availabilitySchedule: currentProfile.availabilitySchedule || { days: [], startTime: '09:00', endTime: '18:00' },
+            walletBalance: currentProfile.walletBalance || 0,
+            totalEarnings: currentProfile.totalEarnings || 0,
+            walletTransactions: currentProfile.walletTransactions || []
+        };
+
+        // Also sync kycDocuments for Flutter verification/admin compatibility
+        userUpdates.kycDocuments = {
+            aadhaarNumber: body.aadhaarNumber || existingAadhaar.docNumber || user.kycDocuments?.aadhaarNumber || null,
+            aadhaarFrontPhoto: aadhaarFrontUrl || existingAadhaar.frontPhotoUrl || user.kycDocuments?.aadhaarFrontPhoto || null,
+            aadhaarBackPhoto: aadhaarBackUrl || existingAadhaar.backPhotoUrl || user.kycDocuments?.aadhaarBackPhoto || null,
+            panNumber: body.panNumber || existingPan.docNumber || user.kycDocuments?.panNumber || null,
+            panFrontPhoto: panFrontUrl || existingPan.frontPhotoUrl || user.kycDocuments?.panFrontPhoto || null,
+            panBackPhoto: panBackUrl || existingPan.backPhotoUrl || user.kycDocuments?.panBackPhoto || null,
+            selfieImageUrl: finalAvatar || user.kycDocuments?.selfieImageUrl || null,
+            certificateUrl: validUploadedCertUrls[0] || user.kycDocuments?.certificateUrl || null,
+            govermentIdType: body.govermentIdType || user.kycDocuments?.govermentIdType || 'Aadhaar Card',
+            govermentIdNumber: body.govermentIdNumber || body.aadhaarNumber || user.kycDocuments?.govermentIdNumber || null,
+            status: user.kycDocuments?.status === 'approved' ? 'approved' : 'submitted',
+            declineReason: user.kycDocuments?.declineReason || null
+        };
+
+        // 6. Save in DB
         const updatedUser = await User.findByIdAndUpdate(
             userId,
-            { $set: updates },
-            { new: true, runValidators: true }
-        ).select('-password').lean();
+            { $set: userUpdates },
+            { returnDocument: 'after', runValidators: true }
+        ).select('-password');
 
-        if (!updatedUser) return res.status(404).json({ success: false, message: 'User not found' });
-
-        await syncUserCache(updatedUser.email, updatedUser);
+        // 7. Clear Redis Cache & Sync User Cache
+        if (redis) {
+            const updatedUserObj = updatedUser.toObject ? updatedUser.toObject() : updatedUser;
+            await syncUserCache(updatedUserObj.email, updatedUserObj);
+            await redis.del(`user:profile:${userId}`);
+            await redis.del(`worker:profile:${userId}`);
+        }
 
         return res.status(200).json({
             success: true,
-            message: 'Profile updated successfully',
+            message: 'Profile and documents uploaded successfully via queue',
             user: updatedUser
         });
+
     } catch (error) {
-        console.error('Update Profile Error:', error);
+        console.error('Profile Setup Error:', error);
         return res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -296,17 +633,18 @@ export const updateUserProfile = async (req, res) => {
 export const googleLogin = async (req, res) => {
     try {
         const { email, name, avatar, role, deviceId, location, phone } = req.body;
-
         let userDoc = await User.findOne({ email }).select('-password');
 
+        const userRole = role || 'customer';
         if (!userDoc) {
             userDoc = await User.create({
                 name,
                 email,
                 avatar: avatar || null,
-                role: role || 'customer',
+                role: userRole,
                 authProvider: 'google',
-                isVerified: true,
+                isEmailVerified: true,
+                isVerified: userRole === 'customer', // Customer verified, Worker requires Admin approval
                 phone: phone || null,
                 location: location || undefined
             });
@@ -341,25 +679,21 @@ export const refreshToken = async (req, res) => {
 
         const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
 
-        // Fetch user from DB/Cache to ensure active role is present
         const user = await User.findById(decoded.id).select('role').lean();
         if (!user) return res.status(404).json({ success: false, message: 'User no longer exists' });
 
-        // Generate new Access Token (Dynamic Expiry)
         const newAccessToken = jwt.sign(
             { id: decoded.id, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
         );
 
-        // Generate new Refresh Token (Dynamic Expiry)
         const newRefreshToken = jwt.sign(
             { id: decoded.id },
             process.env.REFRESH_SECRET,
             { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' }
         );
 
-        // Save new refresh token in Redis to rotate the old one (Dynamic TTL)
         const sessionTtl = parseInt(process.env.REDIS_SESSION_TTL_SEC, 10) || 7 * 24 * 60 * 60;
         await redis.set(`session:${userId}:${deviceId}`, newRefreshToken, 'EX', sessionTtl);
 
@@ -379,7 +713,7 @@ export const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
         if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
-        
+
         const emailNormalized = email.toLowerCase().trim();
         const user = await User.findOne({ email: emailNormalized });
 
@@ -414,8 +748,7 @@ export const resetPassword = async (req, res) => {
 
         const emailNormalized = email.toLowerCase().trim();
         const cachedOtp = await redis.get(`reset_otp:${emailNormalized}`);
-        console.log(`Redis OTP for ${emailNormalized}:`, cachedOtp);
-        
+
         if (!cachedOtp || cachedOtp !== otp.toString()) {
             return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
         }
@@ -459,678 +792,3 @@ export const logoutUser = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
-
-
-// import User from '../models/User.js';
-// import redis from '../config/redis.js';
-// import { generateOtpEmailHtml } from '../utils/emailTemplate.js';
-// import bcrypt from 'bcryptjs';
-// import jwt from 'jsonwebtoken';
-// import emailQueue from '../queues/queue.js';
-
-// const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
-// const REDIS_VERIFIED_TTL = 86400; // 24 Hours Cache TTL
-
-// // ==========================================
-// // SINGLE-DEVICE SESSION HELPER
-// // ==========================================
-// const createSession = async (user, deviceId) => {
-//     const accessToken = jwt.sign(
-//         { id: user._id, role: user.role },
-//         process.env.JWT_SECRET,
-//         { expiresIn: '15m' }
-//     );
-//     const refreshToken = jwt.sign(
-//         { id: user._id },
-//         process.env.REFRESH_SECRET,
-//         { expiresIn: '7d' }
-//     );
-
-//     if (deviceId) {
-//         const activeDeviceKey = `user:active-device:${user._id}`;
-//         const oldDeviceId = await redis.get(activeDeviceKey);
-
-//         if (oldDeviceId && oldDeviceId !== deviceId) {
-//             await redis.del(`session:${user._id}:${oldDeviceId}`);
-//         }
-
-//         const pipeline = redis.pipeline();
-//         pipeline.set(activeDeviceKey, deviceId, 'EX', 7 * 24 * 60 * 60);
-//         pipeline.set(`session:${user._id}:${deviceId}`, refreshToken, 'EX', 7 * 24 * 60 * 60);
-//         await pipeline.exec();
-//     }
-
-//     return { accessToken, refreshToken };
-// };
-
-// // User object se password strip karke Redis me cache karna
-// export const syncUserCache = async (email, userData) => {
-//     const { password, ...safeUser } = userData;
-//     const ttl = safeUser.isVerified ? REDIS_VERIFIED_TTL : 300;
-//     await redis.set(`user:email:${email}`, JSON.stringify(safeUser), 'EX', ttl);
-// };
-
-// // Cache Reader Helper
-// const getUserCache = async (email) => {
-//     const cachedUser = await redis.get(`user:email:${email}`);
-//     if (cachedUser) return JSON.parse(cachedUser);
-
-//     const user = await User.findOne({ email }).select('-password').lean();
-//     if (user) {
-//         await syncUserCache(email, user);
-//     }
-//     return user;
-// };
-
-// // ==========================================
-// // CONTROLLERS
-// // ==========================================
-
-// // 1. REGISTER
-// export const registerUser = async (req, res) => {
-//     try {
-//         const { name, email, password, role, phone, location, workerProfile } = req.body;
-
-//         const existingUser = await getUserCache(email);
-//         if (existingUser && existingUser.isVerified) {
-//             return res.status(400).json({ success: false, message: 'User already exists' });
-//         }
-
-//         const userPayload = {
-//             name,
-//             email,
-//             password,
-//             role: role || 'customer',
-//             authProvider: 'local',
-//             phone: phone || null,
-//             location: location || undefined,
-//             workerProfile: role === 'worker' ? workerProfile || {} : null
-//         };
-
-//         let userDoc;
-//         if (!existingUser) {
-//             userDoc = await User.create(userPayload);
-//         } else {
-//             userDoc = await User.findOne({ email });
-//             Object.assign(userDoc, userPayload);
-//             await userDoc.save();
-//         }
-
-//         const otp = generateOTP();
-//         const pipeline = redis.pipeline();
-//         pipeline.del(`user:email:${email}`);
-//         pipeline.set(`otp:${email}`, otp, 'EX', 300); // 5 Mins Registration OTP
-//         await pipeline.exec();
-
-//         await emailQueue.add('sendOtpEmail', {
-//             to: email,
-//             subject: 'Your Verification Code',
-//             html: generateOtpEmailHtml(otp)
-//         });
-
-//         return res.status(201).json({
-//             success: true,
-//             message: 'OTP sent to email. Please verify.',
-//             userId: userDoc._id
-//         });
-//     } catch (error) {
-//         console.error('Register Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-// // 2. VERIFY REGISTRATION OTP
-// export const verifyOTP = async (req, res) => {
-//     try {
-//         const { email, otp, deviceId } = req.body;
-
-//         const cachedOtp = await redis.get(`otp:${email}`);
-//         if (!cachedOtp || cachedOtp !== otp) {
-//             return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
-//         }
-
-//         const user = await User.findOne({ email });
-//         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-//         user.isVerified = true;
-//         await user.save();
-
-//         const userObj = user.toObject();
-//         delete userObj.password;
-
-//         const pipeline = redis.pipeline();
-//         pipeline.del(`otp:${email}`);
-//         await pipeline.exec();
-
-//         await syncUserCache(email, userObj);
-//         const tokens = await createSession(userObj, deviceId);
-
-//         return res.status(200).json({
-//             success: true,
-//             message: 'Email verified successfully',
-//             user: userObj,
-//             ...tokens
-//         });
-//     } catch (error) {
-//         console.error('Verify OTP Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-// // 3. LOGIN (bcrypt.compare Check)
-// export const loginUser = async (req, res) => {
-//     try {
-//         const { email, password, deviceId, location, phone } = req.body;
-
-//         const user = await User.findOne({ email }).select('+password');
-//         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-//         if (user.authProvider === 'google') {
-//             return res.status(400).json({ success: false, message: 'Please login using Google' });
-//         }
-
-//         const isMatch = await bcrypt.compare(password, user.password);
-//         if (!isMatch) {
-//             return res.status(401).json({ success: false, message: 'Invalid credentials' });
-//         }
-
-//         if (!user.isVerified) {
-//             return res.status(401).json({ success: false, message: 'Please verify your email first' });
-//         }
-
-//         let isModified = false;
-//         if (location) {
-//             user.location = location;
-//             isModified = true;
-//         }
-//         if (phone && !user.phone) {
-//             user.phone = phone;
-//             isModified = true;
-//         }
-
-//         if (isModified) {
-//             await user.save();
-//         }
-
-//         const userObj = user.toObject();
-//         delete userObj.password;
-
-//         await syncUserCache(email, userObj);
-//         const tokens = await createSession(userObj, deviceId);
-
-//         return res.status(200).json({
-//             success: true,
-//             user: userObj,
-//             ...tokens
-//         });
-//     } catch (error) {
-//         console.error('Login Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-// // 4. DYNAMIC PROFILE UPDATE
-// export const updateUserProfile = async (req, res) => {
-//     try {
-//         const userId = req.user.id;
-//         const updates = req.body;
-
-//         delete updates.password;
-//         delete updates.email;
-
-//         const updatedUser = await User.findByIdAndUpdate(
-//             userId,
-//             { $set: updates },
-//             { new: true, runValidators: true }
-//         ).select('-password').lean();
-
-//         if (!updatedUser) return res.status(404).json({ success: false, message: 'User not found' });
-
-//         await syncUserCache(updatedUser.email, updatedUser);
-
-//         return res.status(200).json({
-//             success: true,
-//             message: 'Profile updated successfully',
-//             user: updatedUser
-//         });
-//     } catch (error) {
-//         console.error('Update Profile Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-// // 5. GOOGLE AUTH
-// export const googleLogin = async (req, res) => {
-//     try {
-//         const { email, name, avatar, role, deviceId, location } = req.body;
-
-//         let user = await User.findOne({ email }).select('-password');
-
-//         if (!user) {
-//             user = await User.create({
-//                 name,
-//                 email,
-//                 avatar: avatar || null,
-//                 role: role || 'customer',
-//                 authProvider: 'google',
-//                 isVerified: true,
-//                 location: location || undefined
-//             });
-//             user = user.toObject();
-//             delete user.password;
-//         } else {
-//             user = user.toObject();
-//         }
-
-//         await syncUserCache(email, user);
-//         const tokens = await createSession(user, deviceId);
-
-//         return res.status(200).json({ success: true, user, ...tokens });
-//     } catch (error) {
-//         console.error('Google Auth Error:', error);
-//         return res.status(500).json({ success: false, message: 'Google Auth Failed' });
-//     }
-// };
-
-// // 6. REFRESH TOKEN
-// export const refreshToken = async (req, res) => {
-//     try {
-//         const { userId, deviceId, refreshToken } = req.body;
-
-//         if (!refreshToken) return res.status(401).json({ success: false, message: 'Refresh Token required' });
-
-//         const savedToken = await redis.get(`session:${userId}:${deviceId}`);
-//         if (!savedToken || savedToken !== refreshToken) {
-//             return res.status(403).json({ success: false, message: 'Invalid or expired session. Please login again.' });
-//         }
-
-//         const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
-
-//         const newAccessToken = jwt.sign(
-//             { id: decoded.id },
-//             process.env.JWT_SECRET,
-//             { expiresIn: '15m' }
-//         );
-
-//         return res.status(200).json({ success: true, accessToken: newAccessToken });
-//     } catch (error) {
-//         console.error('Refresh Token Error:', error);
-//         return res.status(403).json({ success: false, message: 'Invalid session' });
-//     }
-// };
-
-// // 7. STEP 1: FORGOT PASSWORD (OTP Generate & Email Send)
-// export const forgotPassword = async (req, res) => {
-//     try {
-//         const { email } = req.body;
-//         const user = await User.findOne({ email });
-
-//         if (!user) return res.status(404).json({ success: false, message: 'Is email se koi account nahi milaa' });
-//         if (user.authProvider === 'google') return res.status(400).json({ success: false, message: 'Google accounts cannot reset password here' });
-
-//         const otp = generateOTP();
-//         await redis.set(`reset_otp:${email}`, otp, 'EX', 300); // 5 mins OTP validity
-
-//         await emailQueue.add('sendOtpEmail', {
-//             to: email,
-//             subject: 'Password Reset Verification Code',
-//             html: generateOtpEmailHtml(otp)
-//         });
-
-//         return res.status(200).json({ success: true, message: 'Password reset OTP sent to email' });
-//     } catch (error) {
-//         console.error('Forgot Password Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-// // 8. STEP 2: RESET PASSWORD (Verify OTP & Update Password)
-// export const resetPassword = async (req, res) => {
-//     try {
-//         const { email, otp, newPassword } = req.body;
-
-//         if (!email || !otp || !newPassword) {
-//             return res.status(400).json({ success: false, message: 'Email, OTP aur Naya Password required hain' });
-//         }
-
-//         // Redis se OTP compare karein
-//         const cachedOtp = await redis.get(`reset_otp:${email}`);
-//         if (!cachedOtp || cachedOtp !== otp) {
-//             return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
-//         }
-
-//         const user = await User.findOne({ email });
-//         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-//         // Password Hash aur Update
-//         const salt = await bcrypt.genSalt(10);
-//         user.password = await bcrypt.hash(newPassword, salt);
-//         await user.save();
-
-//         // Expired OTP aur stale cache clear
-//         const pipeline = redis.pipeline();
-//         pipeline.del(`reset_otp:${email}`);
-//         pipeline.del(`user:email:${email}`);
-//         await pipeline.exec();
-
-//         return res.status(200).json({ success: true, message: 'Password reset successful. Please login.' });
-//     } catch (error) {
-//         console.error('Reset Password Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-// // 9. LOGOUT
-// export const logoutUser = async (req, res) => {
-//     try {
-//         const { userId, deviceId } = req.body;
-
-//         const pipeline = redis.pipeline();
-//         pipeline.del(`session:${userId}:${deviceId}`);
-//         pipeline.del(`user:active-device:${userId}`);
-//         await pipeline.exec();
-
-//         return res.status(200).json({ success: true, message: 'Logged out successfully' });
-//     } catch (error) {
-//         console.error('Logout Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-
-
-// import User from '../models/User.js';
-// import redis from '../config/redis.js';
-// import { generateOtpEmailHtml } from '../utils/emailTemplate.js';
-// import bcrypt from 'bcryptjs';
-// import jwt from 'jsonwebtoken';
-// import emailQueue from '../queues/queue.js';
-
-// const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
-
-// // ==========================================
-// // SINGLE-DEVICE SESSION HELPER
-// // ==========================================
-// const createSession = async (user, deviceId) => {
-//     const accessToken = jwt.sign(
-//         { id: user._id, role: user.role },
-//         process.env.JWT_SECRET,
-//         { expiresIn: '15m' }
-//     );
-//     const refreshToken = jwt.sign(
-//         { id: user._id },
-//         process.env.REFRESH_SECRET,
-//         { expiresIn: '7d' }
-//     );
-
-//     // 1. Check karein ki is user ka pehle se koi active device registered hai ya nahi
-//     const activeDeviceKey = `user:active-device:${user._id}`;
-//     const oldDeviceId = await redis.get(activeDeviceKey);
-
-//     // 2. Agar purana device tha aur wo naye device se alag hai, toh purana session delete kar do (Single-Device Enforcement)
-//     if (oldDeviceId && oldDeviceId !== deviceId) {
-//         await redis.del(`session:${user._id}:${oldDeviceId}`);
-//     }
-
-//     // 3. Pipeline ke through active device aur naya refresh token atomically set karein
-//     const pipeline = redis.pipeline();
-//     pipeline.set(activeDeviceKey, deviceId, 'EX', 7 * 24 * 60 * 60);
-//     pipeline.set(`session:${user._id}:${deviceId}`, refreshToken, 'EX', 7 * 24 * 60 * 60);
-//     await pipeline.exec();
-
-//     return { accessToken, refreshToken };
-// };
-
-// // Helper: Cache Invalidation
-// export const clearUserCache = async (email) => {
-//     await redis.del(`user:email:${email}`);
-// };
-
-// // Helper: Fetch cached user or fallback to MongoDB
-// const getUserCache = async (email) => {
-//     const cachedUser = await redis.get(`user:email:${email}`);
-//     if (cachedUser) {
-//         return JSON.parse(cachedUser);
-//     }
-
-//     const user = await User.findOne({ email }).lean();
-//     if (user) {
-//         const ttl = user.isVerified ? 3600 : 300;
-//         await redis.set(`user:email:${email}`, JSON.stringify(user), 'EX', ttl);
-//     }
-//     return user;
-// };
-
-
-// // ==========================================
-// // CONTROLLERS
-// // ==========================================
-
-// // 1. REGISTER (Local)
-// export const registerUser = async (req, res) => {
-//     try {
-//         const { name, email, password, role } = req.body;
-
-//         let user = await getUserCache(email);
-
-//         if (user && user.isVerified) {
-//             return res.status(400).json({ success: false, message: 'User already exists' });
-//         }
-
-//         if (!user) {
-//             const newUser = await User.create({ name, email, password, role, authProvider: 'local' });
-//             user = newUser.toObject();
-//         }
-
-//         const otp = generateOTP();
-
-//         // Pipeline: Clear stale user cache & set fresh OTP atomically
-//         const pipeline = redis.pipeline();
-//         pipeline.del(`user:email:${email}`);
-//         pipeline.set(`otp:${email}`, otp, 'EX', 300); // 5 mins OTP expiry
-//         await pipeline.exec();
-
-//         await emailQueue.add('sendOtpEmail', {
-//             to: email,
-//             subject: 'Your Verification Code',
-//             html: generateOtpEmailHtml(otp)
-//         });
-
-//         return res.status(201).json({ success: true, message: 'OTP sent to email. Please verify.' });
-//     } catch (error) {
-//         console.error('Register Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-// // 2. VERIFY OTP
-// export const verifyOTP = async (req, res) => {
-//     try {
-//         const { email, otp, deviceId } = req.body;
-
-//         const cachedOtp = await redis.get(`otp:${email}`);
-//         if (!cachedOtp || cachedOtp !== otp) {
-//             return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
-//         }
-
-//         const user = await User.findOne({ email });
-//         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-//         user.isVerified = true;
-//         await user.save();
-
-//         const updatedUser = user.toObject();
-
-//         // Pipeline: Delete OTP and update verified user cache atomically
-//         const pipeline = redis.pipeline();
-//         pipeline.del(`otp:${email}`);
-//         pipeline.set(`user:email:${email}`, JSON.stringify(updatedUser), 'EX', 3600);
-//         await pipeline.exec();
-
-//         const tokens = await createSession(updatedUser, deviceId);
-
-//         const { password: _, ...userWithoutPassword } = updatedUser;
-//         return res.status(200).json({ success: true, user: userWithoutPassword, ...tokens });
-//     } catch (error) {
-//         console.error('Verify OTP Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-// // 3. LOGIN (Local)
-// export const loginUser = async (req, res) => {
-//     try {
-//         const { email, password, deviceId } = req.body;
-
-//         const user = await getUserCache(email);
-//         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-//         if (user.authProvider === 'google') {
-//             return res.status(400).json({ success: false, message: 'Please login using Google' });
-//         }
-
-//         const isMatch = await bcrypt.compare(password, user.password);
-//         if (!isMatch) return res.status(401).json({ success: false, message: 'Invalid credentials' });
-
-//         if (!user.isVerified) {
-//             return res.status(401).json({ success: false, message: 'Please verify your email first' });
-//         }
-
-//         const tokens = await createSession(user, deviceId);
-//         const { password: _, ...userWithoutPassword } = user;
-
-//         return res.status(200).json({ success: true, user: userWithoutPassword, ...tokens });
-//     } catch (error) {
-//         console.error('Login Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-// // 4. REFRESH TOKEN
-// export const refreshToken = async (req, res) => {
-//     try {
-//         const { userId, deviceId, refreshToken } = req.body;
-
-//         if (!refreshToken) return res.status(401).json({ success: false, message: 'Refresh Token required' });
-
-//         const savedToken = await redis.get(`session:${userId}:${deviceId}`);
-//         if (!savedToken || savedToken !== refreshToken) {
-//             return res.status(403).json({ success: false, message: 'Invalid or expired refresh token. Please login again.' });
-//         }
-
-//         const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
-
-//         const newAccessToken = jwt.sign(
-//             { id: decoded.id },
-//             process.env.JWT_SECRET,
-//             { expiresIn: '15m' }
-//         );
-
-//         return res.status(200).json({ success: true, accessToken: newAccessToken });
-//     } catch (error) {
-//         console.error('Refresh Token Error:', error);
-//         return res.status(403).json({ success: false, message: 'Invalid session' });
-//     }
-// };
-
-// // 5. GOOGLE AUTH
-// export const googleLogin = async (req, res) => {
-//     try {
-//         const { role, deviceId } = req.body;
-
-//         const email = "user@example.com";
-//         const name = "Google User";
-
-//         let user = await getUserCache(email);
-
-//         if (!user) {
-//             const newUser = await User.create({
-//                 name,
-//                 email,
-//                 role: role || 'customer',
-//                 authProvider: 'google',
-//                 isVerified: true
-//             });
-//             user = newUser.toObject();
-//             await redis.set(`user:email:${email}`, JSON.stringify(user), 'EX', 3600);
-//         }
-
-//         const tokens = await createSession(user, deviceId);
-//         const { password: _, ...userWithoutPassword } = user;
-
-//         return res.status(200).json({ success: true, user: userWithoutPassword, ...tokens });
-//     } catch (error) {
-//         console.error('Google Auth Error:', error);
-//         return res.status(500).json({ success: false, message: 'Google Auth Failed' });
-//     }
-// };
-
-// // 6. FORGOT PASSWORD
-// export const forgotPassword = async (req, res) => {
-//     try {
-//         const { email } = req.body;
-//         const user = await getUserCache(email);
-
-//         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-//         if (user.authProvider === 'google') return res.status(400).json({ success: false, message: 'Google accounts cannot reset password here' });
-
-//         const otp = generateOTP();
-//         await redis.set(`otp:${email}`, otp, 'EX', 300);
-
-//         await emailQueue.add('sendOtpEmail', {
-//             to: email,
-//             subject: 'Password Reset Verification Code',
-//             html: generateOtpEmailHtml(otp)
-//         });
-
-//         return res.status(200).json({ success: true, message: 'Password reset OTP sent to email' });
-//     } catch (error) {
-//         console.error('Forgot Password Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-// // 7. RESET PASSWORD
-// export const resetPassword = async (req, res) => {
-//     try {
-//         const { email, otp, newPassword } = req.body;
-
-//         const cachedOtp = await redis.get(`otp:${email}`);
-//         if (!cachedOtp || cachedOtp !== otp) {
-//             return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
-//         }
-
-//         const user = await User.findOne({ email });
-//         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-//         user.password = newPassword;
-//         await user.save();
-
-//         const pipeline = redis.pipeline();
-//         pipeline.del(`otp:${email}`);
-//         pipeline.del(`user:email:${email}`);
-//         await pipeline.exec();
-
-//         return res.status(200).json({ success: true, message: 'Password reset successful. Please login.' });
-//     } catch (error) {
-//         console.error('Reset Password Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-// // 8. LOGOUT
-// export const logoutUser = async (req, res) => {
-//     try {
-//         const { userId, deviceId } = req.body;
-
-//         const pipeline = redis.pipeline();
-//         pipeline.del(`session:${userId}:${deviceId}`);
-//         pipeline.del(`user:active-device:${userId}`);
-//         await pipeline.exec();
-
-//         return res.status(200).json({ success: true, message: 'Logged out successfully' });
-//     } catch (error) {
-//         console.error('Logout Error:', error);
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };

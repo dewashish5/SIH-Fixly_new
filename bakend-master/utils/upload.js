@@ -1,36 +1,48 @@
 import multer from 'multer';
 import { uploadQueue } from '../queues/queue.js';
 
-// Disk storage stores files temporarily in the OS default temp folder (e.g. /tmp)
+// Disk storage stores files temporarily in OS default temp folder
 const storage = multer.diskStorage({});
 
 const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+    // Allow images, videos, PDFs, and document files
+    if (
+        !file.mimetype ||
+        file.mimetype.startsWith('image/') ||
+        file.mimetype.startsWith('video/') ||
+        file.mimetype.startsWith('application/') ||
+        file.mimetype === 'application/pdf'
+    ) {
         cb(null, true);
     } else {
-        cb(new Error('Only image and video files are allowed!'), false);
+        cb(new Error('Only image, video, and document files are allowed!'), false);
     }
 };
 
-// Multer upload middleware
 export const upload = multer({ storage, fileFilter });
 
 /**
- * Queues a file upload task to Cloudinary in the background
- * @param {string} modelName - The mongoose Model name (e.g., 'Booking', 'User')
- * @param {string|ObjectId} recordId - Target database document ID
- * @param {string} fieldPath - Document field path to save the URL (e.g., 'problemPhotos')
- * @param {object} file - The file object injected by Multer (contains file.path)
- * @param {boolean} isArray - Set to true if target field is an Array of URLs
+ * Queues a file upload task to Cloudinary in the background via BullMQ uploadQueue
+ * @param {string} modelName - Target Mongoose Model name ('User', 'Booking')
+ * @param {string|ObjectId} recordId - Target document _id
+ * @param {string} fieldPath - Schema field path (e.g., 'avatar', 'workerProfile.aadhaarFrontPhoto')
+ * @param {object|string} fileSource - Multer file object, disk path, or Base64 string
+ * @param {boolean} isArray - True if field is an array of URLs
+ * @param {string} folder - Cloudinary folder path
  */
-export const queueFileUpload = async (modelName, recordId, fieldPath, file, isArray = false) => {
-    if (!file || !file.path) return;
-    
-    await uploadQueue.add('uploadFile', {
-        modelName,
-        recordId,
-        fieldPath,
-        filePath: file.path,
-        isArray
-    });
+export const queueFileUpload = async (modelName, recordId, fieldPath, fileSource, isArray = false, folder = 'gigconnect') => {
+    if (!fileSource) return;
+    try {
+        const filePath = typeof fileSource === 'object' && fileSource ? (fileSource.path || fileSource.filepath || fileSource) : fileSource;
+        await uploadQueue.add('uploadTask', {
+            modelName,
+            recordId: recordId.toString(),
+            fieldPath,
+            filePath,
+            isArray,
+            folder
+        });
+    } catch (err) {
+        console.error(`Failed to enqueue upload task for ${modelName} (${recordId}):`, err.message);
+    }
 };

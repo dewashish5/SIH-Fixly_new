@@ -78,6 +78,7 @@ const sampleWorkers = [
     savedAddresses: [{ label: 'Home', addressLine: 'Sector 62, Noida', city: 'Noida', pincode: '201301', location: { type: 'Point', coordinates: [77.3639, 28.6280] } }],
     workerProfile: {
       category: 'Plumbing',
+      rate: 350,
       hourlyRate: 350,
       experienceYears: 6,
       bio: 'Expert plumber with 6+ years experience in commercial and residential piping.',
@@ -98,6 +99,7 @@ const sampleWorkers = [
     savedAddresses: [{ label: 'Work Base', addressLine: 'Connaught Place, New Delhi', city: 'New Delhi', pincode: '110001', location: { type: 'Point', coordinates: [77.2167, 28.6328] } }],
     workerProfile: {
       category: 'Electrical',
+      rate: 400,
       hourlyRate: 400,
       experienceYears: 8,
       bio: 'Licensed electrician specializing in short-circuits, heavy load meters & MCB boxes.',
@@ -118,6 +120,7 @@ const sampleWorkers = [
     savedAddresses: [{ label: 'Hub', addressLine: 'Cyber City, Gurgaon', city: 'Gurgaon', pincode: '122002', location: { type: 'Point', coordinates: [77.0882, 28.4950] } }],
     workerProfile: {
       category: 'AC Repair',
+      rate: 500,
       hourlyRate: 500,
       experienceYears: 5,
       bio: 'Professional HVAC & split AC service technician. Specialist in R32/R410 gas refilling.',

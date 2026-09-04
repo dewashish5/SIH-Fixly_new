@@ -59,6 +59,354 @@
             "description": "Internal Server Error"
           }
         }
+      },
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "example": "any"
+                },
+                "pincode": {
+                  "example": "any"
+                },
+                "name": {
+                  "example": "any"
+                },
+                "phone": {
+                  "example": "any"
+                },
+                "avatar": {
+                  "example": "any"
+                },
+                "preferredLanguage": {
+                  "example": "any"
+                },
+                "emergencyContact": {
+                  "example": "any"
+                },
+                "workAddress": {
+                  "example": "any"
+                },
+                "bio": {
+                  "example": "any"
+                },
+                "rate": {
+                  "example": "any"
+                },
+                "hourlyRate": {
+                  "example": "any"
+                },
+                "experienceYears": {
+                  "example": "any"
+                },
+                "skills": {
+                  "example": "any"
+                },
+                "categories": {
+                  "example": "any"
+                },
+                "category": {
+                  "example": "any"
+                },
+                "gender": {
+                  "example": "any"
+                },
+                "dateOfBirth": {
+                  "example": "any"
+                },
+                "upiId": {
+                  "example": "any"
+                },
+                "savedAddresses": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "example": "any"
+                },
+                "pincode": {
+                  "example": "any"
+                },
+                "name": {
+                  "example": "any"
+                },
+                "phone": {
+                  "example": "any"
+                },
+                "avatar": {
+                  "example": "any"
+                },
+                "preferredLanguage": {
+                  "example": "any"
+                },
+                "emergencyContact": {
+                  "example": "any"
+                },
+                "workAddress": {
+                  "example": "any"
+                },
+                "bio": {
+                  "example": "any"
+                },
+                "rate": {
+                  "example": "any"
+                },
+                "hourlyRate": {
+                  "example": "any"
+                },
+                "experienceYears": {
+                  "example": "any"
+                },
+                "skills": {
+                  "example": "any"
+                },
+                "categories": {
+                  "example": "any"
+                },
+                "category": {
+                  "example": "any"
+                },
+                "gender": {
+                  "example": "any"
+                },
+                "dateOfBirth": {
+                  "example": "any"
+                },
+                "upiId": {
+                  "example": "any"
+                },
+                "savedAddresses": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/profile": {
+      "put": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Setup & Update Worker Profile (Supports File Picker Uploads & Base64 JSON via Queue)",
+        "description": "",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "avatar",
+            "in": "formData",
+            "type": "file",
+            "description": "Profile Photo / Selfie Image"
+          },
+          {
+            "name": "aadhaarFrontPhoto",
+            "in": "formData",
+            "type": "file",
+            "description": "Aadhaar Card Front Photo"
+          },
+          {
+            "name": "aadhaarBackPhoto",
+            "in": "formData",
+            "type": "file",
+            "description": "Aadhaar Card Back Photo"
+          },
+          {
+            "name": "panFrontPhoto",
+            "in": "formData",
+            "type": "file",
+            "description": "PAN Card Front Photo"
+          },
+          {
+            "name": "panBackPhoto",
+            "in": "formData",
+            "type": "file",
+            "description": "PAN Card Back Photo"
+          },
+          {
+            "name": "certificate",
+            "in": "formData",
+            "type": "file",
+            "description": "Certificate Document / Image"
+          },
+          {
+            "name": "name",
+            "in": "formData",
+            "type": "string",
+            "description": "Full Name"
+          },
+          {
+            "name": "phone",
+            "in": "formData",
+            "type": "string",
+            "description": "Phone Number"
+          },
+          {
+            "name": "dateOfBirth",
+            "in": "formData",
+            "type": "string",
+            "description": "Date of Birth (YYYY-MM-DD)"
+          },
+          {
+            "name": "gender",
+            "in": "formData",
+            "type": "string",
+            "description": "Gender (male/female/other)"
+          },
+          {
+            "name": "category",
+            "in": "formData",
+            "type": "string",
+            "description": "Primary Category (e.g. electrician)"
+          },
+          {
+            "name": "categories",
+            "in": "formData",
+            "type": "string",
+            "description": "Categories list"
+          },
+          {
+            "name": "rate",
+            "in": "formData",
+            "type": "number",
+            "description": "Base Rate / Minimum Service Cost"
+          },
+          {
+            "name": "categoryRates",
+            "in": "formData",
+            "type": "string",
+            "description": "Category Rates array JSON"
+          },
+          {
+            "name": "experienceYears",
+            "in": "formData",
+            "type": "number",
+            "description": "Years of Experience"
+          },
+          {
+            "name": "bio",
+            "in": "formData",
+            "type": "string",
+            "description": "Worker Bio"
+          },
+          {
+            "name": "skills",
+            "in": "formData",
+            "type": "string",
+            "description": "Skills list"
+          },
+          {
+            "name": "aadhaarNumber",
+            "in": "formData",
+            "type": "string",
+            "description": "Aadhaar Card Number"
+          },
+          {
+            "name": "panNumber",
+            "in": "formData",
+            "type": "string",
+            "description": "PAN Card Number"
+          },
+          {
+            "name": "workAddress",
+            "in": "formData",
+            "type": "string",
+            "description": "Work Address"
+          },
+          {
+            "name": "payoutMethod",
+            "in": "formData",
+            "type": "string",
+            "description": "Payout Method (bank/upi)"
+          },
+          {
+            "name": "bank",
+            "in": "formData",
+            "type": "string",
+            "description": "Bank Details JSON"
+          },
+          {
+            "name": "upi",
+            "in": "formData",
+            "type": "string",
+            "description": "UPI Details JSON"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
       }
     },
     "/api/auth/register": {
@@ -160,39 +508,6 @@
         }
       }
     },
-    "/api/auth/refresh-token": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "description": "Refresh token session credentials",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/RefreshTokenInput"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
     "/api/auth/google": {
       "post": {
         "description": "",
@@ -234,6 +549,39 @@
           },
           "500": {
             "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/auth/refresh-token": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Refresh token session credentials",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RefreshTokenInput"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
           }
         }
       }
@@ -1152,67 +1500,7 @@
                 "aadhaarFrontPhoto": {
                   "example": "any"
                 },
-                "aadhaarBackPhoto": {
-                  "example": "any"
-                },
                 "panFrontPhoto": {
-                  "example": "any"
-                },
-                "panBackPhoto": {
-                  "example": "any"
-                },
-                "certifications": {
-                  "example": "any"
-                },
-                "name": {
-                  "example": "any"
-                },
-                "phone": {
-                  "example": "any"
-                },
-                "rate": {
-                  "example": "any"
-                },
-                "categories": {
-                  "example": "any"
-                },
-                "category": {
-                  "example": "any"
-                },
-                "skills": {
-                  "example": "any"
-                },
-                "categoryRates": {
-                  "example": "any"
-                },
-                "aadhaarNumber": {
-                  "example": "any"
-                },
-                "panNumber": {
-                  "example": "any"
-                },
-                "bank": {
-                  "example": "any"
-                },
-                "upi": {
-                  "example": "any"
-                },
-                "dateOfBirth": {
-                  "example": "any"
-                },
-                "gender": {
-                  "example": "any"
-                },
-                "experienceYears": {
-                  "example": "any"
-                },
-                "bio": {
-                  "example": "any"
-                },
-                "workAddress": {
-                  "example": "any"
-                },
-                "payoutMethod": {
                   "example": "any"
                 }
               }
@@ -1220,17 +1508,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
           "401": {
             "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
           }
         }
       }
@@ -2722,6 +3001,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -2761,6 +3043,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -2784,6 +3069,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -2800,7 +3088,22 @@
             "type": "string"
           },
           {
-            "name": "q",
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "isVerified",
             "in": "query",
             "type": "string"
           }
@@ -2811,6 +3114,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2840,6 +3146,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "404": {
             "description": "Not Found"
@@ -2885,6 +3194,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "404": {
             "description": "Not Found"
           },
@@ -2904,17 +3216,22 @@
             "type": "string"
           },
           {
-            "name": "q",
+            "name": "page",
             "in": "query",
             "type": "string"
           },
           {
-            "name": "pendingApproval",
+            "name": "limit",
             "in": "query",
             "type": "string"
           },
           {
-            "name": "kycStatus",
+            "name": "search",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "category",
             "in": "query",
             "type": "string"
           },
@@ -2930,6 +3247,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2965,7 +3285,16 @@
                 "category": {
                   "example": "any"
                 },
-                "hourlyRate": {
+                "rate": {
+                  "example": "any"
+                },
+                "experienceYears": {
+                  "example": "any"
+                },
+                "bio": {
+                  "example": "any"
+                },
+                "skills": {
                   "example": "any"
                 }
               }
@@ -2981,6 +3310,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "500": {
             "description": "Internal Server Error"
@@ -3011,6 +3343,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "404": {
             "description": "Not Found"
           },
@@ -3032,6 +3367,72 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "example": "any"
+                },
+                "name": {
+                  "example": "any"
+                },
+                "phone": {
+                  "example": "any"
+                },
+                "isVerified": {
+                  "example": "any"
+                },
+                "category": {
+                  "example": "any"
+                },
+                "rate": {
+                  "example": "any"
+                },
+                "experienceYears": {
+                  "example": "any"
+                },
+                "bio": {
+                  "example": "any"
+                },
+                "skills": {
+                  "example": "any"
+                },
+                "walletBalance": {
+                  "example": "any"
+                },
+                "totalEarnings": {
+                  "example": "any"
+                },
+                "totalJobs": {
+                  "example": "any"
+                },
+                "rating": {
+                  "example": "any"
+                },
+                "govermentIdType": {
+                  "example": "any"
+                },
+                "govermentIdNumber": {
+                  "example": "any"
+                },
+                "identityProofPhoto": {
+                  "example": "any"
+                },
+                "identityFrontPhoto": {
+                  "example": "any"
+                },
+                "identityBackPhoto": {
+                  "example": "any"
+                },
+                "identityDocuments": {
+                  "example": "any"
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -3040,6 +3441,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "404": {
             "description": "Not Found"
@@ -3071,13 +3475,16 @@
             "schema": {
               "type": "object",
               "properties": {
-                "kycStatus": {
-                  "example": "any"
-                },
-                "declineReason": {
-                  "example": "any"
-                },
                 "isVerified": {
+                  "example": "any"
+                },
+                "badges": {
+                  "example": "any"
+                },
+                "category": {
+                  "example": "any"
+                },
+                "rate": {
                   "example": "any"
                 }
               }
@@ -3088,11 +3495,11 @@
           "200": {
             "description": "OK"
           },
-          "400": {
-            "description": "Bad Request"
-          },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "404": {
             "description": "Not Found"
@@ -3113,6 +3520,21 @@
             "type": "string"
           },
           {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "type": "string"
+          },
+          {
             "name": "status",
             "in": "query",
             "type": "string"
@@ -3124,6 +3546,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "500": {
             "description": "Internal Server Error"
@@ -3153,6 +3578,112 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/admin/bookings/{id}/assign": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "workerId": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/admin/bookings/{id}/status": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "example": "any"
+                },
+                "scheduledTime": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "404": {
             "description": "Not Found"
@@ -3195,8 +3726,14 @@
           "200": {
             "description": "OK"
           },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "404": {
             "description": "Not Found"
@@ -3230,6 +3767,9 @@
               "properties": {
                 "status": {
                   "example": "any"
+                },
+                "scheduledTime": {
+                  "example": "any"
                 }
               }
             }
@@ -3239,8 +3779,14 @@
           "200": {
             "description": "OK"
           },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "404": {
             "description": "Not Found"
@@ -3261,7 +3807,27 @@
             "type": "string"
           },
           {
-            "name": "q",
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "isActive",
             "in": "query",
             "type": "string"
           }
@@ -3272,6 +3838,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "500": {
             "description": "Internal Server Error"
@@ -3285,14 +3854,50 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "example": "any"
+                },
+                "category": {
+                  "example": "any"
+                },
+                "image": {
+                  "example": "any"
+                },
+                "basePrice": {
+                  "example": "any"
+                },
+                "estimatedTime": {
+                  "example": "any"
+                },
+                "whatsIncluded": {
+                  "example": "any"
+                },
+                "isActive": {
+                  "example": "any"
+                }
+              }
+            }
           }
         ],
         "responses": {
           "201": {
             "description": "Created"
           },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "500": {
             "description": "Internal Server Error"
@@ -3323,6 +3928,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "404": {
             "description": "Not Found"
           },
@@ -3353,8 +3961,40 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "404": {
             "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/admin/upload": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "500": {
             "description": "Internal Server Error"
@@ -3370,6 +4010,21 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string"
           }
         ],
         "responses": {
@@ -3378,6 +4033,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "500": {
             "description": "Internal Server Error"
@@ -3402,6 +4060,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -3416,6 +4077,21 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "rating",
+            "in": "query",
+            "type": "string"
           }
         ],
         "responses": {
@@ -3424,6 +4100,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "500": {
             "description": "Internal Server Error"
@@ -3454,6 +4133,12 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -3476,6 +4161,12 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -3488,14 +4179,56 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "recipientType": {
+                  "example": "any"
+                },
+                "targetAudience": {
+                  "example": "any"
+                },
+                "recipientEmail": {
+                  "example": "any"
+                },
+                "title": {
+                  "example": "any"
+                },
+                "message": {
+                  "example": "any"
+                },
+                "category": {
+                  "example": "any"
+                },
+                "priority": {
+                  "example": "any"
+                },
+                "sendEmail": {
+                  "example": "any"
+                }
+              }
+            }
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -3516,6 +4249,12 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -3542,6 +4281,12 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -3562,6 +4307,12 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -3582,6 +4333,12 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -3602,6 +4359,12 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -3622,6 +4385,12 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       },
@@ -3640,29 +4409,9 @@
           },
           "401": {
             "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/admin/upload": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created"
           },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
+          "403": {
+            "description": "Forbidden"
           },
           "500": {
             "description": "Internal Server Error"
@@ -3689,6 +4438,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       },
@@ -3725,6 +4477,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }
@@ -3748,6 +4503,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }
@@ -3792,6 +4550,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }
@@ -3814,6 +4575,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }
@@ -3837,6 +4601,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       },
@@ -3876,6 +4643,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }
@@ -3911,6 +4681,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }
@@ -3928,6 +4701,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       },
@@ -3943,6 +4719,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }
@@ -3960,6 +4739,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }
@@ -3977,6 +4759,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }
@@ -3994,6 +4779,9 @@
         "responses": {
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }
@@ -4021,6 +4809,153 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "example": "any"
+                },
+                "pincode": {
+                  "example": "any"
+                },
+                "name": {
+                  "example": "any"
+                },
+                "phone": {
+                  "example": "any"
+                },
+                "avatar": {
+                  "example": "any"
+                },
+                "preferredLanguage": {
+                  "example": "any"
+                },
+                "emergencyContact": {
+                  "example": "any"
+                },
+                "workAddress": {
+                  "example": "any"
+                },
+                "bio": {
+                  "example": "any"
+                },
+                "rate": {
+                  "example": "any"
+                },
+                "hourlyRate": {
+                  "example": "any"
+                },
+                "experienceYears": {
+                  "example": "any"
+                },
+                "skills": {
+                  "example": "any"
+                },
+                "categories": {
+                  "example": "any"
+                },
+                "category": {
+                  "example": "any"
+                },
+                "gender": {
+                  "example": "any"
+                },
+                "dateOfBirth": {
+                  "example": "any"
+                },
+                "upiId": {
+                  "example": "any"
+                },
+                "savedAddresses": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "example": "any"
+                },
+                "pincode": {
+                  "example": "any"
+                },
+                "name": {
+                  "example": "any"
+                },
+                "phone": {
+                  "example": "any"
+                },
+                "avatar": {
+                  "example": "any"
+                },
+                "preferredLanguage": {
+                  "example": "any"
+                },
+                "emergencyContact": {
+                  "example": "any"
+                },
+                "workAddress": {
+                  "example": "any"
+                },
+                "bio": {
+                  "example": "any"
+                },
+                "rate": {
+                  "example": "any"
+                },
+                "hourlyRate": {
+                  "example": "any"
+                },
+                "experienceYears": {
+                  "example": "any"
+                },
+                "skills": {
+                  "example": "any"
+                },
+                "categories": {
+                  "example": "any"
+                },
+                "category": {
+                  "example": "any"
+                },
+                "gender": {
+                  "example": "any"
+                },
+                "dateOfBirth": {
+                  "example": "any"
+                },
+                "upiId": {
+                  "example": "any"
+                },
+                "savedAddresses": {
+                  "example": "any"
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -4978,6 +5913,94 @@
     }
   },
   "definitions": {
+    "CustomerRegisterInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "John Customer"
+        },
+        "email": {
+          "type": "string",
+          "example": "john.customer@example.com"
+        },
+        "password": {
+          "type": "string",
+          "example": "SecurePassword123"
+        },
+        "role": {
+          "type": "string",
+          "example": "customer"
+        },
+        "phone": {
+          "type": "string",
+          "example": "+919876543210"
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "example": "Point"
+            },
+            "coordinates": {
+              "type": "array",
+              "example": [
+                77.209,
+                28.6139
+              ],
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "WorkerRegisterInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "Ramesh Worker"
+        },
+        "email": {
+          "type": "string",
+          "example": "ramesh.worker@example.com"
+        },
+        "password": {
+          "type": "string",
+          "example": "SecurePassword123"
+        },
+        "role": {
+          "type": "string",
+          "example": "worker"
+        },
+        "phone": {
+          "type": "string",
+          "example": "+919876543210"
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "example": "Point"
+            },
+            "coordinates": {
+              "type": "array",
+              "example": [
+                77.209,
+                28.6139
+              ],
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
     "RegisterInput": {
       "type": "object",
       "properties": {
@@ -4999,7 +6022,7 @@
         },
         "phone": {
           "type": "string",
-          "example": "+1234567890"
+          "example": "+919876543210"
         },
         "location": {
           "type": "object",
@@ -5017,6 +6040,370 @@
               "items": {
                 "type": "number"
               }
+            }
+          }
+        }
+      }
+    },
+    "Worker3StepOnboardingInput": {
+      "type": "object",
+      "properties": {
+        "step1_identity": {
+          "type": "object",
+          "properties": {
+            "fullName": {
+              "type": "string",
+              "example": "Dewashish Hatekar"
+            },
+            "dateOfBirth": {
+              "type": "string",
+              "example": "1998-05-12"
+            },
+            "gender": {
+              "type": "string",
+              "example": "male"
+            },
+            "phone": {
+              "type": "string",
+              "example": "9876543210"
+            },
+            "email": {
+              "type": "string",
+              "example": "dewashishhatekar05@gmail.com"
+            },
+            "aadhaarNumber": {
+              "type": "string",
+              "example": "123456789012"
+            },
+            "aadhaarFrontPhoto": {
+              "type": "string",
+              "example": "https://example.com/aadhaar_front.jpg"
+            },
+            "aadhaarBackPhoto": {
+              "type": "string",
+              "example": "https://example.com/aadhaar_back.jpg"
+            },
+            "panNumber": {
+              "type": "string",
+              "example": "ABCDE1234F"
+            },
+            "panFrontPhoto": {
+              "type": "string",
+              "example": "https://example.com/pan_front.jpg"
+            },
+            "panBackPhoto": {
+              "type": "string",
+              "example": "https://example.com/pan_back.jpg"
+            },
+            "selfieVerified": {
+              "type": "boolean",
+              "example": true
+            },
+            "selfieImageUrl": {
+              "type": "string",
+              "example": "https://example.com/selfie.jpg"
+            },
+            "govermentIdType": {
+              "type": "string",
+              "example": "Aadhaar Card"
+            },
+            "govermentIdNumber": {
+              "type": "string",
+              "example": "123456789012"
+            }
+          }
+        },
+        "step2_workProfile": {
+          "type": "object",
+          "properties": {
+            "certificateUploaded": {
+              "type": "boolean",
+              "example": true
+            },
+            "certifications": {
+              "type": "array",
+              "example": [
+                "certificate.pdf"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "categories": {
+              "type": "array",
+              "example": [
+                "plumber",
+                "electrician"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "category": {
+              "type": "string",
+              "example": "plumber"
+            },
+            "skills": {
+              "type": "array",
+              "example": [
+                "plumber",
+                "electrician",
+                "Pipe Fitting"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "experienceYears": {
+              "type": "number",
+              "example": 4
+            },
+            "bio": {
+              "type": "string",
+              "example": "Experienced plumber and electrician with 4+ years of field experience."
+            },
+            "rate": {
+              "type": "number",
+              "example": 350
+            },
+            "categoryRates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "example": "Pipe Fitting"
+                  },
+                  "rate": {
+                    "type": "number",
+                    "example": 300
+                  }
+                }
+              }
+            },
+            "location": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "example": "Point"
+                },
+                "coordinates": {
+                  "type": "array",
+                  "example": [
+                    77.209,
+                    28.6139
+                  ],
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "address": {
+                  "type": "string",
+                  "example": "Connaught Place, New Delhi"
+                }
+              }
+            }
+          }
+        },
+        "step3_payoutWelfare": {
+          "type": "object",
+          "properties": {
+            "hasEshram": {
+              "type": "boolean",
+              "example": true
+            },
+            "eshramUan": {
+              "type": "string",
+              "example": "ESHRAM1234567890"
+            },
+            "payoutMethod": {
+              "type": "string",
+              "example": "bank"
+            },
+            "bank": {
+              "type": "object",
+              "properties": {
+                "accountHolderName": {
+                  "type": "string",
+                  "example": "Dewashish Hatekar"
+                },
+                "accountNumber": {
+                  "type": "string",
+                  "example": "123456789012"
+                },
+                "confirmAccountNumber": {
+                  "type": "string",
+                  "example": "123456789012"
+                },
+                "ifscCode": {
+                  "type": "string",
+                  "example": "HDFC0001234"
+                },
+                "bankVerified": {
+                  "type": "boolean",
+                  "example": true
+                }
+              }
+            },
+            "upi": {
+              "type": "object",
+              "properties": {
+                "upiId": {
+                  "type": "string",
+                  "example": "dewashish@upi"
+                },
+                "upiVerified": {
+                  "type": "boolean",
+                  "example": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "WorkerProfileSetupInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "Dewashish Hatekar"
+        },
+        "phone": {
+          "type": "string",
+          "example": "9876543210"
+        },
+        "dateOfBirth": {
+          "type": "string",
+          "example": "1998-05-12"
+        },
+        "gender": {
+          "type": "string",
+          "example": "male"
+        },
+        "avatar": {
+          "type": "string",
+          "example": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD..."
+        },
+        "category": {
+          "type": "string",
+          "example": "electrician"
+        },
+        "categories": {
+          "type": "array",
+          "example": [
+            "electrician",
+            "plumber"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "rate": {
+          "type": "number",
+          "example": 500
+        },
+        "categoryRates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "example": "electrician"
+              },
+              "rate": {
+                "type": "number",
+                "example": 500
+              }
+            }
+          }
+        },
+        "experienceYears": {
+          "type": "number",
+          "example": 4
+        },
+        "bio": {
+          "type": "string",
+          "example": "Experienced electrician and plumber with 4+ years of field experience."
+        },
+        "skills": {
+          "type": "array",
+          "example": [
+            "electrician",
+            "plumbing"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "certifications": {
+          "type": "array",
+          "example": [
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+            "data:application/pdf;base64,JVBERi0xLjQN..."
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "aadhaarNumber": {
+          "type": "string",
+          "example": "123456789012"
+        },
+        "aadhaarFrontPhoto": {
+          "type": "string",
+          "example": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD..."
+        },
+        "aadhaarBackPhoto": {
+          "type": "string",
+          "example": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD..."
+        },
+        "panNumber": {
+          "type": "string",
+          "example": "ABCDE1234F"
+        },
+        "panFrontPhoto": {
+          "type": "string",
+          "example": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD..."
+        },
+        "panBackPhoto": {
+          "type": "string",
+          "example": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD..."
+        },
+        "workAddress": {
+          "type": "string",
+          "example": "Connaught Place, New Delhi"
+        },
+        "payoutMethod": {
+          "type": "string",
+          "example": "bank"
+        },
+        "bank": {
+          "type": "object",
+          "properties": {
+            "accountHolderName": {
+              "type": "string",
+              "example": "Dewashish Hatekar"
+            },
+            "accountNumber": {
+              "type": "string",
+              "example": "123456789012"
+            },
+            "ifscCode": {
+              "type": "string",
+              "example": "HDFC0001234"
+            }
+          }
+        },
+        "upi": {
+          "type": "object",
+          "properties": {
+            "upiId": {
+              "type": "string",
+              "example": "dewashish@upi"
             }
           }
         }

@@ -46,8 +46,8 @@ app.set('trust proxy', 1);
 // Security & Utility Middleware
 app.use(helmet());
 app.use(cors());
-// Worker setup-profile sends base64 data URIs for KYC docs
-app.use(express.json({ limit: '25mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Safe Custom NoSQL Injection Sanitizer (Compatible with Node.js v20+)
 app.use((req, res, next) => {
@@ -88,25 +88,25 @@ app.get('/', (req, res) => {
     });
 });
 
-// API Routes Mounting with Rate Limiters where appropriate
+// API Routes Mounting
 app.use('/api/auth', authRoutes);
 app.use('/api/bookings', apiLimiter, bookingRoutes);
-app.use('/api/workers', apiLimiter, workerRoutes);
+app.use('/api/workers', workerRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/home', homeRoutes);
 app.use('/api/ai', aiRoutes);
-app.use('/api/upload', apiLimiter, uploadRoutes);
-app.use('/api/admin', apiLimiter, adminRoutes);
-app.use('/api/users', apiLimiter, userRoutes);
-app.use('/api/verification', apiLimiter, verificationRoutes);
-app.use('/api/worker-certificates', apiLimiter, workerCertificateRoutes);
-app.use('/api/worker-wallet', apiLimiter, workerWalletRoutes);
-app.use('/api/notifications', apiLimiter, notificationRoutes);
-app.use('/api/support', apiLimiter, supportRoutes);
-app.use('/api/cooperative', apiLimiter, cooperativeRoutes);
-app.use('/api/welfare', apiLimiter, welfareRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/verification', verificationRoutes);
+app.use('/api/worker-certificates', workerCertificateRoutes);
+app.use('/api/worker-wallet', workerWalletRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/support', supportRoutes);
+app.use('/api/cooperative', cooperativeRoutes);
+app.use('/api/welfare', welfareRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

@@ -1,41 +1,41 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/authMiddleware.js';
+import jwt from 'jsonwebtoken';
 import upload from '../middleware/uploadMiddleware.js';
 import {
     adminLogin,
-    adminMe,
+    getAdminProfile,
     updateAdminMe,
-    getDashboard,
-    listCustomers,
+    getDashboardStats,
+    getCustomers,
     getCustomerById,
     toggleCustomerStatus,
-    listWorkers,
+    getWorkers,
     getWorkerById,
-    updateWorker,
+    updateWorkerById,
     updateWorkerStatus,
     addWorker,
-    listBookings,
+    getBookings,
     getBookingById,
     assignWorkerToBooking,
     updateBookingStatus,
-    listServices,
-    createServiceAdmin,
-    updateServiceAdmin,
-    deleteServiceAdmin,
-    listPayments,
-    paymentStats,
-    listReviews,
+    getServices,
+    createService,
+    updateService,
+    deleteService,
+    getPayments,
+    getPaymentStats,
+    getReviews,
     deleteReview,
+    sendAdminNotification,
     getNotifications,
-    broadcastNotification,
-    markNotificationsRead,
+    markAllNotificationsRead,
     deleteNotification,
     getAnalytics,
     getAIInsights,
-    getReports,
+    uploadAdminFile,
+    getReportsData,
     getSettings,
     updateSettings,
-    adminUpload,
 } from '../controllers/adminController.js';
 import {
     adminGetWorkerVerification,
@@ -59,64 +59,113 @@ import { adminListPayouts } from '../controllers/workerWalletController.js';
 
 const router = express.Router();
 
+// ==========================================
+// ADMIN AUTH MIDDLEWARE
+// ==========================================
+export const adminProtect = (req, res, next) => {
+    try {
+        let token;
+        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+            token = req.headers.authorization.split(' ')[1];
+        }
+
+        if (!token) {
+            return res.status(401).json({ success: false, message: 'Admin authentication required, token missing' });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden. Access restricted to admin users.' });
+        }
+
+        req.user = decoded;
+        next();
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ success: false, message: 'Admin token expired, please login again' });
+        }
+        return res.status(401).json({ success: false, message: 'Invalid admin authentication token' });
+    }
+};
+
+// ==========================================
+// PUBLIC ADMIN ROUTES
+// ==========================================
 router.post('/login', adminLogin);
 
-router.use(protect, authorize('admin'));
+// ==========================================
+// PROTECTED ADMIN ROUTES
+// ==========================================
+router.use(adminProtect);
 
-router.get('/me', adminMe);
+// Profile & Dashboard
+router.get('/me', getAdminProfile);
 router.put('/me', updateAdminMe);
-router.get('/dashboard', getDashboard);
+router.get('/dashboard', getDashboardStats);
 
-router.get('/customers', listCustomers);
+// Customers
+router.get('/customers', getCustomers);
 router.get('/customers/:id', getCustomerById);
 router.patch('/customers/:id/status', toggleCustomerStatus);
 
-router.get('/workers', listWorkers);
+// Workers
+router.get('/workers', getWorkers);
 router.get('/workers/:id', getWorkerById);
-router.put('/workers/:id', updateWorker);
-router.patch('/workers/:id/status', updateWorkerStatus);
 router.post('/workers', addWorker);
+router.put('/workers/:id', updateWorkerById);
+router.patch('/workers/:id/status', updateWorkerStatus);
 
-router.get('/bookings', listBookings);
+// Bookings (supports both :id and :bookingId)
+router.get('/bookings', getBookings);
 router.get('/bookings/:id', getBookingById);
+router.patch('/bookings/:id/assign', assignWorkerToBooking);
+router.patch('/bookings/:id/status', updateBookingStatus);
 router.patch('/bookings/:bookingId/assign', assignWorkerToBooking);
 router.patch('/bookings/:bookingId/status', updateBookingStatus);
 
-router.get('/services', listServices);
-router.post('/services', createServiceAdmin);
-router.put('/services/:id', updateServiceAdmin);
-router.delete('/services/:id', deleteServiceAdmin);
+// Services & Image Upload
+router.get('/services', getServices);
+router.post('/services', createService);
+router.put('/services/:id', updateService);
+router.delete('/services/:id', deleteService);
+router.post('/upload', upload.single('file'), uploadAdminFile);
 
-router.get('/payments', listPayments);
-router.get('/payments/stats', paymentStats);
+// Payments & Financials
+router.get('/payments', getPayments);
+router.get('/payments/stats', getPaymentStats);
 
-router.get('/reviews', listReviews);
+// Reviews Moderation
+router.get('/reviews', getReviews);
 router.delete('/reviews/:id', deleteReview);
 
+// Notifications & Broadcast
 router.get('/notifications', getNotifications);
-router.post('/notifications/broadcast', broadcastNotification);
-router.put('/notifications/mark-read', markNotificationsRead);
+router.post('/notifications/broadcast', sendAdminNotification);
+router.put('/notifications/mark-read', markAllNotificationsRead);
 router.delete('/notifications/:id', deleteNotification);
 
+// Analytics & AI Insights
 router.get('/analytics', getAnalytics);
 router.get('/ai-insights', getAIInsights);
-router.get('/reports', getReports);
+router.get('/reports', getReportsData);
 
+// Platform Governance Settings
 router.get('/settings', getSettings);
 router.put('/settings', updateSettings);
 
-router.post('/upload', upload.single('file'), adminUpload);
-
+// Worker KYC Verification & Certificates
 router.get('/workers/:id/verification', adminGetWorkerVerification);
 router.patch('/workers/:id/verification', adminReviewWorkerVerification);
 router.get('/workers/:workerId/certificates', adminListCertificates);
 router.patch('/workers/:workerId/certificates/:certificateId', adminReviewCertificate);
 
+// Support Management
 router.get('/support/tickets', adminListTickets);
 router.get('/support/tickets/:id', getTicket);
 router.patch('/support/tickets/:id', adminPatchTicket);
 router.post('/support/tickets/:id/messages', addTicketMessage);
 
+// Cooperative & Welfare Governance
 router.get('/cooperative', adminGetCooperative);
 router.put('/cooperative', adminUpdateCooperative);
 router.get('/cooperative/members', adminCooperativeMembers);
