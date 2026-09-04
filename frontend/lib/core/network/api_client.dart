@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../auth/device_id.dart';
 import '../auth/token_storage.dart';
 import 'api_config.dart';
+import 'api_enpoints.dart';
 import 'api_exception.dart';
 
 /// Shared Dio client: single-flight GET, short TTL GET cache, one refresh lock.
@@ -84,15 +85,7 @@ class ApiClient {
     _getInFlight.clear();
   }
 
-  static bool _isAuthPath(String path) {
-    return path.contains('/api/auth/login') ||
-        path.contains('/api/auth/register') ||
-        path.contains('/api/auth/verify-otp') ||
-        path.contains('/api/auth/refresh-token') ||
-        path.contains('/api/auth/forgot-password') ||
-        path.contains('/api/auth/reset-password') ||
-        path.contains('/api/auth/google');
-  }
+  static bool _isAuthPath(String path) => ApiEndpoints.isAuthPath(path);
 
   Future<bool> _tryRefresh() {
     final inflight = _refreshInFlight;
@@ -116,7 +109,7 @@ class ApiClient {
     }
     try {
       final res = await _dio.post<Map<String, dynamic>>(
-        '/api/auth/refresh-token',
+        ApiEndpoints.refreshToken,
         data: {
           'userId': userId,
           'deviceId': device,

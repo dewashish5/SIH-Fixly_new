@@ -132,13 +132,43 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
                 ],
               ),
               const SizedBox(height: 8),
-              _CategoryGrid(
-                categories: state.categories
-                    .take(AppConstants.homeCategoryPreviewCount)
-                    .toList(),
-                locale: locale,
-                onCategoryTap: context.openCategorySearch,
-              ),
+              if (state.categories.isNotEmpty)
+                _CategoryGrid(
+                  categories: state.categories
+                      .take(AppConstants.homeCategoryPreviewCount)
+                      .toList(),
+                  locale: locale,
+                  onCategoryTap: context.openCategorySearch,
+                )
+              else
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: context.hairline),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.category_outlined,
+                          size: 32, color: context.muted),
+                      const SizedBox(height: 6),
+                      Text(
+                        'No categories available',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: context.muted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -337,7 +367,25 @@ class _ServiceTile extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(Icons.handyman_rounded, color: Colors.white),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: (service.imageUrl != null &&
+                        service.imageUrl!.trim().isNotEmpty)
+                    ? Image.network(
+                        service.imageUrl!.trim(),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.handyman_rounded, color: Colors.white),
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return const Center(
+                            child: Icon(Icons.handyman_rounded,
+                                color: Colors.white, size: 24),
+                          );
+                        },
+                      )
+                    : const Icon(Icons.handyman_rounded, color: Colors.white),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(

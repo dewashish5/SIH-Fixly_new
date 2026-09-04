@@ -29,7 +29,7 @@ const getPaginationMetaData = (total, page, limit) => {
 // ==========================================
 
 /**
- * @desc Admin Login (Single User based on .env)
+ * @desc Admin Login (Single User based strictly on .env)
  * @route POST /api/admin/login
  * @access Public
  */
@@ -37,8 +37,8 @@ export const adminLogin = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const envAdminEmail = process.env.ADMIN_EMAIL || 'admin@gigconnect.com';
-        const envAdminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+        const envAdminEmail = process.env.ADMIN_EMAIL;
+        const envAdminPassword = process.env.ADMIN_PASSWORD;
 
         if (!email || !password) {
             return res.status(400).json({
@@ -47,9 +47,16 @@ export const adminLogin = async (req, res) => {
             });
         }
 
+        if (!envAdminEmail || !envAdminPassword) {
+            return res.status(500).json({
+                success: false,
+                message: 'Admin credentials are not configured on the server environment'
+            });
+        }
+
         const normalizedEmail = email.toLowerCase().trim();
 
-        // Check if matching env-based admin credentials
+        // Crosscheck request body email and password against .env values
         if (normalizedEmail === envAdminEmail.toLowerCase().trim() && password === envAdminPassword) {
             const token = jwt.sign(
                 { id: 'admin-1', role: 'admin', email: envAdminEmail },
@@ -71,33 +78,6 @@ export const adminLogin = async (req, res) => {
             });
         }
 
-        // Fallback: Check MongoDB for admin user
-        const dbAdmin = await User.findOne({ email: normalizedEmail }).select('+password');
-        if (dbAdmin && dbAdmin.role === 'admin') {
-            const isMatch = await dbAdmin.comparePassword(password);
-            if (isMatch) {
-                const token = jwt.sign(
-                    { id: dbAdmin._id, role: 'admin', email: dbAdmin.email },
-                    process.env.JWT_SECRET,
-                    { expiresIn: process.env.JWT_ACCESS_EXPIRY || '1d' }
-                );
-
-                return res.status(200).json({
-                    success: true,
-                    message: 'Admin login successful',
-                    token,
-                    user: {
-                        id: dbAdmin._id,
-                        _id: dbAdmin._id,
-                        name: dbAdmin.name,
-                        email: dbAdmin.email,
-                        role: dbAdmin.role,
-                        avatar: dbAdmin.avatar
-                    }
-                });
-            }
-        }
-
         return res.status(401).json({
             success: false,
             message: 'Invalid admin credentials'
@@ -116,7 +96,7 @@ export const adminLogin = async (req, res) => {
 export const getAdminProfile = async (req, res) => {
     try {
         if (req.user.id === 'admin-1') {
-            const envAdminEmail = process.env.ADMIN_EMAIL || 'admin@gigconnect.com';
+            const envAdminEmail = process.env.ADMIN_EMAIL;
             return res.status(200).json({
                 success: true,
                 user: {
@@ -154,7 +134,7 @@ export const updateAdminMe = async (req, res) => {
                     id: 'admin-1',
                     _id: 'admin-1',
                     name: name || 'System Administrator',
-                    email: email || process.env.ADMIN_EMAIL || 'admin@gigconnect.com',
+                    email: email || process.env.ADMIN_EMAIL,
                     role: 'admin',
                     avatar
                 },

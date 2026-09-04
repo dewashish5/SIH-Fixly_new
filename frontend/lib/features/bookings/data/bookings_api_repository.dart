@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/location/app_location.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_enpoints.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../shared/models/models.dart';
 
@@ -37,7 +38,7 @@ class BookingsApiRepository {
     required String serviceId,
     double estimatedHours = 1,
   }) async {
-    final res = await _api.post('/api/bookings/estimate', data: {
+    final res = await _api.post(ApiEndpoints.bookingEstimate, data: {
       'serviceId': serviceId,
       'estimatedHours': estimatedHours,
     });
@@ -111,7 +112,7 @@ class BookingsApiRepository {
       data = FormData.fromMap(map);
     }
 
-    final res = await _api.post('/api/bookings/', data: data);
+    final res = await _api.post(ApiEndpoints.createBooking, data: data);
     if (res['success'] != true || res['booking'] == null) {
       throw ApiException(res['message']?.toString() ?? 'Booking failed');
     }
@@ -122,7 +123,7 @@ class BookingsApiRepository {
   }
 
   Future<Booking> getById(String bookingId, {String serviceTitle = 'Service'}) async {
-    final res = await _api.get('/api/bookings/$bookingId');
+    final res = await _api.get(ApiEndpoints.bookingById(bookingId));
     if (res['success'] != true || res['booking'] == null) {
       throw ApiException(res['message']?.toString() ?? 'Booking not found');
     }
@@ -133,7 +134,7 @@ class BookingsApiRepository {
   }
 
   Future<Booking> cancel(String bookingId, {String serviceTitle = 'Service'}) async {
-    final res = await _api.patch('/api/bookings/$bookingId/cancel');
+    final res = await _api.patch(ApiEndpoints.cancelBooking(bookingId));
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Cancel failed');
     }
@@ -152,7 +153,7 @@ class BookingsApiRepository {
     required String otp,
     String serviceTitle = 'Service',
   }) async {
-    final res = await _api.post('/api/bookings/$bookingId/verify-otp', data: {
+    final res = await _api.post(ApiEndpoints.verifyArrivalOtp(bookingId), data: {
       'otp': otp,
     });
     if (res['success'] != true) {
@@ -169,7 +170,7 @@ class BookingsApiRepository {
   }
 
   Future<void> complete(String bookingId) async {
-    final res = await _api.post('/api/bookings/$bookingId/complete');
+    final res = await _api.post(ApiEndpoints.completeBooking(bookingId));
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Complete failed');
     }
@@ -179,7 +180,7 @@ class BookingsApiRepository {
     required String bookingId,
     required List<Map<String, dynamic>> extraItems,
   }) async {
-    final res = await _api.patch('/api/bookings/$bookingId/add-parts', data: {
+    final res = await _api.patch(ApiEndpoints.addParts(bookingId), data: {
       'extraItems': extraItems,
     });
     if (res['success'] != true) {
@@ -189,7 +190,7 @@ class BookingsApiRepository {
 
   Future<List<Booking>> history() async {
     try {
-      final res = await _api.get('/api/bookings/history');
+      final res = await _api.get(ApiEndpoints.bookingHistory);
       final data = res['data'] ?? res['bookings'];
       if (data is! List) return const [];
       return data
@@ -202,7 +203,7 @@ class BookingsApiRepository {
   }
 
   Future<WorkerJob> workerJobById(String bookingId) async {
-    final res = await _api.get('/api/bookings/$bookingId');
+    final res = await _api.get(ApiEndpoints.bookingById(bookingId));
     if (res['success'] != true || res['booking'] == null) {
       throw ApiException(res['message']?.toString() ?? 'Job not found');
     }
@@ -210,13 +211,13 @@ class BookingsApiRepository {
   }
 
   Future<List<WorkerJob>> workerIncoming() =>
-      _workerJobs('/api/bookings/worker/incoming', JobStatus.incoming);
+      _workerJobs(ApiEndpoints.workerIncomingJobs, JobStatus.incoming);
 
   Future<List<WorkerJob>> workerActive() =>
-      _workerJobs('/api/bookings/worker/active', JobStatus.active);
+      _workerJobs(ApiEndpoints.workerActiveJobs, JobStatus.active);
 
   Future<List<WorkerJob>> workerCompleted() =>
-      _workerJobs('/api/bookings/worker/completed', JobStatus.completed);
+      _workerJobs(ApiEndpoints.workerCompletedJobs, JobStatus.completed);
 
   Future<List<WorkerJob>> _workerJobs(String path, JobStatus status) async {
     final res = await _api.get(path);
@@ -232,14 +233,14 @@ class BookingsApiRepository {
   }
 
   Future<void> accept(String bookingId) async {
-    final res = await _api.post('/api/bookings/$bookingId/accept');
+    final res = await _api.post(ApiEndpoints.acceptJob(bookingId));
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Accept failed');
     }
   }
 
   Future<void> decline(String bookingId, {String reason = 'OTHER'}) async {
-    final res = await _api.post('/api/bookings/$bookingId/decline', data: {
+    final res = await _api.post(ApiEndpoints.declineJob(bookingId), data: {
       'reason': reason,
     });
     if (res['success'] != true) {
@@ -248,7 +249,7 @@ class BookingsApiRepository {
   }
 
   Future<void> startJob(String bookingId) async {
-    final res = await _api.post('/api/bookings/$bookingId/start-job');
+    final res = await _api.post(ApiEndpoints.startJob(bookingId));
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Start failed');
     }

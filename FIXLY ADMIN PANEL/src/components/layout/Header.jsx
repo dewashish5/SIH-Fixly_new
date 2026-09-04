@@ -674,7 +674,7 @@ export default function Header({ onOpenMobileMenu }) {
                     {adminUser?.name || 'Administrator'}
                   </div>
                   <div style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {adminUser?.email || 'admin@cooperative.org'}
+                    {adminUser?.email || ''}
                   </div>
                 </div>
               </div>

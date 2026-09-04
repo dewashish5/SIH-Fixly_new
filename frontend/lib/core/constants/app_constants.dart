@@ -98,6 +98,7 @@ class ServiceCategory {
     required this.nameHi,
     required this.gradient,
     required this.icon,
+    this.imageUrl,
   });
 
   final String id;
@@ -105,6 +106,7 @@ class ServiceCategory {
   final String nameHi;
   final List<Color> gradient;
   final IconData icon;
+  final String? imageUrl;
 
   String nameFor(String locale) => locale == 'hi' ? nameHi : nameEn;
 }

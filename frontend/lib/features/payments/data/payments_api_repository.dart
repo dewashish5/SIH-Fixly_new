@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_enpoints.dart';
 import '../../../core/network/api_exception.dart';
 
 class PaymentConfig {
@@ -44,7 +45,7 @@ class PaymentsApiRepository {
   final ApiClient _api;
 
   Future<PaymentConfig> fetchConfig() async {
-    final res = await _api.get('/api/payments/config');
+    final res = await _api.get(ApiEndpoints.paymentConfig);
     if (res['success'] != true || res['keyId'] == null) {
       throw ApiException(res['message']?.toString() ?? 'Payment config failed');
     }
@@ -58,7 +59,7 @@ class PaymentsApiRepository {
     required String bookingId,
     required double amountRupees,
   }) async {
-    final res = await _api.post('/api/payments/create-order', data: {
+    final res = await _api.post(ApiEndpoints.createPaymentOrder, data: {
       'bookingId': bookingId,
       'amount': amountRupees,
     });
@@ -81,7 +82,7 @@ class PaymentsApiRepository {
     required String razorpaySignature,
     required String bookingId,
   }) async {
-    final res = await _api.post('/api/payments/verify', data: {
+    final res = await _api.post(ApiEndpoints.verifyPayment, data: {
       'razorpay_order_id': razorpayOrderId,
       'razorpay_payment_id': razorpayPaymentId,
       'razorpay_signature': razorpaySignature,
@@ -91,7 +92,7 @@ class PaymentsApiRepository {
   }
 
   Future<WalletSnapshot> workerWallet() async {
-    final res = await _api.get('/api/workers/me/wallet');
+    final res = await _api.get(ApiEndpoints.workerWallet);
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Wallet failed');
     }
@@ -105,15 +106,15 @@ class PaymentsApiRepository {
           0,
       history: history is List
           ? history
-              .whereType<Map>()
-              .map((e) => Map<String, dynamic>.from(e))
-              .toList()
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList()
           : const [],
     );
   }
 
   Future<Map<String, dynamic>> workerEarningsSummary() async {
-    final res = await _api.get('/api/workers/me/earnings/summary');
+    final res = await _api.get(ApiEndpoints.workerEarningsSummary);
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Earnings failed');
     }
@@ -121,7 +122,7 @@ class PaymentsApiRepository {
   }
 
   Future<void> withdraw(double amount) async {
-    final res = await _api.post('/api/workers/me/withdraw', data: {
+    final res = await _api.post(ApiEndpoints.workerWithdraw, data: {
       'amount': amount,
     });
     if (res['success'] != true) {
@@ -130,7 +131,7 @@ class PaymentsApiRepository {
   }
 
   Future<WalletSnapshot> walletHistory() async {
-    final res = await _api.get('/api/payments/wallet-history');
+    final res = await _api.get(ApiEndpoints.paymentWalletHistory);
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Wallet failed');
     }
@@ -139,9 +140,9 @@ class PaymentsApiRepository {
       balance: (res['walletBalance'] as num?)?.toDouble() ?? 0,
       history: history is List
           ? history
-              .whereType<Map>()
-              .map((e) => Map<String, dynamic>.from(e))
-              .toList()
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList()
           : const [],
     );
   }

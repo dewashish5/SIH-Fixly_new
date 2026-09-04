@@ -23,7 +23,7 @@ class CustomerHomeCubit extends Cubit<CustomerHomeState> {
         emit(
           state.copyWith(
             status: CustomerHomeStatus.loaded,
-            categories: _displayCategories(bundle.categories),
+            categories: bundle.categories,
             popularServices: bundle.topServices,
           ),
         );
@@ -32,7 +32,7 @@ class CustomerHomeCubit extends Cubit<CustomerHomeState> {
         emit(
           state.copyWith(
             status: CustomerHomeStatus.loaded,
-            categories: _displayCategories(categories),
+            categories: categories,
             popularServices: const [],
           ),
         );
@@ -43,25 +43,4 @@ class CustomerHomeCubit extends Cubit<CustomerHomeState> {
   }
 
   void refresh() => load(forceNetwork: true);
-
-  static List<ServiceCategory> _displayCategories(
-    List<ServiceCategory> fromApi,
-  ) {
-    if (fromApi.length >= ServiceCategories.all.length) {
-      return fromApi;
-    }
-    final seen = <String>{};
-    final merged = <ServiceCategory>[];
-    for (final cat in ServiceCategories.all) {
-      merged.add(cat);
-      seen.add(cat.id);
-    }
-    for (final cat in fromApi) {
-      if (!seen.contains(cat.id)) {
-        merged.add(cat);
-        seen.add(cat.id);
-      }
-    }
-    return merged;
-  }
 }

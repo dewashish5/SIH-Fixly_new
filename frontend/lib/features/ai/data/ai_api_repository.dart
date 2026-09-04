@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_enpoints.dart';
 import '../../../core/network/api_exception.dart';
 
 class AiAnalysis {
@@ -41,7 +42,7 @@ class AiApiRepository {
       });
     }
 
-    final res = await _api.post('/api/ai/analyze-issue', data: data);
+    final res = await _api.post(ApiEndpoints.aiAnalyzeIssue, data: data);
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'AI failed');
     }

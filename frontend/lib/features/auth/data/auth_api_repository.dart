@@ -1,8 +1,9 @@
 import '../../../core/auth/device_id.dart';
+import '../../../core/auth/token_storage.dart';
 import '../../../core/location/app_location.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_enpoints.dart';
 import '../../../core/network/api_exception.dart';
-import '../../../core/auth/token_storage.dart';
 import '../../../shared/models/models.dart';
 
 class AuthSession {
@@ -41,7 +42,7 @@ class AuthApiRepository {
     required String role,
     required String phone,
   }) async {
-    final res = await _api.post('/api/auth/register', data: {
+    final res = await _api.post(ApiEndpoints.register, data: {
       'name': name,
       'email': email,
       'password': password,
@@ -59,7 +60,7 @@ class AuthApiRepository {
     required String otp,
   }) async {
     final device = await _deviceId.getOrCreate();
-    final res = await _api.post('/api/auth/verify-otp', data: {
+    final res = await _api.post(ApiEndpoints.verifyOtp, data: {
       'email': email,
       'otp': otp,
       'deviceId': device,
@@ -72,7 +73,7 @@ class AuthApiRepository {
     required String password,
   }) async {
     final device = await _deviceId.getOrCreate();
-    final res = await _api.post('/api/auth/login', data: {
+    final res = await _api.post(ApiEndpoints.login, data: {
       'email': email,
       'password': password,
       'deviceId': device,
@@ -93,7 +94,7 @@ class AuthApiRepository {
         ? avatar.trim()
         : 'https://lh3.googleusercontent.com/a/default-user';
 
-    final res = await _api.post('/api/auth/google', data: {
+    final res = await _api.post(ApiEndpoints.googleLogin, data: {
       'email': email,
       'name': name,
       'avatar': effectiveAvatar,
@@ -112,7 +113,7 @@ class AuthApiRepository {
     if (refresh == null || userId == null) {
       throw ApiException('No refresh session');
     }
-    final res = await _api.post('/api/auth/refresh-token', data: {
+    final res = await _api.post(ApiEndpoints.refreshToken, data: {
       'userId': userId,
       'deviceId': device,
       'refreshToken': refresh,
@@ -130,7 +131,7 @@ class AuthApiRepository {
   }
 
   Future<void> forgotPassword(String email) async {
-    final res = await _api.post('/api/auth/forgot-password', data: {
+    final res = await _api.post(ApiEndpoints.forgotPassword, data: {
       'email': email,
     });
     if (res['success'] != true) {
@@ -143,7 +144,7 @@ class AuthApiRepository {
     required String otp,
     required String newPassword,
   }) async {
-    final res = await _api.post('/api/auth/reset-password', data: {
+    final res = await _api.post(ApiEndpoints.resetPassword, data: {
       'email': email,
       'otp': otp,
       'newPassword': newPassword,
@@ -158,7 +159,7 @@ class AuthApiRepository {
     final device = await _deviceId.getOrCreate();
     if (userId != null) {
       try {
-        await _api.post('/api/auth/logout', data: {
+        await _api.post(ApiEndpoints.logout, data: {
           'userId': userId,
           'deviceId': device,
         });
@@ -215,7 +216,7 @@ class AuthApiRepository {
 
   /// Full `/api/auth/me` user object (includes workerProfile / KYC fields).
   Future<Map<String, dynamic>> fetchMeUserJson() async {
-    final res = await _api.get('/api/auth/me');
+    final res = await _api.get(ApiEndpoints.me);
     if (res['success'] != true || res['user'] == null) {
       throw ApiException(res['message']?.toString() ?? 'Profile fetch failed');
     }
@@ -387,9 +388,9 @@ class AuthApiRepository {
 
     Map<String, dynamic> res;
     try {
-      res = await _api.patch('/api/auth/me', data: payload);
+      res = await _api.patch(ApiEndpoints.me, data: payload);
     } catch (_) {
-      res = await _api.put('/api/users/me', data: payload);
+      res = await _api.put(ApiEndpoints.usersMe, data: payload);
     }
 
     final userJson = res['user'] ?? res['data'];

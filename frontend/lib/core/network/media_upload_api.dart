@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 
 import 'api_client.dart';
+import 'api_enpoints.dart';
 import 'api_exception.dart';
 
 /// Uploads a local file to `POST /api/upload` → Cloudinary URL.
@@ -30,7 +31,7 @@ class MediaUploadApi {
     final form = FormData.fromMap({
       'file': await MultipartFile.fromFile(path, filename: name),
     });
-    final res = await _api.post('/api/upload', data: form);
+    final res = await _api.post(ApiEndpoints.upload, data: form);
     if (res['success'] != true || res['url'] == null) {
       throw ApiException(res['message']?.toString() ?? 'Upload failed');
     }

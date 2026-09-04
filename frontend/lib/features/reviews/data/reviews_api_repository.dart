@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_enpoints.dart';
 import '../../../core/network/api_exception.dart';
 
 class ReviewsApiRepository {
@@ -39,7 +40,7 @@ class ReviewsApiRepository {
     }
     final form = FormData.fromMap(map);
     final res = await _api.post(
-      '/api/reviews/$bookingId',
+      ApiEndpoints.submitReview(bookingId),
       data: form,
     );
     if (res['success'] != true) {

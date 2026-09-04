@@ -1,5 +1,6 @@
 import '../../../core/location/app_location.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_enpoints.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../shared/models/models.dart';
 import '../../worker/data/worker_setup_profile_mapper.dart';
@@ -23,7 +24,7 @@ class WorkersApiRepository {
       throw ApiException('Location required to find nearby workers');
     }
     final res = await _api.get(
-      '/api/workers/',
+      ApiEndpoints.workers,
       query: {
         'lng': useLng,
         'lat': useLat,
@@ -43,7 +44,7 @@ class WorkersApiRepository {
   }
 
   Future<WorkerProfile> fetchWorker(String workerId) async {
-    final res = await _api.get('/api/workers/$workerId');
+    final res = await _api.get(ApiEndpoints.workerById(workerId));
     if (res['success'] != true || res['worker'] == null) {
       throw ApiException(res['message']?.toString() ?? 'Worker not found');
     }
@@ -55,7 +56,7 @@ class WorkersApiRepository {
     OnboardingFormData formData,
   ) async {
     final body = await WorkerSetupProfileMapper.toBody(formData);
-    final res = await _api.put('/api/workers/setup-profile', data: body);
+    final res = await _api.put(ApiEndpoints.setupProfile, data: body);
     if (res['success'] != true) {
       throw ApiException(
         res['message']?.toString() ?? 'Worker profile update failed',
@@ -65,7 +66,7 @@ class WorkersApiRepository {
   }
 
   Future<Map<String, dynamic>> fetchReliability(String workerId) async {
-    final res = await _api.get('/api/workers/$workerId/reliability');
+    final res = await _api.get(ApiEndpoints.workerReliability(workerId));
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Reliability failed');
     }
@@ -73,7 +74,7 @@ class WorkersApiRepository {
   }
 
   Future<Map<String, dynamic>> fetchAvailability() async {
-    final res = await _api.get('/api/workers/me/availability');
+    final res = await _api.get(ApiEndpoints.workerAvailability);
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Availability failed');
     }
@@ -81,7 +82,7 @@ class WorkersApiRepository {
   }
 
   Future<bool> setOnline(bool isOnline) async {
-    final res = await _api.patch('/api/workers/me/availability', data: {
+    final res = await _api.patch(ApiEndpoints.workerAvailability, data: {
       'isOnline': isOnline,
     });
     if (res['success'] != true) {

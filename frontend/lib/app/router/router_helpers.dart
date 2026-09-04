@@ -8,7 +8,7 @@ Page<T> transitPage<T>({
   required Widget child,
 }) {
   return CustomTransitionPage<T>(
-    key: ValueKey<String>('transit:${state.uri}'),
+    key: state.pageKey,
     transitionDuration: AppMotion.route,
     reverseTransitionDuration: AppMotion.routeReverse,
     child: child,

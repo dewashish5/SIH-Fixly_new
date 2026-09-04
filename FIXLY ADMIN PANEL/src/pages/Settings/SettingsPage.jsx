@@ -54,7 +54,7 @@ export default function SettingsPage() {
   // Admin Profile form
   const [profileState, setProfileState] = useState({
     name: adminUser?.name || 'Administrator',
-    email: adminUser?.email || 'admin@fixly.in',
+    email: adminUser?.email || '',
     avatar: adminUser?.avatar || '',
   });
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -86,7 +86,7 @@ export default function SettingsPage() {
     if (adminUser) {
       setProfileState({
         name: adminUser.name || 'Administrator',
-        email: adminUser.email || 'admin@fixly.in',
+        email: adminUser.email || '',
         avatar: adminUser.avatar || '',
       });
     }

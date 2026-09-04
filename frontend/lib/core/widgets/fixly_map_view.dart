@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +24,9 @@ class FixlyMapView extends StatefulWidget {
     this.showDestinationPin = true,
     this.routeStart,
     this.claimGestures = false,
+    this.showZoomControls = true,
+    this.showRecenterButton = false,
+    this.onLocationChanged,
   });
 
   final double height;
@@ -37,6 +42,12 @@ class FixlyMapView extends StatefulWidget {
   final MapCoordinate? routeStart;
   /// Win gesture arena vs parent [ScrollView] so user can pan/zoom the map.
   final bool claimGestures;
+  /// Show floating '+' and '-' zoom buttons.
+  final bool showZoomControls;
+  /// Show floating recenter button to return to [center].
+  final bool showRecenterButton;
+  /// Callback when user moves the map / center coordinate.
+  final ValueChanged<MapCoordinate>? onLocationChanged;
 
   @override
   State<FixlyMapView> createState() => _FixlyMapViewState();
@@ -52,6 +63,13 @@ class _FixlyMapViewState extends State<FixlyMapView> {
   PointAnnotation? _destinationMarker;
   PointAnnotation? _workerMarker;
   String? _mapError;
+  Timer? _idleDebounce;
+
+  @override
+  void dispose() {
+    _idleDebounce?.cancel();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(covariant FixlyMapView oldWidget) {
@@ -80,12 +98,92 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     await mapboxMap.attribution.updateSettings(
       AttributionSettings(marginBottom: 8, marginRight: 8),
     );
+    await mapboxMap.gestures.updateSettings(
+      GesturesSettings(
+        scrollEnabled: true,
+        pinchToZoomEnabled: true,
+        doubleTapToZoomInEnabled: true,
+        quickZoomEnabled: true,
+        pitchEnabled: false,
+      ),
+    );
 
     _polylineManager = await mapboxMap.annotations.createPolylineAnnotationManager();
     _polygonManager = await mapboxMap.annotations.createPolygonAnnotationManager();
     _pointManager = await mapboxMap.annotations.createPointAnnotationManager();
 
     await _refreshAnnotations();
+  }
+
+  void _onCameraChanged() {
+    if (widget.onLocationChanged == null) return;
+    _idleDebounce?.cancel();
+    _idleDebounce = Timer(const Duration(milliseconds: 350), _notifyCenterLocation);
+  }
+
+  void _onMapIdle() {
+    if (widget.onLocationChanged == null) return;
+    _idleDebounce?.cancel();
+    _notifyCenterLocation();
+  }
+
+  Future<void> _notifyCenterLocation() async {
+    final map = _mapboxMap;
+    if (map == null || !mounted || widget.onLocationChanged == null) return;
+    try {
+      final camera = await map.getCameraState();
+      final lat = camera.center.coordinates.lat.toDouble();
+      final lng = camera.center.coordinates.lng.toDouble();
+      widget.onLocationChanged!(MapCoordinate(lat: lat, lng: lng));
+    } catch (e) {
+      debugPrint('FixlyMapView _notifyCenterLocation error: $e');
+    }
+  }
+
+  Future<void> _zoomIn() async {
+    final mapboxMap = _mapboxMap;
+    if (mapboxMap == null) return;
+    try {
+      final camera = await mapboxMap.getCameraState();
+      await mapboxMap.setCamera(
+        CameraOptions(
+          zoom: (camera.zoom + 1.0).clamp(2.0, 20.0),
+        ),
+      );
+    } catch (e) {
+      debugPrint('FixlyMapView zoomIn error: $e');
+    }
+  }
+
+  Future<void> _zoomOut() async {
+    final mapboxMap = _mapboxMap;
+    if (mapboxMap == null) return;
+    try {
+      final camera = await mapboxMap.getCameraState();
+      await mapboxMap.setCamera(
+        CameraOptions(
+          zoom: (camera.zoom - 1.0).clamp(2.0, 20.0),
+        ),
+      );
+    } catch (e) {
+      debugPrint('FixlyMapView zoomOut error: $e');
+    }
+  }
+
+  Future<void> _recenter() async {
+    final mapboxMap = _mapboxMap;
+    final center = widget.center ?? MapConstants.current;
+    if (mapboxMap == null || center == null) return;
+    try {
+      await mapboxMap.setCamera(
+        CameraOptions(
+          center: Point(coordinates: Position(center.lng, center.lat)),
+          zoom: widget.zoom,
+        ),
+      );
+    } catch (e) {
+      debugPrint('FixlyMapView recenter error: $e');
+    }
   }
 
   Future<void> _refreshAnnotations() async {
@@ -290,7 +388,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
 
     final mapCore = MapConstants.hasToken && _mapError == null
         ? MapWidget(
-            key: ValueKey('fixly-map-${center.lat}-${center.lng}'),
+            key: const ValueKey('fixly-map-canvas'),
             styleUri: MapboxStyles.MAPBOX_STREETS,
             textureView: true,
             gestureRecognizers: widget.claimGestures
@@ -307,6 +405,8 @@ class _FixlyMapViewState extends State<FixlyMapView> {
               zoom: widget.zoom,
             ),
             onMapCreated: _onMapCreated,
+            onCameraChangeListener: (_) => _onCameraChanged(),
+            onMapIdleListener: (_) => _onMapIdle(),
             onMapLoadErrorListener: (event) {
               if (!mounted) return;
               setState(() => _mapError = event.message);
@@ -355,6 +455,63 @@ class _FixlyMapViewState extends State<FixlyMapView> {
             top: 12,
             left: 12,
             child: _MapLegend(),
+          ),
+        if (widget.showZoomControls && MapConstants.hasToken && _mapError == null)
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.showRecenterButton) ...[
+                  Material(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    elevation: 3,
+                    shadowColor: Colors.black.withValues(alpha: 0.2),
+                    child: _MapControlBtn(
+                      icon: Icons.my_location_rounded,
+                      tooltip: 'My location',
+                      onTap: _recenter,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.18),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _MapControlBtn(
+                        icon: Icons.add_rounded,
+                        tooltip: 'Zoom in',
+                        onTap: _zoomIn,
+                      ),
+                      Container(
+                        width: 24,
+                        height: 1,
+                        color: Colors.grey.withValues(alpha: 0.25),
+                      ),
+                      _MapControlBtn(
+                        icon: Icons.remove_rounded,
+                        tooltip: 'Zoom out',
+                        onTap: _zoomOut,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
       ],
     );
@@ -594,5 +751,40 @@ class _MapGridPainter extends CustomPainter {
   bool shouldRepaint(covariant _MapGridPainter oldDelegate) {
     return oldDelegate.routeProgress != routeProgress ||
         oldDelegate.serviceRadiusKm != serviceRadiusKm;
+  }
+}
+
+class _MapControlBtn extends StatelessWidget {
+  const _MapControlBtn({
+    required this.icon,
+    required this.onTap,
+    this.tooltip,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Tooltip(
+          message: tooltip ?? '',
+          child: SizedBox(
+            width: 36,
+            height: 36,
+            child: Icon(
+              icon,
+              size: 20,
+              color: AppColors.onSurface,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

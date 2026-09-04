@@ -19,6 +19,7 @@ abstract final class MapConstants {
   static const defaultZoom = 13.0;
   static const navigationZoom = 14.0;
   static const serviceAreaZoom = 11.5;
+  static const pickerZoom = 16.0;
 
   static MapCoordinate lerpRoute(
     MapCoordinate from,

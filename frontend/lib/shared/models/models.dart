@@ -123,6 +123,10 @@ class ServiceItem extends Equatable {
     required this.rating,
     this.titleHi,
     this.descriptionHi,
+    this.imageUrl,
+    this.estimatedTime,
+    this.whatsIncluded = const [],
+    this.isActive = true,
   });
 
   final String id;
@@ -133,6 +137,10 @@ class ServiceItem extends Equatable {
   final String? descriptionHi;
   final double priceFrom;
   final double rating;
+  final String? imageUrl;
+  final String? estimatedTime;
+  final List<String> whatsIncluded;
+  final bool isActive;
 
   String titleFor(String locale) =>
       locale == 'hi' && titleHi != null ? titleHi! : title;
@@ -141,7 +149,17 @@ class ServiceItem extends Equatable {
       locale == 'hi' && descriptionHi != null ? descriptionHi! : description;
 
   @override
-  List<Object?> get props => [id, categoryId, title, priceFrom, rating];
+  List<Object?> get props => [
+        id,
+        categoryId,
+        title,
+        priceFrom,
+        rating,
+        imageUrl,
+        estimatedTime,
+        whatsIncluded,
+        isActive,
+      ];
 }
 
 enum BookingStatus {

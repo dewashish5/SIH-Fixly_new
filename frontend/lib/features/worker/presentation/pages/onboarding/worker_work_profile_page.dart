@@ -36,6 +36,7 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
   final _rateControllers = <String, TextEditingController>{};
   var _othersOpen = false;
   var _refreshingLocation = false;
+  var _updatingAddress = false;
 
   static final _categoryIds =
       ServiceCategories.all.map((c) => c.id).toSet();
@@ -105,6 +106,14 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
     await LocationService.instance.refreshCurrentPosition();
     if (!mounted) return;
     setState(() => _refreshingLocation = false);
+  }
+
+  Future<void> _onMapLocationMoved(MapCoordinate coord) async {
+    if (!mounted) return;
+    setState(() => _updatingAddress = true);
+    await LocationService.instance.updatePosition(coord.lat, coord.lng);
+    if (!mounted) return;
+    setState(() => _updatingAddress = false);
   }
 
   void _commitTypedSkills({required bool keepRemainder}) {
@@ -447,52 +456,64 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
                       l10n.serviceAreaHint,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    if (address != null && address.isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+                    const SizedBox(height: AppSpacing.sm),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.scheme.primaryContainer
+                            .withValues(alpha: 0.45),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color:
+                              context.scheme.primary.withValues(alpha: 0.2),
                         ),
-                        decoration: BoxDecoration(
-                          color: context.scheme.primaryContainer
-                              .withValues(alpha: 0.45),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color:
-                                context.scheme.primary.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
+                      ),
+                      child: Row(
+                        children: [
+                          if (_updatingAddress)
+                            const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          else
                             Icon(
                               Icons.place_outlined,
                               size: 18,
                               color: context.scheme.primary,
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                address,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
-                              ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _updatingAddress
+                                  ? 'Updating address…'
+                                  : (address != null && address.isNotEmpty
+                                      ? address
+                                      : 'Move map or tap refresh to detect location'),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     FixlyMapView(
                       height: 280,
                       borderRadius: BorderRadius.circular(16),
                       center: mapCenter,
-                      zoom: MapConstants.defaultZoom,
+                      zoom: MapConstants.pickerZoom,
                       showDestinationPin: true,
                       claimGestures: true,
+                      showZoomControls: true,
+                      showRecenterButton: true,
+                      onLocationChanged: _onMapLocationMoved,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Align(

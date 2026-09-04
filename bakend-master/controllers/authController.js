@@ -108,6 +108,15 @@ export const registerUser = async (req, res) => {
         const { name, email, password, role, phone, location, workerProfile } = req.body;
         if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
 
+        if (role === 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Admin registration is not allowed. Please login with configured system credentials.'
+            });
+        }
+
+        const registeredRole = role === 'worker' ? 'worker' : 'customer';
+
         const emailNormalized = email.toLowerCase().trim();
         const existingUser = await getUserCache(emailNormalized);
         if (existingUser && existingUser.isVerified) {
@@ -124,11 +133,11 @@ export const registerUser = async (req, res) => {
             name,
             email: emailNormalized,
             password, // Hashed automatically by User model's pre-save hook
-            role: role || 'customer',
+            role: registeredRole,
             authProvider: 'local',
             phone: phone || null,
             location: location || null,
-            workerProfile: (role === 'worker' && hasFullWorkerProfile) ? workerProfile : null
+            workerProfile: (registeredRole === 'worker' && hasFullWorkerProfile) ? workerProfile : null
         };
 
         let userDoc = await User.findOne({ email: emailNormalized });

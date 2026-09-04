@@ -81,18 +81,7 @@ class LocationService {
         ),
       );
 
-      String? address;
-      try {
-        final places = await _geocoder.placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-        if (places.isNotEmpty) {
-          address = _formatPlacemark(places.first);
-        }
-      } catch (e) {
-        debugPrint('LocationService: reverse geocode failed: $e');
-      }
+      final address = await reverseGeocode(position.latitude, position.longitude);
 
       AppLocation.instance.update(
         latitude: position.latitude,
@@ -104,6 +93,30 @@ class LocationService {
       debugPrint('LocationService: position failed: $e');
       return _finishWithOptionalDebugFallback('position error: $e');
     }
+  }
+
+  /// Reverse geocode arbitrary lat/lng coordinates to a readable address.
+  Future<String?> reverseGeocode(double lat, double lng) async {
+    try {
+      final places = await _geocoder.placemarkFromCoordinates(lat, lng);
+      if (places.isNotEmpty) {
+        return _formatPlacemark(places.first);
+      }
+    } catch (e) {
+      debugPrint('LocationService: reverse geocode failed: $e');
+    }
+    return null;
+  }
+
+  /// Update AppLocation with new coordinates and automatically reverse geocode.
+  Future<String?> updatePosition(double latitude, double longitude) async {
+    final address = await reverseGeocode(latitude, longitude);
+    AppLocation.instance.update(
+      latitude: latitude,
+      longitude: longitude,
+      address: address,
+    );
+    return address;
   }
 
   /// Debug-only: seed Delhi so API/maps work without simulator GPS.

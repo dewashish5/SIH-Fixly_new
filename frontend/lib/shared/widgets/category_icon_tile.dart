@@ -48,28 +48,56 @@ class CategoryIconTile extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Icon(
-                        category.icon,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                    Positioned(
-                      right: 6,
-                      bottom: 6,
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: const BoxDecoration(
-                          color: AppColors.accent,
-                          shape: BoxShape.circle,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (category.imageUrl != null &&
+                          category.imageUrl!.trim().isNotEmpty)
+                        Image.network(
+                          category.imageUrl!.trim(),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Center(
+                            child: Icon(
+                              category.icon,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: Icon(
+                                category.icon,
+                                color: Colors.white.withValues(alpha: 0.8),
+                                size: 28,
+                              ),
+                            );
+                          },
+                        )
+                      else
+                        Center(
+                          child: Icon(
+                            category.icon,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                      Positioned(
+                        right: 6,
+                        bottom: 6,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: AppColors.accent,
+                            shape: BoxShape.circle,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 6),
