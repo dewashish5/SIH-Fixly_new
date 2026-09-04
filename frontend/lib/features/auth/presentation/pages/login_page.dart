@@ -21,7 +21,6 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _workerMode = false;
 
   @override
   void initState() {
@@ -78,16 +77,6 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
     context.go(_cubit.postAuthRoute());
-  }
-
-  void _toggleWorkerMode() {
-    setState(() => _workerMode = !_workerMode);
-    _cubit.setRole(_workerMode ? 'worker' : 'customer');
-    if (_workerMode) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(context.l10n.signInAsWorkerHint)));
-    }
   }
 
   Future<void> _forgotPassword() async {
@@ -197,12 +186,6 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: loading
                       ? null
                       : () => _handleSocial(_cubit.signInWithGoogle),
-                ),
-                const SizedBox(height: 16),
-                AuthWorkerChip(
-                  label: l10n.signInAsWorker,
-                  active: _workerMode,
-                  onTap: _toggleWorkerMode,
                 ),
               ],
             ),
