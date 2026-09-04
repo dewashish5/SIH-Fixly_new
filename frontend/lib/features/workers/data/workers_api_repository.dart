@@ -39,7 +39,7 @@ class WorkersApiRepository {
     if (list is! List) return const [];
     return list
         .whereType<Map>()
-        .map((e) => mapWorker(Map<String, dynamic>.from(e)))
+        .map((e) => mapWorker(Map<String, dynamic>.from(e), useLat, useLng))
         .toList();
   }
 
@@ -93,7 +93,11 @@ class WorkersApiRepository {
     return isOnline;
   }
 
-  static WorkerProfile mapWorker(Map<String, dynamic> json) {
+  static WorkerProfile mapWorker(
+    Map<String, dynamic> json, [
+    double? userLat,
+    double? userLng,
+  ]) {
     final profile = json['workerProfile'];
     final profileMap = profile is Map
         ? Map<String, dynamic>.from(profile)
@@ -105,12 +109,36 @@ class WorkersApiRepository {
     final rating =
         (profileMap['rating'] as num?)?.toDouble() ??
         (json['rating'] as num?)?.toDouble() ??
-        0;
+        5.0;
     final jobs =
         (profileMap['jobsCompleted'] as num?)?.toInt() ??
         (profileMap['totalJobs'] as num?)?.toInt() ??
         (json['jobsCompleted'] as num?)?.toInt() ??
         0;
+    final hourlyRate =
+        (profileMap['rate'] as num?)?.toDouble() ??
+        (profileMap['hourlyRate'] as num?)?.toDouble() ??
+        0.0;
+    final category =
+        (profileMap['category'] ?? json['category'])?.toString();
+    final bio = (profileMap['bio'] ?? json['bio'])?.toString();
+    final experienceYears = (profileMap['experienceYears'] as num?)?.toInt();
+
+    // Distance calculation if coordinates are present
+    double? distanceKm;
+    final loc = json['location'];
+    if (loc is Map && userLat != null && userLng != null) {
+      final coords = loc['coordinates'];
+      if (coords is List && coords.length >= 2) {
+        final wLng = (coords[0] as num).toDouble();
+        final wLat = (coords[1] as num).toDouble();
+        final dy = (wLat - userLat) * 111.0;
+        final dx = (wLng - userLng) * 111.0;
+        distanceKm = (dx * dx + dy * dy) > 0 ? (dx.abs() + dy.abs()) : 0.4;
+        if (distanceKm < 0.1) distanceKm = 0.4;
+      }
+    }
+
     return WorkerProfile(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       name: (json['name'] as String?) ?? 'Worker',
@@ -118,7 +146,17 @@ class WorkersApiRepository {
       rating: rating,
       jobsCompleted: jobs,
       reliabilityScore: (rating * 20).round().clamp(0, 100),
-      avatarUrl: (json['avatar'] ?? profileMap['selfieImageUrl']) as String?,
+      avatarUrl: (json['avatar'] ??
+              profileMap['selfieImageUrl'] ??
+              profileMap['identityProofPhoto'])
+          ?.toString(),
+      category: category,
+      hourlyRate: hourlyRate > 0 ? hourlyRate : null,
+      distanceKm: distanceKm != null ? double.parse(distanceKm.toStringAsFixed(1)) : null,
+      bio: bio,
+      experienceYears: experienceYears,
+      isVerified: json['isVerified'] != false,
+      insured: json['insured'] == true || profileMap['insured'] == true,
     );
   }
 }

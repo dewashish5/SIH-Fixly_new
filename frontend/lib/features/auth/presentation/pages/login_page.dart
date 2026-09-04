@@ -21,6 +21,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _submitting = false; // instant local loader before cubit responds
 
   @override
   void initState() {
@@ -40,43 +41,55 @@ class _LoginPageState extends State<LoginPage> {
   AppSessionCubit get _cubit => context.read<AppSessionCubit>();
 
   Future<void> _handleSocial(Future<bool> Function() signIn) async {
-    final success = await signIn();
-    if (!mounted || !success) {
-      final msg = _cubit.state.errorMessage;
-      if (mounted && msg != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    try {
+      final success = await signIn();
+      if (!mounted || !success) {
+        final msg = _cubit.state.errorMessage;
+        if (mounted && msg != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(msg),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+        return;
       }
-      return;
+      context.go(_cubit.postAuthRoute());
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
-    context.go(_cubit.postAuthRoute());
   }
 
   Future<void> _login() async {
+    FocusScope.of(context).unfocus(); // dismiss keyboard instantly
     if (!_formKey.currentState!.validate()) return;
-
-    final success = await _cubit.signInWithEmail(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
-    if (!mounted) return;
-    if (!success) {
-      final msg = _cubit.state.errorMessage;
-      if (msg != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    try {
+      final success = await _cubit.signInWithEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      if (!mounted) return;
+      if (!success) {
+        final msg = _cubit.state.errorMessage;
+        if (msg != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(msg),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+        return;
       }
-      return;
+      context.go(_cubit.postAuthRoute());
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
-    context.go(_cubit.postAuthRoute());
   }
 
   Future<void> _forgotPassword() async {
@@ -107,7 +120,7 @@ class _LoginPageState extends State<LoginPage> {
     return BlocBuilder<AppSessionCubit, AppSessionState>(
       builder: (context, state) {
         final l10n = context.l10n;
-        final loading = state.status == AppSessionStatus.loading;
+        final loading = _submitting || state.status == AppSessionStatus.loading;
 
         return AuthCurvedShell(
           footer: AuthLinkRow(

@@ -13,6 +13,9 @@ import '../../../../core/location/app_location.dart';
 import '../../../../core/location/location_service.dart';
 import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
+import '../../../../core/widgets/location_picker_sheet.dart';
+import '../../../../core/widgets/fixly_map_view.dart';
+import '../../../../core/constants/map_constants.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../../../shared/widgets/category_icon_tile.dart';
@@ -67,6 +70,14 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
     }
   }
 
+  Future<void> _openLocationPicker() async {
+    final changed = await LocationPickerSheet.show(context);
+    if (changed == true && mounted) {
+      setState(() {});
+      context.read<CustomerHomeCubit>().load(forceNetwork: true);
+    }
+  }
+
   Future<void> _refreshAll() async {
     await Future.wait([
       _refreshLocation(),
@@ -109,6 +120,12 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
                 label: _locationLabel,
                 loading: _locating,
                 onRefresh: _refreshLocation,
+                onTap: _openLocationPicker,
+              ),
+              const SizedBox(height: 10),
+              // ── Mini map preview ──
+              _HomeMapPreview(
+                onTap: _openLocationPicker,
               ),
               const SizedBox(height: 16),
               Row(
@@ -224,11 +241,13 @@ class _LocationBar extends StatelessWidget {
     required this.label,
     required this.loading,
     required this.onRefresh,
+    required this.onTap,
   });
 
   final String label;
   final bool loading;
   final VoidCallback onRefresh;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -239,56 +258,70 @@ class _LocationBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(color: context.hairline),
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
-        child: Row(
-          children: [
-            Icon(Icons.location_on_rounded, color: scheme.primary),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Your location',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+          child: Row(
+            children: [
+              Icon(Icons.location_on_rounded, color: scheme.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Your location',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: context.muted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 16,
                           color: context.muted,
-                          fontWeight: FontWeight.w600,
                         ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                tooltip: 'Use current location',
+                onPressed: loading ? null : onRefresh,
+                style: IconButton.styleFrom(
+                  backgroundColor: scheme.primary.withValues(alpha: 0.12),
+                  foregroundColor: scheme.primary,
+                  minimumSize: const Size(48, 48),
+                ),
+                icon: loading
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: scheme.primary,
                         ),
-                  ),
-                ],
+                      )
+                    : const Icon(Icons.my_location_rounded),
               ),
-            ),
-            const SizedBox(width: 4),
-            IconButton(
-              tooltip: 'Use current location',
-              onPressed: loading ? null : onRefresh,
-              style: IconButton.styleFrom(
-                backgroundColor: scheme.primary.withValues(alpha: 0.12),
-                foregroundColor: scheme.primary,
-                minimumSize: const Size(48, 48),
-              ),
-              icon: loading
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: scheme.primary,
-                      ),
-                    )
-                  : const Icon(Icons.my_location_rounded),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -345,38 +378,47 @@ class _ServiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = service.titleFor(locale);
+    final description = service.descriptionFor(locale);
+    final hasImage = service.imageUrl != null && service.imageUrl!.trim().isNotEmpty;
+    final estimatedTime = service.estimatedTime?.trim();
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: AppCard(
         onTap: onTap,
+        padding: const EdgeInsets.all(14),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 64,
+              height: 64,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: AppColors.primaryGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.25),
+                    color: AppColors.primary.withValues(alpha: 0.18),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: (service.imageUrl != null &&
-                        service.imageUrl!.trim().isNotEmpty)
+                borderRadius: BorderRadius.circular(16),
+                child: hasImage
                     ? Image.network(
                         service.imageUrl!.trim(),
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.handyman_rounded, color: Colors.white),
-                        loadingBuilder: (context, child, progress) {
+                        errorBuilder: (context, error, stackTrace) => const Center(
+                          child: Icon(Icons.handyman_rounded, color: Colors.white, size: 28),
+                        ),
+                        loadingBuilder: (_, child, progress) {
                           if (progress == null) return child;
                           return const Center(
                             child: Icon(Icons.handyman_rounded,
@@ -384,63 +426,79 @@ class _ServiceTile extends StatelessWidget {
                           );
                         },
                       )
-                    : const Icon(Icons.handyman_rounded, color: Colors.white),
+                    : const Center(
+                        child: Icon(Icons.handyman_rounded, color: Colors.white, size: 28),
+                      ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    service.titleFor(locale),
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    service.descriptionFor(locale),
-                    maxLines: 2,
+                    title,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
                   ),
-                  const SizedBox(height: 4),
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.muted,
+                            height: 1.3,
+                          ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded,
-                          size: 14, color: AppColors.accent),
-                      const SizedBox(width: 4),
-                      Text('${service.rating}'),
-                      if (index == 0) ...[
-                        const SizedBox(width: 8),
+                      if (estimatedTime != null && estimatedTime.isNotEmpty) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
-                            vertical: 2,
+                            vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: context.isDark
-                                ? AppColors.accent900
-                                : AppColors.accent50,
-                            borderRadius: BorderRadius.circular(8),
+                            color: context.scheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text(
-                            'Recommended',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: context.isDark
-                                  ? AppColors.accent100
-                                  : AppColors.accentDark,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.schedule_rounded,
+                                size: 12,
+                                color: context.muted,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                estimatedTime,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: context.muted,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                       const Spacer(),
                       Text(
-                        '₹${service.priceFrom.toInt()}+',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
+                        '₹${service.priceFrom.toInt()}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: context.scheme.primary,
                         ),
                       ),
                     ],
@@ -448,10 +506,104 @@ class _ServiceTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: context.muted),
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right_rounded, color: context.muted, size: 22),
           ],
         ),
       ),
     ).appListEnter(context, index: index, id: service.id);
+  }
+}
+
+/// Small interactive map preview on the home screen.
+/// Tapping it opens the full LocationPickerSheet.
+class _HomeMapPreview extends StatelessWidget {
+  const _HomeMapPreview({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final center = MapConstants.current;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            IgnorePointer(
+              child: center != null
+                  ? FixlyMapView(
+                      height: 148,
+                      borderRadius: BorderRadius.circular(16),
+                      center: center,
+                      zoom: MapConstants.defaultZoom,
+                      showDestinationPin: true,
+                      claimGestures: false,
+                      showZoomControls: false,
+                      showRecenterButton: false,
+                    )
+                  : Container(
+                      height: 148,
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.location_searching,
+                                size: 28, color: scheme.primary.withValues(alpha: 0.5)),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Tap to set your location',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: scheme.primary.withValues(alpha: 0.6),
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
+            // Tap-to-edit overlay pill
+            Positioned(
+              right: 10,
+              bottom: 10,
+              child: Material(
+                color: Colors.white.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(20),
+                elevation: 2,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.edit_location_alt_rounded,
+                            size: 15, color: scheme.primary),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Change',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

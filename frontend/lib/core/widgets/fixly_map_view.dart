@@ -27,6 +27,7 @@ class FixlyMapView extends StatefulWidget {
     this.showZoomControls = true,
     this.showRecenterButton = false,
     this.onLocationChanged,
+    this.onMapIdled,
   });
 
   final double height;
@@ -46,8 +47,10 @@ class FixlyMapView extends StatefulWidget {
   final bool showZoomControls;
   /// Show floating recenter button to return to [center].
   final bool showRecenterButton;
-  /// Callback when user moves the map / center coordinate.
+  /// Callback when user moves the map / center coordinate (fires continuously during drag).
   final ValueChanged<MapCoordinate>? onLocationChanged;
+  /// Callback fired ONCE after map becomes idle (user stopped dragging).
+  final ValueChanged<MapCoordinate>? onMapIdled;
 
   @override
   State<FixlyMapView> createState() => _FixlyMapViewState();
@@ -116,18 +119,29 @@ class _FixlyMapViewState extends State<FixlyMapView> {
   }
 
   void _onCameraChanged() {
-    if (widget.onLocationChanged == null) return;
+    if (widget.onLocationChanged == null && widget.onMapIdled == null) return;
     _idleDebounce?.cancel();
-    _idleDebounce = Timer(const Duration(milliseconds: 350), _notifyCenterLocation);
+    // Only fire onLocationChanged during drag (continuous updates).
+    if (widget.onLocationChanged != null) {
+      _idleDebounce = Timer(
+        const Duration(milliseconds: 350),
+        _notifyLocationChanged,
+      );
+    }
   }
 
   void _onMapIdle() {
-    if (widget.onLocationChanged == null) return;
     _idleDebounce?.cancel();
-    _notifyCenterLocation();
+    // Fire onMapIdled ONCE when map becomes idle.
+    if (widget.onMapIdled != null) {
+      _notifyMapIdled();
+    } else if (widget.onLocationChanged != null) {
+      // Legacy: fallback for callers that only use onLocationChanged.
+      _notifyLocationChanged();
+    }
   }
 
-  Future<void> _notifyCenterLocation() async {
+  Future<void> _notifyLocationChanged() async {
     final map = _mapboxMap;
     if (map == null || !mounted || widget.onLocationChanged == null) return;
     try {
@@ -136,7 +150,20 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       final lng = camera.center.coordinates.lng.toDouble();
       widget.onLocationChanged!(MapCoordinate(lat: lat, lng: lng));
     } catch (e) {
-      debugPrint('FixlyMapView _notifyCenterLocation error: $e');
+      debugPrint('FixlyMapView _notifyLocationChanged error: $e');
+    }
+  }
+
+  Future<void> _notifyMapIdled() async {
+    final map = _mapboxMap;
+    if (map == null || !mounted || widget.onMapIdled == null) return;
+    try {
+      final camera = await map.getCameraState();
+      final lat = camera.center.coordinates.lat.toDouble();
+      final lng = camera.center.coordinates.lng.toDouble();
+      widget.onMapIdled!(MapCoordinate(lat: lat, lng: lng));
+    } catch (e) {
+      debugPrint('FixlyMapView _notifyMapIdled error: $e');
     }
   }
 

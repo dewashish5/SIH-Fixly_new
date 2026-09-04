@@ -108,6 +108,31 @@ class LocationService {
     return null;
   }
 
+  /// Search places by address or landmark query.
+  Future<List<PlaceSearchResult>> searchPlaces(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.length < 2) return const [];
+    try {
+      final locations = await _geocoder.locationFromAddress(trimmed);
+      final results = <PlaceSearchResult>[];
+      for (final loc in locations.take(5)) {
+        final addr = await reverseGeocode(loc.latitude, loc.longitude);
+        results.add(
+          PlaceSearchResult(
+            name: trimmed,
+            address: addr ?? '$trimmed (${loc.latitude.toStringAsFixed(3)}, ${loc.longitude.toStringAsFixed(3)})',
+            lat: loc.latitude,
+            lng: loc.longitude,
+          ),
+        );
+      }
+      return results;
+    } catch (e) {
+      debugPrint('LocationService: searchPlaces error: $e');
+      return const [];
+    }
+  }
+
   /// Update AppLocation with new coordinates and automatically reverse geocode.
   Future<String?> updatePosition(double latitude, double longitude) async {
     final address = await reverseGeocode(latitude, longitude);
@@ -189,4 +214,18 @@ class LocationService {
     }
     return parts.join(', ');
   }
+}
+
+class PlaceSearchResult {
+  const PlaceSearchResult({
+    required this.name,
+    required this.address,
+    required this.lat,
+    required this.lng,
+  });
+
+  final String name;
+  final String address;
+  final double lat;
+  final double lng;
 }

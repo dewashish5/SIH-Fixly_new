@@ -24,6 +24,7 @@ class _SignupPageState extends State<SignupPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _submitting = false; // instant local loader before cubit responds
 
   @override
   void initState() {
@@ -43,49 +44,66 @@ class _SignupPageState extends State<SignupPage> {
   AppSessionCubit get _cubit => context.read<AppSessionCubit>();
 
   Future<void> _handleSocial(Future<bool> Function() signUp) async {
-    final success = await signUp();
-    if (!mounted || !success) {
-      final msg = _cubit.state.errorMessage;
-      if (mounted && msg != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    try {
+      final success = await signUp();
+      if (!mounted || !success) {
+        final msg = _cubit.state.errorMessage;
+        if (mounted && msg != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(msg),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+        return;
       }
-      return;
+      context.go(_cubit.postAuthRoute());
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
-    context.go(_cubit.postAuthRoute());
   }
 
   Future<void> _signUp() async {
+    FocusScope.of(context).unfocus(); // dismiss keyboard instantly
     if (!_formKey.currentState!.validate()) return;
+    if (_submitting) return;
 
-    await LocationService.instance.ensureForSignup(context);
+    // Show loader immediately — before any async work.
+    setState(() => _submitting = true);
 
-    final phoneDigits = _phoneController.text.replaceAll(RegExp(r'\D'), '');
-    final success = await _cubit.signUpWithEmail(
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      phone: phoneDigits,
-    );
-    if (!mounted) return;
-    if (!success) {
-      final msg = _cubit.state.errorMessage;
-      if (msg != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+    try {
+      // Run GPS check concurrently with signup API — don't block UX waiting for it.
+      // unawaited intentionally; signup API doesn't need GPS result to proceed.
+      LocationService.instance.ensureForSignup(context).ignore();
+
+      final phoneDigits = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+      final success = await _cubit.signUpWithEmail(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        phone: phoneDigits,
+      );
+      if (!mounted) return;
+      if (!success) {
+        final msg = _cubit.state.errorMessage;
+        if (msg != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(msg),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+        return;
       }
-      return;
-    }
-    if (_cubit.state.status == AppSessionStatus.otpSent) {
-      context.push(RouteNames.otp);
+      if (_cubit.state.status == AppSessionStatus.otpSent) {
+        context.push(RouteNames.otp);
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -94,7 +112,7 @@ class _SignupPageState extends State<SignupPage> {
     return BlocBuilder<AppSessionCubit, AppSessionState>(
       builder: (context, state) {
         final l10n = context.l10n;
-        final loading = state.status == AppSessionStatus.loading;
+        final loading = _submitting || state.status == AppSessionStatus.loading;
 
         return AuthCurvedShell(
           compact: true,

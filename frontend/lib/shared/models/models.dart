@@ -97,6 +97,12 @@ class WorkerProfile extends Equatable {
     required this.reliabilityScore,
     this.avatarUrl,
     this.insured = false,
+    this.category,
+    this.hourlyRate,
+    this.distanceKm,
+    this.bio,
+    this.experienceYears,
+    this.isVerified = true,
   });
 
   final String id;
@@ -107,10 +113,29 @@ class WorkerProfile extends Equatable {
   final int reliabilityScore;
   final String? avatarUrl;
   final bool insured;
+  final String? category;
+  final double? hourlyRate;
+  final double? distanceKm;
+  final String? bio;
+  final int? experienceYears;
+  final bool isVerified;
 
   @override
-  List<Object?> get props =>
-      [id, name, skills, rating, jobsCompleted, reliabilityScore, insured];
+  List<Object?> get props => [
+        id,
+        name,
+        skills,
+        rating,
+        jobsCompleted,
+        reliabilityScore,
+        insured,
+        category,
+        hourlyRate,
+        distanceKm,
+        bio,
+        experienceYears,
+        isVerified,
+      ];
 }
 
 class ServiceItem extends Equatable {
