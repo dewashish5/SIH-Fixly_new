@@ -89,10 +89,13 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
             children: [
               _buildStatusBanner(rawStatus),
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _buildServiceCard(job, context),
+                child: AppRefreshIndicator(
+                  onRefresh: () => context.read<ActiveJobCubit>().load(),
+                  child: ListView(
+                    physics: appRefreshScrollPhysics,
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _buildServiceCard(job, context),
                     const SizedBox(height: 16),
                     _buildCustomerCard(job, context),
                     if (job.problemDescription != null && job.problemDescription!.isNotEmpty) ...[
@@ -111,7 +114,8 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
                   ],
                 ),
               ),
-            ],
+            ),
+          ],
           ),
         );
       },

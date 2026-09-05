@@ -50,11 +50,14 @@ class _WorkerIncomingOrdersPageState extends State<WorkerIncomingOrdersPage> {
                       )
                     else
                       Expanded(
-                        child: ListView.separated(
-                          itemCount: incoming.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
+                        child: AppRefreshIndicator(
+                          onRefresh: () => context.read<JobFeedCubit>().load(),
+                          child: ListView.separated(
+                            physics: appRefreshScrollPhysics,
+                            itemCount: incoming.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
                             final job = incoming[index];
                             return JobListTile(
                               title: job.title,
@@ -73,6 +76,7 @@ class _WorkerIncomingOrdersPageState extends State<WorkerIncomingOrdersPage> {
                           },
                         ),
                       ),
+                    ),
                   ],
                 ),
         );

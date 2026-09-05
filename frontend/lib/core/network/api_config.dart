@@ -5,7 +5,7 @@ class ApiConfig {
 
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://supervisors-mix-router-automotive.trycloudflare.com',
+    defaultValue: 'https://ser-beginning-visual-passage.trycloudflare.com',
   );
 }
 

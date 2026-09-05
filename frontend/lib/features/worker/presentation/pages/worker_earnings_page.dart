@@ -99,9 +99,12 @@ class _WorkerEarningsPageState extends State<WorkerEarningsPage> {
                     Expanded(
                       child: _txs.isEmpty
                           ? const Center(child: Text('No transactions yet'))
-                          : ListView.builder(
-                              itemCount: _txs.length,
-                              itemBuilder: (context, index) {
+                          : AppRefreshIndicator(
+                              onRefresh: _load,
+                              child: ListView.builder(
+                                physics: appRefreshScrollPhysics,
+                                itemCount: _txs.length,
+                                itemBuilder: (context, index) {
                                 final tx = _txs[index];
                                 final amount =
                                     (tx['amount'] as num?)?.toDouble() ?? 0;
@@ -133,6 +136,7 @@ class _WorkerEarningsPageState extends State<WorkerEarningsPage> {
                                 );
                               },
                             ),
+                          ),
                     ),
                   ],
                 ),

@@ -36,12 +36,15 @@ class _WorkerJobFeedPageState extends State<WorkerJobFeedPage> {
               : Column(
                   children: [
                     Expanded(
-                      child: ListView.separated(
-                        itemCount: state.jobs.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final job = state.jobs[index];
-                          return JobListTile(
+                      child: AppRefreshIndicator(
+                        onRefresh: () => context.read<JobFeedCubit>().load(),
+                        child: ListView.separated(
+                          physics: appRefreshScrollPhysics,
+                          itemCount: state.jobs.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final job = state.jobs[index];
+                            return JobListTile(
                             title: job.title,
                             subtitle:
                                 '${job.customerName} • ${_jobStatus(job.status)}',
@@ -57,7 +60,8 @@ class _WorkerJobFeedPageState extends State<WorkerJobFeedPage> {
                         },
                       ),
                     ),
-                  ],
+                  ),
+                ],
                 ),
         );
       },

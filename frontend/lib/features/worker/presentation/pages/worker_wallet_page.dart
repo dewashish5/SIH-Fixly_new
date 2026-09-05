@@ -57,11 +57,14 @@ class _WorkerWalletPageState extends State<WorkerWalletPage> {
                         style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 12),
                     Expanded(
-                      child: ListView.separated(
-                        itemCount: state.transactions.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
+                      child: AppRefreshIndicator(
+                        onRefresh: () => context.read<WalletCubit>().load(),
+                        child: ListView.separated(
+                          physics: appRefreshScrollPhysics,
+                          itemCount: state.transactions.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
                           final tx = state.transactions[index];
                           final sign = tx.isCredit ? '+' : '-';
                           final color =
@@ -103,7 +106,8 @@ class _WorkerWalletPageState extends State<WorkerWalletPage> {
                         },
                       ),
                     ),
-                    PrimaryButton(
+                  ),
+                  PrimaryButton(
                       label: 'Withdraw',
                       onPressed: state.balance <= 0
                           ? null
