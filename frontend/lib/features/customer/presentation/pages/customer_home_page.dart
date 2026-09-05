@@ -1,21 +1,23 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
-import '../../../../core/navigation/customer_navigation.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/constants/map_constants.dart';
 import '../../../../core/l10n/locale_scope.dart';
 import '../../../../core/location/app_location.dart';
 import '../../../../core/location/location_service.dart';
+import '../../../../core/navigation/customer_navigation.dart';
 import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
-import '../../../../core/widgets/location_picker_sheet.dart';
 import '../../../../core/widgets/fixly_map_view.dart';
-import '../../../../core/constants/map_constants.dart';
+import '../../../../core/widgets/location_picker_sheet.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../../../shared/widgets/category_icon_tile.dart';
@@ -89,241 +91,442 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final locale = LocaleScope.of(context).locale;
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final statusBarH = MediaQuery.of(context).padding.top;
 
     final userName =
         MockRepository.instance.currentUser?.name ?? l10n.guestUser;
 
-    return AppScaffold(
-      titleWidget: GreetingAppBarTitle(userName: userName),
-      showBack: false,
-      padding: EdgeInsets.zero,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          tooltip: l10n.notifications,
-          onPressed: () => context.push(RouteNames.sharedNotifications),
-        ),
-      ],
-      body: BlocBuilder<CustomerHomeCubit, CustomerHomeState>(
-        builder: (context, state) {
-          if (state.status == CustomerHomeStatus.loading &&
-              state.categories.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return AppRefreshIndicator(
-            onRefresh: _refreshAll,
-            child: ListView(
-              physics: appRefreshScrollPhysics,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              children: [
-              _LocationBar(
-                label: _locationLabel,
-                loading: _locating,
-                onRefresh: _refreshLocation,
-                onTap: _openLocationPicker,
-              ),
-              const SizedBox(height: 10),
-              // ── Mini map preview ──
-              _HomeMapPreview(
-                onTap: _openLocationPicker,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l10n.categories,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      minimumSize: const Size(48, 40),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: () =>
-                        context.push(RouteNames.customerCategories),
-                    child: Text(l10n.viewAll),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (state.categories.isNotEmpty)
-                _CategoryGrid(
-                  categories: state.categories
-                      .take(AppConstants.homeCategoryPreviewCount)
-                      .toList(),
-                  locale: locale,
-                  onCategoryTap: context.openCategorySearch,
-                )
-              else
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest
-                        .withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: context.hairline),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.category_outlined,
-                          size: 32, color: context.muted),
-                      const SizedBox(height: 6),
-                      Text(
-                        'No categories available',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: context.muted,
-                              fontWeight: FontWeight.w600,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: scheme.surface,
+        systemNavigationBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFF080F1E), // Keeps map/pull-down gradient dark
+        body: BlocBuilder<CustomerHomeCubit, CustomerHomeState>(
+          builder: (context, state) {
+            return AppRefreshIndicator(
+              onRefresh: _refreshAll,
+              child: NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
+                  return [
+                    SliverAppBar(
+                      pinned: true,
+                      expandedHeight: statusBarH + 280,
+                      toolbarHeight: 90,
+                      backgroundColor: scheme.surface,
+                      elevation: 0,
+                      flexibleSpace: FlexibleSpaceBar(
+                        collapseMode: CollapseMode.pin, // Keeps blur at the very top
+                        background: _HomeMapHero(
+                          statusBarH: statusBarH,
+                          onOpenLocationPicker: _openLocationPicker,
+                        ),
+                      ),
+                      title: Padding(
+                        padding: const EdgeInsets.only(left: 0, right: 0, bottom: 8),
+                        child: _AppBarTitleContent(
+                          userName: userName,
+                          locationLabel: _locationLabel,
+                          locating: _locating,
+                          onOpenLocationPicker: _openLocationPicker,
+                          onNotificationsTap: () =>
+                              context.push(RouteNames.sharedNotifications),
+                        ),
+                      ),
+                      bottom: PreferredSize(
+                        preferredSize: const Size.fromHeight(24),
+                        child: Container(
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: scheme.surface,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(24),
                             ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ];
+                },
+                body: Container(
+                  color: scheme.surface,
+                  child: Column(
+                    children: [
+                      // Pinned Categories & Popular Services Header
+                      _buildCategoriesAndHeader(context, state, l10n, locale),
+                      // Scrollable Services List
+                      Expanded(
+                        child: state.status == CustomerHomeStatus.loading &&
+                                state.popularServices.isEmpty
+                            ? _buildShimmerList()
+                            : ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.only(top: 8, bottom: 32),
+                                itemCount: state.popularServices.length,
+                                itemBuilder: (context, index) {
+                                  final service = state.popularServices[index];
+                                  return _ServiceTile(
+                                    service: service,
+                                    locale: locale,
+                                    index: index,
+                                    onTap: () => context.push(
+                                      '/customer/service/${service.id}',
+                                    ),
+                                  );
+                                },
+                              ),
                       ),
                     ],
                   ),
                 ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l10n.popularServices,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      minimumSize: const Size(48, 40),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: () => context.goCustomerTab(2),
-                    child: Text(
-                      l10n.aiHelper,
-                      style: const TextStyle(color: AppColors.accent),
-                    ),
-                  ),
-                ],
               ),
-              const SizedBox(height: 8),
-              ...state.popularServices.asMap().entries.map(
-                    (entry) => _ServiceTile(
-                      service: entry.value,
-                      locale: locale,
-                      index: entry.key,
-                      onTap: () => context.push(
-                        '/customer/service/${entry.value.id}',
-                      ),
-                    ),
-                  ),
-              const SizedBox(height: 16),
-              SecondaryButton(
-                label: l10n.homeBooking,
-                onPressed: () =>
-                    context.push(RouteNames.customerHomeBooking),
-              ),
-              const SizedBox(height: 24),
-              ],
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
+    );
+  }
+
+  Widget _buildCategoriesAndHeader(
+    BuildContext context,
+    CustomerHomeState state,
+    dynamic l10n,
+    String locale,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.categories,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(48, 40),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () => context.push(RouteNames.customerCategories),
+                child: Text(l10n.viewAll),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (state.categories.isNotEmpty)
+            _CategoryGrid(
+              categories: state.categories
+                  .take(AppConstants.homeCategoryPreviewCount)
+                  .toList(),
+              locale: locale,
+              onCategoryTap: context.openCategorySearch,
+            )
+          else
+            _buildEmptyCategories(context),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.popularServices,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(48, 40),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () => context.goCustomerTab(2),
+                child: Text(
+                  l10n.aiHelper,
+                  style: const TextStyle(color: AppColors.accent),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyCategories(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.hairline),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.category_outlined, size: 32, color: context.muted),
+          const SizedBox(height: 6),
+          Text(
+            'No categories available',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: context.muted,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerList() {
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(top: 8, bottom: 32),
+      itemCount: 4,
+      itemBuilder: (context, index) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: _ShimmerServiceTile(),
+        );
+      },
     );
   }
 }
 
-class _LocationBar extends StatelessWidget {
-  const _LocationBar({
-    required this.label,
-    required this.loading,
-    required this.onRefresh,
-    required this.onTap,
+class _AppBarTitleContent extends StatelessWidget {
+  const _AppBarTitleContent({
+    required this.userName,
+    required this.locationLabel,
+    required this.locating,
+    required this.onOpenLocationPicker,
+    required this.onNotificationsTap,
   });
 
-  final String label;
-  final bool loading;
-  final VoidCallback onRefresh;
-  final VoidCallback onTap;
+  final String userName;
+  final String locationLabel;
+  final bool locating;
+  final VoidCallback onOpenLocationPicker;
+  final VoidCallback onNotificationsTap;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: context.hairline),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
-          child: Row(
+    
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.location_on_rounded, color: scheme.primary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Your location',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: context.muted,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 16,
-                          color: context.muted,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
+              Text(
+                l10n.timeGreeting(DateTime.now().hour),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface.withValues(alpha: 0.8),
                 ),
               ),
-              const SizedBox(width: 4),
-              IconButton(
-                tooltip: 'Use current location',
-                onPressed: loading ? null : onRefresh,
-                style: IconButton.styleFrom(
-                  backgroundColor: scheme.primary.withValues(alpha: 0.12),
-                  foregroundColor: scheme.primary,
-                  minimumSize: const Size(48, 48),
+              const SizedBox(height: 1),
+              Text(
+                userName,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: scheme.onSurface,
+                  letterSpacing: -0.3,
                 ),
-                icon: loading
-                    ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: scheme.primary,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              InkWell(
+                onTap: onOpenLocationPicker,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.location_on_rounded,
+                        color: AppColors.primary400,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          locationLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface.withValues(alpha: 0.95),
+                          ),
                         ),
-                      )
-                    : const Icon(Icons.my_location_rounded),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 16,
+                        color: scheme.onSurface.withValues(alpha: 0.85),
+                      ),
+                      if (locating) ...[
+                        const SizedBox(width: 8),
+                        const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: AppColors.primary400,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
         ),
-      ),
+        const SizedBox(width: 12),
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: scheme.onSurface.withValues(alpha: 0.08),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: scheme.onSurface.withValues(alpha: 0.1),
+              width: 1,
+            ),
+          ),
+          child: IconButton(
+            icon: Icon(
+              Icons.notifications_outlined,
+              color: scheme.onSurface,
+              size: 22,
+            ),
+            tooltip: l10n.notifications,
+            onPressed: onNotificationsTap,
+            padding: EdgeInsets.zero,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeMapHero extends StatelessWidget {
+  const _HomeMapHero({
+    required this.statusBarH,
+    required this.onOpenLocationPicker,
+  });
+
+  final double statusBarH;
+  final VoidCallback onOpenLocationPicker;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final center = MapConstants.current;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // 1. The Map
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onOpenLocationPicker,
+          child: center != null
+              ? IgnorePointer(
+                  child: FixlyMapView(
+                    expand: true,
+                    borderRadius: BorderRadius.zero,
+                    center: center,
+                    zoom: MapConstants.defaultZoom,
+                    showDestinationPin: true,
+                    claimGestures: false,
+                    showZoomControls: false,
+                    showRecenterButton: false,
+                  ),
+                )
+              : Container(
+                  color: const Color(0xFF0A1428),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_searching,
+                          size: 32,
+                          color: AppColors.primary400.withValues(alpha: 0.7),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tap to set your location',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+        ),
+
+        // 2. Blur and subtle gradient at the top (Ensures text/status bar is readable)
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: statusBarH + 160,
+          child: IgnorePointer(
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        scheme.surface.withValues(alpha: 0.8),
+                        scheme.surface.withValues(alpha: 0.3),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.6, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -344,6 +547,7 @@ class _CategoryGrid extends StatelessWidget {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
         mainAxisSpacing: 6,
@@ -380,11 +584,12 @@ class _ServiceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = service.titleFor(locale);
     final description = service.descriptionFor(locale);
-    final hasImage = service.imageUrl != null && service.imageUrl!.trim().isNotEmpty;
+    final hasImage =
+        service.imageUrl != null && service.imageUrl!.trim().isNotEmpty;
     final estimatedTime = service.estimatedTime?.trim();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
       child: AppCard(
         onTap: onTap,
         padding: const EdgeInsets.all(14),
@@ -415,8 +620,10 @@ class _ServiceTile extends StatelessWidget {
                     ? Image.network(
                         service.imageUrl!.trim(),
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const Center(
-                          child: Icon(Icons.handyman_rounded, color: Colors.white, size: 28),
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Center(
+                          child: Icon(Icons.handyman_rounded,
+                              color: Colors.white, size: 28),
                         ),
                         loadingBuilder: (_, child, progress) {
                           if (progress == null) return child;
@@ -427,7 +634,8 @@ class _ServiceTile extends StatelessWidget {
                         },
                       )
                     : const Center(
-                        child: Icon(Icons.handyman_rounded, color: Colors.white, size: 28),
+                        child: Icon(Icons.handyman_rounded,
+                            color: Colors.white, size: 28),
                       ),
               ),
             ),
@@ -461,7 +669,8 @@ class _ServiceTile extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      if (estimatedTime != null && estimatedTime.isNotEmpty) ...[
+                      if (estimatedTime != null &&
+                          estimatedTime.isNotEmpty) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -515,95 +724,92 @@ class _ServiceTile extends StatelessWidget {
   }
 }
 
-/// Small interactive map preview on the home screen.
-/// Tapping it opens the full LocationPickerSheet.
-class _HomeMapPreview extends StatelessWidget {
-  const _HomeMapPreview({required this.onTap});
-  final VoidCallback onTap;
+class _ShimmerServiceTile extends StatefulWidget {
+  const _ShimmerServiceTile();
+
+  @override
+  State<_ShimmerServiceTile> createState() => _ShimmerServiceTileState();
+}
+
+class _ShimmerServiceTileState extends State<_ShimmerServiceTile>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final center = MapConstants.current;
+    final color = Theme.of(context).colorScheme.surfaceContainerHighest;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          children: [
-            IgnorePointer(
-              child: center != null
-                  ? FixlyMapView(
-                      height: 148,
-                      borderRadius: BorderRadius.circular(16),
-                      center: center,
-                      zoom: MapConstants.defaultZoom,
-                      showDestinationPin: true,
-                      claimGestures: false,
-                      showZoomControls: false,
-                      showRecenterButton: false,
-                    )
-                  : Container(
-                      height: 148,
-                      decoration: BoxDecoration(
-                        color: scheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.location_searching,
-                                size: 28, color: scheme.primary.withValues(alpha: 0.5)),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Tap to set your location',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: scheme.primary.withValues(alpha: 0.6),
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-            ),
-            // Tap-to-edit overlay pill
-            Positioned(
-              right: 10,
-              bottom: 10,
-              child: Material(
-                color: Colors.white.withValues(alpha: 0.92),
-                borderRadius: BorderRadius.circular(20),
-                elevation: 2,
-                child: InkWell(
-                  onTap: onTap,
-                  borderRadius: BorderRadius.circular(20),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.edit_location_alt_rounded,
-                            size: 15, color: scheme.primary),
-                        const SizedBox(width: 5),
-                        Text(
-                          'Change',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Opacity(
+          opacity: 0.4 + (_controller.value * 0.6),
+          child: AppCard(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-              ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 120,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: 60,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

@@ -23,28 +23,61 @@ abstract final class ApiEndpoints {
   static const String createBooking = '/api/bookings/';
   static const String bookingHistory = '/api/bookings/history';
   static String bookingById(String bookingId) => '/api/bookings/$bookingId';
-  static String cancelBooking(String bookingId) => '/api/bookings/$bookingId/cancel';
-  static String verifyArrivalOtp(String bookingId) => '/api/bookings/$bookingId/verify-otp';
-  static String completeBooking(String bookingId) => '/api/bookings/$bookingId/complete';
-  static String addParts(String bookingId) => '/api/bookings/$bookingId/add-parts';
+  static String cancelBooking(String bookingId) =>
+      '/api/bookings/$bookingId/cancel';
+  static String verifyArrivalOtp(String bookingId) =>
+      '/api/bookings/$bookingId/verify-otp';
+  static String completeBooking(String bookingId) =>
+      '/api/bookings/$bookingId/complete';
+  static String addParts(String bookingId) =>
+      '/api/bookings/$bookingId/add-parts';
+  static String bookingInvoice(String bookingId) =>
+      '/api/bookings/$bookingId/invoice';
+  static String bookingReview(String bookingId) =>
+      '/api/bookings/$bookingId/review';
+  static String bookingSos(String bookingId) => '/api/bookings/$bookingId/sos';
+  static String bookingTrack(String bookingId) =>
+      '/api/bookings/$bookingId/track';
 
   // --- Bookings (Worker Operations) ---
   static const String workerIncomingJobs = '/api/bookings/worker/incoming';
   static const String workerActiveJobs = '/api/bookings/worker/active';
   static const String workerCompletedJobs = '/api/bookings/worker/completed';
-  static String acceptJob(String bookingId) => '/api/bookings/$bookingId/accept';
-  static String declineJob(String bookingId) => '/api/bookings/$bookingId/decline';
-  static String startJob(String bookingId) => '/api/bookings/$bookingId/start-job';
+  static String acceptJob(String bookingId) =>
+      '/api/bookings/$bookingId/accept';
+  static String declineJob(String bookingId) =>
+      '/api/bookings/$bookingId/decline';
+  static String startJob(String bookingId) =>
+      '/api/bookings/$bookingId/start-job';
 
   // --- Workers ---
   static const String workers = '/api/workers/';
   static const String setupProfile = '/api/workers/setup-profile';
   static const String workerAvailability = '/api/workers/me/availability';
   static const String workerWallet = '/api/workers/me/wallet';
-  static const String workerEarningsSummary = '/api/workers/me/earnings/summary';
+  static const String workerEarningsSummary =
+      '/api/workers/me/earnings/summary';
   static const String workerWithdraw = '/api/workers/me/withdraw';
   static String workerById(String workerId) => '/api/workers/$workerId';
-  static String workerReliability(String workerId) => '/api/workers/$workerId/reliability';
+  static String workerReliability(String workerId) =>
+      '/api/workers/$workerId/reliability';
+  static String workerReviews(String workerId) =>
+      '/api/workers/$workerId/reviews';
+  static const String workerAvailabilitySchedule =
+      '/api/workers/me/availability/schedule';
+  static const String workerCertificates = '/api/workers/me/certificates';
+  static String workerCertificate(String id) =>
+      '/api/workers/me/certificates/$id';
+  static const String workerEarnings = '/api/workers/me/earnings';
+  static const String workerInsurance = '/api/workers/me/insurance';
+  static const String workerInsuranceClaims =
+      '/api/workers/me/insurance/claims';
+  static const String workerMembership = '/api/workers/me/membership';
+  static const String workerPayouts = '/api/workers/me/payouts';
+  static const String workerTransactions = '/api/workers/me/transactions';
+  static const String workerWelfare = '/api/workers/me/welfare';
+  static const String workerWelfareTransactions =
+      '/api/workers/me/welfare/transactions';
 
   // --- Payments ---
   static const String paymentConfig = '/api/payments/config';

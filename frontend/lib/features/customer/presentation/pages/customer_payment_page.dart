@@ -5,9 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/booking_flow_cubit.dart';
-import '../../../../core/constants/app_strings.dart';
 
 class CustomerPaymentPage extends StatefulWidget {
   const CustomerPaymentPage({super.key});
@@ -17,8 +17,6 @@ class CustomerPaymentPage extends StatefulWidget {
 }
 
 class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
-  String _method = 'upi';
-
   @override
   void initState() {
     super.initState();
@@ -27,25 +25,24 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
     });
   }
 
-  Future<void> _handlePay(BuildContext context) async {
+  Future<void> _handlePay() async {
     final cubit = context.read<BookingFlowCubit>();
-
-    final success = _method == 'cash'
-        ? await cubit.completeCashPayment()
-        : await cubit.payWithRazorpay();
-
-    if (!context.mounted) return;
-
+    final success = await cubit.payWithRazorpay();
+    if (!mounted) return;
     if (success) {
-      context.push(RouteNames.customerRating);
+      final bookingId = cubit.state.booking?.id;
+      if (bookingId != null) {
+        context.push(RouteNames.customerInvoice.replaceFirst(':id', bookingId));
+      } else {
+        context.push(RouteNames.customerRating);
+      }
       return;
     }
-
     final error = cubit.state.errorMessage;
     if (error != null && error.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
@@ -55,9 +52,8 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
       title: context.l10n.payment,
       body: BlocBuilder<BookingFlowCubit, BookingFlowState>(
         builder: (context, state) {
-          final amount = state.displayPrice;
           final booking = state.booking;
-
+          final amount = state.displayPrice;
           return SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,23 +67,24 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
                   child: Text(
                     '₹${amount.toInt()}',
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ).animate().fadeIn().scale(begin: const Offset(0.8, 0.8)),
                 ),
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    state.service?.title ?? 'Service payment',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.outline,
-                        ),
+                    booking?.serviceTitle ??
+                        state.service?.title ??
+                        'Service payment',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: AppColors.outline),
                   ),
                 ),
-                if (booking != null &&
-                    (booking.extraPartsTotal ?? 0) > 0) ...[
-                  const SizedBox(height: 16),
+                const SizedBox(height: 24),
+                if (booking != null)
                   AppCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,60 +95,40 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
                         ),
                         const SizedBox(height: 8),
                         if (booking.baseServiceFee != null)
-                          _InvoiceRow(
-                            'Base service',
-                            booking.baseServiceFee!,
-                          ),
-                        if (booking.extraPartsTotal != null)
-                          _InvoiceRow(
-                            'Extra parts',
-                            booking.extraPartsTotal!,
-                          ),
+                          _InvoiceRow('Base service', booking.baseServiceFee!),
+                        if ((booking.extraPartsTotal ?? 0) > 0)
+                          _InvoiceRow('Extra parts', booking.extraPartsTotal!),
                         if (booking.platformFee != null)
-                          _InvoiceRow(
-                            'Platform fee',
-                            booking.platformFee!,
-                          ),
+                          _InvoiceRow('Platform fee', booking.platformFee!),
+                        const Divider(height: 24),
+                        _InvoiceRow('Total amount', amount, emphasized: true),
                       ],
                     ),
                   ),
-                ],
-                const SizedBox(height: 32),
-                Text(
-                  'Payment Method',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                _PaymentOption(
-                  icon: Icons.account_balance,
-                  label: 'UPI',
-                  subtitle: 'Google Pay, PhonePe, Paytm via Razorpay',
-                  selected: _method == 'upi',
-                  onTap: () => setState(() => _method = 'upi'),
-                ),
-                _PaymentOption(
-                  icon: Icons.credit_card,
-                  label: 'Card',
-                  subtitle: 'Visa, Mastercard, RuPay via Razorpay',
-                  selected: _method == 'card',
-                  onTap: () => setState(() => _method = 'card'),
-                ),
-                _PaymentOption(
-                  icon: Icons.money,
-                  label: 'Cash',
-                  subtitle: 'Pay worker after service',
-                  selected: _method == 'cash',
-                  onTap: () => setState(() => _method = 'cash'),
+                const SizedBox(height: 20),
+                AppCard(
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.account_balance_wallet_outlined,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Secure payment powered by Razorpay. UPI, cards and supported wallets are available in the Razorpay checkout.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 32),
                 PrimaryButton(
-                  label: _method == 'cash'
-                      ? 'Confirm cash payment'
-                      : 'Pay ₹${amount.toInt()}',
+                  label: 'Pay ₹${amount.toInt()} with Razorpay',
                   loading: state.isLoading,
-                  onPressed: state.isLoading ? null : () => _handlePay(context),
+                  onPressed: state.isLoading ? null : _handlePay,
                 ),
-                const SizedBox(height: 24),
               ],
             ),
           );
@@ -162,70 +139,30 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
 }
 
 class _InvoiceRow extends StatelessWidget {
-  const _InvoiceRow(this.label, this.amount);
+  const _InvoiceRow(this.label, this.amount, {this.emphasized = false});
 
   final String label;
   final double amount;
+  final bool emphasized;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-          Text('₹${amount.toInt()}'),
-        ],
-      ),
-    );
-  }
-}
-
-class _PaymentOption extends StatelessWidget {
-  const _PaymentOption({
-    required this.icon,
-    required this.label,
-    required this.subtitle,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final String subtitle;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: AppCard(
-        onTap: onTap,
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Icon(icon, color: selected ? AppColors.primary : AppColors.outline),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: Theme.of(context).textTheme.titleSmall),
-                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
-            ),
-            Icon(
-              selected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_unchecked,
-              color: selected ? AppColors.primary : AppColors.outline,
-            ),
-          ],
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontWeight: emphasized ? FontWeight.w700 : null),
         ),
-      ),
-    );
-  }
+        Text(
+          '₹${amount.toInt()}',
+          style: TextStyle(
+            color: emphasized ? AppColors.primary : null,
+            fontWeight: emphasized ? FontWeight.w800 : null,
+          ),
+        ),
+      ],
+    ),
+  );
 }

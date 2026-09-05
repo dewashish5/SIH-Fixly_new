@@ -900,11 +900,13 @@ class AuthGoogleSquare extends StatelessWidget {
   const AuthGoogleSquare({
     required this.onPressed,
     this.compact = false,
+    this.loading = false,
     super.key,
   });
 
   final VoidCallback? onPressed;
   final bool compact;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -916,7 +918,7 @@ class AuthGoogleSquare extends StatelessWidget {
         color: context.scheme.surface,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
-          onTap: onPressed,
+          onTap: loading ? null : onPressed,
           borderRadius: BorderRadius.circular(14),
           child: Ink(
             height: h,
@@ -930,11 +932,20 @@ class AuthGoogleSquare extends StatelessWidget {
               ),
             ),
             child: Center(
-              child: SvgPicture.asset(
-                'assets/icons/google.svg',
-                width: compact ? 22 : 26,
-                height: compact ? 22 : 26,
-              ),
+              child: loading
+                  ? SizedBox(
+                      width: compact ? 20 : 24,
+                      height: compact ? 20 : 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: context.scheme.primary,
+                      ),
+                    )
+                  : SvgPicture.asset(
+                      'assets/icons/google.svg',
+                      width: compact ? 22 : 26,
+                      height: compact ? 22 : 26,
+                    ),
             ),
           ),
         ),

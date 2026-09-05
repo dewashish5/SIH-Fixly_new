@@ -23,9 +23,9 @@ class AuthApiRepository {
     ApiClient? client,
     TokenStorage? tokens,
     DeviceId? deviceId,
-  })  : _api = client ?? ApiServices.client,
-        _tokens = tokens ?? ApiServices.tokens,
-        _deviceId = deviceId ?? ApiServices.deviceId;
+  }) : _api = client ?? ApiServices.client,
+       _tokens = tokens ?? ApiServices.tokens,
+       _deviceId = deviceId ?? ApiServices.deviceId;
 
   final ApiClient _api;
   final TokenStorage _tokens;
@@ -35,6 +35,27 @@ class AuthApiRepository {
     return AppLocation.instance.toGeoJsonPointOrNull();
   }
 
+  Future<void> saveCurrentWorkerLocation() async {
+    final location = _locationBody();
+    if (location == null) return;
+
+    final payload = <String, dynamic>{'location': location};
+    final address = AppLocation.instance.addressLabel;
+    if (address != null && address.trim().isNotEmpty) {
+      payload['workAddress'] = address.trim();
+    }
+
+    Map<String, dynamic> res;
+    try {
+      res = await _api.patch(ApiEndpoints.me, data: payload);
+    } catch (_) {
+      res = await _api.put(ApiEndpoints.usersMe, data: payload);
+    }
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Location save failed');
+    }
+  }
+
   Future<void> register({
     required String name,
     required String email,
@@ -42,14 +63,17 @@ class AuthApiRepository {
     required String role,
     required String phone,
   }) async {
-    final res = await _api.post(ApiEndpoints.register, data: {
-      'name': name,
-      'email': email,
-      'password': password,
-      'role': role,
-      'phone': phone,
-      'location': _locationBody(),
-    });
+    final res = await _api.post(
+      ApiEndpoints.register,
+      data: {
+        'name': name,
+        'email': email,
+        'password': password,
+        'role': role,
+        'phone': phone,
+        'location': _locationBody(),
+      },
+    );
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Register failed');
     }
@@ -60,11 +84,10 @@ class AuthApiRepository {
     required String otp,
   }) async {
     final device = await _deviceId.getOrCreate();
-    final res = await _api.post(ApiEndpoints.verifyOtp, data: {
-      'email': email,
-      'otp': otp,
-      'deviceId': device,
-    });
+    final res = await _api.post(
+      ApiEndpoints.verifyOtp,
+      data: {'email': email, 'otp': otp, 'deviceId': device},
+    );
     return _persistSession(res, fallbackMessage: 'OTP verification failed');
   }
 
@@ -73,12 +96,15 @@ class AuthApiRepository {
     required String password,
   }) async {
     final device = await _deviceId.getOrCreate();
-    final res = await _api.post(ApiEndpoints.login, data: {
-      'email': email,
-      'password': password,
-      'deviceId': device,
-      'location': _locationBody(),
-    });
+    final res = await _api.post(
+      ApiEndpoints.login,
+      data: {
+        'email': email,
+        'password': password,
+        'deviceId': device,
+        'location': _locationBody(),
+      },
+    );
     return _persistSession(res, fallbackMessage: 'Login failed');
   }
 
@@ -94,15 +120,18 @@ class AuthApiRepository {
         ? avatar.trim()
         : 'https://lh3.googleusercontent.com/a/default-user';
 
-    final res = await _api.post(ApiEndpoints.googleLogin, data: {
-      'email': email,
-      'name': name,
-      'avatar': effectiveAvatar,
-      'role': role,
-      'phone': phone,
-      'deviceId': device,
-      'location': _locationBody(),
-    });
+    final res = await _api.post(
+      ApiEndpoints.googleLogin,
+      data: {
+        'email': email,
+        'name': name,
+        'avatar': effectiveAvatar,
+        'role': role,
+        'phone': phone,
+        'deviceId': device,
+        'location': _locationBody(),
+      },
+    );
     return _persistSession(res, fallbackMessage: 'Google login failed');
   }
 
@@ -113,27 +142,24 @@ class AuthApiRepository {
     if (refresh == null || userId == null) {
       throw ApiException('No refresh session');
     }
-    final res = await _api.post(ApiEndpoints.refreshToken, data: {
-      'userId': userId,
-      'deviceId': device,
-      'refreshToken': refresh,
-    });
+    final res = await _api.post(
+      ApiEndpoints.refreshToken,
+      data: {'userId': userId, 'deviceId': device, 'refreshToken': refresh},
+    );
     final access = res['accessToken'] as String?;
     if (res['success'] != true || access == null || access.isEmpty) {
       throw ApiException(res['message']?.toString() ?? 'Refresh failed');
     }
     final newRefresh = res['refreshToken'] as String?;
-    await _tokens.saveTokens(
-      accessToken: access,
-      refreshToken: newRefresh,
-    );
+    await _tokens.saveTokens(accessToken: access, refreshToken: newRefresh);
     return access;
   }
 
   Future<void> forgotPassword(String email) async {
-    final res = await _api.post(ApiEndpoints.forgotPassword, data: {
-      'email': email,
-    });
+    final res = await _api.post(
+      ApiEndpoints.forgotPassword,
+      data: {'email': email},
+    );
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Request failed');
     }
@@ -144,11 +170,10 @@ class AuthApiRepository {
     required String otp,
     required String newPassword,
   }) async {
-    final res = await _api.post(ApiEndpoints.resetPassword, data: {
-      'email': email,
-      'otp': otp,
-      'newPassword': newPassword,
-    });
+    final res = await _api.post(
+      ApiEndpoints.resetPassword,
+      data: {'email': email, 'otp': otp, 'newPassword': newPassword},
+    );
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Reset failed');
     }
@@ -159,10 +184,10 @@ class AuthApiRepository {
     final device = await _deviceId.getOrCreate();
     if (userId != null) {
       try {
-        await _api.post(ApiEndpoints.logout, data: {
-          'userId': userId,
-          'deviceId': device,
-        });
+        await _api.post(
+          ApiEndpoints.logout,
+          data: {'userId': userId, 'deviceId': device},
+        );
       } catch (_) {
         // Still clear local session.
       }
@@ -236,19 +261,20 @@ class AuthApiRepository {
         ? Map<String, dynamic>.from(kycDocsRaw)
         : <String, dynamic>{};
 
-    final raw = (user['kycStatus'] ??
-            user['verificationStatus'] ??
-            kycDocs['status'] ??
-            profile['kycStatus'] ??
-            profile['status'] ??
-            profile['verificationStatus'] ??
-            profile['profileStatus'] ??
-            '')
-        .toString()
-        .trim()
-        .toLowerCase()
-        .replaceAll(' ', '_')
-        .replaceAll('-', '_');
+    final raw =
+        (user['kycStatus'] ??
+                user['verificationStatus'] ??
+                kycDocs['status'] ??
+                profile['kycStatus'] ??
+                profile['status'] ??
+                profile['verificationStatus'] ??
+                profile['profileStatus'] ??
+                '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .replaceAll(' ', '_')
+            .replaceAll('-', '_');
 
     // Decline must win over profile heuristics.
     if (raw == 'rejected' ||
@@ -304,7 +330,8 @@ class AuthApiRepository {
 
     if (profile.isNotEmpty) {
       final selfieOk = profile['selfieVerified'] == true;
-      final hasDocs = profile['aadhaarNumber'] != null ||
+      final hasDocs =
+          profile['aadhaarNumber'] != null ||
           profile['panNumber'] != null ||
           profile['govermentIdNumber'] != null ||
           (profile['identityDocuments'] is List &&
@@ -346,14 +373,14 @@ class AuthApiRepository {
     String? homePincode,
     bool isWorker = false,
   }) async {
-    final payload = <String, dynamic>{
-      'name': name,
-      'phone': phone,
-    };
+    final payload = <String, dynamic>{'name': name, 'phone': phone};
     if (avatar != null) payload['avatar'] = avatar;
-    if (preferredLanguage != null) payload['preferredLanguage'] = preferredLanguage;
+    if (preferredLanguage != null)
+      payload['preferredLanguage'] = preferredLanguage;
 
-    if (emergencyContactName != null || emergencyContactPhone != null || emergencyContactRelation != null) {
+    if (emergencyContactName != null ||
+        emergencyContactPhone != null ||
+        emergencyContactRelation != null) {
       payload['emergencyContact'] = {
         'name': emergencyContactName ?? '',
         'phone': emergencyContactPhone ?? '',
@@ -473,7 +500,8 @@ class AuthApiRepository {
       isVerified: json['isVerified'] == true,
       hasWorkerProfile: hasProfile,
       bio: profile['bio'] as String?,
-      workAddress: (profile['workAddress'] as String?) ??
+      workAddress:
+          (profile['workAddress'] as String?) ??
           (homeAddr?['addressLine'] as String?),
       category: profile['category'] as String?,
       categories: categories,

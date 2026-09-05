@@ -5,7 +5,7 @@ class ApiConfig {
 
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://jewelry-hartford-third-fork.trycloudflare.com',
+    defaultValue: 'https://supervisors-mix-router-automotive.trycloudflare.com',
   );
 }
 

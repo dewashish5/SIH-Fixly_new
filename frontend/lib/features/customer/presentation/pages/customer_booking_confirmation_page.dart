@@ -36,21 +36,21 @@ class CustomerBookingConfirmationPage extends StatelessWidget {
                 color: AppColors.accent,
               ),
             ).animate().scale(
-                  begin: const Offset(0.3, 0.3),
-                  duration: 600.ms,
-                  curve: Curves.elasticOut,
-                ),
+              begin: const Offset(0.3, 0.3),
+              duration: 600.ms,
+              curve: Curves.elasticOut,
+            ),
             const SizedBox(height: 24),
             Text(
-              'Thank you!',
+              'Booking Confirmed!',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 8),
             Text(
-              'Your booking has been completed successfully',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.outline,
-                  ),
+              'Your service request has been created successfully.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: AppColors.outline),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -63,37 +63,54 @@ class CustomerBookingConfirmationPage extends StatelessWidget {
                   ),
                   _DetailRow(
                     label: 'Worker',
-                    value: state.booking?.workerName ?? 'Rajesh Kumar',
+                    value: state.booking?.workerName ?? 'Assigned worker',
                   ),
+                  if (state.address != null)
+                    _DetailRow(label: 'Address', value: state.address!),
                   _DetailRow(
-                    label: 'Amount Paid',
+                    label: 'Estimated amount',
                     value: '₹${state.displayPrice.toInt()}',
                   ),
                   _DetailRow(
                     label: 'Booking ID',
-                    value: state.booking?.id ?? 'B-${DateTime.now().millisecondsSinceEpoch}',
+                    value:
+                        state.booking?.id ??
+                        'B-${DateTime.now().millisecondsSinceEpoch}',
                   ),
+                  if (state.booking?.arrivalOtp != null)
+                    _DetailRow(
+                      label: 'Arrival OTP',
+                      value: state.booking!.arrivalOtp!,
+                      valueColor: AppColors.accent,
+                    ),
                   _DetailRow(
                     label: 'Status',
-                    value: 'Completed & Paid',
-                    valueColor: AppColors.accent,
+                    value: 'Booking requested',
+                    valueColor: AppColors.primary,
                   ),
                 ],
               ),
             ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
             const SizedBox(height: 32),
             PrimaryButton(
-              label: 'Back to Home',
+              label: 'Track Booking',
+              onPressed: () {
+                final bookingId = state.booking?.id;
+                context.push(
+                  bookingId == null
+                      ? RouteNames.customerTracking
+                      : '${RouteNames.customerTracking}?bookingId=$bookingId',
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            SecondaryButton(
+              label: 'Return to Home',
               onPressed: () {
                 context.read<BookingFlowCubit>().reset();
                 context.read<TrackingCubit>().reset();
                 context.go(RouteNames.customerHome);
               },
-            ),
-            const SizedBox(height: 12),
-            SecondaryButton(
-              label: 'View Order History',
-              onPressed: () => context.push(RouteNames.sharedOrderHistory),
             ),
             const SizedBox(height: 24),
           ],
@@ -104,11 +121,7 @@ class CustomerBookingConfirmationPage extends StatelessWidget {
 }
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _DetailRow({required this.label, required this.value, this.valueColor});
 
   final String label;
   final String value;
@@ -123,17 +136,17 @@ class _DetailRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.outline,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.outline),
           ),
           Flexible(
             child: Text(
               value,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: valueColor,
-                  ),
+                fontWeight: FontWeight.w600,
+                color: valueColor,
+              ),
               textAlign: TextAlign.right,
             ),
           ),

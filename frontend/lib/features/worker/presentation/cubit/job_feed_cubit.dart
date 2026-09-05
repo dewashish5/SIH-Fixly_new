@@ -9,15 +9,20 @@ part 'job_feed_state.dart';
 
 class JobFeedCubit extends Cubit<JobFeedState> {
   JobFeedCubit({BookingsApiRepository? bookings})
-      : _bookings = bookings ?? BookingsApiRepository(),
-        super(const JobFeedState());
+    : _bookings = bookings ?? BookingsApiRepository(),
+      super(const JobFeedState());
 
   final BookingsApiRepository _bookings;
 
   Future<void> load() async {
     emit(state.copyWith(status: JobFeedStatus.loading, clearError: true));
     try {
-      final jobs = await _bookings.workerIncoming();
+      final results = await Future.wait([
+        _bookings.workerIncoming(),
+        _bookings.workerActive(),
+        _bookings.workerCompleted(),
+      ]);
+      final jobs = <WorkerJob>[...results[0], ...results[1], ...results[2]];
       emit(JobFeedState(status: JobFeedStatus.loaded, jobs: jobs));
     } on ApiException catch (e) {
       emit(state.copyWith(status: JobFeedStatus.failure, error: e.message));
@@ -36,7 +41,7 @@ class JobFeedCubit extends Cubit<JobFeedState> {
     emit(state.copyWith(status: JobFeedStatus.loading));
     try {
       await _bookings.accept(id);
-      final jobs = await _bookings.workerIncoming();
+      final jobs = await _loadAllJobs();
       emit(JobFeedState(status: JobFeedStatus.loaded, jobs: jobs));
     } on ApiException catch (e) {
       emit(state.copyWith(status: JobFeedStatus.failure, error: e.message));
@@ -47,10 +52,19 @@ class JobFeedCubit extends Cubit<JobFeedState> {
     emit(state.copyWith(status: JobFeedStatus.loading));
     try {
       await _bookings.decline(id);
-      final jobs = await _bookings.workerIncoming();
+      final jobs = await _loadAllJobs();
       emit(JobFeedState(status: JobFeedStatus.loaded, jobs: jobs));
     } on ApiException catch (e) {
       emit(state.copyWith(status: JobFeedStatus.failure, error: e.message));
     }
+  }
+
+  Future<List<WorkerJob>> _loadAllJobs() async {
+    final results = await Future.wait([
+      _bookings.workerIncoming(),
+      _bookings.workerActive(),
+      _bookings.workerCompleted(),
+    ]);
+    return <WorkerJob>[...results[0], ...results[1], ...results[2]];
   }
 }

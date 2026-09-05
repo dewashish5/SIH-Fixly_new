@@ -11,11 +11,13 @@ class WorkersApiRepository {
 
   final ApiClient _api;
 
-  Future<List<WorkerProfile>> fetchNearby({
+  Future<WorkersPage> fetchNearbyPage({
     double? lng,
     double? lat,
     String? category,
     String sortBy = 'nearest',
+    int offset = 0,
+    int limit = 5,
   }) async {
     final loc = AppLocation.instance;
     final useLng = lng ?? (loc.hasFix ? loc.requireLng : null);
@@ -29,6 +31,8 @@ class WorkersApiRepository {
         'lng': useLng,
         'lat': useLat,
         'sortBy': sortBy,
+        'offset': offset,
+        'limit': limit,
         if (category != null && category.isNotEmpty) 'category': category,
       },
     );
@@ -36,19 +40,49 @@ class WorkersApiRepository {
       throw ApiException(res['message']?.toString() ?? 'Workers failed');
     }
     final list = res['workers'];
-    if (list is! List) return const [];
-    return list
-        .whereType<Map>()
-        .map((e) => mapWorker(Map<String, dynamic>.from(e), useLat, useLng))
-        .toList();
+    final workers = list is List
+        ? list
+              .whereType<Map>()
+              .map(
+                (e) => mapWorker(Map<String, dynamic>.from(e), useLat, useLng),
+              )
+              .toList()
+        : <WorkerProfile>[];
+    return WorkersPage(
+      workers: workers,
+      hasMore: res['hasMore'] == true,
+      nextOffset:
+          (res['nextOffset'] as num?)?.toInt() ?? offset + workers.length,
+    );
+  }
+
+  Future<List<WorkerProfile>> fetchNearby({
+    double? lng,
+    double? lat,
+    String? category,
+    String sortBy = 'nearest',
+  }) async {
+    final loc = AppLocation.instance;
+    final useLng = lng ?? (loc.hasFix ? loc.requireLng : null);
+    final useLat = lat ?? (loc.hasFix ? loc.requireLat : null);
+    if (useLng == null || useLat == null) {
+      throw ApiException('Location required to find nearby workers');
+    }
+    return (await fetchNearbyPage(
+      lng: useLng,
+      lat: useLat,
+      category: category,
+      sortBy: sortBy,
+    )).workers;
   }
 
   Future<WorkerProfile> fetchWorker(String workerId) async {
     final res = await _api.get(ApiEndpoints.workerById(workerId));
-    if (res['success'] != true || res['worker'] == null) {
+    final rawWorker = res['worker'] ?? res['data'] ?? res['user'];
+    if (res['success'] != true || rawWorker is! Map) {
       throw ApiException(res['message']?.toString() ?? 'Worker not found');
     }
-    return mapWorker(Map<String, dynamic>.from(res['worker'] as Map));
+    return mapWorker(Map<String, dynamic>.from(rawWorker));
   }
 
   /// Last onboarding step: flat JSON + base64 media → setup-profile.
@@ -70,7 +104,9 @@ class WorkersApiRepository {
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Reliability failed');
     }
-    return Map<String, dynamic>.from((res['data'] ?? res['reliability'] ?? {}) as Map);
+    return Map<String, dynamic>.from(
+      (res['data'] ?? res['reliability'] ?? {}) as Map,
+    );
   }
 
   Future<Map<String, dynamic>> fetchAvailability() async {
@@ -82,11 +118,14 @@ class WorkersApiRepository {
   }
 
   Future<bool> setOnline(bool isOnline) async {
-    final res = await _api.patch(ApiEndpoints.workerAvailability, data: {
-      'isOnline': isOnline,
-    });
+    final res = await _api.patch(
+      ApiEndpoints.workerAvailability,
+      data: {'isOnline': isOnline},
+    );
     if (res['success'] != true) {
-      throw ApiException(res['message']?.toString() ?? 'Availability update failed');
+      throw ApiException(
+        res['message']?.toString() ?? 'Availability update failed',
+      );
     }
     final data = res['data'];
     if (data is Map) return data['isOnline'] == true;
@@ -109,23 +148,40 @@ class WorkersApiRepository {
     final rating =
         (profileMap['rating'] as num?)?.toDouble() ??
         (json['rating'] as num?)?.toDouble() ??
-        5.0;
+        0.0;
     final jobs =
         (profileMap['jobsCompleted'] as num?)?.toInt() ??
         (profileMap['totalJobs'] as num?)?.toInt() ??
         (json['jobsCompleted'] as num?)?.toInt() ??
+        (json['totalJobs'] as num?)?.toInt() ??
         0;
     final hourlyRate =
         (profileMap['rate'] as num?)?.toDouble() ??
         (profileMap['hourlyRate'] as num?)?.toDouble() ??
+        (json['rate'] as num?)?.toDouble() ??
         0.0;
-    final category =
-        (profileMap['category'] ?? json['category'])?.toString();
+    final category = (profileMap['category'] ?? json['category'])?.toString();
     final bio = (profileMap['bio'] ?? json['bio'])?.toString();
     final experienceYears = (profileMap['experienceYears'] as num?)?.toInt();
+    final reviewsRaw = json['reviews'] ?? profileMap['reviews'];
+    final reviews = reviewsRaw is List
+        ? reviewsRaw.whereType<Map>().map(_mapReview).toList()
+        : <WorkerReview>[];
+    final reviewCount =
+        (json['reviewCount'] as num?)?.toInt() ??
+        (json['totalReviews'] as num?)?.toInt() ??
+        (profileMap['reviewCount'] as num?)?.toInt() ??
+        (profileMap['totalReviews'] as num?)?.toInt() ??
+        reviews.length;
+    final reliabilityRaw = json['reliability'];
+    final reliability = reliabilityRaw is Map
+        ? Map<String, dynamic>.from(reliabilityRaw)
+        : <String, dynamic>{};
+    final kycRaw = json['kycDocuments'];
+    final kyc = kycRaw is Map ? Map<String, dynamic>.from(kycRaw) : {};
 
     // Distance calculation if coordinates are present
-    double? distanceKm;
+    double? distanceKm = (json['distanceKm'] as num?)?.toDouble();
     final loc = json['location'];
     if (loc is Map && userLat != null && userLng != null) {
       final coords = loc['coordinates'];
@@ -134,7 +190,7 @@ class WorkersApiRepository {
         final wLat = (coords[1] as num).toDouble();
         final dy = (wLat - userLat) * 111.0;
         final dx = (wLng - userLng) * 111.0;
-        distanceKm = (dx * dx + dy * dy) > 0 ? (dx.abs() + dy.abs()) : 0.4;
+        distanceKm ??= (dx * dx + dy * dy) > 0 ? (dx.abs() + dy.abs()) : 0.4;
         if (distanceKm < 0.1) distanceKm = 0.4;
       }
     }
@@ -145,18 +201,75 @@ class WorkersApiRepository {
       skills: skills,
       rating: rating,
       jobsCompleted: jobs,
-      reliabilityScore: (rating * 20).round().clamp(0, 100),
-      avatarUrl: (json['avatar'] ??
-              profileMap['selfieImageUrl'] ??
-              profileMap['identityProofPhoto'])
-          ?.toString(),
+      reliabilityScore:
+          (reliability['score'] as num?)?.toInt() ??
+          (rating * 20).round().clamp(0, 100),
+      avatarUrl:
+          (json['avatar'] ??
+                  profileMap['selfieImageUrl'] ??
+                  profileMap['identityProofPhoto'])
+              ?.toString(),
       category: category,
+      title: (json['title'] ?? profileMap['title'])?.toString(),
       hourlyRate: hourlyRate > 0 ? hourlyRate : null,
-      distanceKm: distanceKm != null ? double.parse(distanceKm.toStringAsFixed(1)) : null,
+      minimumCharge: (json['minimumCharge'] as num?)?.toDouble(),
+      rateFormatted: json['rateFormatted']?.toString(),
+      distanceKm: distanceKm != null
+          ? double.parse(distanceKm.toStringAsFixed(1))
+          : null,
+      distanceFormatted: json['distanceFormatted']?.toString(),
+      isOnline: json['isOnline'] == true || profileMap['isOnline'] == true,
+      isAvailable:
+          json['isAvailable'] == true ||
+          profileMap['isAvailable'] == true ||
+          profileMap['isOnline'] == true ||
+          json['isOnline'] == true,
+      reviewCount: reviewCount,
+      reviews: reviews,
+      onTimeArrival: (reliability['onTimeArrival'] as num?)?.toDouble(),
+      completionRate: (reliability['completionRate'] as num?)?.toDouble(),
+      customerFeedback: (reliability['customerFeedback'] as num?)?.toDouble(),
+      cancellationRate: (reliability['cancellationRate'] as num?)?.toDouble(),
+      serviceRadiusKm:
+          (profileMap['serviceRadiusKm'] as num?)?.toDouble() ??
+          (json['serviceRadiusKm'] as num?)?.toDouble(),
+      kycStatus: kyc['status']?.toString(),
+      isEmailVerified: json['isEmailVerified'] == true,
       bio: bio,
       experienceYears: experienceYears,
       isVerified: json['isVerified'] != false,
       insured: json['insured'] == true || profileMap['insured'] == true,
     );
   }
+
+  static WorkerReview _mapReview(Map review) {
+    final reviewer = review['reviewer'] ?? review['customer'];
+    final reviewerMap = reviewer is Map ? reviewer : const <String, dynamic>{};
+    return WorkerReview(
+      reviewerName:
+          (review['reviewerName'] ??
+                  review['customerName'] ??
+                  reviewerMap['name'] ??
+                  'Customer')
+              .toString(),
+      rating: (review['rating'] as num?)?.toDouble() ?? 0,
+      comment: (review['comment'] ?? review['text'] ?? review['review'] ?? '')
+          .toString(),
+      createdAt: DateTime.tryParse(
+        (review['createdAt'] ?? review['date'] ?? '').toString(),
+      ),
+    );
+  }
+}
+
+class WorkersPage {
+  const WorkersPage({
+    required this.workers,
+    required this.hasMore,
+    required this.nextOffset,
+  });
+
+  final List<WorkerProfile> workers;
+  final bool hasMore;
+  final int nextOffset;
 }

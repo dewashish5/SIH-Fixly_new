@@ -8,6 +8,9 @@ class SearchState extends Equatable {
     this.nearbyWorkers = const [],
     this.isSearching = false,
     this.isLoadingWorkers = false,
+    this.hasMoreWorkers = false,
+    this.nextWorkerOffset = 0,
+    this.isLoadingMoreWorkers = false,
   });
 
   final String query;
@@ -16,6 +19,9 @@ class SearchState extends Equatable {
   final List<WorkerProfile> nearbyWorkers;
   final bool isSearching;
   final bool isLoadingWorkers;
+  final bool hasMoreWorkers;
+  final int nextWorkerOffset;
+  final bool isLoadingMoreWorkers;
 
   SearchState copyWith({
     String? query,
@@ -24,6 +30,9 @@ class SearchState extends Equatable {
     List<WorkerProfile>? nearbyWorkers,
     bool? isSearching,
     bool? isLoadingWorkers,
+    bool? hasMoreWorkers,
+    int? nextWorkerOffset,
+    bool? isLoadingMoreWorkers,
   }) {
     return SearchState(
       query: query ?? this.query,
@@ -32,16 +41,22 @@ class SearchState extends Equatable {
       nearbyWorkers: nearbyWorkers ?? this.nearbyWorkers,
       isSearching: isSearching ?? this.isSearching,
       isLoadingWorkers: isLoadingWorkers ?? this.isLoadingWorkers,
+      hasMoreWorkers: hasMoreWorkers ?? this.hasMoreWorkers,
+      nextWorkerOffset: nextWorkerOffset ?? this.nextWorkerOffset,
+      isLoadingMoreWorkers: isLoadingMoreWorkers ?? this.isLoadingMoreWorkers,
     );
   }
 
   @override
   List<Object?> get props => [
-        query,
-        categoryId,
-        results,
-        nearbyWorkers,
-        isSearching,
-        isLoadingWorkers,
-      ];
+    query,
+    categoryId,
+    results,
+    nearbyWorkers,
+    isSearching,
+    isLoadingWorkers,
+    hasMoreWorkers,
+    nextWorkerOffset,
+    isLoadingMoreWorkers,
+  ];
 }

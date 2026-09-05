@@ -48,7 +48,8 @@ class AppScaffold extends StatelessWidget {
           : AppBar(
               title: titleWidget ?? (title != null ? Text(title!) : null),
               centerTitle: false,
-              leading: leading ??
+              leading:
+                  leading ??
                   (canPop
                       ? IconButton(
                           icon: const Icon(Icons.arrow_back_rounded),
@@ -68,10 +69,7 @@ class AppScaffold extends StatelessWidget {
             ),
       floatingActionButton: floatingActionButton,
       body: SafeArea(
-        child: Padding(
-          padding: padding,
-          child: body,
-        ),
+        child: Padding(padding: padding, child: body),
       ),
     );
   }
@@ -96,21 +94,21 @@ class PrimaryButton extends StatelessWidget {
       enabled: !loading && onPressed != null,
       label: label,
       child: SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: loading ? null : onPressed,
-        child: loading
-            ? SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-              )
-            : Text(label),
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: loading ? null : onPressed,
+          child: loading
+              ? SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                )
+              : Text(label),
+        ),
       ),
-    ),
     );
   }
 }
@@ -129,9 +127,94 @@ class SecondaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        child: Text(label),
+      child: OutlinedButton(onPressed: onPressed, child: Text(label)),
+    );
+  }
+}
+
+class SwipeActionButton extends StatefulWidget {
+  const SwipeActionButton({
+    required this.label,
+    required this.onCompleted,
+    super.key,
+    this.enabled = true,
+  });
+
+  final String label;
+  final VoidCallback onCompleted;
+  final bool enabled;
+
+  @override
+  State<SwipeActionButton> createState() => _SwipeActionButtonState();
+}
+
+class _SwipeActionButtonState extends State<SwipeActionButton> {
+  double _drag = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: widget.enabled
+            ? scheme.primary.withValues(alpha: 0.12)
+            : scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxDrag = constraints.maxWidth - 52;
+          return Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              Center(
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    color: widget.enabled ? scheme.primary : scheme.outline,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: _drag,
+                child: GestureDetector(
+                  onHorizontalDragUpdate: !widget.enabled
+                      ? null
+                      : (details) => setState(() {
+                          _drag = (_drag + details.delta.dx).clamp(
+                            0.0,
+                            maxDrag,
+                          );
+                        }),
+                  onHorizontalDragEnd: !widget.enabled
+                      ? null
+                      : (_) {
+                          if (_drag >= maxDrag * 0.82) {
+                            setState(() => _drag = maxDrag);
+                            widget.onCompleted();
+                          } else {
+                            setState(() => _drag = 0);
+                          }
+                        },
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: widget.enabled ? scheme.primary : scheme.outline,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.double_arrow_rounded,
+                      color: scheme.onPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -230,10 +313,7 @@ class AppTextField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (label != null) ...[
-          Text(
-            label!,
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
+          Text(label!, style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 8),
         ],
         TextFormField(
@@ -285,9 +365,9 @@ class StepProgressHeader extends StatelessWidget {
       children: [
         Text(
           'Step $currentStep of $totalSteps',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: AppColors.primary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(color: AppColors.primary),
         ),
         const SizedBox(height: 4),
         Text(title, style: Theme.of(context).textTheme.headlineSmall),
@@ -335,10 +415,7 @@ class AppCard extends StatelessWidget {
 }
 
 class GreetingAppBarTitle extends StatelessWidget {
-  const GreetingAppBarTitle({
-    required this.userName,
-    super.key,
-  });
+  const GreetingAppBarTitle({required this.userName, super.key});
 
   final String userName;
 

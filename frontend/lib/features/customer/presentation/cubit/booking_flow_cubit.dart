@@ -16,11 +16,11 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
     BookingsApiRepository? bookingsRepository,
     PaymentsApiRepository? paymentsRepository,
     RazorpayCheckoutService? razorpayCheckout,
-  })  : _repo = repository ?? MockRepository.instance,
-        _bookings = bookingsRepository ?? BookingsApiRepository(),
-        _payments = paymentsRepository ?? PaymentsApiRepository(),
-        _razorpay = razorpayCheckout ?? RazorpayCheckoutService(),
-        super(const BookingFlowState());
+  }) : _repo = repository ?? MockRepository.instance,
+       _bookings = bookingsRepository ?? BookingsApiRepository(),
+       _payments = paymentsRepository ?? PaymentsApiRepository(),
+       _razorpay = razorpayCheckout ?? RazorpayCheckoutService(),
+       super(const BookingFlowState());
 
   final MockRepository _repo;
   final BookingsApiRepository _bookings;
@@ -33,32 +33,35 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
 
   Future<void> submitBookingDetails({
     required String address,
-    required DateTime scheduledAt,
+    DateTime? scheduledAt,
+    required String problemDescription,
+    String? workerId,
+    List<String> photoPaths = const [],
+    List<String> videoPaths = const [],
   }) async {
-    if (state.service == null) return;
+    final service = state.service;
+    if (service == null) {
+      emit(state.copyWith(errorMessage: 'Please select a service first'));
+      return;
+    }
     emit(state.copyWith(isLoading: true, clearError: true));
     try {
-      final estimate = await _bookings.estimate(serviceId: state.service!.id);
       final booking = await _bookings.create(
-        serviceId: state.service!.id,
+        serviceId: service.id,
         addressLine: address,
-        problemDescription: state.service!.title,
+        problemDescription: problemDescription,
+        workerId: workerId,
         scheduledTime: scheduledAt,
-        serviceTitle: state.service!.title,
+        serviceTitle: service.title,
+        photoPaths: photoPaths,
+        videoPaths: videoPaths,
       );
-      final priced = booking.copyWith(
-        estimatedPrice: estimate.maxTotal > 0
-            ? estimate.maxTotal
-            : booking.estimatedPrice,
-      );
-      _repo.activeBooking = priced;
+      _repo.activeBooking = booking;
       emit(
         state.copyWith(
-          booking: priced,
+          booking: booking,
           address: address,
           scheduledAt: scheduledAt,
-          priceEstimate: estimate,
-          estimatedPrice: estimate.maxTotal,
           step: BookingStatus.searching,
           isLoading: false,
         ),
@@ -77,11 +80,13 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
   Future<void> searchWorker() async {
     emit(state.copyWith(isLoading: true, step: BookingStatus.searching));
     await Future<void>.delayed(const Duration(seconds: 1));
-    emit(state.copyWith(
-      isLoading: false,
-      step: BookingStatus.searching,
-      booking: state.booking,
-    ));
+    emit(
+      state.copyWith(
+        isLoading: false,
+        step: BookingStatus.searching,
+        booking: state.booking,
+      ),
+    );
   }
 
   Future<void> workerAccepted() async {
@@ -94,34 +99,15 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
         serviceTitle: booking.serviceTitle,
       );
       _repo.activeBooking = updated;
-      emit(state.copyWith(
-        isLoading: false,
-        step: updated.workerId != null
-            ? BookingStatus.accepted
-            : BookingStatus.searching,
-        booking: updated,
-      ));
-    } on ApiException catch (e) {
-      emit(state.copyWith(isLoading: false, errorMessage: e.message));
-    }
-  }
-
-  Future<void> startWork() async {
-    final booking = state.booking;
-    if (booking == null) return;
-    emit(state.copyWith(isLoading: true, clearError: true));
-    try {
-      final updated = await _bookings.verifyArrivalOtp(
-        bookingId: booking.id,
-        otp: '8492',
-        serviceTitle: booking.serviceTitle,
+      emit(
+        state.copyWith(
+          isLoading: false,
+          step: updated.workerId != null
+              ? BookingStatus.accepted
+              : BookingStatus.searching,
+          booking: updated,
+        ),
       );
-      _repo.activeBooking = updated;
-      emit(state.copyWith(
-        isLoading: false,
-        step: BookingStatus.inProgress,
-        booking: updated.copyWith(status: BookingStatus.inProgress),
-      ));
     } on ApiException catch (e) {
       emit(state.copyWith(isLoading: false, errorMessage: e.message));
     }
@@ -195,36 +181,13 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
 
       final paid = current.copyWith(status: BookingStatus.paid);
       _repo.activeBooking = paid;
-      emit(state.copyWith(
-        isLoading: false,
-        step: BookingStatus.paid,
-        booking: paid,
-      ));
-      return true;
-    } on ApiException catch (e) {
-      emit(state.copyWith(isLoading: false, errorMessage: e.message));
-      return false;
-    } catch (e) {
-      emit(state.copyWith(isLoading: false, errorMessage: e.toString()));
-      return false;
-    }
-  }
-
-  Future<bool> completeCashPayment() async {
-    final booking = state.booking;
-    if (booking == null) return false;
-    emit(state.copyWith(isLoading: true, clearError: true));
-    try {
-      await refreshBooking();
-      final current = state.booking ?? booking;
-      await _bookings.complete(current.id);
-      final completed = current.copyWith(status: BookingStatus.completed);
-      _repo.activeBooking = completed;
-      emit(state.copyWith(
-        isLoading: false,
-        step: BookingStatus.completed,
-        booking: completed,
-      ));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          step: BookingStatus.paid,
+          booking: paid,
+        ),
+      );
       return true;
     } on ApiException catch (e) {
       emit(state.copyWith(isLoading: false, errorMessage: e.message));

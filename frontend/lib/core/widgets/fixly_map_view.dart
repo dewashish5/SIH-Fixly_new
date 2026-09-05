@@ -8,6 +8,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import '../../app/theme/app_colors.dart';
 import '../constants/map_constants.dart';
 import '../constants/map_geo_utils.dart';
+import '../utils/navigation_math.dart';
 
 /// Mapbox map with route, worker progress, and service-area circle.
 class FixlyMapView extends StatefulWidget {
@@ -23,6 +24,8 @@ class FixlyMapView extends StatefulWidget {
     this.serviceRadiusKm,
     this.showDestinationPin = true,
     this.routeStart,
+    this.routeCoordinates = const [],
+    this.workerHeading,
     this.claimGestures = false,
     this.showZoomControls = true,
     this.showRecenterButton = false,
@@ -39,16 +42,24 @@ class FixlyMapView extends StatefulWidget {
   final double? routeProgress;
   final double? serviceRadiusKm;
   final bool showDestinationPin;
+
   /// Worker / route start. Defaults to [MapConstants.workerApproachStart].
   final MapCoordinate? routeStart;
+  final List<MapCoordinate> routeCoordinates;
+  final double? workerHeading;
+
   /// Win gesture arena vs parent [ScrollView] so user can pan/zoom the map.
   final bool claimGestures;
+
   /// Show floating '+' and '-' zoom buttons.
   final bool showZoomControls;
+
   /// Show floating recenter button to return to [center].
   final bool showRecenterButton;
+
   /// Callback when user moves the map / center coordinate (fires continuously during drag).
   final ValueChanged<MapCoordinate>? onLocationChanged;
+
   /// Callback fired ONCE after map becomes idle (user stopped dragging).
   final ValueChanged<MapCoordinate>? onMapIdled;
 
@@ -65,6 +76,10 @@ class _FixlyMapViewState extends State<FixlyMapView> {
   PolygonAnnotation? _areaPolygon;
   PointAnnotation? _destinationMarker;
   PointAnnotation? _workerMarker;
+  PointAnnotation? _startMarker;
+  Uint8List? _startImage;
+  Uint8List? _stopImage;
+  Uint8List? _bikeImage;
   String? _mapError;
   Timer? _idleDebounce;
 
@@ -79,25 +94,33 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     super.didUpdateWidget(oldWidget);
     if (_mapboxMap == null) return;
 
-    final changed = oldWidget.routeProgress != widget.routeProgress ||
+    final changed =
+        oldWidget.routeProgress != widget.routeProgress ||
         oldWidget.serviceRadiusKm != widget.serviceRadiusKm ||
         oldWidget.routeEnd != widget.routeEnd ||
         oldWidget.routeStart?.lat != widget.routeStart?.lat ||
         oldWidget.routeStart?.lng != widget.routeStart?.lng ||
+        oldWidget.routeCoordinates != widget.routeCoordinates ||
+        oldWidget.workerHeading != widget.workerHeading ||
         oldWidget.center?.lat != widget.center?.lat ||
         oldWidget.center?.lng != widget.center?.lng ||
         oldWidget.showDestinationPin != widget.showDestinationPin;
 
     if (changed) {
-      _refreshAnnotations();
+      _refreshAnnotations(fitCamera: false);
     }
   }
 
   Future<void> _onMapCreated(MapboxMap mapboxMap) async {
     _mapboxMap = mapboxMap;
+    _startImage = await _loadAsset('assets/icons/start.png');
+    _stopImage = await _loadAsset('assets/icons/stop.png');
+    _bikeImage = await _loadAsset('assets/icons/bike_marker.png');
     await mapboxMap.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
     await mapboxMap.compass.updateSettings(CompassSettings(enabled: false));
-    await mapboxMap.logo.updateSettings(LogoSettings(marginBottom: 8, marginLeft: 8));
+    await mapboxMap.logo.updateSettings(
+      LogoSettings(marginBottom: 8, marginLeft: 8),
+    );
     await mapboxMap.attribution.updateSettings(
       AttributionSettings(marginBottom: 8, marginRight: 8),
     );
@@ -111,11 +134,22 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       ),
     );
 
-    _polylineManager = await mapboxMap.annotations.createPolylineAnnotationManager();
-    _polygonManager = await mapboxMap.annotations.createPolygonAnnotationManager();
+    _polylineManager = await mapboxMap.annotations
+        .createPolylineAnnotationManager();
+    _polygonManager = await mapboxMap.annotations
+        .createPolygonAnnotationManager();
     _pointManager = await mapboxMap.annotations.createPointAnnotationManager();
 
     await _refreshAnnotations();
+  }
+
+  Future<Uint8List?> _loadAsset(String path) async {
+    try {
+      final data = await DefaultAssetBundle.of(context).load(path);
+      return data.buffer.asUint8List();
+    } catch (_) {
+      return null;
+    }
   }
 
   void _onCameraChanged() {
@@ -173,9 +207,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     try {
       final camera = await mapboxMap.getCameraState();
       await mapboxMap.setCamera(
-        CameraOptions(
-          zoom: (camera.zoom + 1.0).clamp(2.0, 20.0),
-        ),
+        CameraOptions(zoom: (camera.zoom + 1.0).clamp(2.0, 20.0)),
       );
     } catch (e) {
       debugPrint('FixlyMapView zoomIn error: $e');
@@ -188,9 +220,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     try {
       final camera = await mapboxMap.getCameraState();
       await mapboxMap.setCamera(
-        CameraOptions(
-          zoom: (camera.zoom - 1.0).clamp(2.0, 20.0),
-        ),
+        CameraOptions(zoom: (camera.zoom - 1.0).clamp(2.0, 20.0)),
       );
     } catch (e) {
       debugPrint('FixlyMapView zoomOut error: $e');
@@ -213,11 +243,13 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     }
   }
 
-  Future<void> _refreshAnnotations() async {
+  Future<void> _refreshAnnotations({bool fitCamera = true}) async {
     final polylineManager = _polylineManager;
     final polygonManager = _polygonManager;
     final pointManager = _pointManager;
-    if (polylineManager == null || polygonManager == null || pointManager == null) {
+    if (polylineManager == null ||
+        polygonManager == null ||
+        pointManager == null) {
       return;
     }
 
@@ -262,11 +294,13 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     }
 
     if (widget.routeEnd != null && start != null) {
+      final coordinates = widget.routeCoordinates.length >= 2
+          ? widget.routeCoordinates
+          : [start, widget.routeEnd!];
       final route = LineString(
-        coordinates: [
-          Position(start.lng, start.lat),
-          Position(widget.routeEnd!.lng, widget.routeEnd!.lat),
-        ],
+        coordinates: coordinates
+            .map((coordinate) => Position(coordinate.lng, coordinate.lat))
+            .toList(),
       );
       final routeOptions = PolylineAnnotationOptions(
         geometry: route,
@@ -293,8 +327,11 @@ class _FixlyMapViewState extends State<FixlyMapView> {
 
     if (widget.showDestinationPin) {
       final destinationOptions = PointAnnotationOptions(
-        geometry: Point(coordinates: Position(destination.lng, destination.lat)),
-        iconImage: 'marker-15',
+        geometry: Point(
+          coordinates: Position(destination.lng, destination.lat),
+        ),
+        image: _stopImage,
+        iconImage: _stopImage == null ? 'marker-15' : null,
         iconSize: 1.35,
         iconColor: AppColors.accent.toARGB32(),
         iconAnchor: IconAnchor.BOTTOM,
@@ -319,12 +356,37 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       _destinationMarker = null;
     }
 
+    if (start != null) {
+      final startOptions = PointAnnotationOptions(
+        geometry: Point(coordinates: Position(start.lng, start.lat)),
+        image: _startImage,
+        iconImage: _startImage == null ? 'marker-15' : null,
+        iconSize: 0.7,
+        iconAnchor: IconAnchor.BOTTOM,
+        textField: 'Worker',
+      );
+      if (_startMarker == null) {
+        _startMarker = await pointManager.create(startOptions);
+      } else {
+        _startMarker!
+          ..geometry = startOptions.geometry
+          ..image = startOptions.image;
+        await pointManager.update(_startMarker!);
+      }
+    }
+
     if (worker != null) {
       final workerOptions = PointAnnotationOptions(
         geometry: Point(coordinates: Position(worker.lng, worker.lat)),
-        iconImage: 'car-15',
-        iconSize: 1.25,
-        iconColor: AppColors.primary.toARGB32(),
+        image: _bikeImage,
+        iconImage: _bikeImage == null ? 'car-15' : null,
+        iconSize: 0.8,
+        iconColor: _bikeImage == null ? AppColors.primary.toARGB32() : null,
+        iconRotate:
+            widget.workerHeading ??
+            (start != null && widget.routeEnd != null
+                ? NavigationMath.bikeIconRotation(start, widget.routeEnd!)
+                : 0),
         iconAnchor: IconAnchor.CENTER,
         textField: start?.label ?? 'Worker',
         textSize: 12,
@@ -339,6 +401,8 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       } else {
         _workerMarker!
           ..geometry = workerOptions.geometry
+          ..image = workerOptions.image
+          ..iconRotate = workerOptions.iconRotate
           ..textField = workerOptions.textField;
         await pointManager.update(_workerMarker!);
       }
@@ -347,7 +411,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       _workerMarker = null;
     }
 
-    await _fitCamera();
+    if (fitCamera) await _fitCamera();
   }
 
   Future<void> _fitCamera() async {
@@ -363,14 +427,13 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       routeEnd: widget.routeEnd,
       routeProgress: widget.routeProgress,
       serviceRadiusKm: widget.serviceRadiusKm,
+      routeCoordinates: widget.routeCoordinates,
     );
 
     if (points.length <= 1) {
       await mapboxMap.setCamera(
         CameraOptions(
-          center: Point(
-            coordinates: Position(center.lng, center.lat),
-          ),
+          center: Point(coordinates: Position(center.lng, center.lat)),
           zoom: widget.zoom,
         ),
       );
@@ -420,15 +483,11 @@ class _FixlyMapViewState extends State<FixlyMapView> {
             textureView: true,
             gestureRecognizers: widget.claimGestures
                 ? <Factory<OneSequenceGestureRecognizer>>{
-                    Factory<EagerGestureRecognizer>(
-                      EagerGestureRecognizer.new,
-                    ),
+                    Factory<EagerGestureRecognizer>(EagerGestureRecognizer.new),
                   }
                 : null,
             viewport: CameraViewportState(
-              center: Point(
-                coordinates: Position(center.lng, center.lat),
-              ),
+              center: Point(coordinates: Position(center.lng, center.lat)),
               zoom: widget.zoom,
             ),
             onMapCreated: _onMapCreated,
@@ -445,7 +504,8 @@ class _FixlyMapViewState extends State<FixlyMapView> {
             routeProgress: widget.routeProgress,
             serviceRadiusKm: widget.serviceRadiusKm,
             showDestinationPin: widget.showDestinationPin,
-            message: _mapError ??
+            message:
+                _mapError ??
                 (MapConstants.hasToken ? null : 'Add ACCESS_TOKEN for Mapbox'),
           );
 
@@ -477,13 +537,13 @@ class _FixlyMapViewState extends State<FixlyMapView> {
               ),
             ),
           ),
-        if (widget.routeEnd != null && _mapError == null && MapConstants.hasToken)
-          const Positioned(
-            top: 12,
-            left: 12,
-            child: _MapLegend(),
-          ),
-        if (widget.showZoomControls && MapConstants.hasToken && _mapError == null)
+        if (widget.routeEnd != null &&
+            _mapError == null &&
+            MapConstants.hasToken)
+          const Positioned(top: 12, left: 12, child: _MapLegend()),
+        if (widget.showZoomControls &&
+            MapConstants.hasToken &&
+            _mapError == null)
           Positioned(
             right: 12,
             bottom: 12,
@@ -546,7 +606,9 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     final content = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: widget.borderRadius,
-        border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.8)),
+        border: Border.all(
+          color: AppColors.outlineVariant.withValues(alpha: 0.8),
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.primary.withValues(alpha: 0.06),
@@ -555,10 +617,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: widget.borderRadius,
-        child: mapChild,
-      ),
+      child: ClipRRect(borderRadius: widget.borderRadius, child: mapChild),
     );
 
     if (widget.expand) {
@@ -623,9 +682,9 @@ class _LegendRow extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -676,7 +735,10 @@ class _MapPreviewFallback extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
                   child: Text(
                     message!,
                     style: const TextStyle(color: Colors.white, fontSize: 10),
@@ -782,11 +844,7 @@ class _MapGridPainter extends CustomPainter {
 }
 
 class _MapControlBtn extends StatelessWidget {
-  const _MapControlBtn({
-    required this.icon,
-    required this.onTap,
-    this.tooltip,
-  });
+  const _MapControlBtn({required this.icon, required this.onTap, this.tooltip});
 
   final IconData icon;
   final VoidCallback onTap;
@@ -804,11 +862,7 @@ class _MapControlBtn extends StatelessWidget {
           child: SizedBox(
             width: 36,
             height: 36,
-            child: Icon(
-              icon,
-              size: 20,
-              color: AppColors.onSurface,
-            ),
+            child: Icon(icon, size: 20, color: AppColors.onSurface),
           ),
         ),
       ),

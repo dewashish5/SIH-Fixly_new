@@ -24,7 +24,8 @@ class _SignupPageState extends State<SignupPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _submitting = false; // instant local loader before cubit responds
+  bool _emailSubmitting = false;
+  bool _googleSubmitting = false;
 
   @override
   void initState() {
@@ -44,8 +45,8 @@ class _SignupPageState extends State<SignupPage> {
   AppSessionCubit get _cubit => context.read<AppSessionCubit>();
 
   Future<void> _handleSocial(Future<bool> Function() signUp) async {
-    if (_submitting) return;
-    setState(() => _submitting = true);
+    if (_googleSubmitting || _emailSubmitting) return;
+    setState(() => _googleSubmitting = true);
     try {
       final success = await signUp();
       if (!mounted || !success) {
@@ -62,17 +63,16 @@ class _SignupPageState extends State<SignupPage> {
       }
       context.go(_cubit.postAuthRoute());
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) setState(() => _googleSubmitting = false);
     }
   }
 
   Future<void> _signUp() async {
     FocusScope.of(context).unfocus(); // dismiss keyboard instantly
     if (!_formKey.currentState!.validate()) return;
-    if (_submitting) return;
+    if (_emailSubmitting || _googleSubmitting) return;
 
-    // Show loader immediately — before any async work.
-    setState(() => _submitting = true);
+    setState(() => _emailSubmitting = true);
 
     try {
       // Run GPS check concurrently with signup API — don't block UX waiting for it.
@@ -103,7 +103,7 @@ class _SignupPageState extends State<SignupPage> {
         context.push(RouteNames.otp);
       }
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) setState(() => _emailSubmitting = false);
     }
   }
 
@@ -112,7 +112,10 @@ class _SignupPageState extends State<SignupPage> {
     return BlocBuilder<AppSessionCubit, AppSessionState>(
       builder: (context, state) {
         final l10n = context.l10n;
-        final loading = _submitting || state.status == AppSessionStatus.loading;
+        final cubitLoading = state.status == AppSessionStatus.loading;
+        final emailLoading = _emailSubmitting || (cubitLoading && !_googleSubmitting);
+        final googleLoading = _googleSubmitting || (cubitLoading && _googleSubmitting);
+        final isBusy = emailLoading || googleLoading;
 
         return AuthCurvedShell(
           compact: true,
@@ -135,7 +138,7 @@ class _SignupPageState extends State<SignupPage> {
                   customerLabel: l10n.customer,
                   workerLabel: l10n.worker,
                   onChanged: _cubit.setRole,
-                  enabled: !loading,
+                  enabled: !isBusy,
                 ),
                 const SizedBox(height: 16),
                 AuthUnderlineField(
@@ -201,7 +204,7 @@ class _SignupPageState extends State<SignupPage> {
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) {
-                    if (!loading) _signUp();
+                    if (!isBusy) _signUp();
                   },
                   validator: (value) => Validators.requiredField(
                     value,
@@ -227,13 +230,14 @@ class _SignupPageState extends State<SignupPage> {
                 AuthDarkButton(
                   compact: true,
                   label: l10n.createAccount,
-                  loading: loading,
-                  onPressed: loading ? null : _signUp,
+                  loading: emailLoading,
+                  onPressed: isBusy ? null : _signUp,
                 ),
                 const SizedBox(height: 12),
                 AuthGoogleSquare(
                   compact: true,
-                  onPressed: loading
+                  loading: googleLoading,
+                  onPressed: isBusy
                       ? null
                       : () => _handleSocial(_cubit.signInWithGoogle),
                 ),

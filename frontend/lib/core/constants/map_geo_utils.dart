@@ -24,7 +24,8 @@ abstract final class MapGeoUtils {
         math.sin(latRad) * math.cos(angularDistance) +
             math.cos(latRad) * math.sin(angularDistance) * math.cos(bearing),
       );
-      final lng2 = lngRad +
+      final lng2 =
+          lngRad +
           math.atan2(
             math.sin(bearing) * math.sin(angularDistance) * math.cos(latRad),
             math.cos(angularDistance) - math.sin(latRad) * math.sin(lat2),
@@ -42,6 +43,7 @@ abstract final class MapGeoUtils {
     MapCoordinate? routeEnd,
     double? routeProgress,
     double? serviceRadiusKm,
+    List<MapCoordinate> routeCoordinates = const [],
   }) {
     final points = <Point>[
       Point(coordinates: Position(center.lng, center.lat)),
@@ -61,11 +63,7 @@ abstract final class MapGeoUtils {
     }
 
     if (routeEnd != null && routeStart != null) {
-      points.add(
-        Point(
-          coordinates: Position(routeStart.lng, routeStart.lat),
-        ),
-      );
+      points.add(Point(coordinates: Position(routeStart.lng, routeStart.lat)));
       final worker = MapConstants.lerpRoute(
         routeStart,
         routeEnd,
@@ -74,6 +72,13 @@ abstract final class MapGeoUtils {
       points.add(Point(coordinates: Position(worker.lng, worker.lat)));
       points.add(Point(coordinates: Position(routeEnd.lng, routeEnd.lat)));
     }
+
+    points.addAll(
+      routeCoordinates.map(
+        (coordinate) =>
+            Point(coordinates: Position(coordinate.lng, coordinate.lat)),
+      ),
+    );
 
     return points;
   }
@@ -94,15 +99,13 @@ abstract final class MapGeoUtils {
       math.sin(latRad) * math.cos(angularDistance) +
           math.cos(latRad) * math.sin(angularDistance) * math.cos(bearing),
     );
-    final lng2 = lngRad +
+    final lng2 =
+        lngRad +
         math.atan2(
           math.sin(bearing) * math.sin(angularDistance) * math.cos(latRad),
           math.cos(angularDistance) - math.sin(latRad) * math.sin(lat2),
         );
 
-    return MapCoordinate(
-      lat: lat2 * 180 / math.pi,
-      lng: lng2 * 180 / math.pi,
-    );
+    return MapCoordinate(lat: lat2 * 180 / math.pi, lng: lng2 * 180 / math.pi);
   }
 }

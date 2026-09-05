@@ -9,12 +9,12 @@ import '../../features/auth/presentation/pages/signup_page.dart';
 import '../../features/cooperative/presentation/pages/cooperative_welcome_page.dart';
 import '../../features/customer/presentation/cubit/booking_flow_cubit.dart';
 import '../../features/customer/presentation/cubit/tracking_cubit.dart';
-import '../../features/customer/presentation/pages/customer_add_parts_page.dart';
 import '../../features/customer/presentation/pages/customer_ai_discovery_page.dart';
 import '../../features/customer/presentation/pages/customer_ai_helper_page.dart';
 import '../../features/customer/presentation/pages/customer_ai_workers_page.dart';
 import '../../features/customer/presentation/pages/customer_booking_confirmation_page.dart';
 import '../../features/customer/presentation/pages/customer_booking_page.dart';
+import '../../features/customer/presentation/pages/customer_invoice_page.dart';
 import '../../features/customer/presentation/pages/customer_categories_page.dart';
 import '../../features/customer/presentation/pages/customer_finding_worker_page.dart';
 import '../../features/customer/presentation/pages/customer_home_booking_page.dart';
@@ -38,6 +38,7 @@ import '../../features/shared/presentation/cubit/support_cubit.dart';
 import '../../features/shared/presentation/pages/edit_profile_page.dart';
 import '../../features/shared/presentation/pages/notifications_page.dart';
 import '../../features/shared/presentation/pages/order_history_page.dart';
+import '../../features/shared/presentation/pages/booking_detail_page.dart';
 import '../../features/shared/presentation/pages/profile_hub_page.dart';
 import '../../features/shared/presentation/pages/settings_page.dart';
 import '../../features/shared/presentation/pages/sos_page.dart';
@@ -86,8 +87,7 @@ GoRouter createAppRouter() {
       _page(RouteNames.login, (_, s) => const LoginPage()),
       _page(RouteNames.signup, (_, s) => const SignupPage()),
       _page(RouteNames.otp, (_, s) => const OtpPage()),
-      if (kDebugMode)
-        _page(RouteNames.demo, (_, s) => const DemoHubPage()),
+      if (kDebugMode) _page(RouteNames.demo, (_, s) => const DemoHubPage()),
 
       StatefulShellRoute(
         builder: (context, state, navigationShell) {
@@ -104,10 +104,8 @@ GoRouter createAppRouter() {
             routes: [
               GoRoute(
                 path: RouteNames.customerHome,
-                pageBuilder: (context, state) => transitPage(
-                  state: state,
-                  child: const CustomerHomePage(),
-                ),
+                pageBuilder: (context, state) =>
+                    transitPage(state: state, child: const CustomerHomePage()),
                 routes: [
                   GoRoute(
                     path: 'categories',
@@ -134,17 +132,26 @@ GoRouter createAppRouter() {
           ),
           StatefulShellBranch(
             routes: [
-              _page(RouteNames.customerSearch, (_, s) => const CustomerSearchPage()),
+              _page(
+                RouteNames.customerSearch,
+                (_, s) => const CustomerSearchPage(),
+              ),
             ],
           ),
           StatefulShellBranch(
             routes: [
-              _page(RouteNames.customerAiHelper, (_, s) => const CustomerAiHelperPage()),
+              _page(
+                RouteNames.customerAiHelper,
+                (_, s) => const CustomerAiHelperPage(),
+              ),
             ],
           ),
           StatefulShellBranch(
             routes: [
-              _page(RouteNames.customerOrders, (_, s) => const OrderHistoryPage(showBack: false)),
+              _page(
+                RouteNames.customerOrders,
+                (_, s) => const OrderHistoryPage(showBack: false),
+              ),
             ],
           ),
           StatefulShellBranch(
@@ -231,7 +238,14 @@ GoRouter createAppRouter() {
           );
         },
         routes: [
-          _page(RouteNames.customerBooking, (_, s) => const CustomerBookingPage()),
+          _page(
+            RouteNames.customerBooking,
+            (_, s) => CustomerBookingPage(
+              workerId: s.uri.queryParameters['workerId'],
+              serviceId: s.uri.queryParameters['serviceId'],
+              categoryId: s.uri.queryParameters['category'],
+            ),
+          ),
           _page(
             RouteNames.customerPriceEstimate,
             (_, s) => const CustomerPriceEstimatePage(),
@@ -244,17 +258,36 @@ GoRouter createAppRouter() {
             RouteNames.customerWorkerAccepted,
             (_, s) => const CustomerWorkerAcceptedPage(),
           ),
-          _page(RouteNames.customerTracking, (_, s) => const CustomerTrackingPage()),
+          _page(
+            RouteNames.customerTracking,
+            (_, s) => CustomerTrackingPage(
+              bookingId: s.uri.queryParameters['bookingId'],
+            ),
+          ),
           _page(
             RouteNames.customerWorkStarted,
             (_, s) => const CustomerWorkStartedPage(),
           ),
-          _page(RouteNames.customerAddParts, (_, s) => const CustomerAddPartsPage()),
-          _page(RouteNames.customerPayment, (_, s) => const CustomerPaymentPage()),
-          _page(RouteNames.customerRating, (_, s) => const CustomerRatingPage()),
+          _page(
+            RouteNames.customerPayment,
+            (_, s) => const CustomerPaymentPage(),
+          ),
+          _page(
+            RouteNames.customerRating,
+            (_, s) => const CustomerRatingPage(),
+          ),
           _page(
             RouteNames.customerBookingConfirmation,
             (_, s) => const CustomerBookingConfirmationPage(),
+          ),
+          GoRoute(
+            path: RouteNames.customerInvoice,
+            pageBuilder: (context, state) => transitPage(
+              state: state,
+              child: CustomerInvoicePage(
+                bookingId: state.pathParameters['id']!,
+              ),
+            ),
           ),
         ],
       ),
@@ -267,6 +300,14 @@ GoRouter createAppRouter() {
           child: CustomerServiceDetailPage(
             serviceId: state.pathParameters['id']!,
           ),
+        ),
+      ),
+      GoRoute(
+        path: RouteNames.bookingDetail,
+        parentNavigatorKey: rootNavigatorKey,
+        pageBuilder: (context, state) => transitPage(
+          state: state,
+          child: BookingDetailPage(bookingId: state.pathParameters['id']!),
         ),
       ),
       _page(
@@ -296,6 +337,7 @@ GoRouter createAppRouter() {
           state: state,
           child: CustomerWorkerProfilePage(
             workerId: state.pathParameters['id']!,
+            serviceId: state.uri.queryParameters['serviceId'],
           ),
         ),
       ),
@@ -361,7 +403,8 @@ GoRouter createAppRouter() {
       ),
       _page(
         RouteNames.workerNavigation,
-        (_, s) => const WorkerNavigationPage(),
+        (_, s) =>
+            WorkerNavigationPage(bookingId: s.uri.queryParameters['bookingId']),
         overlay: true,
       ),
       _page(
@@ -452,9 +495,7 @@ GoRoute _page(
   return GoRoute(
     path: path,
     parentNavigatorKey: overlay ? rootNavigatorKey : null,
-    pageBuilder: (context, state) => transitPage(
-      state: state,
-      child: builder(context, state),
-    ),
+    pageBuilder: (context, state) =>
+        transitPage(state: state, child: builder(context, state)),
   );
 }

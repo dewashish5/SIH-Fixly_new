@@ -35,7 +35,8 @@ abstract final class WorkerSetupProfileMapper {
       if (certUri != null && certUri.isNotEmpty) certUri,
     ];
 
-    final workAddress = (loc.addressLabel != null && loc.addressLabel!.isNotEmpty)
+    final workAddress =
+        (loc.addressLabel != null && loc.addressLabel!.isNotEmpty)
         ? loc.addressLabel
         : null;
 
@@ -60,15 +61,14 @@ abstract final class WorkerSetupProfileMapper {
       if (panFront != null) 'panFrontPhoto': panFront,
       if (panBack != null) 'panBackPhoto': panBack,
       if (workAddress != null) 'workAddress': workAddress,
+      if (loc.hasFix) 'location': loc.toGeoJsonPointOrNull(),
       'payoutMethod': data.payoutMethod.name,
       'bank': {
         'accountHolderName': data.accountHolderName.trim(),
         'accountNumber': data.bankAccount.trim(),
         'ifscCode': data.ifscCode.trim().toUpperCase(),
       },
-      'upi': {
-        'upiId': data.upiId.trim(),
-      },
+      'upi': {'upiId': data.upiId.trim()},
     };
   }
 

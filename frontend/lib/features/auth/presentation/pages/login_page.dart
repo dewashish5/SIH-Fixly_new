@@ -21,7 +21,8 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _submitting = false; // instant local loader before cubit responds
+  bool _emailSubmitting = false;
+  bool _googleSubmitting = false;
 
   @override
   void initState() {
@@ -41,8 +42,8 @@ class _LoginPageState extends State<LoginPage> {
   AppSessionCubit get _cubit => context.read<AppSessionCubit>();
 
   Future<void> _handleSocial(Future<bool> Function() signIn) async {
-    if (_submitting) return;
-    setState(() => _submitting = true);
+    if (_googleSubmitting || _emailSubmitting) return;
+    setState(() => _googleSubmitting = true);
     try {
       final success = await signIn();
       if (!mounted || !success) {
@@ -59,15 +60,15 @@ class _LoginPageState extends State<LoginPage> {
       }
       context.go(_cubit.postAuthRoute());
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) setState(() => _googleSubmitting = false);
     }
   }
 
   Future<void> _login() async {
     FocusScope.of(context).unfocus(); // dismiss keyboard instantly
     if (!_formKey.currentState!.validate()) return;
-    if (_submitting) return;
-    setState(() => _submitting = true);
+    if (_emailSubmitting || _googleSubmitting) return;
+    setState(() => _emailSubmitting = true);
     try {
       final success = await _cubit.signInWithEmail(
         email: _emailController.text.trim(),
@@ -88,7 +89,7 @@ class _LoginPageState extends State<LoginPage> {
       }
       context.go(_cubit.postAuthRoute());
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) setState(() => _emailSubmitting = false);
     }
   }
 
@@ -120,7 +121,10 @@ class _LoginPageState extends State<LoginPage> {
     return BlocBuilder<AppSessionCubit, AppSessionState>(
       builder: (context, state) {
         final l10n = context.l10n;
-        final loading = _submitting || state.status == AppSessionStatus.loading;
+        final cubitLoading = state.status == AppSessionStatus.loading;
+        final emailLoading = _emailSubmitting || (cubitLoading && !_googleSubmitting);
+        final googleLoading = _googleSubmitting || (cubitLoading && _googleSubmitting);
+        final isBusy = emailLoading || googleLoading;
 
         return AuthCurvedShell(
           footer: AuthLinkRow(
@@ -151,7 +155,7 @@ class _LoginPageState extends State<LoginPage> {
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) {
-                    if (!loading) _login();
+                    if (!isBusy) _login();
                   },
                   validator: (value) =>
                       Validators.requiredField(value, label: l10n.password),
@@ -172,13 +176,13 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 20),
                 AuthDarkButton(
                   label: l10n.signIn,
-                  loading: loading,
-                  onPressed: loading ? null : _login,
+                  loading: emailLoading,
+                  onPressed: isBusy ? null : _login,
                 ),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: loading ? null : _forgotPassword,
+                    onPressed: isBusy ? null : _forgotPassword,
                     style: TextButton.styleFrom(
                       foregroundColor: context.scheme.primary,
                       minimumSize: const Size(48, 44),
@@ -196,7 +200,8 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 12),
                 AuthGoogleSquare(
-                  onPressed: loading
+                  loading: googleLoading,
+                  onPressed: isBusy
                       ? null
                       : () => _handleSocial(_cubit.signInWithGoogle),
                 ),

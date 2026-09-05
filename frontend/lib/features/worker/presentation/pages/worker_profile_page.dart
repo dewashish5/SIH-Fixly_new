@@ -23,6 +23,8 @@ class WorkerProfilePage extends StatefulWidget {
 }
 
 class _WorkerProfilePageState extends State<WorkerProfilePage> {
+  bool _refreshingLocation = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +59,25 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
     await context.read<ProfileCubit>().load();
   }
 
+  Future<void> _useCurrentLocation() async {
+    if (_refreshingLocation) return;
+    setState(() => _refreshingLocation = true);
+    try {
+      await context.read<ProfileCubit>().refreshCurrentLocation();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Current location saved to your profile')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save location: $e')));
+    } finally {
+      if (mounted) setState(() => _refreshingLocation = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -89,6 +110,9 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                         hourlyRate: state.hourlyRate,
                         experienceYears: state.experienceYears,
                         insured: state.insured,
+                        workAddress: state.workAddress,
+                        refreshingLocation: _refreshingLocation,
+                        onUseCurrentLocation: _useCurrentLocation,
                         onEditTap: () async {
                           await context.push(RouteNames.sharedEditProfile);
                           if (context.mounted) {
@@ -100,8 +124,9 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
 
                       // Bio snippet if available
                       if (state.bio.isNotEmpty) ...[
-                        _WorkerBioCard(bio: state.bio)
-                            .appListEnter(context, index: 1, id: 'bio'),
+                        _WorkerBioCard(
+                          bio: state.bio,
+                        ).appListEnter(context, index: 1, id: 'bio'),
                         const SizedBox(height: AppSpacing.lg),
                       ],
 
@@ -112,8 +137,9 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                           title: 'Specialized Skills',
                         ),
                         const SizedBox(height: AppSpacing.xs),
-                        _SkillsCard(skills: state.skills)
-                            .appListEnter(context, index: 2, id: 'skills'),
+                        _SkillsCard(
+                          skills: state.skills,
+                        ).appListEnter(context, index: 2, id: 'skills'),
                         const SizedBox(height: AppSpacing.lg),
                       ],
 
@@ -159,7 +185,8 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                             icon: Icons.support_agent_rounded,
                             iconColor: AppColors.primary,
                             title: l10n.support,
-                            subtitle: 'Cooperative worker help & emergency desk',
+                            subtitle:
+                                'Cooperative worker help & emergency desk',
                             onTap: () =>
                                 context.push(RouteNames.sharedSupportChat),
                           ),
@@ -205,6 +232,9 @@ class _WorkerHeroCard extends StatelessWidget {
     required this.hourlyRate,
     required this.experienceYears,
     required this.insured,
+    required this.workAddress,
+    required this.refreshingLocation,
+    required this.onUseCurrentLocation,
     required this.onEditTap,
   });
 
@@ -215,6 +245,9 @@ class _WorkerHeroCard extends StatelessWidget {
   final double hourlyRate;
   final int experienceYears;
   final bool insured;
+  final String workAddress;
+  final bool refreshingLocation;
+  final VoidCallback onUseCurrentLocation;
   final VoidCallback onEditTap;
 
   String _categoryLabel(String id) {
@@ -328,6 +361,42 @@ class _WorkerHeroCard extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              const Icon(
+                Icons.location_on_outlined,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  workAddress.isNotEmpty ? workAddress : 'Location not set',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: refreshingLocation ? null : onUseCurrentLocation,
+                tooltip: 'Use current location',
+                color: Colors.white,
+                icon: refreshingLocation
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.my_location_outlined),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.md),
           const Divider(color: Colors.white24, height: 1),
           const SizedBox(height: AppSpacing.md),
@@ -346,7 +415,9 @@ class _WorkerHeroCard extends StatelessWidget {
               Container(width: 1, height: 28, color: Colors.white24),
               _HeroMetric(
                 label: 'Experience',
-                value: experienceYears > 0 ? '$experienceYears yrs' : 'Verified',
+                value: experienceYears > 0
+                    ? '$experienceYears yrs'
+                    : 'Verified',
                 icon: Icons.work_history_outlined,
               ),
               Container(width: 1, height: 28, color: Colors.white24),
@@ -433,18 +504,18 @@ class _WorkerBioCard extends StatelessWidget {
                 Text(
                   'About Me',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: context.muted,
-                      ),
+                    fontWeight: FontWeight.w700,
+                    color: context.muted,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
               bio,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    height: 1.4,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(height: 1.4),
             ),
           ],
         ),
@@ -483,8 +554,10 @@ class _SkillsCard extends StatelessWidget {
           children: [
             for (final s in skills)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: scheme.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(AppRadius.full),
@@ -495,9 +568,9 @@ class _SkillsCard extends StatelessWidget {
                 child: Text(
                   _skillName(s),
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: scheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
           ],
@@ -526,10 +599,10 @@ class _SectionHeader extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: context.muted,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2,
-                ),
+              color: context.muted,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
           ),
         ],
       ),
@@ -557,10 +630,7 @@ class _WorkerMenuCard extends StatelessWidget {
           for (var i = 0; i < children.length; i++) ...[
             children[i],
             if (i < children.length - 1)
-              Divider(
-                height: 1,
-                color: scheme.outline.withValues(alpha: 0.15),
-              ),
+              Divider(height: 1, color: scheme.outline.withValues(alpha: 0.15)),
           ],
         ],
       ),
@@ -602,15 +672,15 @@ class _WorkerMenuTile extends StatelessWidget {
       ),
       title: Text(
         title,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
       ),
       subtitle: Text(
         subtitle,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: context.muted,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: context.muted),
       ),
       trailing: const Icon(Icons.chevron_right_rounded),
       onTap: onTap,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
@@ -12,11 +13,7 @@ import '../../../../shared/models/models.dart';
 import '../cubit/search_cubit.dart';
 
 class CustomerSearchPage extends StatelessWidget {
-  const CustomerSearchPage({
-    super.key,
-    this.categoryId,
-    this.showBack = false,
-  });
+  const CustomerSearchPage({super.key, this.categoryId, this.showBack = false});
 
   final String? categoryId;
   final bool showBack;
@@ -33,19 +30,13 @@ class CustomerSearchPage extends StatelessWidget {
         }
         return cubit;
       },
-      child: _CustomerSearchView(
-        categoryId: categoryId,
-        showBack: showBack,
-      ),
+      child: _CustomerSearchView(categoryId: categoryId, showBack: showBack),
     );
   }
 }
 
 class _CustomerSearchView extends StatefulWidget {
-  const _CustomerSearchView({
-    this.categoryId,
-    required this.showBack,
-  });
+  const _CustomerSearchView({this.categoryId, required this.showBack});
 
   final String? categoryId;
   final bool showBack;
@@ -55,8 +46,6 @@ class _CustomerSearchView extends StatefulWidget {
 }
 
 class _CustomerSearchViewState extends State<_CustomerSearchView> {
-  late final TextEditingController _controller;
-
   ServiceCategory? get _matchedCategory {
     final id = widget.categoryId?.toLowerCase().trim();
     if (id == null || id.isEmpty) return null;
@@ -78,34 +67,14 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
     return id[0].toUpperCase() + id.substring(1);
   }
 
-  @override
-  void initState() {
-    super.initState();
-    final query = context.read<SearchCubit>().state.query;
-    _controller = TextEditingController(text: query);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
   Future<void> _onRefresh() async {
     await context.read<SearchCubit>().refresh();
-    if (!mounted) return;
-    final query = context.read<SearchCubit>().state.query;
-    if (_controller.text != query) {
-      _controller.text = query;
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final locale = l10n.locale;
-    final isCategoryMode = widget.categoryId != null && widget.categoryId!.isNotEmpty;
-
     return AppScaffold(
       title: _categoryTitle,
       showBack: widget.showBack,
@@ -114,55 +83,30 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
         child: CustomScrollView(
           physics: appRefreshScrollPhysics,
           slivers: [
-            // 1. Hero Search & Category Intro
+            // 1. Category intro
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (isCategoryMode) ...[
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                  color: AppColors.primary.withValues(alpha: 0.2)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.verified_rounded,
-                                    size: 14, color: AppColors.primary),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Verified Specialists & Fixed Pricing',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelSmall
-                                      ?.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                    AppTextField(
-                      controller: _controller,
-                      hint: isCategoryMode
-                          ? 'Search in $_categoryTitle services or skills...'
-                          : l10n.searchHint,
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      onChanged: (q) => context.read<SearchCubit>().search(q),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.verified_rounded,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Verified Specialists & Fixed Pricing',
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -180,24 +124,29 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(
                           children: [
-                            const Icon(Icons.stars_rounded,
-                                size: 20, color: AppColors.accent),
+                            const Icon(
+                              Icons.stars_rounded,
+                              size: 20,
+                              color: AppColors.accent,
+                            ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 'Top Matching Specialists',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
+                                style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.w700),
                               ),
                             ),
                             if (state.nearbyWorkers.isNotEmpty)
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.success.withValues(alpha: 0.12),
+                                  color: AppColors.success.withValues(
+                                    alpha: 0.12,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -217,21 +166,25 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           'Ranked by highest rating, skill relevance & proximity',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: context.muted,
-                              ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: context.muted),
                         ),
                       ),
                       const SizedBox(height: 12),
                       if (state.isLoadingWorkers)
                         SizedBox(
                           height: 175,
-                          child: ListView.separated(
+                          child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             itemCount: 2,
-                            separatorBuilder: (context, index) => const SizedBox(width: 12),
-                            itemBuilder: (context, index) => const _WorkerSkeletonCard(),
+                            itemBuilder: (context, index) => Padding(
+                              padding: EdgeInsets.only(
+                                right: index == 1 ? 0 : 12,
+                              ),
+                              child: const _WorkerSkeletonCard(),
+                            ),
                           ),
                         )
                       else if (state.nearbyWorkers.isEmpty)
@@ -240,7 +193,9 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                           child: Container(
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(
-                                vertical: 16, horizontal: 16),
+                              vertical: 16,
+                              horizontal: 16,
+                            ),
                             decoration: BoxDecoration(
                               color: Theme.of(context)
                                   .colorScheme
@@ -254,23 +209,31 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: AppColors.accent.withValues(alpha: 0.15),
+                                    color: AppColors.accent.withValues(
+                                      alpha: 0.15,
+                                    ),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.person_search_rounded,
-                                      size: 24, color: AppColors.accentDark),
+                                  child: const Icon(
+                                    Icons.person_search_rounded,
+                                    size: 24,
+                                    color: AppColors.accentDark,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Auto-Matching Active',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyMedium
-                                            ?.copyWith(fontWeight: FontWeight.w700),
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
@@ -290,18 +253,48 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                       else
                         SizedBox(
                           height: 195,
-                          child: ListView.separated(
+                          child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: state.nearbyWorkers.length,
-                            separatorBuilder: (context, index) => const SizedBox(width: 12),
+                            itemCount:
+                                state.nearbyWorkers.length +
+                                (state.isLoadingMoreWorkers ? 1 : 0),
                             itemBuilder: (context, index) {
+                              if (index >= state.nearbyWorkers.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: _WorkerSkeletonCard(),
+                                );
+                              }
                               final worker = state.nearbyWorkers[index];
-                              return _WorkerCard(
-                                worker: worker,
-                                targetCategory: widget.categoryId ?? '',
-                                onTap: () => context.push(
-                                    '/customer/worker/${worker.id}'),
+                              final serviceId = state.results.isNotEmpty
+                                  ? state.results.first.id
+                                  : '';
+                              if (index >= state.nearbyWorkers.length - 2) {
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
+                                  if (context.mounted) {
+                                    context
+                                        .read<SearchCubit>()
+                                        .loadMoreWorkers();
+                                  }
+                                });
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: _WorkerCard(
+                                  worker: worker,
+                                  targetCategory:
+                                      widget.categoryId ??
+                                      state.categoryId ??
+                                      '',
+                                  onTap: () => context.push(
+                                    '/customer/worker/${worker.id}'
+                                    '?serviceId=${Uri.encodeComponent(serviceId)}'
+                                    '&category=${Uri.encodeComponent(widget.categoryId ?? state.categoryId ?? '')}',
+                                  ),
+                                ),
                               );
                             },
                           ),
@@ -319,15 +312,16 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    const Icon(Icons.home_repair_service_rounded,
-                        size: 20, color: AppColors.primary),
+                    const Icon(
+                      Icons.home_repair_service_rounded,
+                      size: 20,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         'Services in this Category',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -353,14 +347,15 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                       child: Center(
                         child: Column(
                           children: [
-                            Icon(Icons.search_off_rounded,
-                                size: 42, color: context.muted),
+                            Icon(
+                              Icons.search_off_rounded,
+                              size: 42,
+                              color: context.muted,
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               l10n.noServicesFound,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyLarge
+                              style: Theme.of(context).textTheme.bodyLarge
                                   ?.copyWith(color: context.muted),
                             ),
                           ],
@@ -372,22 +367,15 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                 return SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final service = state.results[index];
-                        return _ServicePackageTile(
-                          service: service,
-                          locale: locale,
-                          onTap: () =>
-                              context.push('/customer/service/${service.id}'),
-                        ).appListEnter(
-                          context,
-                          index: index,
-                          id: service.id,
-                        );
-                      },
-                      childCount: state.results.length,
-                    ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final service = state.results[index];
+                      return _ServicePackageTile(
+                        service: service,
+                        locale: locale,
+                        onTap: () =>
+                            context.push('/customer/service/${service.id}'),
+                      ).appListEnter(context, index: index, id: service.id);
+                    }, childCount: state.results.length),
                   ),
                 );
               },
@@ -454,21 +442,31 @@ class _WorkerCard extends StatelessWidget {
                           height: 46,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.primary, width: 1.5),
+                            border: Border.all(
+                              color: AppColors.primary,
+                              width: 1.5,
+                            ),
                           ),
                           child: ClipOval(
-                            child: (worker.avatarUrl != null &&
+                            child:
+                                (worker.avatarUrl != null &&
                                     worker.avatarUrl!.isNotEmpty)
                                 ? Image.network(
                                     worker.avatarUrl!,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => const Icon(
-                                        Icons.person_rounded,
-                                        size: 26,
-                                        color: AppColors.primary),
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            const Icon(
+                                              Icons.person_rounded,
+                                              size: 26,
+                                              color: AppColors.primary,
+                                            ),
                                   )
-                                : const Icon(Icons.person_rounded,
-                                    size: 26, color: AppColors.primary),
+                                : const Icon(
+                                    Icons.person_rounded,
+                                    size: 26,
+                                    color: AppColors.primary,
+                                  ),
                           ),
                         ),
                         if (worker.isVerified)
@@ -481,8 +479,11 @@ class _WorkerCard extends StatelessWidget {
                                 color: AppColors.success,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.check,
-                                  size: 10, color: Colors.white),
+                              child: const Icon(
+                                Icons.check,
+                                size: 10,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                       ],
@@ -496,26 +497,39 @@ class _WorkerCard extends StatelessWidget {
                             worker.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
+                            style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
+                          if (worker.title != null && worker.title!.isNotEmpty)
+                            Text(
+                              worker.title!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(color: context.muted),
+                            ),
                           const SizedBox(height: 2),
                           Row(
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 1.5),
+                                  horizontal: 6,
+                                  vertical: 1.5,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.accent.withValues(alpha: 0.15),
+                                  color: AppColors.accent.withValues(
+                                    alpha: 0.15,
+                                  ),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.star_rounded,
-                                        size: 13, color: AppColors.accentDark),
+                                    const Icon(
+                                      Icons.star_rounded,
+                                      size: 13,
+                                      color: AppColors.accentDark,
+                                    ),
                                     const SizedBox(width: 3),
                                     Text(
                                       worker.rating > 0
@@ -533,9 +547,7 @@ class _WorkerCard extends StatelessWidget {
                               const SizedBox(width: 6),
                               Text(
                                 '${worker.jobsCompleted} jobs',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelSmall
+                                style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(color: context.muted),
                               ),
                             ],
@@ -551,34 +563,42 @@ class _WorkerCard extends StatelessWidget {
                 Row(
                   children: [
                     if (worker.distanceKm != null) ...[
-                      const Icon(Icons.near_me_rounded,
-                          size: 13, color: AppColors.primary),
+                      const Icon(
+                        Icons.near_me_rounded,
+                        size: 13,
+                        color: AppColors.primary,
+                      ),
                       const SizedBox(width: 3),
                       Text(
-                        '${worker.distanceKm} km away',
+                        worker.distanceFormatted ??
+                            '${worker.distanceKm} km away',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const Spacer(),
                     ] else ...[
-                      const Icon(Icons.bolt_rounded,
-                          size: 14, color: AppColors.accent),
+                      const Icon(
+                        Icons.bolt_rounded,
+                        size: 14,
+                        color: AppColors.accent,
+                      ),
                       const SizedBox(width: 2),
                       Text(
                         'Fast dispatch',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: context.muted,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          color: context.muted,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const Spacer(),
                     ],
                     Text(
-                      worker.hourlyRate != null
-                          ? '₹${worker.hourlyRate!.toInt()}/hr'
-                          : 'Top Rated',
+                      worker.rateFormatted ??
+                          (worker.hourlyRate != null
+                              ? '₹${worker.hourlyRate!.toInt()}'
+                              : 'Top Rated'),
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -593,42 +613,83 @@ class _WorkerCard extends StatelessWidget {
                 Wrap(
                   spacing: 4,
                   runSpacing: 4,
-                  children: (worker.skills.isNotEmpty
-                          ? worker.skills.take(3)
-                          : ['General Service', 'Verified'])
-                      .map((skill) {
-                    final isMatching = normalizedCategory.isNotEmpty &&
-                        (skill.toLowerCase().contains(normalizedCategory) ||
-                            normalizedCategory.contains(skill.toLowerCase()));
+                  children:
+                      (worker.skills.isNotEmpty
+                              ? worker.skills.take(3)
+                              : ['General Service', 'Verified'])
+                          .map((skill) {
+                            final isMatching =
+                                normalizedCategory.isNotEmpty &&
+                                (skill.toLowerCase().contains(
+                                      normalizedCategory,
+                                    ) ||
+                                    normalizedCategory.contains(
+                                      skill.toLowerCase(),
+                                    ));
 
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: isMatching
-                            ? AppColors.primary.withValues(alpha: 0.1)
-                            : (context.isDark
-                                ? Colors.white10
-                                : const Color(0xfff1f5f9)),
-                        borderRadius: BorderRadius.circular(6),
-                        border: isMatching
-                            ? Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.3))
-                            : null,
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isMatching
+                                    ? AppColors.primary.withValues(alpha: 0.1)
+                                    : (context.isDark
+                                          ? Colors.white10
+                                          : const Color(0xfff1f5f9)),
+                                borderRadius: BorderRadius.circular(6),
+                                border: isMatching
+                                    ? Border.all(
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.3,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              child: Text(
+                                skill,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: isMatching
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isMatching
+                                      ? AppColors.primary
+                                      : (context.isDark
+                                            ? Colors.white70
+                                            : Colors.black87),
+                                ),
+                              ),
+                            );
+                          })
+                          .toList(),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      worker.isAvailable && worker.isOnline
+                          ? Icons.circle
+                          : Icons.circle_outlined,
+                      size: 10,
+                      color: worker.isAvailable && worker.isOnline
+                          ? AppColors.success
+                          : context.muted,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      worker.isAvailable && worker.isOnline
+                          ? 'Available now'
+                          : 'Currently unavailable',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: worker.isAvailable && worker.isOnline
+                            ? AppColors.success
+                            : context.muted,
+                        fontWeight: FontWeight.w600,
                       ),
-                      child: Text(
-                        skill,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight:
-                              isMatching ? FontWeight.w700 : FontWeight.w500,
-                          color: isMatching
-                              ? AppColors.primary
-                              : (context.isDark ? Colors.white70 : Colors.black87),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -644,49 +705,16 @@ class _WorkerSkeletonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.hairline),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 100,
-                      height: 12,
-                      color: Colors.grey.withValues(alpha: 0.15),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      width: 60,
-                      height: 10,
-                      color: Colors.grey.withValues(alpha: 0.12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+    return Shimmer.fromColors(
+      baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+      highlightColor: Theme.of(context).colorScheme.surface,
+      child: Container(
+        width: 260,
+        height: 175,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
     );
   }
@@ -708,7 +736,8 @@ class _ServicePackageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasImage = service.imageUrl != null && service.imageUrl!.trim().isNotEmpty;
+    final hasImage =
+        service.imageUrl != null && service.imageUrl!.trim().isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -740,20 +769,28 @@ class _ServicePackageTile extends StatelessWidget {
                     ? Image.network(
                         service.imageUrl!.trim(),
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const Icon(
-                            Icons.home_repair_service_rounded,
-                            color: Colors.white,
-                            size: 32),
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                              Icons.home_repair_service_rounded,
+                              color: Colors.white,
+                              size: 32,
+                            ),
                         loadingBuilder: (context, child, progress) {
                           if (progress == null) return child;
                           return const Center(
-                            child: Icon(Icons.home_repair_service_rounded,
-                                color: Colors.white, size: 28),
+                            child: Icon(
+                              Icons.home_repair_service_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                           );
                         },
                       )
-                    : const Icon(Icons.home_repair_service_rounded,
-                        color: Colors.white, size: 32),
+                    : const Icon(
+                        Icons.home_repair_service_rounded,
+                        color: Colors.white,
+                        size: 32,
+                      ),
               ),
             ),
             const SizedBox(width: 14),
@@ -765,10 +802,9 @@ class _ServicePackageTile extends StatelessWidget {
                 children: [
                   Text(
                     service.titleFor(locale),
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -776,9 +812,9 @@ class _ServicePackageTile extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: context.muted,
-                          fontSize: 12,
-                        ),
+                      color: context.muted,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -796,7 +832,9 @@ class _ServicePackageTile extends StatelessWidget {
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: (context.isDark
                                 ? Colors.white10
@@ -806,8 +844,11 @@ class _ServicePackageTile extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.access_time_rounded,
-                                  size: 11, color: AppColors.outline),
+                              const Icon(
+                                Icons.access_time_rounded,
+                                size: 11,
+                                color: AppColors.outline,
+                              ),
                               const SizedBox(width: 3),
                               Text(
                                 service.estimatedTime!,

@@ -6,6 +6,7 @@ import '../../../../app/router/route_names.dart';
 import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/widgets/shared_widgets.dart';
+import '../../../../shared/models/models.dart';
 import '../cubit/job_feed_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
 
@@ -42,17 +43,17 @@ class _WorkerJobFeedPageState extends State<WorkerJobFeedPage> {
                           final job = state.jobs[index];
                           return JobListTile(
                             title: job.title,
-                            subtitle: job.customerName,
+                            subtitle:
+                                '${job.customerName} • ${_jobStatus(job.status)}',
                             pay: job.pay,
                             distanceKm: job.distanceKm,
                             onTap: () => context.push(
-                              RouteNames.workerJobDetail.replaceFirst(':id', job.id),
+                              RouteNames.workerJobDetail.replaceFirst(
+                                ':id',
+                                job.id,
+                              ),
                             ),
-                          ).appListEnter(
-                            context,
-                            index: index,
-                            id: job.id,
-                          );
+                          ).appListEnter(context, index: index, id: job.id);
                         },
                       ),
                     ),
@@ -61,5 +62,16 @@ class _WorkerJobFeedPageState extends State<WorkerJobFeedPage> {
         );
       },
     );
+  }
+}
+
+String _jobStatus(JobStatus status) {
+  switch (status) {
+    case JobStatus.incoming:
+      return 'Incoming';
+    case JobStatus.active:
+      return 'Active';
+    case JobStatus.completed:
+      return 'Completed';
   }
 }

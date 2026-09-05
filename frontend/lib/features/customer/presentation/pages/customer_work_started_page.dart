@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
+import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/booking_flow_cubit.dart';
-import '../../../../core/constants/app_strings.dart';
 
 class CustomerWorkStartedPage extends StatelessWidget {
   const CustomerWorkStartedPage({super.key});
@@ -26,7 +23,7 @@ class CustomerWorkStartedPage extends StatelessWidget {
                 const StepProgressHeader(
                   currentStep: 4,
                   totalSteps: 5,
-                  title: 'Work started',
+                  title: 'Work in progress',
                 ),
                 Center(
                   child: Container(
@@ -41,8 +38,7 @@ class CustomerWorkStartedPage extends StatelessWidget {
                       size: 48,
                       color: AppColors.tertiary,
                     ),
-                  ).animate(onPlay: (c) => c.repeat())
-                      .rotate(duration: 3000.ms),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -53,51 +49,43 @@ class CustomerWorkStartedPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   state.service?.title ?? 'Service in progress',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.outline,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: AppColors.outline),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
                 AppCard(
-                  child: Column(
+                  child: const Column(
                     children: [
+                      _StatusRow(label: 'Worker arrived', done: true),
                       _StatusRow(
-                        label: 'Worker arrived',
-                        done: true,
-                      ),
-                      _StatusRow(
-                        label: 'Diagnosis complete',
-                        done: true,
-                      ),
-                      _StatusRow(
-                        label: 'Repair in progress',
+                        label: 'Service is in progress',
                         done: true,
                         active: true,
                       ),
                       _StatusRow(
-                        label: 'Quality check',
+                        label: 'Payment will be available after completion',
                         done: false,
                       ),
                     ],
                   ),
-                ).animate().fadeIn(delay: 200.ms),
-                const SizedBox(height: 24),
-                PrimaryButton(
-                  label: 'Add Parts (if needed)',
-                  onPressed: () => context.push(RouteNames.customerAddParts),
-                ),
-                const SizedBox(height: 12),
-                SecondaryButton(
-                  label: 'Proceed to Payment',
-                  onPressed: () async {
-                    await context.read<BookingFlowCubit>().startWork();
-                    if (context.mounted) {
-                      context.push(RouteNames.customerPayment);
-                    }
-                  },
                 ),
                 const SizedBox(height: 24),
+                AppCard(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: AppColors.primary),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'The final invoice and Razorpay payment option will appear when the worker completes the job.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           );
@@ -132,11 +120,13 @@ class _StatusRow extends StatelessWidget {
             size: 22,
           ),
           const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-              color: active ? context.ink : context.muted,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                color: active ? context.ink : context.muted,
+              ),
             ),
           ),
         ],

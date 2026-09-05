@@ -41,6 +41,7 @@ class AppUser extends Equatable {
   final String? eshramUan;
   final bool insured;
   final bool isVerified;
+
   /// True when API returned a non-empty workerProfile (onboarding submitted).
   final bool hasWorkerProfile;
   final String? bio;
@@ -60,31 +61,31 @@ class AppUser extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        phone,
-        email,
-        role,
-        avatar,
-        eshramUan,
-        insured,
-        isVerified,
-        hasWorkerProfile,
-        bio,
-        workAddress,
-        category,
-        categories,
-        skills,
-        hourlyRate,
-        experienceYears,
-        gender,
-        upiId,
-        emergencyName,
-        emergencyPhone,
-        emergencyRelation,
-        homeCity,
-        homePincode,
-      ];
+    id,
+    name,
+    phone,
+    email,
+    role,
+    avatar,
+    eshramUan,
+    insured,
+    isVerified,
+    hasWorkerProfile,
+    bio,
+    workAddress,
+    category,
+    categories,
+    skills,
+    hourlyRate,
+    experienceYears,
+    gender,
+    upiId,
+    emergencyName,
+    emergencyPhone,
+    emergencyRelation,
+    homeCity,
+    homePincode,
+  ];
 }
 
 class WorkerProfile extends Equatable {
@@ -98,8 +99,23 @@ class WorkerProfile extends Equatable {
     this.avatarUrl,
     this.insured = false,
     this.category,
+    this.title,
     this.hourlyRate,
+    this.minimumCharge,
+    this.rateFormatted,
     this.distanceKm,
+    this.distanceFormatted,
+    this.isOnline = false,
+    this.isAvailable = false,
+    this.reviewCount = 0,
+    this.reviews = const [],
+    this.onTimeArrival,
+    this.completionRate,
+    this.customerFeedback,
+    this.cancellationRate,
+    this.serviceRadiusKm,
+    this.kycStatus,
+    this.isEmailVerified = false,
     this.bio,
     this.experienceYears,
     this.isVerified = true,
@@ -114,28 +130,75 @@ class WorkerProfile extends Equatable {
   final String? avatarUrl;
   final bool insured;
   final String? category;
+  final String? title;
   final double? hourlyRate;
+  final double? minimumCharge;
+  final String? rateFormatted;
   final double? distanceKm;
+  final String? distanceFormatted;
+  final bool isOnline;
+  final bool isAvailable;
+  final int reviewCount;
+  final List<WorkerReview> reviews;
+  final double? onTimeArrival;
+  final double? completionRate;
+  final double? customerFeedback;
+  final double? cancellationRate;
+  final double? serviceRadiusKm;
+  final String? kycStatus;
+  final bool isEmailVerified;
   final String? bio;
   final int? experienceYears;
   final bool isVerified;
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        skills,
-        rating,
-        jobsCompleted,
-        reliabilityScore,
-        insured,
-        category,
-        hourlyRate,
-        distanceKm,
-        bio,
-        experienceYears,
-        isVerified,
-      ];
+    id,
+    name,
+    skills,
+    rating,
+    jobsCompleted,
+    reliabilityScore,
+    insured,
+    category,
+    title,
+    hourlyRate,
+    minimumCharge,
+    rateFormatted,
+    distanceKm,
+    distanceFormatted,
+    isOnline,
+    isAvailable,
+    reviewCount,
+    reviews,
+    onTimeArrival,
+    completionRate,
+    customerFeedback,
+    cancellationRate,
+    serviceRadiusKm,
+    kycStatus,
+    isEmailVerified,
+    bio,
+    experienceYears,
+    isVerified,
+  ];
+}
+
+class WorkerReview extends Equatable {
+  const WorkerReview({
+    required this.reviewerName,
+    required this.rating,
+    required this.comment,
+    this.createdAt,
+  });
+
+  final String reviewerName;
+  final double rating;
+  final String comment;
+  final DateTime? createdAt;
+
+  @override
+  List<Object?> get props => [reviewerName, rating, comment, createdAt];
 }
 
 class ServiceItem extends Equatable {
@@ -175,26 +238,19 @@ class ServiceItem extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        categoryId,
-        title,
-        priceFrom,
-        rating,
-        imageUrl,
-        estimatedTime,
-        whatsIncluded,
-        isActive,
-      ];
+    id,
+    categoryId,
+    title,
+    priceFrom,
+    rating,
+    imageUrl,
+    estimatedTime,
+    whatsIncluded,
+    isActive,
+  ];
 }
 
-enum BookingStatus {
-  draft,
-  searching,
-  accepted,
-  inProgress,
-  completed,
-  paid,
-}
+enum BookingStatus { draft, searching, accepted, inProgress, completed, paid }
 
 class BookingAddOn extends Equatable {
   const BookingAddOn({
@@ -209,6 +265,47 @@ class BookingAddOn extends Equatable {
 
   @override
   List<Object?> get props => [title, price, quantity];
+}
+
+class BookingInvoice extends Equatable {
+  const BookingInvoice({
+    required this.bookingId,
+    required this.serviceName,
+    required this.status,
+    required this.baseServiceFee,
+    required this.extraPartsTotal,
+    required this.platformFee,
+    required this.totalAmount,
+    this.paymentStatus,
+    this.paymentMethod,
+    this.customerName,
+    this.customerPhone,
+    this.workerName,
+    this.workerPhone,
+    this.addOns = const [],
+    this.jobStartedAt,
+    this.jobCompletedAt,
+  });
+
+  final String bookingId;
+  final String serviceName;
+  final String status;
+  final double baseServiceFee;
+  final double extraPartsTotal;
+  final double platformFee;
+  final double totalAmount;
+  final String? paymentStatus;
+  final String? paymentMethod;
+  final String? customerName;
+  final String? customerPhone;
+  final String? workerName;
+  final String? workerPhone;
+  final List<BookingAddOn> addOns;
+  final DateTime? jobStartedAt;
+  final DateTime? jobCompletedAt;
+
+  @override
+  List<Object?> get props => [bookingId, totalAmount, paymentStatus, addOns];
 }
 
 class Booking extends Equatable {
@@ -226,6 +323,26 @@ class Booking extends Equatable {
     this.baseServiceFee,
     this.platformFee,
     this.extraPartsTotal,
+    this.displayId,
+    this.serviceCategory,
+    this.serviceImage,
+    this.estimatedTime,
+    this.whatsIncluded = const [],
+    this.problemDescription,
+    this.problemPhotos = const [],
+    this.problemVideos = const [],
+    this.paymentMethod,
+    this.paymentStatus,
+    this.arrivalOtp,
+    this.createdAt,
+    this.jobStartedAt,
+    this.jobCompletedAt,
+    this.isReviewed = false,
+    this.workerAvatar,
+    this.customerName,
+    this.customerPhone,
+    this.customerLat,
+    this.customerLng,
   });
 
   final String id;
@@ -241,6 +358,26 @@ class Booking extends Equatable {
   final double? baseServiceFee;
   final double? platformFee;
   final double? extraPartsTotal;
+  final String? displayId;
+  final String? serviceCategory;
+  final String? serviceImage;
+  final String? estimatedTime;
+  final List<String> whatsIncluded;
+  final String? problemDescription;
+  final List<String> problemPhotos;
+  final List<String> problemVideos;
+  final String? paymentMethod;
+  final String? paymentStatus;
+  final String? arrivalOtp;
+  final DateTime? createdAt;
+  final DateTime? jobStartedAt;
+  final DateTime? jobCompletedAt;
+  final bool isReviewed;
+  final String? workerAvatar;
+  final String? customerName;
+  final String? customerPhone;
+  final double? customerLat;
+  final double? customerLng;
 
   Booking copyWith({
     BookingStatus? status,
@@ -266,19 +403,44 @@ class Booking extends Equatable {
       baseServiceFee: baseServiceFee ?? this.baseServiceFee,
       platformFee: platformFee ?? this.platformFee,
       extraPartsTotal: extraPartsTotal ?? this.extraPartsTotal,
+      displayId: displayId,
+      serviceCategory: serviceCategory,
+      serviceImage: serviceImage,
+      estimatedTime: estimatedTime,
+      whatsIncluded: whatsIncluded,
+      problemDescription: problemDescription,
+      problemPhotos: problemPhotos,
+      problemVideos: problemVideos,
+      paymentMethod: paymentMethod,
+      paymentStatus: paymentStatus,
+      arrivalOtp: arrivalOtp,
+      createdAt: createdAt,
+      jobStartedAt: jobStartedAt,
+      jobCompletedAt: jobCompletedAt,
+      isReviewed: isReviewed,
+      workerAvatar: workerAvatar,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      customerLat: customerLat,
+      customerLng: customerLng,
     );
   }
 
   @override
   List<Object?> get props => [
-        id,
-        serviceId,
-        serviceTitle,
-        status,
-        estimatedPrice,
-        workerId,
-        addOns,
-      ];
+    id,
+    serviceId,
+    serviceTitle,
+    status,
+    estimatedPrice,
+    workerId,
+    addOns,
+    displayId,
+    problemDescription,
+    paymentStatus,
+    createdAt,
+    customerName,
+  ];
 }
 
 enum JobStatus { incoming, active, completed }
@@ -292,6 +454,8 @@ class WorkerJob extends Equatable {
     required this.pay,
     required this.status,
     required this.distanceKm,
+    this.customerLat,
+    this.customerLng,
   });
 
   final String id;
@@ -301,6 +465,8 @@ class WorkerJob extends Equatable {
   final double pay;
   final JobStatus status;
   final double distanceKm;
+  final double? customerLat;
+  final double? customerLng;
 
   WorkerJob copyWith({JobStatus? status}) {
     return WorkerJob(
@@ -311,11 +477,13 @@ class WorkerJob extends Equatable {
       pay: pay,
       status: status ?? this.status,
       distanceKm: distanceKm,
+      customerLat: customerLat,
+      customerLng: customerLng,
     );
   }
 
   @override
-  List<Object?> get props => [id, title, pay, status];
+  List<Object?> get props => [id, title, pay, status, customerLat, customerLng];
 }
 
 class WalletTransaction extends Equatable {
@@ -360,10 +528,10 @@ enum WorkerGender { male, female, other }
 
 extension WorkerGenderX on WorkerGender {
   String get label => switch (this) {
-        WorkerGender.male => 'Male',
-        WorkerGender.female => 'Female',
-        WorkerGender.other => 'Other',
-      };
+    WorkerGender.male => 'Male',
+    WorkerGender.female => 'Female',
+    WorkerGender.other => 'Other',
+  };
 }
 
 class OnboardingFormData extends Equatable {
@@ -414,6 +582,7 @@ class OnboardingFormData extends Equatable {
   final String? panFrontPath;
   final String? panBackPath;
   final List<String> skills;
+
   /// Hourly rate (₹) per skill/category id.
   final Map<String, int> categoryRates;
   final int experienceYears;
@@ -439,8 +608,7 @@ class OnboardingFormData extends Equatable {
       (aadhaarBackPath?.isNotEmpty ?? false);
 
   bool get hasPanPhotos =>
-      (panFrontPath?.isNotEmpty ?? false) &&
-      (panBackPath?.isNotEmpty ?? false);
+      (panFrontPath?.isNotEmpty ?? false) && (panBackPath?.isNotEmpty ?? false);
 
   /// Primary rate for API `rate` / `hourlyRate` — first selected skill with a rate.
   int get primaryRate {
@@ -454,12 +622,7 @@ class OnboardingFormData extends Equatable {
   /// API-shaped rows: `{ category, rate }`.
   List<Map<String, dynamic>> get categoryRatesPayload => skills
       .where((id) => (categoryRates[id] ?? 0) > 0)
-      .map(
-        (id) => {
-          'category': id,
-          'rate': categoryRates[id],
-        },
-      )
+      .map((id) => {'category': id, 'rate': categoryRates[id]})
       .toList();
 
   OnboardingFormData copyWith({
@@ -546,37 +709,37 @@ class OnboardingFormData extends Equatable {
 
   @override
   List<Object?> get props => [
-        fullName,
-        phone,
-        email,
-        dateOfBirth,
-        gender,
-        aadhaar,
-        pan,
-        aadhaarFrontPath,
-        aadhaarBackPath,
-        panFrontPath,
-        panBackPath,
-        skills,
-        categoryRates,
-        experienceYears,
-        bio,
-        serviceRadiusKm,
-        hasEshram,
-        eshramUan,
-        payoutMethod,
-        accountHolderName,
-        bankAccount,
-        ifscCode,
-        upiId,
-        bankVerified,
-        upiVerified,
-        certificateUploaded,
-        certificatePath,
-        certificateFileName,
-        selfieVerified,
-        selfieImageUrl,
-      ];
+    fullName,
+    phone,
+    email,
+    dateOfBirth,
+    gender,
+    aadhaar,
+    pan,
+    aadhaarFrontPath,
+    aadhaarBackPath,
+    panFrontPath,
+    panBackPath,
+    skills,
+    categoryRates,
+    experienceYears,
+    bio,
+    serviceRadiusKm,
+    hasEshram,
+    eshramUan,
+    payoutMethod,
+    accountHolderName,
+    bankAccount,
+    ifscCode,
+    upiId,
+    bankVerified,
+    upiVerified,
+    certificateUploaded,
+    certificatePath,
+    certificateFileName,
+    selfieVerified,
+    selfieImageUrl,
+  ];
 }
 
 enum PayoutMethod { bank, upi }

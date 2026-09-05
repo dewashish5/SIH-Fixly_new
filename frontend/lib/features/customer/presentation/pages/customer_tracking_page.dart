@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/theme_x.dart';
-import '../../../../core/constants/map_constants.dart';
-import '../../../../core/location/app_location.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/widgets/fixly_map_view.dart';
+import '../../../../core/constants/map_constants.dart';
 import '../cubit/booking_flow_cubit.dart';
 import '../cubit/tracking_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
 
 class CustomerTrackingPage extends StatefulWidget {
-  const CustomerTrackingPage({super.key});
+  const CustomerTrackingPage({super.key, this.bookingId});
+
+  final String? bookingId;
 
   @override
   State<CustomerTrackingPage> createState() => _CustomerTrackingPageState();
@@ -25,8 +22,18 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
   @override
   void initState() {
     super.initState();
-    final workerName = context.read<BookingFlowCubit>().state.booking?.workerName;
-    context.read<TrackingCubit>().startTracking(workerName: workerName);
+    final booking = context.read<BookingFlowCubit>().state.booking;
+    context.read<TrackingCubit>().startTracking(
+      bookingId: widget.bookingId ?? booking?.id,
+      workerName: booking?.workerName,
+      destination: booking?.customerLat == null || booking?.customerLng == null
+          ? null
+          : MapCoordinate(
+              lat: booking!.customerLat!,
+              lng: booking.customerLng!,
+              label: 'Customer',
+            ),
+    );
   }
 
   @override
@@ -34,31 +41,25 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
     final l10n = context.l10n;
     return AppScaffold(
       title: l10n.liveTracking,
-      body: BlocConsumer<TrackingCubit, TrackingState>(
-        listenWhen: (prev, curr) => curr.phase == TrackingPhase.arrived,
-        listener: (context, state) {
-          if (state.phase == TrackingPhase.arrived) {
-            Future.delayed(const Duration(seconds: 1), () {
-              if (context.mounted) {
-                context.push(RouteNames.customerWorkStarted);
-              }
-            });
-          }
-        },
+      body: BlocBuilder<TrackingCubit, TrackingState>(
         builder: (context, state) {
           return SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                  FixlyMapView(
+                FixlyMapView(
                   height: 320,
                   borderRadius: BorderRadius.circular(20),
-                  center: MapConstants.current,
+                  center: state.customerPosition,
                   zoom: MapConstants.navigationZoom,
-                  routeEnd: MapConstants.current,
-                  routeStart: MapConstants.workerApproachStart,
-                  routeProgress: state.progress,
-                ).animate().fadeIn(),
+                  routeEnd: state.customerPosition,
+                  routeStart: state.workerPosition,
+                  routeCoordinates: state.routeCoordinates,
+                  routeProgress: 0,
+                  claimGestures: true,
+                  showZoomControls: true,
+                  showRecenterButton: true,
+                ),
                 const SizedBox(height: 24),
                 Text(
                   state.phaseLabelFor(l10n.locale),
@@ -70,36 +71,11 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 16),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: state.progress,
-                    minHeight: 8,
-                    backgroundColor: context.scheme.surfaceContainerHighest,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      l10n.percentComplete
-                          .replaceFirst('%s', '${(state.progress * 100).toInt()}'),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    Text(
-                      state.etaMinutes > 0
-                          ? l10n.etaFormat.replaceFirst(
-                              '%s',
-                              '${state.etaMinutes}',
-                            )
-                          : l10n.arrived,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
+                Text(
+                  state.workerPosition == null
+                      ? 'Waiting for live worker location'
+                      : 'Live location updates are active',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 32),
                 AppCard(
@@ -116,12 +92,8 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                               style: Theme.of(context).textTheme.labelMedium,
                             ),
                             Text(
-                              context
-                                      .read<BookingFlowCubit>()
-                                      .state
-                                      .address ??
-                                  AppLocation.instance.addressLabel ??
-                                  'Current location',
+                              context.read<BookingFlowCubit>().state.address ??
+                                  'Customer location',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ],
@@ -131,12 +103,6 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                if (state.phase != TrackingPhase.arrived)
-                  PrimaryButton(
-                    label: l10n.skipToWorkStarted,
-                    onPressed: () =>
-                        context.push(RouteNames.customerWorkStarted),
-                  ),
                 const SizedBox(height: 24),
               ],
             ),

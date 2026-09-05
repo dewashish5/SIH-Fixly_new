@@ -2,6 +2,8 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/location/app_location.dart';
+import '../../../../core/location/location_service.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../../auth/data/auth_api_repository.dart';
@@ -9,15 +11,25 @@ import '../../../auth/data/auth_api_repository.dart';
 part 'profile_state.dart';
 
 class ProfileCubit extends Cubit<ProfileState> {
-  ProfileCubit({
-    MockRepository? repository,
-    AuthApiRepository? authRepository,
-  })  : _repo = repository ?? MockRepository.instance,
-        _auth = authRepository ?? AuthApiRepository(),
-        super(const ProfileState());
+  ProfileCubit({MockRepository? repository, AuthApiRepository? authRepository})
+    : _repo = repository ?? MockRepository.instance,
+      _auth = authRepository ?? AuthApiRepository(),
+      super(const ProfileState());
 
   final MockRepository _repo;
   final AuthApiRepository _auth;
+
+  Future<bool> refreshCurrentLocation() async {
+    final refreshed = await LocationService.instance.refreshCurrentPosition();
+    if (!refreshed || !AppLocation.instance.hasFix) return false;
+
+    await _auth.saveCurrentWorkerLocation();
+    final address = AppLocation.instance.addressLabel;
+    if (address != null && address.isNotEmpty) {
+      emit(state.copyWith(workAddress: address));
+    }
+    return true;
+  }
 
   Future<void> load() async {
     emit(state.copyWith(status: ProfileStatus.loading, clearError: true));
@@ -183,10 +195,7 @@ class ProfileCubit extends Cubit<ProfileState> {
       );
     } on ApiException catch (e) {
       emit(
-        state.copyWith(
-          status: ProfileStatus.error,
-          errorMessage: e.message,
-        ),
+        state.copyWith(status: ProfileStatus.error, errorMessage: e.message),
       );
       rethrow;
     }

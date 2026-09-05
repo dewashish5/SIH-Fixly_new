@@ -19,19 +19,19 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     MockRepository? repository,
     AppPreferences? preferences,
     AuthApiRepository? authRepository,
-  })  : _repo = repository ?? MockRepository.instance,
-        _prefs = preferences ?? AppPreferences.instance,
-        _auth = authRepository ?? AuthApiRepository(),
-        super(
-          AppSessionState(
-            locale: (preferences ?? AppPreferences.instance).locale,
-            themeMode: (preferences ?? AppPreferences.instance).themeMode,
-            languageSelected:
-                (preferences ?? AppPreferences.instance).languageSelected,
-            notificationsEnabled:
-                (preferences ?? AppPreferences.instance).notificationsEnabled,
-          ),
-        ) {
+  }) : _repo = repository ?? MockRepository.instance,
+       _prefs = preferences ?? AppPreferences.instance,
+       _auth = authRepository ?? AuthApiRepository(),
+       super(
+         AppSessionState(
+           locale: (preferences ?? AppPreferences.instance).locale,
+           themeMode: (preferences ?? AppPreferences.instance).themeMode,
+           languageSelected:
+               (preferences ?? AppPreferences.instance).languageSelected,
+           notificationsEnabled:
+               (preferences ?? AppPreferences.instance).notificationsEnabled,
+         ),
+       ) {
     _repo.locale = state.locale;
   }
 
@@ -67,6 +67,13 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     }
     _repo.currentUser = session.user;
     _repo.selectedRole = session.user.role;
+    if (session.user.role == UserRole.worker) {
+      try {
+        await _auth.saveCurrentWorkerLocation();
+      } catch (_) {
+        // Location sync must not prevent a worker from opening the app.
+      }
+    }
     emit(
       state.copyWith(
         role: session.user.role == UserRole.worker ? 'worker' : 'customer',
@@ -129,10 +136,12 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       _applySession(session);
       return true;
     } on ApiException catch (e) {
-      emit(state.copyWith(
-        status: AppSessionStatus.initial,
-        errorMessage: e.message,
-      ));
+      emit(
+        state.copyWith(
+          status: AppSessionStatus.initial,
+          errorMessage: e.message,
+        ),
+      );
       return false;
     } on GoogleSignInException catch (e) {
       final canceled = e.code == GoogleSignInExceptionCode.canceled;
@@ -140,19 +149,23 @@ class AppSessionCubit extends Cubit<AppSessionState> {
           e.code == GoogleSignInExceptionCode.clientConfigurationError;
       final message = configError
           ? 'Google Sign-In not configured. Add Firebase config files — '
-              'see assets/config/README in project.'
+                'see assets/config/README in project.'
           : ApiException.fromError(e);
-      emit(state.copyWith(
-        status: AppSessionStatus.initial,
-        errorMessage: canceled ? null : message,
-        clearError: canceled,
-      ));
+      emit(
+        state.copyWith(
+          status: AppSessionStatus.initial,
+          errorMessage: canceled ? null : message,
+          clearError: canceled,
+        ),
+      );
       return false;
     } catch (e) {
-      emit(state.copyWith(
-        status: AppSessionStatus.initial,
-        errorMessage: ApiException.fromError(e),
-      ));
+      emit(
+        state.copyWith(
+          status: AppSessionStatus.initial,
+          errorMessage: ApiException.fromError(e),
+        ),
+      );
       return false;
     }
   }
@@ -161,26 +174,32 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     required String email,
     required String password,
   }) async {
-    emit(state.copyWith(
-      email: email,
-      status: AppSessionStatus.loading,
-      clearError: true,
-    ));
+    emit(
+      state.copyWith(
+        email: email,
+        status: AppSessionStatus.loading,
+        clearError: true,
+      ),
+    );
     try {
       final session = await _auth.login(email: email, password: password);
       _applySession(session);
       return true;
     } on ApiException catch (e) {
-      emit(state.copyWith(
-        status: AppSessionStatus.initial,
-        errorMessage: e.message,
-      ));
+      emit(
+        state.copyWith(
+          status: AppSessionStatus.initial,
+          errorMessage: e.message,
+        ),
+      );
       return false;
     } catch (e) {
-      emit(state.copyWith(
-        status: AppSessionStatus.initial,
-        errorMessage: ApiException.fromError(e),
-      ));
+      emit(
+        state.copyWith(
+          status: AppSessionStatus.initial,
+          errorMessage: ApiException.fromError(e),
+        ),
+      );
       return false;
     }
   }
@@ -196,14 +215,16 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     required String password,
     required String phone,
   }) async {
-    emit(state.copyWith(
-      email: email,
-      phone: phone,
-      pendingSignupName: name,
-      pendingSignupPassword: password,
-      status: AppSessionStatus.loading,
-      clearError: true,
-    ));
+    emit(
+      state.copyWith(
+        email: email,
+        phone: phone,
+        pendingSignupName: name,
+        pendingSignupPassword: password,
+        status: AppSessionStatus.loading,
+        clearError: true,
+      ),
+    );
     try {
       await _auth.register(
         name: name,
@@ -212,26 +233,32 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         role: state.role,
         phone: phone,
       );
-      emit(state.copyWith(
-        email: email,
-        phone: phone,
-        pendingSignupName: name,
-        pendingSignupPassword: password,
-        status: AppSessionStatus.otpSent,
-        clearError: true,
-      ));
+      emit(
+        state.copyWith(
+          email: email,
+          phone: phone,
+          pendingSignupName: name,
+          pendingSignupPassword: password,
+          status: AppSessionStatus.otpSent,
+          clearError: true,
+        ),
+      );
       return true;
     } on ApiException catch (e) {
-      emit(state.copyWith(
-        status: AppSessionStatus.initial,
-        errorMessage: e.message,
-      ));
+      emit(
+        state.copyWith(
+          status: AppSessionStatus.initial,
+          errorMessage: e.message,
+        ),
+      );
       return false;
     } catch (e) {
-      emit(state.copyWith(
-        status: AppSessionStatus.initial,
-        errorMessage: ApiException.fromError(e),
-      ));
+      emit(
+        state.copyWith(
+          status: AppSessionStatus.initial,
+          errorMessage: ApiException.fromError(e),
+        ),
+      );
       return false;
     }
   }
@@ -247,9 +274,11 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         email.isEmpty ||
         password == null ||
         phone == null) {
-      emit(state.copyWith(
-        errorMessage: 'Missing signup details — go back and sign up again',
-      ));
+      emit(
+        state.copyWith(
+          errorMessage: 'Missing signup details — go back and sign up again',
+        ),
+      );
       return false;
     }
 
@@ -261,10 +290,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         role: state.role,
         phone: phone,
       );
-      emit(state.copyWith(
-        status: AppSessionStatus.otpSent,
-        clearError: true,
-      ));
+      emit(state.copyWith(status: AppSessionStatus.otpSent, clearError: true));
       return true;
     } on ApiException catch (e) {
       emit(state.copyWith(errorMessage: e.message));
@@ -278,10 +304,12 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   Future<bool> verifyOtp(String otp) async {
     final email = state.email;
     if (email == null || email.isEmpty) {
-      emit(state.copyWith(
-        status: AppSessionStatus.otpFailed,
-        errorMessage: 'Missing email for OTP',
-      ));
+      emit(
+        state.copyWith(
+          status: AppSessionStatus.otpFailed,
+          errorMessage: 'Missing email for OTP',
+        ),
+      );
       return false;
     }
     emit(state.copyWith(status: AppSessionStatus.loading, clearError: true));
@@ -290,16 +318,20 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       _applySession(session);
       return true;
     } on ApiException catch (e) {
-      emit(state.copyWith(
-        status: AppSessionStatus.otpFailed,
-        errorMessage: e.message,
-      ));
+      emit(
+        state.copyWith(
+          status: AppSessionStatus.otpFailed,
+          errorMessage: e.message,
+        ),
+      );
       return false;
     } catch (e) {
-      emit(state.copyWith(
-        status: AppSessionStatus.otpFailed,
-        errorMessage: ApiException.fromError(e),
-      ));
+      emit(
+        state.copyWith(
+          status: AppSessionStatus.otpFailed,
+          errorMessage: ApiException.fromError(e),
+        ),
+      );
       return false;
     }
   }
@@ -355,5 +387,4 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       ),
     );
   }
-
 }

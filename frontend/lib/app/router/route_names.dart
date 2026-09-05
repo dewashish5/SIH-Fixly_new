@@ -16,6 +16,10 @@ abstract final class RouteNames {
   static String customerCategorySearchPath(String categoryId) =>
       '/customer/home/category-search/$categoryId';
   static const customerOrders = '/customer/orders';
+  static const bookingDetail = '/booking/:id';
+
+  static String bookingDetailPath(String bookingId) => '/booking/$bookingId';
+
   static const customerProfileTab = '/customer/profile';
   static const customerCategories = '/customer/home/categories';
   static const customerService = '/customer/service/:id';
@@ -33,8 +37,8 @@ abstract final class RouteNames {
   static const customerAiWorkers = '/customer/ai-workers';
   static const customerWorkers = '/customer/workers';
   static const customerWorkerProfile = '/customer/worker/:id';
-  static const customerAddParts = '/customer/add-parts';
   static const customerBookingConfirmation = '/customer/booking-confirmation';
+  static const customerInvoice = '/customer/invoice/:id';
 
   static const workerOnboardingIdentity = '/worker/onboarding/identity';
   static const workerOnboardingWork = '/worker/onboarding/work';

@@ -1,11 +1,9 @@
-import 'dart:convert';
-
-import 'package:dio/dio.dart';
-
 import '../../../core/location/app_location.dart';
+import '../../../core/constants/map_constants.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_enpoints.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/media_upload_api.dart';
 import '../../../shared/models/models.dart';
 
 class PriceEstimate {
@@ -30,18 +28,71 @@ class PriceEstimate {
 
 class BookingsApiRepository {
   BookingsApiRepository({ApiClient? client})
-      : _api = client ?? ApiServices.client;
+    : _api = client ?? ApiServices.client;
 
   final ApiClient _api;
+  late final MediaUploadApi _uploads = MediaUploadApi(client: _api);
+
+  Future<List<MapCoordinate>> fetchDrivingRoute({
+    required MapCoordinate from,
+    required MapCoordinate to,
+  }) async {
+    final response = await _api.dio.get<Map<String, dynamic>>(
+      'https://api.mapbox.com/directions/v5/mapbox/driving/'
+      '${from.lng},${from.lat};${to.lng},${to.lat}',
+      queryParameters: {
+        'alternatives': 'false',
+        'geometries': 'geojson',
+        'overview': 'full',
+        'access_token': MapConstants.accessToken,
+      },
+    );
+    final routes = response.data?['routes'];
+    if (routes is! List || routes.isEmpty) return const [];
+    final geometry = routes.first is Map ? routes.first['geometry'] : null;
+    final coordinates = geometry is Map ? geometry['coordinates'] : null;
+    if (coordinates is! List) return const [];
+    return coordinates
+        .whereType<List>()
+        .where((point) => point.length >= 2)
+        .map((point) {
+          return MapCoordinate(
+            lng: (point[0] as num).toDouble(),
+            lat: (point[1] as num).toDouble(),
+          );
+        })
+        .toList();
+  }
+
+  Future<MapCoordinate?> trackWorkerPosition(String bookingId) async {
+    final res = await _api.get(ApiEndpoints.bookingTrack(bookingId));
+    final raw =
+        res['location'] ??
+        res['workerLocation'] ??
+        res['position'] ??
+        res['data'];
+    if (raw is! Map) return null;
+    final coordinates = raw['coordinates'];
+    if (coordinates is List && coordinates.length >= 2) {
+      return MapCoordinate(
+        lng: (coordinates[0] as num?)?.toDouble() ?? 0,
+        lat: (coordinates[1] as num?)?.toDouble() ?? 0,
+      );
+    }
+    final lat = (raw['lat'] ?? raw['latitude']) as num?;
+    final lng = (raw['lng'] ?? raw['longitude']) as num?;
+    if (lat == null || lng == null) return null;
+    return MapCoordinate(lat: lat.toDouble(), lng: lng.toDouble());
+  }
 
   Future<PriceEstimate> estimate({
     required String serviceId,
     double estimatedHours = 1,
   }) async {
-    final res = await _api.post(ApiEndpoints.bookingEstimate, data: {
-      'serviceId': serviceId,
-      'estimatedHours': estimatedHours,
-    });
+    final res = await _api.post(
+      ApiEndpoints.bookingEstimate,
+      data: {'serviceId': serviceId, 'estimatedHours': estimatedHours},
+    );
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Estimate failed');
     }
@@ -70,6 +121,10 @@ class BookingsApiRepository {
     double? lat,
     String serviceTitle = 'Service',
     List<String> photoPaths = const [],
+    List<String> videoPaths = const [],
+    List<String> problemPhotoUrls = const [],
+    List<String> problemVideoUrls = const [],
+    Map<String, dynamic>? invoice,
   }) async {
     final loc = AppLocation.instance;
     final useLng = lng ?? (loc.hasFix ? loc.requireLng : null);
@@ -78,39 +133,28 @@ class BookingsApiRepository {
       throw ApiException('Location required to create booking');
     }
 
-    final Object data;
-    if (photoPaths.isEmpty) {
-      data = {
-        'serviceId': serviceId,
-        'workerId': ?workerId,
-        'problemDescription': ?problemDescription,
-        'addressLine': addressLine,
-        'coordinates': [useLng, useLat],
-        'scheduledTime': ?scheduledTime?.toUtc().toIso8601String(),
-      };
-    } else {
-      final map = <String, dynamic>{
-        'serviceId': serviceId,
-        if (workerId != null) 'workerId': workerId,
-        if (problemDescription != null) 'problemDescription': problemDescription,
-        'addressLine': addressLine,
-        'coordinates': jsonEncode([useLng, useLat]),
-        if (scheduledTime != null)
-          'scheduledTime': scheduledTime.toUtc().toIso8601String(),
-      };
-      final files = <MultipartFile>[];
-      for (final path in photoPaths) {
-        if (path.isEmpty) continue;
-        files.add(
-          await MultipartFile.fromFile(
-            path,
-            filename: path.split(RegExp(r'[/\\]')).last,
-          ),
-        );
-      }
-      map['photos'] = files;
-      data = FormData.fromMap(map);
+    final uploadedPhotos = [...problemPhotoUrls];
+    for (final path in photoPaths) {
+      final url = await _uploads.uploadIfLocal(path);
+      if (url != null) uploadedPhotos.add(url);
     }
+    final uploadedVideos = [...problemVideoUrls];
+    for (final path in videoPaths) {
+      final url = await _uploads.uploadIfLocal(path);
+      if (url != null) uploadedVideos.add(url);
+    }
+    final data = <String, dynamic>{
+      'serviceId': serviceId,
+      if (workerId != null) 'workerId': workerId,
+      if (problemDescription != null) 'problemDescription': problemDescription,
+      if (uploadedPhotos.isNotEmpty) 'problemPhotos': uploadedPhotos,
+      if (uploadedVideos.isNotEmpty) 'problemVideos': uploadedVideos,
+      'addressLine': addressLine,
+      'coordinates': [useLng, useLat],
+      if (scheduledTime != null)
+        'scheduledTime': scheduledTime.toUtc().toIso8601String(),
+      if (invoice != null) 'invoice': invoice,
+    };
 
     final res = await _api.post(ApiEndpoints.createBooking, data: data);
     if (res['success'] != true || res['booking'] == null) {
@@ -122,18 +166,64 @@ class BookingsApiRepository {
     );
   }
 
-  Future<Booking> getById(String bookingId, {String serviceTitle = 'Service'}) async {
+  Future<Booking> getById(
+    String bookingId, {
+    String serviceTitle = 'Service',
+  }) async {
     final res = await _api.get(ApiEndpoints.bookingById(bookingId));
-    if (res['success'] != true || res['booking'] == null) {
+    final rawBooking = res['booking'] ?? res['data'];
+    if (res['success'] != true || rawBooking is! Map) {
       throw ApiException(res['message']?.toString() ?? 'Booking not found');
     }
     return mapBooking(
-      Map<String, dynamic>.from(res['booking'] as Map),
+      Map<String, dynamic>.from(rawBooking),
       serviceTitleFallback: serviceTitle,
     );
   }
 
-  Future<Booking> cancel(String bookingId, {String serviceTitle = 'Service'}) async {
+  Future<BookingInvoice> invoice(String bookingId) async {
+    final res = await _api.get(ApiEndpoints.bookingInvoice(bookingId));
+    if (res['success'] != true || res['invoice'] is! Map) {
+      throw ApiException(res['message']?.toString() ?? 'Invoice not found');
+    }
+    final invoice = Map<String, dynamic>.from(res['invoice'] as Map);
+    final details = res['bookingDetails'] is Map
+        ? Map<String, dynamic>.from(res['bookingDetails'] as Map)
+        : <String, dynamic>{};
+    final service = details['service'] is Map
+        ? Map<String, dynamic>.from(details['service'] as Map)
+        : <String, dynamic>{};
+    final customer = details['customer'] is Map
+        ? Map<String, dynamic>.from(details['customer'] as Map)
+        : <String, dynamic>{};
+    final worker = details['worker'] is Map
+        ? Map<String, dynamic>.from(details['worker'] as Map)
+        : <String, dynamic>{};
+    return BookingInvoice(
+      bookingId: details['bookingId']?.toString() ?? '#$bookingId',
+      serviceName: (service['name'] ?? service['title'] ?? 'Service')
+          .toString(),
+      status: details['status']?.toString() ?? 'PENDING',
+      baseServiceFee: (invoice['baseServiceFee'] as num?)?.toDouble() ?? 0,
+      extraPartsTotal: (invoice['extraPartsTotal'] as num?)?.toDouble() ?? 0,
+      platformFee: (invoice['platformFee'] as num?)?.toDouble() ?? 0,
+      totalAmount: (invoice['totalAmount'] as num?)?.toDouble() ?? 0,
+      paymentStatus: invoice['paymentStatus']?.toString(),
+      paymentMethod: invoice['paymentMethod']?.toString(),
+      customerName: customer['name']?.toString(),
+      customerPhone: customer['phone']?.toString(),
+      workerName: worker['name']?.toString(),
+      workerPhone: worker['phone']?.toString(),
+      addOns: _mapAddOns(details['addOns']),
+      jobStartedAt: _parseDate(details['jobStartedAt']),
+      jobCompletedAt: _parseDate(details['jobCompletedAt']),
+    );
+  }
+
+  Future<Booking> cancel(
+    String bookingId, {
+    String serviceTitle = 'Service',
+  }) async {
     final res = await _api.patch(ApiEndpoints.cancelBooking(bookingId));
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Cancel failed');
@@ -153,9 +243,10 @@ class BookingsApiRepository {
     required String otp,
     String serviceTitle = 'Service',
   }) async {
-    final res = await _api.post(ApiEndpoints.verifyArrivalOtp(bookingId), data: {
-      'otp': otp,
-    });
+    final res = await _api.post(
+      ApiEndpoints.verifyArrivalOtp(bookingId),
+      data: {'otp': otp},
+    );
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'OTP failed');
     }
@@ -180,9 +271,10 @@ class BookingsApiRepository {
     required String bookingId,
     required List<Map<String, dynamic>> extraItems,
   }) async {
-    final res = await _api.patch(ApiEndpoints.addParts(bookingId), data: {
-      'extraItems': extraItems,
-    });
+    final res = await _api.patch(
+      ApiEndpoints.addParts(bookingId),
+      data: {'extraItems': extraItems},
+    );
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Add parts failed');
     }
@@ -228,7 +320,12 @@ class BookingsApiRepository {
     if (data is! List) return const [];
     return data
         .whereType<Map>()
-        .map((e) => mapWorkerJob(Map<String, dynamic>.from(e), fallbackStatus: status))
+        .map(
+          (e) => mapWorkerJob(
+            Map<String, dynamic>.from(e),
+            fallbackStatus: status,
+          ),
+        )
         .toList();
   }
 
@@ -240,9 +337,10 @@ class BookingsApiRepository {
   }
 
   Future<void> decline(String bookingId, {String reason = 'OTHER'}) async {
-    final res = await _api.post(ApiEndpoints.declineJob(bookingId), data: {
-      'reason': reason,
-    });
+    final res = await _api.post(
+      ApiEndpoints.declineJob(bookingId),
+      data: {'reason': reason},
+    );
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Decline failed');
     }
@@ -260,6 +358,17 @@ class BookingsApiRepository {
     JobStatus fallbackStatus = JobStatus.incoming,
   }) {
     final booking = mapBooking(json);
+    double? customerLat;
+    double? customerLng;
+    final serviceAddress = json['serviceAddress'];
+    if (serviceAddress is Map) {
+      final location = serviceAddress['location'];
+      final coordinates = location is Map ? location['coordinates'] : null;
+      if (coordinates is List && coordinates.length >= 2) {
+        customerLng = (coordinates[0] as num?)?.toDouble();
+        customerLat = (coordinates[1] as num?)?.toDouble();
+      }
+    }
     final customer = json['customer'];
     var customerName = 'Customer';
     if (customer is Map) {
@@ -267,7 +376,9 @@ class BookingsApiRepository {
     }
     final statusRaw = (json['status'] ?? '').toString().toUpperCase();
     final status = switch (statusRaw) {
+      'PENDING' => JobStatus.incoming,
       'SEARCHING' => JobStatus.incoming,
+      'APPROVED' => JobStatus.active,
       'COMPLETED' => JobStatus.completed,
       'CANCELLED' => JobStatus.completed,
       _ => JobStatus.active,
@@ -280,6 +391,8 @@ class BookingsApiRepository {
       pay: booking.estimatedPrice,
       status: status == JobStatus.incoming ? fallbackStatus : status,
       distanceKm: 0,
+      customerLat: customerLat,
+      customerLng: customerLng,
     );
   }
 
@@ -292,7 +405,9 @@ class BookingsApiRepository {
     String serviceTitle = serviceTitleFallback;
     if (service is Map) {
       serviceId = (service['_id'] ?? service['id'] ?? '').toString();
-      serviceTitle = (service['title'] as String?) ?? serviceTitleFallback;
+      serviceTitle =
+          (service['title'] ?? service['name'])?.toString() ??
+          serviceTitleFallback;
     } else {
       serviceId = service?.toString() ?? '';
     }
@@ -300,17 +415,35 @@ class BookingsApiRepository {
     final worker = json['worker'];
     String? workerId;
     String? workerName;
+    String? workerAvatar;
     if (worker is Map) {
       workerId = (worker['_id'] ?? worker['id'])?.toString();
       workerName = worker['name'] as String?;
+      workerAvatar = worker['avatar'] as String?;
     } else if (worker != null) {
       workerId = worker.toString();
     }
 
+    final customer = json['customer'];
+    final customerName = customer is Map ? customer['name']?.toString() : null;
+    final customerPhone = customer is Map
+        ? customer['phone']?.toString()
+        : null;
+
     final address = json['serviceAddress'];
     String? addressLine;
+    double? customerLat;
+    double? customerLng;
     if (address is Map) {
       addressLine = address['addressLine'] as String?;
+      final location = address['location'];
+      final coordinates = location is Map ? location['coordinates'] : null;
+      if (coordinates is List && coordinates.length >= 2) {
+        customerLng = (coordinates[0] as num?)?.toDouble();
+        customerLat = (coordinates[1] as num?)?.toDouble();
+      }
+    } else if (address is String) {
+      addressLine = address;
     }
 
     final invoice = json['invoice'];
@@ -322,31 +455,32 @@ class BookingsApiRepository {
       baseServiceFee = (invoice['baseServiceFee'] as num?)?.toDouble();
       platformFee = (invoice['platformFee'] as num?)?.toDouble();
       extraPartsTotal = (invoice['extraPartsTotal'] as num?)?.toDouble();
-      price = (invoice['totalAmount'] as num?)?.toDouble() ??
+      price =
+          (invoice['totalAmount'] as num?)?.toDouble() ??
           (invoice['baseServiceFee'] as num?)?.toDouble() ??
           0;
     }
 
-    final addOnsRaw = json['addOns'];
-    final addOns = <BookingAddOn>[];
-    if (addOnsRaw is List) {
-      for (final item in addOnsRaw) {
-        if (item is! Map) continue;
-        addOns.add(
-          BookingAddOn(
-            title: (item['title'] as String?) ?? 'Part',
-            price: (item['price'] as num?)?.toDouble() ?? 0,
-            quantity: (item['quantity'] as num?)?.toInt() ?? 1,
-          ),
-        );
-      }
-    }
+    final addOns = _mapAddOns(json['addOns']);
 
     final scheduled = json['scheduledTime'];
     DateTime? scheduledAt;
     if (scheduled is String) {
       scheduledAt = DateTime.tryParse(scheduled);
     }
+
+    DateTime? parseDate(dynamic value) =>
+        value is String ? DateTime.tryParse(value) : null;
+
+    List<String> strings(dynamic value) => value is List
+        ? value.whereType<String>().where((item) => item.isNotEmpty).toList()
+        : const [];
+
+    final serviceMap = service is Map ? service : const <String, dynamic>{};
+    final bookingId = json['bookingId']?.toString();
+    final displayId = bookingId != null && bookingId.isNotEmpty
+        ? bookingId
+        : null;
 
     return Booking(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
@@ -362,15 +496,41 @@ class BookingsApiRepository {
       baseServiceFee: baseServiceFee,
       platformFee: platformFee,
       extraPartsTotal: extraPartsTotal,
+      displayId: displayId,
+      serviceCategory: serviceMap['category']?.toString(),
+      serviceImage: (serviceMap['image'] ?? serviceMap['imageUrl'])?.toString(),
+      estimatedTime: serviceMap['estimatedTime']?.toString(),
+      whatsIncluded: strings(serviceMap['whatsIncluded']),
+      problemDescription: json['problemDescription']?.toString(),
+      problemPhotos: strings(json['problemPhotos']),
+      problemVideos: strings(json['problemVideos']),
+      paymentMethod: invoice is Map
+          ? invoice['paymentMethod']?.toString()
+          : null,
+      paymentStatus: invoice is Map
+          ? invoice['paymentStatus']?.toString()
+          : null,
+      arrivalOtp: json['arrivalOtp']?.toString(),
+      createdAt: parseDate(json['createdAt']),
+      jobStartedAt: parseDate(json['jobStartedAt']),
+      jobCompletedAt: parseDate(json['jobCompletedAt']),
+      isReviewed: json['isReviewed'] == true,
+      workerAvatar: workerAvatar,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      customerLat: customerLat,
+      customerLng: customerLng,
     );
   }
 
   static BookingStatus mapStatus(String? raw) {
     switch ((raw ?? '').toUpperCase()) {
       case 'SEARCHING':
+      case 'PENDING':
         return BookingStatus.searching;
       case 'ASSIGNED':
       case 'ACCEPTED':
+      case 'APPROVED':
       case 'EN_ROUTE':
       case 'ARRIVED':
         return BookingStatus.accepted;
@@ -385,4 +545,21 @@ class BookingsApiRepository {
         return BookingStatus.draft;
     }
   }
+
+  static List<BookingAddOn> _mapAddOns(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => BookingAddOn(
+            title: (item['title'] ?? item['name'] ?? 'Part').toString(),
+            price: ((item['price'] ?? item['amount']) as num?)?.toDouble() ?? 0,
+            quantity: (item['quantity'] as num?)?.toInt() ?? 1,
+          ),
+        )
+        .toList();
+  }
+
+  static DateTime? _parseDate(dynamic value) =>
+      value is String ? DateTime.tryParse(value) : null;
 }

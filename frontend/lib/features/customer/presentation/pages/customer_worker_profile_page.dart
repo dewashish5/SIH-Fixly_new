@@ -10,9 +10,14 @@ import '../../../../shared/models/models.dart';
 import '../../../workers/data/workers_api_repository.dart';
 
 class CustomerWorkerProfilePage extends StatefulWidget {
-  const CustomerWorkerProfilePage({required this.workerId, super.key});
+  const CustomerWorkerProfilePage({
+    required this.workerId,
+    this.serviceId,
+    super.key,
+  });
 
   final String workerId;
+  final String? serviceId;
 
   @override
   State<CustomerWorkerProfilePage> createState() =>
@@ -20,8 +25,9 @@ class CustomerWorkerProfilePage extends StatefulWidget {
 }
 
 class _CustomerWorkerProfilePageState extends State<CustomerWorkerProfilePage> {
-  late final Future<WorkerProfile> _future =
-      WorkersApiRepository().fetchWorker(widget.workerId);
+  late final Future<WorkerProfile> _future = WorkersApiRepository().fetchWorker(
+    widget.workerId,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -42,11 +48,18 @@ class _CustomerWorkerProfilePageState extends State<CustomerWorkerProfilePage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.person_off, size: 48, color: AppColors.error),
+                  const Icon(
+                    Icons.person_off,
+                    size: 48,
+                    color: AppColors.error,
+                  ),
                   const SizedBox(height: 16),
                   Text(snap.error?.toString() ?? 'Worker not found'),
                   const SizedBox(height: 16),
-                  PrimaryButton(label: 'Go Back', onPressed: () => context.pop()),
+                  PrimaryButton(
+                    label: 'Go Back',
+                    onPressed: () => context.pop(),
+                  ),
                 ],
               ),
             ),
@@ -60,6 +73,13 @@ class _CustomerWorkerProfilePageState extends State<CustomerWorkerProfilePage> {
         final aboutSkill = worker.skills.isEmpty
             ? 'professional'
             : worker.skills.first.toLowerCase();
+        final hasRatingHistory =
+            worker.jobsCompleted > 0 || worker.reviewCount > 0;
+        final kycLabel = switch (worker.kycStatus?.toLowerCase()) {
+          'approved' => 'Identity verified',
+          'submitted' || 'pending' || 'in_review' => 'Identity under review',
+          _ => worker.isVerified ? 'Profile verified' : 'Verification pending',
+        };
 
         return AppScaffold(
           title: context.l10n.workerProfile,
@@ -93,11 +113,36 @@ class _CustomerWorkerProfilePageState extends State<CustomerWorkerProfilePage> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  skillLabel,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.outline,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      worker.isOnline ? Icons.circle : Icons.circle_outlined,
+                      size: 10,
+                      color: worker.isOnline
+                          ? AppColors.success
+                          : AppColors.outline,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      worker.isOnline ? 'Online now' : 'Currently offline',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: worker.isOnline
+                            ? AppColors.success
+                            : AppColors.outline,
+                        fontWeight: FontWeight.w600,
                       ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  worker.title?.isNotEmpty == true
+                      ? '${worker.title} • $skillLabel'
+                      : skillLabel,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppColors.outline),
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -105,7 +150,9 @@ class _CustomerWorkerProfilePageState extends State<CustomerWorkerProfilePage> {
                   children: [
                     _StatChip(
                       label: 'Rating',
-                      value: '${worker.rating}',
+                      value: hasRatingHistory && worker.rating > 0
+                          ? worker.rating.toStringAsFixed(1)
+                          : 'N/A',
                       icon: Icons.star,
                     ),
                     _StatChip(
@@ -115,7 +162,9 @@ class _CustomerWorkerProfilePageState extends State<CustomerWorkerProfilePage> {
                     ),
                     _StatChip(
                       label: 'Reliability',
-                      value: '${worker.reliabilityScore}%',
+                      value: worker.jobsCompleted > 0
+                          ? '${worker.reliabilityScore}%'
+                          : 'Limited',
                       icon: Icons.trending_up,
                     ),
                   ],
@@ -126,12 +175,69 @@ class _CustomerWorkerProfilePageState extends State<CustomerWorkerProfilePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
+                        'Trust & Reliability',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      _TrustRow(label: 'Verification', value: kycLabel),
+                      _TrustRow(
+                        label: 'Email',
+                        value: worker.isEmailVerified
+                            ? 'Verified'
+                            : 'Not verified',
+                      ),
+                      _TrustRow(
+                        label: 'Completed jobs',
+                        value: worker.jobsCompleted == 0
+                            ? 'No completed jobs yet'
+                            : '${worker.jobsCompleted}',
+                      ),
+                      _TrustRow(
+                        label: 'On-time arrival',
+                        value: worker.jobsCompleted == 0
+                            ? 'Not enough data'
+                            : _percent(worker.onTimeArrival),
+                      ),
+                      _TrustRow(
+                        label: 'Completion rate',
+                        value: worker.jobsCompleted == 0
+                            ? 'Not enough data'
+                            : _percent(worker.completionRate),
+                      ),
+                      if (worker.serviceRadiusKm != null)
+                        _TrustRow(
+                          label: 'Service radius',
+                          value:
+                              '${worker.serviceRadiusKm!.toStringAsFixed(0)} km',
+                        ),
+                      const SizedBox(height: 4),
+                      Text(
+                        worker.jobsCompleted == 0
+                            ? 'This worker is new to the platform. Reliability metrics will appear after completed jobs.'
+                            : 'Based on completed jobs and customer activity.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
                         'About',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Experienced $aboutSkill with ${worker.jobsCompleted}+ completed jobs. Known for quality work and punctuality.',
+                        worker.bio?.isNotEmpty == true
+                            ? worker.bio!
+                            : worker.jobsCompleted > 0
+                            ? 'Experienced $aboutSkill with ${worker.jobsCompleted} completed jobs.'
+                            : 'A $aboutSkill professional new to the Fixly platform.',
                       ),
                     ],
                   ),
@@ -146,23 +252,38 @@ class _CustomerWorkerProfilePageState extends State<CustomerWorkerProfilePage> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
-                      _ReviewTile(
-                        name: 'Priya S.',
-                        rating: 5,
-                        text: 'Excellent work, very professional!',
-                      ),
-                      _ReviewTile(
-                        name: 'Rahul V.',
-                        rating: 4,
-                        text: 'Good service, arrived on time.',
-                      ),
+                      if (!hasRatingHistory)
+                        const Text('No rating available for this worker.')
+                      else if (worker.reviews.isEmpty)
+                        Text(
+                          worker.reviewCount > 0
+                              ? '${worker.reviewCount} ratings, but no written reviews yet.'
+                              : 'No written reviews yet.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        )
+                      else
+                        ...worker.reviews
+                            .take(5)
+                            .map(
+                              (review) => _ReviewTile(
+                                name: review.reviewerName,
+                                rating: review.rating,
+                                text: review.comment.isEmpty
+                                    ? 'No written comment.'
+                                    : review.comment,
+                              ),
+                            ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 32),
                 AccentButton(
                   label: 'Book This Worker',
-                  onPressed: () => context.push(RouteNames.customerBooking),
+                  onPressed: () => context.push(
+                    '${RouteNames.customerBooking}?workerId=${worker.id}'
+                    '&serviceId=${Uri.encodeComponent(widget.serviceId ?? '')}'
+                    '&category=${Uri.encodeComponent(worker.category ?? '')}',
+                  ),
                 ),
                 const SizedBox(height: 24),
               ],
@@ -191,15 +312,40 @@ class _StatChip extends StatelessWidget {
       children: [
         Icon(icon, color: AppColors.primary),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text(value, style: Theme.of(context).textTheme.titleMedium),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
   }
 }
+
+class _TrustRow extends StatelessWidget {
+  const _TrustRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Row(
+        children: [
+          Expanded(child: Text(label)),
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _percent(double? value) =>
+    value == null ? 'Not enough data' : '${value.toStringAsFixed(0)}%';
 
 class _ReviewTile extends StatelessWidget {
   const _ReviewTile({
@@ -209,7 +355,7 @@ class _ReviewTile extends StatelessWidget {
   });
 
   final String name;
-  final int rating;
+  final double rating;
   final String text;
 
   @override
@@ -224,8 +370,9 @@ class _ReviewTile extends StatelessWidget {
               Text(name, style: Theme.of(context).textTheme.labelLarge),
               const Spacer(),
               ...List.generate(
-                rating,
-                (_) => const Icon(Icons.star, size: 14, color: AppColors.tertiary),
+                rating.round(),
+                (_) =>
+                    const Icon(Icons.star, size: 14, color: AppColors.tertiary),
               ),
             ],
           ),

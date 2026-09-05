@@ -13,9 +13,9 @@ class SearchCubit extends Cubit<SearchState> {
     HomeApiRepository? homeRepository,
     WorkersApiRepository? workersRepository,
     String? initialQuery,
-  })  : _home = homeRepository ?? HomeApiRepository(),
-        _workers = workersRepository ?? WorkersApiRepository(),
-        super(SearchState(query: initialQuery ?? '')) {
+  }) : _home = homeRepository ?? HomeApiRepository(),
+       _workers = workersRepository ?? WorkersApiRepository(),
+       super(SearchState(query: initialQuery ?? '')) {
     _warmCache();
   }
 
@@ -43,13 +43,13 @@ class SearchCubit extends Cubit<SearchState> {
     final results = q.isEmpty
         ? _all
         : _all
-            .where(
-              (s) =>
-                  s.title.toLowerCase().contains(q) ||
-                  s.categoryId.toLowerCase().contains(q) ||
-                  s.description.toLowerCase().contains(q),
-            )
-            .toList();
+              .where(
+                (s) =>
+                    s.title.toLowerCase().contains(q) ||
+                    s.categoryId.toLowerCase().contains(q) ||
+                    s.description.toLowerCase().contains(q),
+              )
+              .toList();
     emit(state.copyWith(results: results, isSearching: false));
 
     if (q.isNotEmpty) {
@@ -62,12 +62,14 @@ class SearchCubit extends Cubit<SearchState> {
   }
 
   Future<void> filterByCategory(String categoryId) async {
-    emit(state.copyWith(
-      query: categoryId,
-      categoryId: categoryId,
-      isSearching: true,
-      isLoadingWorkers: true,
-    ));
+    emit(
+      state.copyWith(
+        query: categoryId,
+        categoryId: categoryId,
+        isSearching: true,
+        isLoadingWorkers: true,
+      ),
+    );
 
     if (_all.isEmpty) {
       try {
@@ -92,18 +94,28 @@ class SearchCubit extends Cubit<SearchState> {
   }
 
   Future<void> _loadWorkers(String categoryOrSkill) async {
-    emit(state.copyWith(isLoadingWorkers: true));
+    emit(
+      state.copyWith(
+        isLoadingWorkers: true,
+        nearbyWorkers: const [],
+        hasMoreWorkers: false,
+        nextWorkerOffset: 0,
+      ),
+    );
     try {
       final loc = AppLocation.instance;
-      final lat = loc.hasFix ? loc.lat : 28.6139; // fallback coordinate if GPS not fixed
+      final lat = loc.hasFix
+          ? loc.lat
+          : 28.6139; // fallback coordinate if GPS not fixed
       final lng = loc.hasFix ? loc.lng : 77.2090;
 
-      final workers = await _workers.fetchNearby(
+      final page = await _workers.fetchNearbyPage(
         category: categoryOrSkill,
         sortBy: 'top_rated',
         lat: lat,
         lng: lng,
       );
+      final workers = page.workers;
 
       final normalizedTarget = categoryOrSkill.toLowerCase().trim();
 
@@ -111,32 +123,68 @@ class SearchCubit extends Cubit<SearchState> {
       // 1. Workers with skills explicitly matching target keyword/category
       // 2. Highest rating
       // 3. Number of jobs completed
-      final sorted = List<WorkerProfile>.from(workers)..sort((a, b) {
-        final aMatchesSkill = a.skills.any((s) =>
-            s.toLowerCase().contains(normalizedTarget) ||
-            normalizedTarget.contains(s.toLowerCase()));
-        final bMatchesSkill = b.skills.any((s) =>
-            s.toLowerCase().contains(normalizedTarget) ||
-            normalizedTarget.contains(s.toLowerCase()));
+      final sorted = List<WorkerProfile>.from(workers)
+        ..sort((a, b) {
+          final aMatchesSkill = a.skills.any(
+            (s) =>
+                s.toLowerCase().contains(normalizedTarget) ||
+                normalizedTarget.contains(s.toLowerCase()),
+          );
+          final bMatchesSkill = b.skills.any(
+            (s) =>
+                s.toLowerCase().contains(normalizedTarget) ||
+                normalizedTarget.contains(s.toLowerCase()),
+          );
 
-        if (aMatchesSkill && !bMatchesSkill) return -1;
-        if (!aMatchesSkill && bMatchesSkill) return 1;
+          if (aMatchesSkill && !bMatchesSkill) return -1;
+          if (!aMatchesSkill && bMatchesSkill) return 1;
 
-        final ratingDiff = b.rating.compareTo(a.rating);
-        if (ratingDiff != 0) return ratingDiff;
+          final ratingDiff = b.rating.compareTo(a.rating);
+          if (ratingDiff != 0) return ratingDiff;
 
-        return b.jobsCompleted.compareTo(a.jobsCompleted);
-      });
+          return b.jobsCompleted.compareTo(a.jobsCompleted);
+        });
 
-      emit(state.copyWith(
-        nearbyWorkers: sorted,
-        isLoadingWorkers: false,
-      ));
+      emit(
+        state.copyWith(
+          nearbyWorkers: sorted,
+          isLoadingWorkers: false,
+          hasMoreWorkers: page.hasMore,
+          nextWorkerOffset: page.nextOffset,
+        ),
+      );
     } catch (_) {
-      emit(state.copyWith(
-        nearbyWorkers: const [],
-        isLoadingWorkers: false,
-      ));
+      emit(state.copyWith(nearbyWorkers: const [], isLoadingWorkers: false));
+    }
+  }
+
+  Future<void> loadMoreWorkers() async {
+    if (state.isLoadingWorkers ||
+        state.isLoadingMoreWorkers ||
+        !state.hasMoreWorkers ||
+        state.categoryId == null) {
+      return;
+    }
+    emit(state.copyWith(isLoadingMoreWorkers: true));
+    try {
+      final loc = AppLocation.instance;
+      final page = await _workers.fetchNearbyPage(
+        category: state.categoryId,
+        sortBy: 'top_rated',
+        lat: loc.hasFix ? loc.lat : 28.6139,
+        lng: loc.hasFix ? loc.lng : 77.2090,
+        offset: state.nextWorkerOffset,
+      );
+      emit(
+        state.copyWith(
+          nearbyWorkers: [...state.nearbyWorkers, ...page.workers],
+          hasMoreWorkers: page.hasMore,
+          nextWorkerOffset: page.nextOffset,
+          isLoadingMoreWorkers: false,
+        ),
+      );
+    } catch (_) {
+      emit(state.copyWith(isLoadingMoreWorkers: false));
     }
   }
 
