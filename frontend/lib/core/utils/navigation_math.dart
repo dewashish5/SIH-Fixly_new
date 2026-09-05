@@ -14,10 +14,9 @@ abstract final class NavigationMath {
     return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
   }
 
-  /// The supplied bike artwork points to the right, so rotate it by 90 degrees
-  /// relative to Mapbox's north-up bearing convention.
+  /// The bike artwork points North (0° up), so rotation matches bearing directly.
   static double bikeIconRotation(MapCoordinate from, MapCoordinate to) =>
-      (bearingDegrees(from, to) + 90) % 360;
+      bearingDegrees(from, to);
 
   static double distanceMeters(MapCoordinate from, MapCoordinate to) {
     const radius = 6371000.0;

@@ -42,7 +42,12 @@ class ActiveJobCubit extends Cubit<ActiveJobState> {
         ),
       );
     } on ApiException catch (e) {
-      emit(state.copyWith(status: ActiveJobStatus.failure, error: e.message));
+      emit(
+        state.copyWith(
+          status: ActiveJobStatus.inProgress,
+          error: e.message,
+        ),
+      );
     }
   }
 

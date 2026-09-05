@@ -182,6 +182,17 @@ class CustomerWorkerArrivedPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
                   
+                  PrimaryButton(
+                    label: 'View Live Location Map',
+                    onPressed: () {
+                      if (booking?.id != null) {
+                        context.push('${RouteNames.customerTracking}?bookingId=${booking!.id}');
+                      } else {
+                        context.push(RouteNames.customerTracking);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
                   SecondaryButton(
                     label: 'Worker Not Arrived?',
                     onPressed: () => context.push(RouteNames.sharedSupportChat),

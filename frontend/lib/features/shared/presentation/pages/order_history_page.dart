@@ -186,6 +186,21 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                                             ),
                                       ),
                                     ],
+                                    if (order.transactionId != null &&
+                                        order.transactionId!.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Razorpay ID: ${order.transactionId}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: Theme.of(
+                                                context,
+                                              ).hintColor,
+                                            ),
+                                      ),
+                                    ],
                                     if (order.scheduledAt != null) ...[
                                       const SizedBox(height: 2),
                                       Text(

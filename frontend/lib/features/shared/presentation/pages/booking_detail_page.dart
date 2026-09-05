@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -6,6 +7,7 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
+import '../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
 
 class BookingDetailPage extends StatefulWidget {
@@ -48,7 +50,10 @@ class _BookingDetailPageState extends State<BookingDetailPage> {
           if (snapshot.hasError || !snapshot.hasData) {
             return _ErrorState(onRetry: _retry);
           }
-          return _BookingDetails(booking: snapshot.data!);
+          return _BookingDetails(
+            booking: snapshot.data!,
+            onRefresh: _retry,
+          );
         },
       ),
     );
@@ -56,9 +61,13 @@ class _BookingDetailPageState extends State<BookingDetailPage> {
 }
 
 class _BookingDetails extends StatelessWidget {
-  const _BookingDetails({required this.booking});
+  const _BookingDetails({
+    required this.booking,
+    this.onRefresh,
+  });
 
   final Booking booking;
+  final VoidCallback? onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -339,7 +348,7 @@ class _BookingDetails extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 24),
-        _StatusActions(booking: booking),
+        _StatusActions(booking: booking, onRefresh: onRefresh),
       ],
     );
   }
@@ -580,16 +589,83 @@ String _paymentLabel(String status) {
 }
 
 class _StatusActions extends StatelessWidget {
-  const _StatusActions({required this.booking});
+  const _StatusActions({required this.booking, this.onRefresh});
   final Booking booking;
+  final VoidCallback? onRefresh;
+
+  void _showEditBookingDialog(BuildContext context) {
+    final descCtrl = TextEditingController(text: booking.problemDescription ?? '');
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Edit Booking'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Editing this booking will reset its status to PENDING and notify available professionals.',
+              style: TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descCtrl,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Problem Description',
+                border: OutlineInputBorder(),
+                hintText: 'Describe the updated issue...',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              try {
+                await BookingsApiRepository().updateBooking(
+                  bookingId: booking.id,
+                  problemDescription: descCtrl.text.trim(),
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Booking updated & sent to workers!')),
+                  );
+                  onRefresh?.call();
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to update: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Save & Update'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     switch (booking.status) {
       case BookingStatus.searching:
+      case BookingStatus.draft:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            PrimaryButton(
+              label: 'Edit Booking Details',
+              onPressed: () => _showEditBookingDialog(context),
+            ),
+            const SizedBox(height: 12),
             SecondaryButton(
               label: 'Cancel Booking',
               onPressed: () async {
@@ -600,16 +676,29 @@ class _StatusActions extends StatelessWidget {
           ],
         );
       case BookingStatus.accepted:
+        final role = context.read<AppSessionCubit>().currentUser?.role;
+        final isWorker = role == UserRole.worker;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             PrimaryButton(
-              label: 'Track Worker Live',
-              onPressed: () => context.push('/customer/tracking?bookingId=${booking.id}'),
+              label: isWorker ? 'Open Navigation Map' : 'Track Worker Live',
+              onPressed: () => isWorker
+                  ? context.push('${RouteNames.workerNavigation}?bookingId=${booking.id}')
+                  : context.push('${RouteNames.customerTracking}?bookingId=${booking.id}'),
             ),
+            if (!isWorker) ...[
+              const SizedBox(height: 12),
+              SecondaryButton(
+                label: 'Edit Booking Details',
+                onPressed: () => _showEditBookingDialog(context),
+              ),
+            ],
           ],
         );
       case BookingStatus.arrived:
+        final role = context.read<AppSessionCubit>().currentUser?.role;
+        final isWorker = role == UserRole.worker;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -625,9 +714,18 @@ class _StatusActions extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             ),
+            const SizedBox(height: 12),
+            PrimaryButton(
+              label: isWorker ? 'View Navigation Map' : 'View Worker on Map',
+              onPressed: () => isWorker
+                  ? context.push('${RouteNames.workerNavigation}?bookingId=${booking.id}')
+                  : context.push('${RouteNames.customerTracking}?bookingId=${booking.id}'),
+            ),
           ],
         );
       case BookingStatus.inProgress:
+        final role = context.read<AppSessionCubit>().currentUser?.role;
+        final isWorker = role == UserRole.worker;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -646,6 +744,13 @@ class _StatusActions extends StatelessWidget {
                 ],
               ),
             ),
+            if (!isWorker) ...[
+              const SizedBox(height: 12),
+              PrimaryButton(
+                label: 'Pay Now',
+                onPressed: () => context.push(RouteNames.customerPayment),
+              ),
+            ],
           ],
         );
       case BookingStatus.completed:

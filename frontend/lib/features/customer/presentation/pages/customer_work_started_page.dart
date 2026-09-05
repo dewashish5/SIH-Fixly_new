@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_strings.dart';
@@ -65,7 +67,7 @@ class CustomerWorkStartedPage extends StatelessWidget {
                         active: true,
                       ),
                       _StatusRow(
-                        label: 'Payment will be available after completion',
+                        label: 'Pay securely with Razorpay to complete',
                         done: false,
                       ),
                     ],
@@ -79,12 +81,17 @@ class CustomerWorkStartedPage extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'The final invoice and Razorpay payment option will appear when the worker completes the job.',
+                          'Pay now when the work is done. The job completes after a successful Razorpay payment.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 24),
+                PrimaryButton(
+                  label: 'Pay invoice',
+                  onPressed: () => context.push(RouteNames.customerPayment),
                 ),
               ],
             ),

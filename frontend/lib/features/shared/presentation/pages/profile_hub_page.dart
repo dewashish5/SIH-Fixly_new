@@ -100,6 +100,13 @@ class _ProfileHubPageState extends State<ProfileHubPage> {
                       onTap: () => context.push(RouteNames.sharedOrderHistory),
                     ),
                     _ModernHubTile(
+                      icon: Icons.payments_outlined,
+                      iconColor: AppColors.primary,
+                      title: 'Payment history',
+                      subtitle: 'Razorpay receipts and transaction IDs',
+                      onTap: () => context.push(RouteNames.customerPayments),
+                    ),
+                    _ModernHubTile(
                       icon: Icons.notifications_outlined,
                       iconColor: AppColors.secondary,
                       title: l10n.notifications,

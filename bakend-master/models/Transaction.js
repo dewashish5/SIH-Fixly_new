@@ -10,7 +10,8 @@ const transactionSchema = new mongoose.Schema({
     amount: { type: Number, required: true },
     currency: { type: String, default: 'INR' },
     status: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
-    paymentMethod: { type: String, default: 'Razorpay' }
+    paymentMethod: { type: String, default: 'Razorpay' },
+    description: { type: String, default: '' }
 }, { timestamps: true });
 
 export default mongoose.model('Transaction', transactionSchema);

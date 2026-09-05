@@ -24,6 +24,8 @@ class FixlyMapView extends StatefulWidget {
     this.serviceRadiusKm,
     this.showDestinationPin = true,
     this.routeStart,
+    this.workerPosition,
+    this.followWorker = false,
     this.routeCoordinates = const [],
     this.workerHeading,
     this.claimGestures = false,
@@ -43,10 +45,18 @@ class FixlyMapView extends StatefulWidget {
   final double? serviceRadiusKm;
   final bool showDestinationPin;
 
-  /// Worker / route start. Defaults to [MapConstants.workerApproachStart].
+  /// Trip start origin pin (defaults to [MapConstants.workerApproachStart]).
   final MapCoordinate? routeStart;
+
+  /// Moving worker position (displayed with bike icon).
+  final MapCoordinate? workerPosition;
+
+  /// Automatically keep camera centered on moving worker.
+  final bool followWorker;
+
   final List<MapCoordinate> routeCoordinates;
   final double? workerHeading;
+
 
   /// Win gesture arena vs parent [ScrollView] so user can pan/zoom the map.
   final bool claimGestures;
@@ -82,10 +92,18 @@ class _FixlyMapViewState extends State<FixlyMapView> {
   Uint8List? _bikeImage;
   String? _mapError;
   Timer? _idleDebounce;
+  bool _isDisposed = false;
+  bool _isRefreshing = false;
+  bool _refreshQueued = false;
 
   @override
   void dispose() {
+    _isDisposed = true;
     _idleDebounce?.cancel();
+    _polylineManager = null;
+    _polygonManager = null;
+    _pointManager = null;
+    _mapboxMap = null;
     super.dispose();
   }
 
@@ -100,11 +118,14 @@ class _FixlyMapViewState extends State<FixlyMapView> {
         oldWidget.routeEnd != widget.routeEnd ||
         oldWidget.routeStart?.lat != widget.routeStart?.lat ||
         oldWidget.routeStart?.lng != widget.routeStart?.lng ||
+        oldWidget.workerPosition?.lat != widget.workerPosition?.lat ||
+        oldWidget.workerPosition?.lng != widget.workerPosition?.lng ||
         oldWidget.routeCoordinates != widget.routeCoordinates ||
         oldWidget.workerHeading != widget.workerHeading ||
         oldWidget.center?.lat != widget.center?.lat ||
         oldWidget.center?.lng != widget.center?.lng ||
-        oldWidget.showDestinationPin != widget.showDestinationPin;
+        oldWidget.showDestinationPin != widget.showDestinationPin ||
+        oldWidget.followWorker != widget.followWorker;
 
     if (changed) {
       _refreshAnnotations(fitCamera: false);
@@ -129,8 +150,10 @@ class _FixlyMapViewState extends State<FixlyMapView> {
         scrollEnabled: true,
         pinchToZoomEnabled: true,
         doubleTapToZoomInEnabled: true,
+        doubleTouchToZoomOutEnabled: true,
         quickZoomEnabled: true,
-        pitchEnabled: false,
+        pitchEnabled: true,
+        rotateEnabled: true,
       ),
     );
 
@@ -206,8 +229,9 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     if (mapboxMap == null) return;
     try {
       final camera = await mapboxMap.getCameraState();
-      await mapboxMap.setCamera(
-        CameraOptions(zoom: (camera.zoom + 1.0).clamp(2.0, 20.0)),
+      await mapboxMap.easeTo(
+        CameraOptions(zoom: (camera.zoom + 1.2).clamp(2.0, 20.0)),
+        MapAnimationOptions(duration: 300),
       );
     } catch (e) {
       debugPrint('FixlyMapView zoomIn error: $e');
@@ -219,8 +243,9 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     if (mapboxMap == null) return;
     try {
       final camera = await mapboxMap.getCameraState();
-      await mapboxMap.setCamera(
-        CameraOptions(zoom: (camera.zoom - 1.0).clamp(2.0, 20.0)),
+      await mapboxMap.easeTo(
+        CameraOptions(zoom: (camera.zoom - 1.2).clamp(2.0, 20.0)),
+        MapAnimationOptions(duration: 300),
       );
     } catch (e) {
       debugPrint('FixlyMapView zoomOut error: $e');
@@ -232,186 +257,264 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     final center = widget.center ?? MapConstants.current;
     if (mapboxMap == null || center == null) return;
     try {
-      await mapboxMap.setCamera(
+      await mapboxMap.easeTo(
         CameraOptions(
           center: Point(coordinates: Position(center.lng, center.lat)),
           zoom: widget.zoom,
         ),
+        MapAnimationOptions(duration: 400),
       );
     } catch (e) {
       debugPrint('FixlyMapView recenter error: $e');
     }
   }
 
+
   Future<void> _refreshAnnotations({bool fitCamera = true}) async {
-    final polylineManager = _polylineManager;
-    final polygonManager = _polygonManager;
-    final pointManager = _pointManager;
-    if (polylineManager == null ||
-        polygonManager == null ||
-        pointManager == null) {
+    if (_isDisposed || !mounted || _mapboxMap == null) return;
+
+    if (_isRefreshing) {
+      _refreshQueued = true;
       return;
     }
+    _isRefreshing = true;
 
-    final destination = widget.center ?? MapConstants.current;
-    if (destination == null) {
-      return;
-    }
-    final start = widget.routeStart ?? MapConstants.workerApproachStart;
-    final worker = widget.routeEnd == null || start == null
-        ? null
-        : MapConstants.lerpRoute(
-            start,
-            widget.routeEnd!,
-            widget.routeProgress ?? 0,
-          );
-
-    if (widget.serviceRadiusKm != null) {
-      final polygon = MapGeoUtils.geodesicCirclePolygon(
-        lat: destination.lat,
-        lng: destination.lng,
-        radiusKm: widget.serviceRadiusKm!,
-      );
-      final areaOptions = PolygonAnnotationOptions(
-        geometry: polygon,
-        fillColor: AppColors.primary.withValues(alpha: 0.18).toARGB32(),
-        fillOutlineColor: AppColors.primary.withValues(alpha: 0.85).toARGB32(),
-        fillOpacity: 0.75,
-      );
-      if (_areaPolygon == null) {
-        _areaPolygon = await polygonManager.create(areaOptions);
-      } else {
-        _areaPolygon!
-          ..geometry = areaOptions.geometry
-          ..fillColor = areaOptions.fillColor
-          ..fillOutlineColor = areaOptions.fillOutlineColor
-          ..fillOpacity = areaOptions.fillOpacity;
-        await polygonManager.update(_areaPolygon!);
+    try {
+      final polylineManager = _polylineManager;
+      final polygonManager = _polygonManager;
+      final pointManager = _pointManager;
+      if (polylineManager == null ||
+          polygonManager == null ||
+          pointManager == null) {
+        return;
       }
-    } else if (_areaPolygon != null) {
-      await polygonManager.delete(_areaPolygon!);
-      _areaPolygon = null;
-    }
 
-    if (widget.routeEnd != null && start != null) {
-      final coordinates = widget.routeCoordinates.length >= 2
-          ? widget.routeCoordinates
-          : [start, widget.routeEnd!];
-      final route = LineString(
-        coordinates: coordinates
-            .map((coordinate) => Position(coordinate.lng, coordinate.lat))
-            .toList(),
-      );
-      final routeOptions = PolylineAnnotationOptions(
-        geometry: route,
-        lineColor: AppColors.primary.toARGB32(),
-        lineWidth: 5,
-        lineOpacity: 0.95,
-        lineJoin: LineJoin.ROUND,
-        lineBorderColor: Colors.white.toARGB32(),
-        lineBorderWidth: 1.5,
-      );
-      if (_routeLine == null) {
-        _routeLine = await polylineManager.create(routeOptions);
-      } else {
-        _routeLine!
-          ..geometry = routeOptions.geometry
-          ..lineColor = routeOptions.lineColor
-          ..lineWidth = routeOptions.lineWidth;
-        await polylineManager.update(_routeLine!);
+      final destination = widget.center ?? MapConstants.current;
+      if (destination == null) {
+        return;
       }
-    } else if (_routeLine != null) {
-      await polylineManager.delete(_routeLine!);
-      _routeLine = null;
-    }
+      final start = widget.routeStart ?? MapConstants.workerApproachStart;
+      final worker = widget.workerPosition ??
+          (widget.routeEnd == null || start == null
+              ? null
+              : MapConstants.lerpRoute(
+                  start,
+                  widget.routeEnd!,
+                  widget.routeProgress ?? 0,
+                ));
 
-    if (widget.showDestinationPin) {
-      final destinationOptions = PointAnnotationOptions(
-        geometry: Point(
-          coordinates: Position(destination.lng, destination.lat),
-        ),
-        image: _stopImage,
-        iconImage: _stopImage == null ? 'marker-15' : null,
-        iconSize: 1.35,
-        iconColor: AppColors.accent.toARGB32(),
-        iconAnchor: IconAnchor.BOTTOM,
-        textField: destination.label ?? 'Destination',
-        textSize: 12,
-        textColor: AppColors.onSurface.toARGB32(),
-        textHaloColor: Colors.white.toARGB32(),
-        textHaloWidth: 1.5,
-        textOffset: [0, 0.8],
-        textAnchor: TextAnchor.TOP,
-      );
-      if (_destinationMarker == null) {
-        _destinationMarker = await pointManager.create(destinationOptions);
-      } else {
-        _destinationMarker!
-          ..geometry = destinationOptions.geometry
-          ..textField = destinationOptions.textField;
-        await pointManager.update(_destinationMarker!);
+      if (widget.serviceRadiusKm != null) {
+        final polygon = MapGeoUtils.geodesicCirclePolygon(
+          lat: destination.lat,
+          lng: destination.lng,
+          radiusKm: widget.serviceRadiusKm!,
+        );
+        final areaOptions = PolygonAnnotationOptions(
+          geometry: polygon,
+          fillColor: AppColors.primary.withValues(alpha: 0.18).toARGB32(),
+          fillOutlineColor: AppColors.primary.withValues(alpha: 0.85).toARGB32(),
+          fillOpacity: 0.75,
+        );
+        try {
+          if (_areaPolygon == null) {
+            _areaPolygon = await polygonManager.create(areaOptions);
+          } else {
+            _areaPolygon!
+              ..geometry = areaOptions.geometry
+              ..fillColor = areaOptions.fillColor
+              ..fillOutlineColor = areaOptions.fillOutlineColor
+              ..fillOpacity = areaOptions.fillOpacity;
+            await polygonManager.update(_areaPolygon!);
+          }
+        } catch (_) {
+          _areaPolygon = null;
+        }
+      } else if (_areaPolygon != null) {
+        try {
+          await polygonManager.delete(_areaPolygon!);
+        } catch (_) {}
+        _areaPolygon = null;
       }
-    } else if (_destinationMarker != null) {
-      await pointManager.delete(_destinationMarker!);
-      _destinationMarker = null;
-    }
 
-    if (start != null) {
-      final startOptions = PointAnnotationOptions(
-        geometry: Point(coordinates: Position(start.lng, start.lat)),
-        image: _startImage,
-        iconImage: _startImage == null ? 'marker-15' : null,
-        iconSize: 0.7,
-        iconAnchor: IconAnchor.BOTTOM,
-        textField: 'Worker',
-      );
-      if (_startMarker == null) {
-        _startMarker = await pointManager.create(startOptions);
-      } else {
-        _startMarker!
-          ..geometry = startOptions.geometry
-          ..image = startOptions.image;
-        await pointManager.update(_startMarker!);
+      if (widget.routeEnd != null && (widget.routeCoordinates.length >= 2 || start != null)) {
+        final coordinates = widget.routeCoordinates.length >= 2
+            ? widget.routeCoordinates
+            : [start ?? worker ?? destination, widget.routeEnd!];
+        final route = LineString(
+          coordinates: coordinates
+              .map((coordinate) => Position(coordinate.lng, coordinate.lat))
+              .toList(),
+        );
+        final routeOptions = PolylineAnnotationOptions(
+          geometry: route,
+          lineColor: AppColors.primary.toARGB32(),
+          lineWidth: 5,
+          lineOpacity: 0.95,
+          lineJoin: LineJoin.ROUND,
+          lineBorderColor: Colors.white.toARGB32(),
+          lineBorderWidth: 1.5,
+        );
+        try {
+          if (_routeLine == null) {
+            _routeLine = await polylineManager.create(routeOptions);
+          } else {
+            _routeLine!
+              ..geometry = routeOptions.geometry
+              ..lineColor = routeOptions.lineColor
+              ..lineWidth = routeOptions.lineWidth;
+            await polylineManager.update(_routeLine!);
+          }
+        } catch (_) {
+          _routeLine = null;
+        }
+      } else if (_routeLine != null) {
+        try {
+          await polylineManager.delete(_routeLine!);
+        } catch (_) {}
+        _routeLine = null;
       }
-    }
 
-    if (worker != null) {
-      final workerOptions = PointAnnotationOptions(
-        geometry: Point(coordinates: Position(worker.lng, worker.lat)),
-        image: _bikeImage,
-        iconImage: _bikeImage == null ? 'car-15' : null,
-        iconSize: 0.8,
-        iconColor: _bikeImage == null ? AppColors.primary.toARGB32() : null,
-        iconRotate:
-            widget.workerHeading ??
+      if (widget.showDestinationPin) {
+        final destinationOptions = PointAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(destination.lng, destination.lat),
+          ),
+          image: _stopImage,
+          iconImage: _stopImage == null ? 'marker-15' : null,
+          iconSize: 1.35,
+          iconColor: AppColors.accent.toARGB32(),
+          iconAnchor: IconAnchor.BOTTOM,
+          textField: destination.label ?? 'Destination',
+          textSize: 12,
+          textColor: AppColors.onSurface.toARGB32(),
+          textHaloColor: Colors.white.toARGB32(),
+          textHaloWidth: 1.5,
+          textOffset: [0, 0.8],
+          textAnchor: TextAnchor.TOP,
+        );
+        try {
+          if (_destinationMarker == null) {
+            _destinationMarker = await pointManager.create(destinationOptions);
+          } else {
+            _destinationMarker!
+              ..geometry = destinationOptions.geometry
+              ..textField = destinationOptions.textField;
+            await pointManager.update(_destinationMarker!);
+          }
+        } catch (_) {
+          _destinationMarker = null;
+        }
+      } else if (_destinationMarker != null) {
+        try {
+          await pointManager.delete(_destinationMarker!);
+        } catch (_) {}
+        _destinationMarker = null;
+      }
+
+      // Only render start marker if distinct from worker bike
+      final isStartDistinct = start != null &&
+          (worker == null ||
+              (start.lat - worker.lat).abs() > 0.0001 ||
+              (start.lng - worker.lng).abs() > 0.0001);
+
+      if (isStartDistinct) {
+        final startOptions = PointAnnotationOptions(
+          geometry: Point(coordinates: Position(start.lng, start.lat)),
+          image: _startImage,
+          iconImage: _startImage == null ? 'marker-15' : null,
+          iconSize: 0.7,
+          iconAnchor: IconAnchor.BOTTOM,
+          textField: start.label ?? 'Start',
+          textSize: 11,
+          textColor: AppColors.onSurface.toARGB32(),
+          textHaloColor: Colors.white.toARGB32(),
+          textHaloWidth: 1.5,
+          textOffset: [0, 0.8],
+          textAnchor: TextAnchor.TOP,
+        );
+        try {
+          if (_startMarker == null) {
+            _startMarker = await pointManager.create(startOptions);
+          } else {
+            _startMarker!
+              ..geometry = startOptions.geometry
+              ..image = startOptions.image
+              ..textField = startOptions.textField;
+            await pointManager.update(_startMarker!);
+          }
+        } catch (_) {
+          _startMarker = null;
+        }
+      } else if (_startMarker != null) {
+        try {
+          await pointManager.delete(_startMarker!);
+        } catch (_) {}
+        _startMarker = null;
+      }
+
+      if (worker != null) {
+        final rotation = widget.workerHeading ??
+            worker.heading ??
             (start != null && widget.routeEnd != null
                 ? NavigationMath.bikeIconRotation(start, widget.routeEnd!)
-                : 0),
-        iconAnchor: IconAnchor.CENTER,
-        textField: start?.label ?? 'Worker',
-        textSize: 12,
-        textColor: AppColors.primary.toARGB32(),
-        textHaloColor: Colors.white.toARGB32(),
-        textHaloWidth: 1.5,
-        textOffset: [0, 1.2],
-        textAnchor: TextAnchor.TOP,
-      );
-      if (_workerMarker == null) {
-        _workerMarker = await pointManager.create(workerOptions);
-      } else {
-        _workerMarker!
-          ..geometry = workerOptions.geometry
-          ..image = workerOptions.image
-          ..iconRotate = workerOptions.iconRotate
-          ..textField = workerOptions.textField;
-        await pointManager.update(_workerMarker!);
-      }
-    } else if (_workerMarker != null) {
-      await pointManager.delete(_workerMarker!);
-      _workerMarker = null;
-    }
+                : 0.0);
 
-    if (fitCamera) await _fitCamera();
+        final workerOptions = PointAnnotationOptions(
+          geometry: Point(coordinates: Position(worker.lng, worker.lat)),
+          image: _bikeImage,
+          iconImage: _bikeImage == null ? 'car-15' : null,
+          iconSize: 0.85,
+          iconColor: _bikeImage == null ? AppColors.primary.toARGB32() : null,
+          iconRotate: rotation,
+          iconAnchor: IconAnchor.CENTER,
+          textField: worker.label ?? 'Worker',
+          textSize: 12,
+          textColor: AppColors.primary.toARGB32(),
+          textHaloColor: Colors.white.toARGB32(),
+          textHaloWidth: 1.5,
+          textOffset: [0, 1.2],
+          textAnchor: TextAnchor.TOP,
+        );
+        try {
+          if (_workerMarker == null) {
+            _workerMarker = await pointManager.create(workerOptions);
+          } else {
+            _workerMarker!
+              ..geometry = workerOptions.geometry
+              ..image = workerOptions.image
+              ..iconRotate = workerOptions.iconRotate
+              ..textField = workerOptions.textField;
+            await pointManager.update(_workerMarker!);
+          }
+        } catch (_) {
+          _workerMarker = null;
+        }
+
+        if (widget.followWorker && _mapboxMap != null) {
+          try {
+            await _mapboxMap!.easeTo(
+              CameraOptions(center: Point(coordinates: Position(worker.lng, worker.lat))),
+              MapAnimationOptions(duration: 250),
+            );
+          } catch (_) {}
+        }
+      } else if (_workerMarker != null) {
+        try {
+          await pointManager.delete(_workerMarker!);
+        } catch (_) {}
+        _workerMarker = null;
+      }
+
+      if (fitCamera) await _fitCamera();
+    } catch (e) {
+      debugPrint('FixlyMapView _refreshAnnotations error: $e');
+    } finally {
+      _isRefreshing = false;
+      if (_refreshQueued && !_isDisposed && mounted) {
+        _refreshQueued = false;
+        Future.microtask(() => _refreshAnnotations(fitCamera: false));
+      }
+    }
   }
 
   Future<void> _fitCamera() async {

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
+import '../../../../core/utils/toast_utils.dart';
 import '../cubit/active_job_cubit.dart';
 
 class WorkerActiveJobPage extends StatefulWidget {
@@ -33,7 +34,6 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
             onPressed: () {
               Navigator.pop(ctx);
               context.read<ActiveJobCubit>().completeJob();
-              context.push('${RouteNames.workerRating}?bookingId=$bookingId');
             },
             child: const Text('No, Complete Directly'),
           ),
@@ -52,16 +52,19 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<ActiveJobCubit, ActiveJobState>(
+      listenWhen: (previous, current) =>
+          previous.status != current.status || previous.error != current.error,
       listener: (context, state) {
-        if (state.status == ActiveJobStatus.reviewSubmitted || state.status == ActiveJobStatus.completed) {
-          if (state.status == ActiveJobStatus.reviewSubmitted) {
-            context.go(RouteNames.workerDashboard);
-          } else {
-            // When completed, go to rating if we haven't already.
-            if (state.job != null) {
-              context.push('${RouteNames.workerRating}?bookingId=${state.job!.id}&customerId=${state.job!.customerLat}'); // passing lat as mock for now, actual is needed if avail
-            }
+        if (state.status == ActiveJobStatus.reviewSubmitted) {
+          context.go(RouteNames.workerDashboard);
+        } else if (state.status == ActiveJobStatus.completed) {
+          if (state.job != null) {
+            context.push(
+              '${RouteNames.workerRating}?bookingId=${state.job!.id}',
+            );
           }
+        } else if (state.error != null && state.error!.isNotEmpty) {
+          ToastUtils.showError(context: context, message: state.error!);
         }
       },
       builder: (context, state) {
@@ -343,6 +346,11 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
           SwipeActionButton(
             label: 'Swipe to Complete Job',
             onCompleted: () => _showCompleteDialog(context, job.id),
+          ),
+          const SizedBox(height: 12),
+          SecondaryButton(
+            label: 'Complete Job',
+            onPressed: () => _showCompleteDialog(context, job.id),
           ),
         ],
       );

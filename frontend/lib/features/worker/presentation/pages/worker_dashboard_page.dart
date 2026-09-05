@@ -44,12 +44,14 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
               onPressed: () => context.push(RouteNames.sharedNotifications),
             ),
           ],
-          body: state.status == WorkerDashboardStatus.loading
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
+          body: AppRefreshIndicator(
+            onRefresh: () => context.read<WorkerDashboardCubit>().load(),
+            child: state.status == WorkerDashboardStatus.loading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView(
+                    physics: appRefreshScrollPhysics,
+                    children: [
+                      Row(
                       children: [
                         Expanded(
                           child: _StatCard(
@@ -125,7 +127,7 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
                         id: state.activeJob!.id,
                       ),
                     ],
-                    const Spacer(),
+                    const SizedBox(height: 24),
                     PrimaryButton(
                       label: 'View job feed',
                       onPressed: () => context.push(RouteNames.workerJobs),
@@ -135,8 +137,10 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
                       label: 'My profile',
                       onPressed: () => context.go(RouteNames.workerProfileTab),
                     ),
+                    const SizedBox(height: 24),
                   ],
                 ),
+          ),
         );
       },
     );

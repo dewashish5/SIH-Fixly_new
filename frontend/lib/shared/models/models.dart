@@ -278,6 +278,7 @@ class BookingInvoice extends Equatable {
     required this.totalAmount,
     this.paymentStatus,
     this.paymentMethod,
+    this.transactionId,
     this.customerName,
     this.customerPhone,
     this.workerName,
@@ -296,6 +297,7 @@ class BookingInvoice extends Equatable {
   final double totalAmount;
   final String? paymentStatus;
   final String? paymentMethod;
+  final String? transactionId;
   final String? customerName;
   final String? customerPhone;
   final String? workerName;
@@ -333,6 +335,7 @@ class Booking extends Equatable {
     this.problemVideos = const [],
     this.paymentMethod,
     this.paymentStatus,
+    this.transactionId,
     this.arrivalOtp,
     this.createdAt,
     this.jobStartedAt,
@@ -368,6 +371,7 @@ class Booking extends Equatable {
   final List<String> problemVideos;
   final String? paymentMethod;
   final String? paymentStatus;
+  final String? transactionId;
   final String? arrivalOtp;
   final DateTime? createdAt;
   final DateTime? jobStartedAt;
@@ -413,6 +417,7 @@ class Booking extends Equatable {
       problemVideos: problemVideos,
       paymentMethod: paymentMethod,
       paymentStatus: paymentStatus,
+      transactionId: transactionId,
       arrivalOtp: arrivalOtp,
       createdAt: createdAt,
       jobStartedAt: jobStartedAt,
@@ -545,6 +550,7 @@ class WalletTransaction extends Equatable {
     required this.amount,
     required this.isCredit,
     this.date,
+    this.transactionId,
   });
 
   final String id;
@@ -552,9 +558,11 @@ class WalletTransaction extends Equatable {
   final double amount;
   final bool isCredit;
   final DateTime? date;
+  final String? transactionId;
 
   @override
-  List<Object?> get props => [id, label, amount, isCredit, date];
+  List<Object?> get props =>
+      [id, label, amount, isCredit, date, transactionId];
 }
 
 class NotificationItem extends Equatable {

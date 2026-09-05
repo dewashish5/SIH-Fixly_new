@@ -9,7 +9,7 @@ export const acceptBooking = async (req, res) => {
         const booking = await Booking.findById(bookingId);
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
-        if (booking.status !== 'SEARCHING') {
+        if (!['PENDING', 'SEARCHING'].includes(booking.status)) {
             return res.status(400).json({ success: false, message: 'Booking is already accepted or cancelled' });
         }
 
@@ -148,14 +148,22 @@ export const completeJob = async (req, res) => {
         const booking = await Booking.findById(bookingId);
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
-        booking.status = 'COMPLETED';
-        booking.jobCompletedAt = Date.now();
-
-        // Recalculate invoice based on Booking schema fields
-        const extraPartsTotal = booking.addOns.reduce((sum, item) => sum + item.price, 0);
+        booking.invoice = booking.invoice || {};
+        const extraPartsTotal = (booking.addOns || []).reduce((sum, item) => sum + item.price, 0);
         booking.invoice.extraPartsTotal = extraPartsTotal;
-        booking.invoice.totalAmount = booking.invoice.baseServiceFee + extraPartsTotal + booking.invoice.platformFee;
+        booking.invoice.totalAmount = (booking.invoice.baseServiceFee || 0) + extraPartsTotal + (booking.invoice.platformFee || 0);
+        await booking.save();
 
+        if (booking.invoice.paymentStatus !== 'PAID') {
+            return res.status(400).json({
+                success: false,
+                code: 'PAYMENT_REQUIRED',
+                message: 'Customer payment is required before this job can be completed',
+            });
+        }
+
+        booking.status = 'COMPLETED';
+        booking.jobCompletedAt = booking.jobCompletedAt || Date.now();
         await booking.save();
 
         // Notify client via Socket.io

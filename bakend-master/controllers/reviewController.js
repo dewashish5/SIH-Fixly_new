@@ -6,7 +6,7 @@ import { uploadMulterFiles } from '../utils/cloudinary.js';
 // Screen: Rating & Review Submission
 export const submitReview = async (req, res) => {
     try {
-        const { bookingId: bodyBookingId, workerId, rating, comment, traits } = req.body;
+        const { bookingId: bodyBookingId, workerId, rating, comment, traits, reviewerRole } = req.body;
         const bookingId = req.params.bookingId || bodyBookingId;
 
         let badgesGiven = traits;
@@ -19,27 +19,38 @@ export const submitReview = async (req, res) => {
             photos = await uploadMulterFiles(req.files, 'gigconnect/reviews');
         }
 
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        const isWorkerReviewing = req.user.role === 'WORKER' || reviewerRole === 'worker';
+        const targetWorkerId = workerId && workerId.length === 24 ? workerId : booking.worker;
+        const targetCustomerId = booking.customer;
+
         const review = await Review.create({
             booking: bookingId,
-            customer: req.user.id,
-            worker: workerId,
-            rating,
+            customer: targetCustomerId,
+            worker: targetWorkerId,
+            rating: Number(rating),
             feedback: comment,
             badgesGiven: badgesGiven || [],
             photos,
         });
 
         // MongoDB Aggregation to dynamically update worker's average rating
-        const stats = await Review.aggregate([
-            { $match: { worker: review.worker } },
-            { $group: { _id: '$worker', avgRating: { $avg: '$rating' }, totalJobs: { $sum: 1 } } }
-        ]);
+        if (!isWorkerReviewing && targetWorkerId) {
+            const stats = await Review.aggregate([
+                { $match: { worker: review.worker } },
+                { $group: { _id: '$worker', avgRating: { $avg: '$rating' }, totalJobs: { $sum: 1 } } }
+            ]);
 
-        if (stats.length > 0) {
-            await User.findByIdAndUpdate(workerId, {
-                'workerProfile.rating': stats[0].avgRating.toFixed(1),
-                'workerProfile.totalJobs': stats[0].totalJobs
-            });
+            if (stats.length > 0) {
+                await User.findByIdAndUpdate(targetWorkerId, {
+                    'workerProfile.rating': stats[0].avgRating.toFixed(1),
+                    'workerProfile.totalJobs': stats[0].totalJobs
+                });
+            }
         }
 
         await Booking.findByIdAndUpdate(bookingId, { isReviewed: true });

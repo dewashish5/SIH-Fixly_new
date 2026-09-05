@@ -36,5 +36,8 @@
     "socket.io": "^4.8.3",
     "swagger-autogen": "^2.23.7",
     "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3"
   }
 }

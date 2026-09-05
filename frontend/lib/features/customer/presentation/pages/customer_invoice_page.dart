@@ -122,6 +122,17 @@ class _InvoiceContent extends StatelessWidget {
                   ),
                 ),
               ],
+              if (invoice.transactionId != null &&
+                  invoice.transactionId!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Razorpay ID: ${invoice.transactionId}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

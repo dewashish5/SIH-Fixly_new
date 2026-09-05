@@ -19,8 +19,8 @@ const bookingSchema = new mongoose.Schema({
 
     status: {
         type: String,
-        enum: ['SEARCHING', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
-        default: 'SEARCHING'
+        enum: ['PENDING', 'SEARCHING', 'APPROVED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+        default: 'PENDING'
     },
 
     problemDescription: { type: String, default: null },
@@ -57,7 +57,8 @@ const bookingSchema = new mongoose.Schema({
         platformFee: { type: Number, default: 15 },
         totalAmount: { type: Number, default: 0 },
         paymentStatus: { type: String, enum: ['PENDING', 'PAID', 'FAILED'], default: 'PENDING' },
-        paymentMethod: { type: String, default: 'UPI' }
+        paymentMethod: { type: String, default: 'UPI' },
+        transactionId: { type: String, default: null }
     }
 }, { timestamps: true });
 

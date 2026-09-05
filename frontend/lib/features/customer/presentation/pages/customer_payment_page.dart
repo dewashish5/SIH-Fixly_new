@@ -94,7 +94,23 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7ED),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Text(
+                        'Razorpay test mode',
+                        style: TextStyle(
+                          color: Color(0xFF9A3412),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     
                     // Itemized invoice AppCard
                     AppCard(
@@ -131,7 +147,7 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
                         Icon(Icons.lock_outlined, color: Colors.grey, size: 16),
                         SizedBox(width: 8),
                         Text(
-                          'Secured by Razorpay • 256-bit SSL',
+                          'Secured by Razorpay • Test mode',
                           style: TextStyle(color: Colors.grey, fontSize: 12),
                         ),
                       ],

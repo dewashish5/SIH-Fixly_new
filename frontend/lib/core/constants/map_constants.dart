@@ -50,9 +50,47 @@ class MapCoordinate {
     required this.lat,
     required this.lng,
     this.label,
+    this.heading,
   });
 
   final double lat;
   final double lng;
   final String? label;
+  final double? heading;
+
+  MapCoordinate copyWith({
+    double? lat,
+    double? lng,
+    String? label,
+    double? heading,
+  }) {
+    return MapCoordinate(
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      label: label ?? this.label,
+      heading: heading ?? this.heading,
+    );
+  }
+
+  static MapCoordinate lerp(MapCoordinate from, MapCoordinate to, double progress) {
+    return MapConstants.lerpRoute(from, to, progress);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MapCoordinate &&
+          runtimeType == other.runtimeType &&
+          lat == other.lat &&
+          lng == other.lng &&
+          label == other.label &&
+          heading == other.heading;
+
+  @override
+  int get hashCode => Object.hash(lat, lng, label, heading);
+
+  @override
+  String toString() =>
+      'MapCoordinate(lat: $lat, lng: $lng, label: $label, heading: $heading)';
 }
+

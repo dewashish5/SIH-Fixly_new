@@ -12,6 +12,7 @@ import {
     listWorkerActive,
     listWorkerCompleted,
     declineBooking,
+    updateBooking,
 } from '../controllers/bookingController.js';
 import {
     verifyArrivalOtp,
@@ -36,6 +37,7 @@ router.post('/', protect, upload.array('photos', 5), createBooking);
 router.get('/:bookingId/review', protect, getBookingReview);
 router.get('/:bookingId', protect, getBookingDetails);
 router.patch('/:bookingId/cancel', protect, cancelBooking);
+router.patch('/:bookingId', protect, updateBooking);
 router.post('/:bookingId/decline', protect, declineBooking);
 
 // Verification & Live Tracking

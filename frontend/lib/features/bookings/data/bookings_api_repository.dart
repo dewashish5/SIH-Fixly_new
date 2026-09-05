@@ -210,6 +210,7 @@ class BookingsApiRepository {
       totalAmount: (invoice['totalAmount'] as num?)?.toDouble() ?? 0,
       paymentStatus: invoice['paymentStatus']?.toString(),
       paymentMethod: invoice['paymentMethod']?.toString(),
+      transactionId: invoice['transactionId']?.toString(),
       customerName: customer['name']?.toString(),
       customerPhone: customer['phone']?.toString(),
       workerName: worker['name']?.toString(),
@@ -236,6 +237,36 @@ class BookingsApiRepository {
       );
     }
     return getById(bookingId, serviceTitle: serviceTitle);
+  }
+
+  Future<Booking> updateBooking({
+    required String bookingId,
+    String? problemDescription,
+    DateTime? scheduledTime,
+    String? addressLine,
+    double? lat,
+    double? lng,
+  }) async {
+    final Map<String, dynamic> data = {};
+    if (problemDescription != null) data['problemDescription'] = problemDescription;
+    if (scheduledTime != null) data['scheduledTime'] = scheduledTime.toIso8601String();
+    if (addressLine != null || (lat != null && lng != null)) {
+      final Map<String, dynamic> serviceAddress = {};
+      if (addressLine != null) serviceAddress['addressLine'] = addressLine;
+      if (lat != null && lng != null) {
+        serviceAddress['coordinates'] = [lng, lat];
+      }
+      data['serviceAddress'] = serviceAddress;
+    }
+    final res = await _api.patch(ApiEndpoints.bookingById(bookingId), data: data);
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Update failed');
+    }
+    final booking = res['booking'];
+    if (booking is Map) {
+      return mapBooking(Map<String, dynamic>.from(booking));
+    }
+    return getById(bookingId);
   }
 
   Future<Booking> verifyArrivalOtp({
@@ -558,6 +589,9 @@ class BookingsApiRepository {
           : null,
       paymentStatus: invoice is Map
           ? invoice['paymentStatus']?.toString()
+          : null,
+      transactionId: invoice is Map
+          ? invoice['transactionId']?.toString()
           : null,
       arrivalOtp: json['arrivalOtp']?.toString(),
       createdAt: parseDate(json['createdAt']),

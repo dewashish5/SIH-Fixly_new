@@ -165,54 +165,58 @@ class _SwipeActionButtonState extends State<SwipeActionButton> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final maxDrag = constraints.maxWidth - 52;
-          return Stack(
-            alignment: Alignment.centerLeft,
-            children: [
-              Center(
-                child: Text(
-                  widget.label,
-                  style: TextStyle(
-                    color: widget.enabled ? scheme.primary : scheme.outline,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Positioned(
-                left: _drag,
-                child: GestureDetector(
-                  onHorizontalDragUpdate: !widget.enabled
-                      ? null
-                      : (details) => setState(() {
-                          _drag = (_drag + details.delta.dx).clamp(
-                            0.0,
-                            maxDrag,
-                          );
-                        }),
-                  onHorizontalDragEnd: !widget.enabled
-                      ? null
-                      : (_) {
-                          if (_drag >= maxDrag * 0.82) {
-                            setState(() => _drag = maxDrag);
-                            widget.onCompleted();
-                          } else {
-                            setState(() => _drag = 0);
-                          }
-                        },
-                  child: Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
+          return InkWell(
+            borderRadius: BorderRadius.circular(28),
+            onTap: widget.enabled ? widget.onCompleted : null,
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                Center(
+                  child: Text(
+                    widget.label,
+                    style: TextStyle(
                       color: widget.enabled ? scheme.primary : scheme.outline,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.double_arrow_rounded,
-                      color: scheme.onPrimary,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-              ),
-            ],
+                Positioned(
+                  left: _drag,
+                  child: GestureDetector(
+                    onHorizontalDragUpdate: !widget.enabled
+                        ? null
+                        : (details) => setState(() {
+                            _drag = (_drag + details.delta.dx).clamp(
+                              0.0,
+                              maxDrag,
+                            );
+                          }),
+                    onHorizontalDragEnd: !widget.enabled
+                        ? null
+                        : (_) {
+                            if (_drag >= maxDrag * 0.7) {
+                              setState(() => _drag = maxDrag);
+                              widget.onCompleted();
+                            } else {
+                              setState(() => _drag = 0);
+                            }
+                          },
+                    child: Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: widget.enabled ? scheme.primary : scheme.outline,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.double_arrow_rounded,
+                        color: scheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),

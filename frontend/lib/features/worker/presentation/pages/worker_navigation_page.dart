@@ -1,16 +1,21 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/constants/map_constants.dart';
 import '../../../../core/location/app_location.dart';
-import '../../../../core/widgets/core_widgets.dart';
+import '../../../../core/network/live_tracking_socket.dart';
+import '../../../../core/utils/toast_utils.dart';
+import '../../../../core/utils/tracking_helpers.dart';
 import '../../../../core/widgets/fixly_map_view.dart';
 import '../../../../shared/models/models.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
-import '../../../../core/utils/toast_utils.dart';
 
 class WorkerNavigationPage extends StatefulWidget {
   const WorkerNavigationPage({super.key, this.bookingId});
@@ -23,12 +28,17 @@ class WorkerNavigationPage extends StatefulWidget {
 
 class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
   final _bookings = BookingsApiRepository();
+  final _socket = LiveTrackingSocket();
+
   WorkerJob? _job;
   MapCoordinate? _workerPosition;
+  MapCoordinate? _startPosition;
   MapCoordinate? _destination;
+  double? _workerHeading;
   List<MapCoordinate> _route = const [];
-  Timer? _pollTimer;
-  Timer? _animationTimer;
+  StreamSubscription<Position>? _gpsSubscription;
+
+  bool _followWorker = true;
   bool _loading = true;
   bool _navigationStarted = false;
   String? _error;
@@ -41,8 +51,9 @@ class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
-    _animationTimer?.cancel();
+    _gpsSubscription?.cancel();
+    _socket.disconnect();
+    _socket.dispose();
     super.dispose();
   }
 
@@ -51,30 +62,54 @@ class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
       final job = widget.bookingId == null
           ? null
           : await _bookings.workerJobById(widget.bookingId!);
+
       final current = AppLocation.instance.coordinateOrNull;
       final destination =
           job == null || job.customerLat == null || job.customerLng == null
-          ? MapConstants.current
-          : MapCoordinate(
-              lat: job.customerLat!,
-              lng: job.customerLng!,
-              label: 'Customer',
-            );
+              ? (current != null
+                  ? MapCoordinate(lat: current.lat + 0.012, lng: current.lng + 0.010, label: 'Customer')
+                  : MapConstants.current)
+              : MapCoordinate(
+                  lat: job.customerLat!,
+                  lng: job.customerLng!,
+                  label: 'Customer',
+                );
+
+      // Determine initial worker departure location
+      final workerStart = current ??
+          (destination != null
+              ? MapCoordinate(lat: destination.lat - 0.012, lng: destination.lng - 0.010, label: 'Worker Departure')
+              : MapConstants.workerApproachStart);
+
+      final initialHeading = (workerStart != null && destination != null)
+          ? TrackingHelpers.bearingDegrees(workerStart, destination)
+          : 0.0;
+
       if (!mounted) return;
       setState(() {
         _job = job;
-        _workerPosition = current ?? MapConstants.workerApproachStart;
+        _workerPosition = workerStart;
+        _startPosition = workerStart;
         _destination = destination;
+        _workerHeading = initialHeading;
         _loading = false;
         _error = destination == null ? 'Waiting for location permission' : null;
       });
+
       await _loadRoute();
+
+      // Connect to Socket.IO room for this booking so worker can broadcast location
       if (widget.bookingId != null) {
-        _pollTimer = Timer.periodic(
-          const Duration(seconds: 5),
-          (_) => _pollPosition(),
-        );
+        _socket.connect(widget.bookingId!);
+
+        // Broadcast initial location
+        if (workerStart != null) {
+          _broadcastLocation(workerStart, initialHeading);
+        }
       }
+
+      // Automatically start live GPS streaming
+      await _startLiveGpsTracking();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -84,49 +119,153 @@ class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
     }
   }
 
+  Future<void> _startLiveGpsTracking() async {
+    await _gpsSubscription?.cancel();
+
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      if (permission == LocationPermission.deniedForever) return;
+
+      const locationSettings = LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 2,
+      );
+
+      _gpsSubscription = Geolocator.getPositionStream(locationSettings: locationSettings)
+          .listen((Position position) {
+        final prev = _workerPosition;
+        final nextCoord = MapCoordinate(
+          lat: position.latitude,
+          lng: position.longitude,
+        );
+
+        final heading = position.heading > 0
+            ? position.heading
+            : (prev != null
+                ? TrackingHelpers.bearingDegrees(prev, nextCoord)
+                : 0.0);
+
+        final updatedWorker = nextCoord.copyWith(heading: heading);
+
+        if (!mounted) return;
+        setState(() {
+          _workerPosition = updatedWorker;
+          _workerHeading = heading;
+          _navigationStarted = true;
+        });
+
+        _broadcastLocation(updatedWorker, heading);
+      });
+    } catch (e) {
+      debugPrint('Error starting live GPS stream: $e');
+    }
+  }
+
   Future<void> _loadRoute() async {
     final from = _workerPosition;
     final to = _destination;
     if (from == null || to == null || !MapConstants.hasToken) return;
     try {
       final route = await _bookings.fetchDrivingRoute(from: from, to: to);
-      if (mounted && route.length >= 2) setState(() => _route = route);
-    } catch (_) {
-      // The map keeps its local fallback line when directions are unavailable.
-    }
+      if (mounted && route.length >= 2) {
+        setState(() => _route = route);
+      }
+    } catch (_) {}
   }
 
-  Future<void> _pollPosition() async {
+  void _broadcastLocation(MapCoordinate pos, double heading) {
     final bookingId = widget.bookingId;
     if (bookingId == null) return;
-    try {
-      final next = await _bookings.trackWorkerPosition(bookingId);
-      if (next == null || !mounted) return;
-      _animateWorkerTo(next);
-      await _loadRoute();
-    } catch (_) {
-      // Keep the last known position while a polling request is unavailable.
+    _socket.emitWorkerLocation(
+      bookingId: bookingId,
+      lat: pos.lat,
+      lng: pos.lng,
+      heading: heading,
+    );
+  }
+
+  Future<void> _makePhoneCall(String? phone) async {
+    final uri = Uri.parse('tel:${phone ?? "9876543210"}');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
     }
   }
 
-  void _animateWorkerTo(MapCoordinate target) {
-    final start = _workerPosition ?? target;
-    _animationTimer?.cancel();
-    var tick = 0;
-    _animationTimer = Timer.periodic(const Duration(milliseconds: 100), (
-      timer,
-    ) {
-      tick++;
-      final progress = (tick / 10).clamp(0.0, 1.0);
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      setState(
-        () => _workerPosition = MapConstants.lerpRoute(start, target, progress),
-      );
-      if (progress >= 1) timer.cancel();
-    });
+  void _showArrivalDialog() {
+    final controller = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Enter Customer Start OTP',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Ask customer for the 4-digit OTP shown on their live tracking screen.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
+              decoration: InputDecoration(
+                hintText: '••••',
+                counterText: '',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                final otp = controller.text.trim();
+                if (otp.length == 4 && widget.bookingId != null) {
+                  Navigator.pop(ctx);
+                  try {
+                    await _bookings.verifyArrivalOtp(bookingId: widget.bookingId!, otp: otp);
+                    if (mounted) {
+                      ToastUtils.showToast(context: context, message: 'OTP verified! Job started.');
+                      context.go(RouteNames.workerActiveJob);
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ToastUtils.showToast(context: context, message: e.toString());
+                    }
+                  }
+                }
+              },
+              child: const Text('Verify & Start Work', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -134,89 +273,216 @@ class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
     final l10n = context.l10n;
     final destination = _destination;
     final worker = _workerPosition;
+    final start = _startPosition ?? worker;
 
     if (_loading) {
-      return AppScaffold(
-        title: l10n.navigation,
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.navigation)),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    return AppScaffold(
-      title: l10n.navigation,
-      padding: EdgeInsets.zero,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    final distanceMeters = (worker != null && destination != null)
+        ? TrackingHelpers.distanceMeters(worker, destination)
+        : 1500.0;
+    final distStr = TrackingHelpers.formatDistance(distanceMeters);
+    final etaStr = TrackingHelpers.formatEta(TrackingHelpers.estimateEtaMinutes(distanceMeters));
+
+    return Scaffold(
+      body: Stack(
         children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-              child: destination == null
-                  ? Center(
-                      child: Text(_error ?? 'Customer location unavailable'),
-                    )
-                  : FixlyMapView(
-                      expand: true,
-                      borderRadius: BorderRadius.circular(20),
-                      center: destination,
-                      zoom: MapConstants.navigationZoom,
-                      routeEnd: destination,
-                      routeStart: worker,
-                      routeCoordinates: _route,
-                      routeProgress: 0,
-                      claimGestures: true,
-                      showZoomControls: true,
-                      showRecenterButton: true,
+          // 1. Full Screen Interactive Navigation Map
+          Positioned.fill(
+            child: destination == null
+                ? Center(child: Text(_error ?? 'Customer location unavailable'))
+                : FixlyMapView(
+                    expand: true,
+                    borderRadius: BorderRadius.zero,
+                    center: worker ?? destination,
+                    zoom: MapConstants.navigationZoom,
+                    routeStart: start,
+                    routeEnd: destination,
+                    workerPosition: worker,
+                    workerHeading: _workerHeading,
+                    routeCoordinates: _route,
+                    followWorker: _followWorker,
+                    claimGestures: true,
+                    showZoomControls: true,
+                    showRecenterButton: true,
+                  ),
+          ),
+
+          // 2. Turn-by-Turn HUD Top Card
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4)),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            onPressed: () => context.pop(),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.navigation, color: Color(0xFF38BDF8), size: 28),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _navigationStarted ? 'GPS Active • En Route' : 'Navigation Ready',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  '$distStr • $etaStr',
+                                  style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF10B981)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.gps_fixed, color: Color(0xFF10B981), size: 14),
+                                SizedBox(width: 4),
+                                Text(
+                                  'REAL GPS',
+                                  style: TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  ],
+                ),
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AppCard(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.route_rounded, color: AppColors.primary),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _job?.address ??
-                                  destination?.label ??
-                                  'Customer location',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                            Text(
-                              _route.length >= 2
-                                  ? 'Road route • Live location updates every 5 seconds'
-                                  : 'Live route to customer',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
+
+          // 3. Floating Follow Camera Toggle
+          Positioned(
+            right: 16,
+            top: 110,
+            child: Material(
+              color: _followWorker ? AppColors.primary : Colors.white,
+              shape: const CircleBorder(),
+              elevation: 4,
+              shadowColor: Colors.black26,
+              child: IconButton(
+                tooltip: _followWorker ? 'Free camera' : 'Follow bike',
+                icon: Icon(
+                  _followWorker ? Icons.my_location : Icons.location_searching,
+                  color: _followWorker ? Colors.white : AppColors.primary,
+                  size: 22,
+                ),
+                onPressed: () => setState(() => _followWorker = !_followWorker),
+              ),
+            ),
+          ),
+
+          // 4. Bottom Card with Customer Details & Arrival Action
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black12, blurRadius: 16, offset: Offset(0, -4)),
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, color: AppColors.accent, size: 24),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _job?.customerName ?? 'Customer',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              Text(
+                                _job?.address ?? destination?.label ?? 'Customer Location',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.call, color: AppColors.primary),
+                          style: IconButton.styleFrom(
+                            backgroundColor: const Color(0xFFEFF6FF),
+                          ),
+                          onPressed: () => _makePhoneCall(_job?.customerPhone),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                      onPressed: _showArrivalDialog,
+                      child: const Text('I Have Arrived', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                PrimaryButton(
-                  label: _navigationStarted
-                      ? 'Navigation active'
-                      : l10n.startNavigation,
-                  onPressed: _navigationStarted
-                      ? null
-                      : () {
-                          setState(() => _navigationStarted = true);
-                          ToastUtils.showToast(context: context, message: l10n.navigationStarted);
-                        },
-                ),
-              ],
+              ),
             ),
           ),
         ],

@@ -6,10 +6,15 @@ class PaymentConfig {
   const PaymentConfig({
     required this.keyId,
     required this.currency,
+    this.mode = 'test',
   });
 
   final String keyId;
   final String currency;
+  final String mode;
+
+  bool get isTestMode =>
+      mode != 'live' && (mode == 'test' || keyId.startsWith('rzp_test'));
 }
 
 class PaymentOrder {
@@ -32,9 +37,11 @@ class WalletSnapshot {
   const WalletSnapshot({
     required this.balance,
     required this.history,
+    this.totalEarnings = 0,
   });
 
   final double balance;
+  final double totalEarnings;
   final List<Map<String, dynamic>> history;
 }
 
@@ -44,6 +51,21 @@ class PaymentsApiRepository {
 
   final ApiClient _api;
 
+  List<Map<String, dynamic>> _mapHistory(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw.whereType<Map>().map((e) {
+      final map = Map<String, dynamic>.from(e);
+      final paymentId = (map['paymentId'] ?? map['transactionId'] ?? '')
+          .toString();
+      map['transactionId'] = paymentId.isNotEmpty
+          ? paymentId
+          : (map['orderId'] ?? map['_id'] ?? '').toString();
+      map['description'] = (map['description'] ?? '').toString();
+      map['type'] = (map['type'] ?? 'CREDIT').toString();
+      return map;
+    }).toList();
+  }
+
   Future<PaymentConfig> fetchConfig() async {
     final res = await _api.get(ApiEndpoints.paymentConfig);
     if (res['success'] != true || res['keyId'] == null) {
@@ -52,6 +74,7 @@ class PaymentsApiRepository {
     return PaymentConfig(
       keyId: res['keyId'].toString(),
       currency: (res['currency'] as String?) ?? 'INR',
+      mode: (res['mode'] as String?) ?? 'test',
     );
   }
 
@@ -99,17 +122,18 @@ class PaymentsApiRepository {
     final data = res['data'] is Map
         ? Map<String, dynamic>.from(res['data'] as Map)
         : res;
-    final history = data['transactions'] ?? res['transactions'];
+    final history = data['walletTransactions'] ??
+        data['transactions'] ??
+        res['walletTransactions'] ??
+        res['transactions'];
     return WalletSnapshot(
       balance: (data['availableBalance'] as num?)?.toDouble() ??
           (res['walletBalance'] as num?)?.toDouble() ??
           0,
-      history: history is List
-          ? history
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList()
-          : const [],
+      totalEarnings: (data['totalEarnings'] as num?)?.toDouble() ??
+          (data['totalEarned'] as num?)?.toDouble() ??
+          0,
+      history: _mapHistory(history),
     );
   }
 
@@ -135,15 +159,17 @@ class PaymentsApiRepository {
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Wallet failed');
     }
-    final history = res['history'];
+    final history = res['history'] ??
+        res['walletTransactions'] ??
+        res['transactions'] ??
+        (res['data'] is Map
+            ? (res['data'] as Map)['walletTransactions'] ??
+                (res['data'] as Map)['transactions']
+            : null);
     return WalletSnapshot(
       balance: (res['walletBalance'] as num?)?.toDouble() ?? 0,
-      history: history is List
-          ? history
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList()
-          : const [],
+      totalEarnings: (res['totalSpent'] as num?)?.toDouble() ?? 0,
+      history: _mapHistory(history),
     );
   }
 }

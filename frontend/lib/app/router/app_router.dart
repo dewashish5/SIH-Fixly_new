@@ -20,6 +20,7 @@ import '../../features/customer/presentation/pages/customer_finding_worker_page.
 import '../../features/customer/presentation/pages/customer_home_booking_page.dart';
 import '../../features/customer/presentation/pages/customer_home_page.dart';
 import '../../features/customer/presentation/pages/customer_payment_page.dart';
+import '../../features/customer/presentation/pages/customer_payments_page.dart';
 import '../../features/customer/presentation/pages/customer_price_estimate_page.dart';
 import '../../features/customer/presentation/pages/customer_rating_page.dart';
 import '../../features/customer/presentation/pages/customer_search_page.dart';
@@ -277,6 +278,10 @@ GoRouter createAppRouter() {
             (_, s) => const CustomerPaymentPage(),
           ),
           _page(
+            RouteNames.customerPayments,
+            (_, s) => const CustomerPaymentsPage(),
+          ),
+          _page(
             RouteNames.customerRating,
             (_, s) => const CustomerRatingPage(),
           ),
@@ -411,8 +416,11 @@ GoRouter createAppRouter() {
       ),
       _page(
         RouteNames.workerOtpEntry,
-        (_, s) => WorkerOtpEntryPage(
-          bookingId: s.uri.queryParameters['bookingId'] ?? '',
+        (_, s) => BlocProvider(
+          create: (_) => ActiveJobCubit()..load(),
+          child: WorkerOtpEntryPage(
+            bookingId: s.uri.queryParameters['bookingId'] ?? '',
+          ),
         ),
         overlay: true,
       ),

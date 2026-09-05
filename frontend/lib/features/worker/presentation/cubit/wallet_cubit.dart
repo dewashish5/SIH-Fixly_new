@@ -20,19 +20,32 @@ class WalletCubit extends Cubit<WalletState> {
       final snap = await _payments.workerWallet();
       final txs = snap.history.map((e) {
         final amount = (e['amount'] as num?)?.toDouble() ?? 0;
+        final transactionId = (e['transactionId'] ?? e['paymentId'] ?? '')
+            .toString();
+        final type = (e['type'] ?? 'CREDIT').toString();
+        final rawDescription = (e['description'] ?? '').toString();
+        final description = rawDescription.isNotEmpty
+            ? rawDescription
+            : transactionId.isNotEmpty
+                ? '$type • $transactionId'
+                : '$type • Payment';
         return WalletTransaction(
-          id: (e['_id'] ?? e['id'] ?? e['orderId'] ?? '').toString(),
-          label: (e['status'] ?? e['paymentMethod'] ?? 'Transaction').toString(),
+          id: (e['_id'] ?? e['id'] ?? e['orderId'] ?? transactionId)
+              .toString(),
+          label: description,
           amount: amount.abs(),
-          isCredit: true,
+          isCredit: type.toUpperCase() != 'DEBIT',
           date: DateTime.tryParse(e['createdAt']?.toString() ?? '') ??
               DateTime.now(),
+          transactionId:
+              transactionId.isNotEmpty ? transactionId : null,
         );
       }).toList();
       emit(
         WalletState(
           status: WalletStatus.loaded,
           balance: snap.balance,
+          totalEarnings: snap.totalEarnings,
           transactions: txs,
         ),
       );

@@ -11,7 +11,17 @@ class TrackingState extends Equatable {
     this.phase = TrackingPhase.enRoute,
     this.workerPosition,
     this.customerPosition,
+    this.startPosition,
     this.routeCoordinates = const [],
+    this.workerHeading,
+    this.distanceMeters = 0,
+    this.isSocketConnected = false,
+    this.serviceTitle,
+    this.arrivalOtp,
+    this.bookingId,
+    this.workerPhone,
+    this.workerRating,
+    this.workerAvatar,
   });
 
   final double progress;
@@ -21,13 +31,23 @@ class TrackingState extends Equatable {
   final TrackingPhase phase;
   final MapCoordinate? workerPosition;
   final MapCoordinate? customerPosition;
+  final MapCoordinate? startPosition;
   final List<MapCoordinate> routeCoordinates;
+  final double? workerHeading;
+  final double distanceMeters;
+  final bool isSocketConnected;
+  final String? serviceTitle;
+  final String? arrivalOtp;
+  final String? bookingId;
+  final String? workerPhone;
+  final double? workerRating;
+  final String? workerAvatar;
 
   String phaseLabelFor(String locale) {
     final hi = locale == 'hi';
     return switch (phase) {
-      TrackingPhase.enRoute => hi ? 'कार्यकर्ता रास्ते में' : 'Worker en route',
-      TrackingPhase.nearby => hi ? 'कार्यकर्ता पास में' : 'Worker nearby',
+      TrackingPhase.enRoute => hi ? 'कार्यकर्ता रास्ते में है' : 'Worker en route',
+      TrackingPhase.nearby => hi ? 'कार्यकर्ता पास में है' : 'Worker nearby',
       TrackingPhase.arriving => hi ? 'लगभग पहुंच गए' : 'Almost there',
       TrackingPhase.arrived => hi ? 'कार्यकर्ता पहुंच गया' : 'Worker arrived',
     };
@@ -43,7 +63,17 @@ class TrackingState extends Equatable {
     TrackingPhase? phase,
     MapCoordinate? workerPosition,
     MapCoordinate? customerPosition,
+    MapCoordinate? startPosition,
     List<MapCoordinate>? routeCoordinates,
+    double? workerHeading,
+    double? distanceMeters,
+    bool? isSocketConnected,
+    String? serviceTitle,
+    String? arrivalOtp,
+    String? bookingId,
+    String? workerPhone,
+    double? workerRating,
+    String? workerAvatar,
   }) {
     return TrackingState(
       progress: progress ?? this.progress,
@@ -53,7 +83,17 @@ class TrackingState extends Equatable {
       phase: phase ?? this.phase,
       workerPosition: workerPosition ?? this.workerPosition,
       customerPosition: customerPosition ?? this.customerPosition,
+      startPosition: startPosition ?? this.startPosition,
       routeCoordinates: routeCoordinates ?? this.routeCoordinates,
+      workerHeading: workerHeading ?? this.workerHeading,
+      distanceMeters: distanceMeters ?? this.distanceMeters,
+      isSocketConnected: isSocketConnected ?? this.isSocketConnected,
+      serviceTitle: serviceTitle ?? this.serviceTitle,
+      arrivalOtp: arrivalOtp ?? this.arrivalOtp,
+      bookingId: bookingId ?? this.bookingId,
+      workerPhone: workerPhone ?? this.workerPhone,
+      workerRating: workerRating ?? this.workerRating,
+      workerAvatar: workerAvatar ?? this.workerAvatar,
     );
   }
 
@@ -66,6 +106,17 @@ class TrackingState extends Equatable {
     phase,
     workerPosition,
     customerPosition,
+    startPosition,
     routeCoordinates,
+    workerHeading,
+    distanceMeters,
+    isSocketConnected,
+    serviceTitle,
+    arrivalOtp,
+    bookingId,
+    workerPhone,
+    workerRating,
+    workerAvatar,
   ];
 }
+

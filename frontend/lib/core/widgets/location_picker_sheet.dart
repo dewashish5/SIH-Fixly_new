@@ -123,6 +123,11 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
     }
     // Cancel any in-progress geocode debounce — user is still moving.
     _geocodeDebounce?.cancel();
+    _geocodeDebounce = Timer(const Duration(seconds: 2), () {
+      if (mounted && _isDragging) {
+        _onMapIdled(coord);
+      }
+    });
   }
 
   /// Called ONCE when map becomes idle (user stopped dragging).
@@ -135,14 +140,24 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
       _isDragging = false;
       _isGeocodingDraft = true;
     });
-    final addr = await LocationService.instance.reverseGeocode(_draftLat, _draftLng);
-    if (!mounted) return;
-    setState(() {
-      _isGeocodingDraft = false;
-      _draftAddress = (addr != null && addr.isNotEmpty)
-          ? addr
-          : '${_draftLat.toStringAsFixed(5)}, ${_draftLng.toStringAsFixed(5)}';
-    });
+    try {
+      final addr = await LocationService.instance
+          .reverseGeocode(_draftLat, _draftLng)
+          .timeout(const Duration(seconds: 3), onTimeout: () => null);
+      if (!mounted) return;
+      setState(() {
+        _isGeocodingDraft = false;
+        _draftAddress = (addr != null && addr.isNotEmpty)
+            ? addr
+            : '${_draftLat.toStringAsFixed(5)}, ${_draftLng.toStringAsFixed(5)}';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isGeocodingDraft = false;
+        _draftAddress = '${_draftLat.toStringAsFixed(5)}, ${_draftLng.toStringAsFixed(5)}';
+      });
+    }
   }
 
   // ──────────────────────────────────────────────── GPS ──

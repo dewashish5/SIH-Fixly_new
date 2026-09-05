@@ -34,13 +34,39 @@ const summarize = async (workerId, from, to) => {
     const lastPayout = await PayoutRequest.findOne({ worker: workerId, status: 'paid' }).sort({ paidAt: -1 });
 
     const worker = await User.findById(workerId).select('workerProfile');
-    const stored = worker?.workerProfile?.walletBalance || 0;
-    const availableBalance = Math.max(0, (stored || totalEarned) - pendingBalance);
+    const profile = worker?.workerProfile || {};
+    const stored = profile.walletBalance || 0;
+    const availableBalance = Math.max(0, stored - pendingBalance);
+    const walletTxs = (profile.walletTransactions || [])
+        .slice()
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .map((t) => ({
+            _id: t._id,
+            transactionId: t.transactionId,
+            description: t.description,
+            type: t.type || 'CREDIT',
+            amount: t.amount,
+            bookingId: t.bookingId,
+            createdAt: t.createdAt,
+        }));
+    const history = walletTxs.length
+        ? walletTxs
+        : txs.map((t) => ({
+            _id: t._id,
+            transactionId: t.paymentId || t.orderId,
+            description: t.description || `Razorpay ${t.paymentId || t.orderId || ''}`.trim(),
+            type: 'CREDIT',
+            amount: t.amount,
+            bookingId: t.bookingId,
+            createdAt: t.createdAt,
+        }));
+    const profileEarnings = profile.totalEarnings || 0;
 
     return {
         availableBalance,
         pendingBalance,
-        totalEarned,
+        totalEarned: profileEarnings || totalEarned,
+        totalEarnings: profileEarnings || totalEarned,
         today,
         thisWeek,
         thisMonth,
@@ -48,7 +74,8 @@ const summarize = async (workerId, from, to) => {
         welfareContribution: 0,
         insuranceContribution: 0,
         lastPayout: lastPayout || null,
-        transactions: txs,
+        transactions: history,
+        walletTransactions: history,
     };
 };
 

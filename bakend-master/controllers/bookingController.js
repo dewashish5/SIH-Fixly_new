@@ -141,7 +141,65 @@ export const cancelBooking = async (req, res) => {
         booking.status = 'CANCELLED';
         await booking.save();
 
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`booking_${bookingId}`).emit('booking_status_update', {
+                bookingId,
+                status: 'CANCELLED'
+            });
+        }
+
         return res.status(200).json({ success: true, message: 'Booking cancelled successfully', booking });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Customer Edits Booking (Resets to PENDING for worker review)
+export const updateBooking = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const customerId = req.user.id;
+        const { problemDescription, serviceAddress, scheduledTime } = req.body;
+
+        const booking = await Booking.findOne({ _id: bookingId, customer: customerId });
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+        if (['ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(booking.status)) {
+            return res.status(400).json({ success: false, message: 'Cannot edit booking at this stage' });
+        }
+
+        if (problemDescription) booking.problemDescription = problemDescription;
+        if (scheduledTime) booking.scheduledTime = new Date(scheduledTime);
+        if (serviceAddress) {
+            if (serviceAddress.addressLine) booking.serviceAddress.addressLine = serviceAddress.addressLine;
+            if (serviceAddress.city) booking.serviceAddress.city = serviceAddress.city;
+            if (serviceAddress.pincode) booking.serviceAddress.pincode = serviceAddress.pincode;
+            if (serviceAddress.coordinates && Array.isArray(serviceAddress.coordinates)) {
+                // GeoJSON: [lng, lat]
+                booking.serviceAddress.location = {
+                    type: 'Point',
+                    coordinates: [Number(serviceAddress.coordinates[0]), Number(serviceAddress.coordinates[1])]
+                };
+            }
+        }
+
+        booking.status = 'PENDING';
+        booking.worker = null;
+        await booking.save();
+
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`booking_${bookingId}`).emit('booking_status_update', {
+                bookingId,
+                status: 'PENDING',
+                booking
+            });
+            // Also notify worker feed
+            io.emit('new_incoming_job', { booking });
+        }
+
+        return res.status(200).json({ success: true, message: 'Booking updated successfully', booking });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
@@ -285,7 +343,7 @@ export const listWorkerIncoming = async (req, res) => {
             return res.status(403).json({ success: false, code: 'FORBIDDEN', message: 'Worker role required' });
         }
         const { page, limit, skip } = paginate(req);
-        const query = { status: 'SEARCHING', worker: null };
+        const query = { status: { $in: ['PENDING', 'SEARCHING'] }, worker: null };
         const [bookings, total] = await Promise.all([
             populateBooking(Booking.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit)),
             Booking.countDocuments(query),
@@ -304,7 +362,7 @@ export const listWorkerActive = async (req, res) => {
         const { page, limit, skip } = paginate(req);
         const query = {
             worker: req.user.id,
-            status: { $in: ['ACCEPTED', 'ARRIVED', 'IN_PROGRESS'] },
+            status: { $in: ['APPROVED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS'] },
         };
         const [bookings, total] = await Promise.all([
             populateBooking(Booking.find(query).sort({ updatedAt: -1 }).skip(skip).limit(limit)),
@@ -342,7 +400,7 @@ export const declineBooking = async (req, res) => {
         const reason = allowed.has(req.body?.reason) ? req.body.reason : 'OTHER';
         const booking = await Booking.findById(req.params.bookingId);
         if (!booking) return res.status(404).json({ success: false, code: 'NOT_FOUND', message: 'Booking not found' });
-        if (booking.status !== 'SEARCHING') {
+        if (!['PENDING', 'SEARCHING'].includes(booking.status)) {
             return res.status(400).json({ success: false, code: 'VALIDATION_ERROR', message: 'Booking cannot be declined' });
         }
         booking.declineReason = reason;
