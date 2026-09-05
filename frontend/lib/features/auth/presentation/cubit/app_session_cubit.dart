@@ -31,12 +31,10 @@ class AppSessionCubit extends Cubit<AppSessionState> {
            themeMode: (preferences ?? AppPreferences.instance).themeMode,
            languageSelected:
                (preferences ?? AppPreferences.instance).languageSelected,
-           notificationsEnabled:
-               (preferences ?? AppPreferences.instance)
-                   .transactionalNotificationsEnabled,
-           systemNotificationsEnabled:
-               (preferences ?? AppPreferences.instance)
-                   .systemNotificationsEnabled,
+           notificationsEnabled: (preferences ?? AppPreferences.instance)
+               .transactionalNotificationsEnabled,
+           systemNotificationsEnabled: (preferences ?? AppPreferences.instance)
+               .systemNotificationsEnabled,
            marketingNotificationsEnabled:
                (preferences ?? AppPreferences.instance)
                    .marketingNotificationsEnabled,
@@ -426,3 +424,4 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       ),
     );
   }
+}
