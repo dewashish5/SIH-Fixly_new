@@ -1,6 +1,7 @@
 import Booking from '../models/Booking.js';
 import User from '../models/User.js';
 import redis from '../config/redis.js';
+import { notifyUser, safeNotify } from '../services/notificationService.js';
 
 // 1. Worker Accepts Booking Request (transitions SEARCHING -> ACCEPTED with Distributed Lock & Concurrency Control)
 export const acceptBooking = async (req, res) => {
@@ -91,6 +92,14 @@ export const acceptBooking = async (req, res) => {
             });
         }
 
+        safeNotify(() => notifyUser({
+            recipient: booking.customer,
+            eventType: 'BOOKING_ACCEPTED',
+            entityId: booking._id,
+            bookingId: booking._id,
+            dedupeKey: `BOOKING_ACCEPTED:${booking._id}:${workerId}`,
+        }));
+
         return res.status(200).json({ success: true, message: 'Booking accepted successfully', booking });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
@@ -135,6 +144,14 @@ export const verifyArrivalOtp = async (req, res) => {
             });
         }
 
+        safeNotify(() => notifyUser({
+            recipient: booking.customer,
+            eventType: 'WORKER_ARRIVED',
+            entityId: booking._id,
+            bookingId: booking._id,
+            dedupeKey: `WORKER_ARRIVED:${booking._id}`,
+        }));
+
         return res.status(200).json({ success: true, message: 'Worker arrival verified', booking });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
@@ -166,6 +183,14 @@ export const startJob = async (req, res) => {
                 jobStartedAt: booking.jobStartedAt
             });
         }
+
+        safeNotify(() => notifyUser({
+            recipient: booking.customer,
+            eventType: 'JOB_STARTED',
+            entityId: booking._id,
+            bookingId: booking._id,
+            dedupeKey: `JOB_STARTED:${booking._id}`,
+        }));
 
         return res.status(200).json({ success: true, message: 'Job started successfully', booking });
     } catch (error) {
@@ -204,6 +229,14 @@ export const addExtraParts = async (req, res) => {
                 invoice: booking.invoice
             });
         }
+
+        safeNotify(() => notifyUser({
+            recipient: booking.customer,
+            eventType: 'INVOICE_UPDATED',
+            entityId: booking._id,
+            bookingId: booking._id,
+            dedupeKey: `INVOICE_UPDATED:${booking._id}:${booking.updatedAt?.getTime?.() || Date.now()}`,
+        }));
 
         return res.status(200).json({ success: true, addOns: booking.addOns, invoice: booking.invoice });
     } catch (error) {
@@ -270,6 +303,25 @@ export const completeJob = async (req, res) => {
                 });
             }
         }
+
+        safeNotify(async () => {
+            await notifyUser({
+                recipient: booking.customer,
+                eventType: 'JOB_COMPLETED',
+                entityId: booking._id,
+                bookingId: booking._id,
+                dedupeKey: `JOB_COMPLETED:${booking._id}`,
+            });
+            if (booking.worker) {
+                await notifyUser({
+                    recipient: booking.worker,
+                    eventType: 'JOB_COMPLETED',
+                    entityId: booking._id,
+                    bookingId: booking._id,
+                    dedupeKey: `JOB_COMPLETED:${booking._id}:${booking.worker}`,
+                });
+            }
+        });
 
         return res.status(200).json({ success: true, message: 'Job completed successfully', invoice: booking.invoice });
     } catch (error) {

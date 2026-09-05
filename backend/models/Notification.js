@@ -8,6 +8,7 @@ const notificationSchema = new mongoose.Schema({
         type: String,
         enum: [
             'BOOKING', 'PAYMENT', 'VERIFICATION', 'SUPPORT', 'SAFETY', 'SYSTEM', 'PROMOTION',
+            'WALLET', 'PAYOUT',
             'Emergency', 'Payments', 'System', 'Surge', 'General',
         ],
         default: 'SYSTEM',

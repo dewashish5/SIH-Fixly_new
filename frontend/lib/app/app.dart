@@ -6,6 +6,7 @@ import 'package:toastification/toastification.dart';
 
 import '../core/l10n/locale_scope.dart';
 import '../core/location/location_service.dart';
+import '../core/notifications/notification_router.dart';
 import '../features/auth/presentation/cubit/app_session_cubit.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
@@ -25,6 +26,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    NotificationRouter.instance.attachRouter(_router);
   }
 
   @override

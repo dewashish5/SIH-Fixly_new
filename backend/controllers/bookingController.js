@@ -6,6 +6,8 @@ import Service from '../models/Service.js';
 import User from '../models/User.js';
 import redis from '../config/redis.js';
 import { uploadMulterFiles } from '../utils/cloudinary.js';
+import { notifyUser, notifyUsers, safeNotify } from '../services/notificationService.js';
+import { findEligibleWorkerIds } from '../services/eligibleWorkers.js';
 
 // Screen 5 & 6: Estimate Price Breakdown
 export const calculateEstimate = async (req, res) => {
@@ -159,6 +161,26 @@ export const createBooking = async (req, res) => {
             }
         }
 
+        safeNotify(async () => {
+            if (workerId) {
+                await notifyUser({
+                    recipient: workerId,
+                    eventType: 'BOOKING_ASSIGNED',
+                    entityId: booking._id,
+                    bookingId: booking._id,
+                    dedupeKey: `BOOKING_ASSIGNED:${booking._id}:${workerId}`,
+                });
+                return;
+            }
+            const workerIds = await findEligibleWorkerIds(booking, service?.category);
+            await notifyUsers(workerIds, {
+                eventType: 'NEW_BOOKING_AVAILABLE',
+                entityId: booking._id,
+                bookingId: booking._id,
+                dedupeKeyFor: (id) => `NEW_BOOKING_AVAILABLE:${booking._id}:${id}`,
+            });
+        });
+
         return res.status(201).json({
             success: true,
             message: 'Booking created successfully. Waiting for worker approval.',
@@ -224,6 +246,30 @@ export const cancelBooking = async (req, res) => {
                 });
             }
         }
+
+        safeNotify(async () => {
+            const actorId = String(req.user.id);
+            const customerId = String(booking.customer);
+            const workerId = booking.worker ? String(booking.worker) : null;
+            if (workerId && actorId !== workerId) {
+                await notifyUser({
+                    recipient: workerId,
+                    eventType: 'BOOKING_CANCELLED',
+                    entityId: booking._id,
+                    bookingId: booking._id,
+                    dedupeKey: `BOOKING_CANCELLED:${booking._id}:${workerId}`,
+                });
+            }
+            if (actorId !== customerId) {
+                await notifyUser({
+                    recipient: customerId,
+                    eventType: 'BOOKING_CANCELLED',
+                    entityId: booking._id,
+                    bookingId: booking._id,
+                    dedupeKey: `BOOKING_CANCELLED:${booking._id}:${customerId}`,
+                });
+            }
+        });
 
         return res.status(200).json({ success: true, message: 'Booking cancelled successfully', booking });
     } catch (error) {
@@ -374,6 +420,22 @@ export const triggerSosAlert = async (req, res) => {
                 timestamp: Date.now()
             });
         }
+
+        safeNotify(async () => {
+            const actorId = String(req.user.id);
+            const counterpart = String(booking.customer) === actorId
+                ? booking.worker
+                : booking.customer;
+            if (counterpart) {
+                await notifyUser({
+                    recipient: counterpart,
+                    eventType: 'SOS_ALERT',
+                    entityId: booking._id,
+                    bookingId: booking._id,
+                    dedupeKey: `SOS_ALERT:${booking._id}:${counterpart}:${Math.floor(Date.now() / 60000)}`,
+                });
+            }
+        });
 
         return res.status(200).json({
             success: true,

@@ -32,7 +32,14 @@ class AppSessionCubit extends Cubit<AppSessionState> {
            languageSelected:
                (preferences ?? AppPreferences.instance).languageSelected,
            notificationsEnabled:
-               (preferences ?? AppPreferences.instance).notificationsEnabled,
+               (preferences ?? AppPreferences.instance)
+                   .transactionalNotificationsEnabled,
+           systemNotificationsEnabled:
+               (preferences ?? AppPreferences.instance)
+                   .systemNotificationsEnabled,
+           marketingNotificationsEnabled:
+               (preferences ?? AppPreferences.instance)
+                   .marketingNotificationsEnabled,
          ),
        ) {
     _repo.locale = state.locale;
@@ -90,6 +97,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       NotificationService.instance.onAuthenticated(
         role: session.user.role == UserRole.worker ? 'worker' : 'customer',
         locale: state.locale,
+        marketingEnabled: state.marketingNotificationsEnabled,
       ),
     );
   }
@@ -106,8 +114,22 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   }
 
   Future<void> setNotificationsEnabled(bool enabled) async {
-    await _prefs.setNotificationsEnabled(enabled);
+    await _prefs.setTransactionalNotificationsEnabled(enabled);
     emit(state.copyWith(notificationsEnabled: enabled));
+    if (enabled) {
+      unawaited(NotificationService.instance.enablePushFromSettings());
+    }
+  }
+
+  Future<void> setSystemNotificationsEnabled(bool enabled) async {
+    await _prefs.setSystemNotificationsEnabled(enabled);
+    emit(state.copyWith(systemNotificationsEnabled: enabled));
+  }
+
+  Future<void> setMarketingNotificationsEnabled(bool enabled) async {
+    await _prefs.setMarketingNotificationsEnabled(enabled);
+    emit(state.copyWith(marketingNotificationsEnabled: enabled));
+    unawaited(NotificationService.instance.setMarketingEnabled(enabled));
   }
 
   Future<void> completeLanguageSelection() async {
@@ -400,7 +422,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       NotificationService.instance.onAuthenticated(
         role: session.user.role == UserRole.worker ? 'worker' : 'customer',
         locale: state.locale,
+        marketingEnabled: state.marketingNotificationsEnabled,
       ),
     );
   }
-}

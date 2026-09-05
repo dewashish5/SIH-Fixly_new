@@ -7,6 +7,7 @@ import {
     deleteMyNotification,
     registerDeviceToken,
     removeDeviceToken,
+    sendTestNotification,
 } from '../controllers/notificationController.js';
 
 const router = express.Router();
@@ -17,4 +18,5 @@ router.patch('/:id/read', markNotificationRead);
 router.delete('/:id', deleteMyNotification);
 router.post('/device-token', registerDeviceToken);
 router.delete('/device-token', removeDeviceToken);
+router.post('/test', sendTestNotification);
 export default router;

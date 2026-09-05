@@ -10,6 +10,8 @@ class AppSessionState extends Equatable {
     this.themeMode = ThemeMode.system,
     this.languageSelected = false,
     this.notificationsEnabled = true,
+    this.systemNotificationsEnabled = true,
+    this.marketingNotificationsEnabled = false,
     this.role = 'customer',
     this.phone,
     this.email,
@@ -24,6 +26,8 @@ class AppSessionState extends Equatable {
   final ThemeMode themeMode;
   final bool languageSelected;
   final bool notificationsEnabled;
+  final bool systemNotificationsEnabled;
+  final bool marketingNotificationsEnabled;
   final String role;
   final String? phone;
   final String? email;
@@ -38,6 +42,8 @@ class AppSessionState extends Equatable {
     ThemeMode? themeMode,
     bool? languageSelected,
     bool? notificationsEnabled,
+    bool? systemNotificationsEnabled,
+    bool? marketingNotificationsEnabled,
     String? role,
     String? phone,
     String? email,
@@ -54,6 +60,10 @@ class AppSessionState extends Equatable {
       languageSelected: languageSelected ?? this.languageSelected,
       notificationsEnabled:
           notificationsEnabled ?? this.notificationsEnabled,
+      systemNotificationsEnabled:
+          systemNotificationsEnabled ?? this.systemNotificationsEnabled,
+      marketingNotificationsEnabled:
+          marketingNotificationsEnabled ?? this.marketingNotificationsEnabled,
       role: role ?? this.role,
       phone: phone ?? this.phone,
       email: email ?? this.email,
@@ -72,6 +82,8 @@ class AppSessionState extends Equatable {
         themeMode,
         languageSelected,
         notificationsEnabled,
+        systemNotificationsEnabled,
+        marketingNotificationsEnabled,
         role,
         phone,
         email,

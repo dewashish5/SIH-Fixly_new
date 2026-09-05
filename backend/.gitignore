@@ -36,3 +36,5 @@ Thumbs.db
 # Ephemeral cloudflared URL
 PUBLIC_URL
 serviceAccountKey.json
+*service-account*.json
+firebase-adminsdk*.json

@@ -57,7 +57,7 @@ import {
     adminCooperativeMembers,
 } from '../controllers/cooperativeController.js';
 import { adminWelfareSummary } from '../controllers/welfareController.js';
-import { adminListPayouts } from '../controllers/workerWalletController.js';
+import { adminListPayouts, adminUpdatePayoutStatus } from '../controllers/workerWalletController.js';
 
 const router = express.Router();
 
@@ -185,5 +185,6 @@ router.put('/cooperative', adminUpdateCooperative);
 router.get('/cooperative/members', adminCooperativeMembers);
 router.get('/welfare/summary', adminWelfareSummary);
 router.get('/worker-payouts', adminListPayouts);
+router.patch('/worker-payouts/:id/status', adminUpdatePayoutStatus);
 
 export default router;

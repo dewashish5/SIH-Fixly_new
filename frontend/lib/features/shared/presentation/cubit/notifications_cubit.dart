@@ -46,4 +46,14 @@ class NotificationsCubit extends Cubit<NotificationsState> {
     await _repo.markAllRead();
     await load();
   }
+
+  Future<void> markRead(String id) async {
+    await _repo.markRead(id);
+    await load();
+  }
+
+  Future<void> delete(String id) async {
+    await _repo.delete(id);
+    await load();
+  }
 }

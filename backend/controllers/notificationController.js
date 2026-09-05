@@ -98,3 +98,23 @@ export const removeDeviceToken = async (req, res) => {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);
     }
 };
+
+export const sendTestNotification = async (req, res) => {
+    try {
+        if (process.env.NODE_ENV === 'production') {
+            return fail(res, 404, 'NOT_FOUND', 'Not found');
+        }
+        const { notifyUser } = await import('../services/notificationService.js');
+        const item = await notifyUser({
+            recipient: req.user.id,
+            eventType: req.body.eventType || 'SYSTEM_ANNOUNCEMENT',
+            title: req.body.title || 'Fixly test notification',
+            body: req.body.body || 'FCM test from the Fixly backend.',
+            entityId: req.user.id,
+            dedupeKey: `TEST:${req.user.id}:${Date.now()}`,
+        });
+        return ok(res, { data: item });
+    } catch (error) {
+        return fail(res, 500, 'INTERNAL_ERROR', error.message);
+    }
+};

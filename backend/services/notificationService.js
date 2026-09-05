@@ -1,82 +1,149 @@
 import Notification from '../models/Notification.js';
-import PushToken from '../models/PushToken.js';
 import { notificationQueue } from '../queues/notificationQueue.js';
+import { mapPriorityForStorage, resolveTemplate } from './notificationTemplates.js';
+
+const stringifyIds = (value) => (value == null ? null : String(value));
+
+export const safeNotify = (task) => {
+    Promise.resolve()
+        .then(task)
+        .catch((error) => {
+            console.error('[notifications]', error.message);
+        });
+};
 
 export const notifyUser = async ({
     recipient,
-    title,
-    body,
     eventType,
-    category = 'SYSTEM',
-    priority = 'Normal',
-    entityType = null,
+    locale = 'en',
     entityId = null,
     bookingId = null,
     data = {},
     dedupeKey = null,
-    channel = 'MULTI',
+    title,
+    body,
+    category,
+    priority,
+    entityType,
+    action,
+    channel,
 }) => {
+    if (!recipient) return null;
+
+    const template = eventType ? resolveTemplate(eventType, locale) : null;
+    const resolvedTitle = title || template?.title;
+    const resolvedBody = body || template?.body;
+    const resolvedCategory = category || template?.category || 'SYSTEM';
+    const resolvedPriority = mapPriorityForStorage(priority || template?.priority || 'NORMAL');
+    const resolvedEntityType = entityType || template?.entityType || null;
+    const resolvedAction = action || template?.action || 'system';
+    const resolvedChannel = channel || template?.channel || 'MULTI';
+    const resolvedBookingId = stringifyIds(bookingId || (resolvedEntityType === 'booking' ? entityId : null));
+    const resolvedEntityId = stringifyIds(entityId || resolvedBookingId);
+
+    if (!resolvedTitle || !resolvedBody) {
+        throw new Error('Notification title and body are required');
+    }
+
     if (dedupeKey) {
         const existing = await Notification.findOne({ dedupeKey });
         if (existing) return existing;
     }
 
+    const payload = {
+        eventType: eventType || null,
+        entityType: resolvedEntityType,
+        entityId: resolvedEntityId,
+        bookingId: resolvedBookingId,
+        action: resolvedAction,
+        version: '1',
+        ...data,
+    };
+
     const notification = await Notification.create({
         recipient,
-        title,
-        message: body,
-        body,
-        eventType,
-        category,
-        priority,
-        entityType,
-        entityId,
-        bookingId,
+        title: resolvedTitle,
+        message: resolvedBody,
+        body: resolvedBody,
+        eventType: eventType || null,
+        category: resolvedCategory,
+        priority: resolvedPriority,
+        entityType: resolvedEntityType,
+        entityId: resolvedEntityId,
+        bookingId: resolvedBookingId,
         dedupeKey,
-        channel,
-        data: { ...data, eventType, entityType, entityId, bookingId },
-        deliveryStatus: channel === 'IN_APP' ? 'SKIPPED' : 'PENDING',
+        channel: resolvedChannel,
+        data: payload,
+        deliveryStatus: resolvedChannel === 'IN_APP' ? 'SKIPPED' : 'PENDING',
     });
 
-    if (channel !== 'IN_APP') {
-        const tokens = await PushToken.find({ user: recipient, isActive: true }).select('token').lean();
-        if (tokens.length) {
-            await notification.updateOne({ deliveryStatus: 'QUEUED' });
+    if (resolvedChannel !== 'IN_APP') {
+        await notification.updateOne({ deliveryStatus: 'QUEUED' });
+        try {
             await notificationQueue.add('send-push', {
                 notificationId: notification.id,
-                tokens: tokens.map(({ token }) => token),
+                recipientUserId: String(recipient),
+                eventType: eventType || null,
+                channel: 'PUSH',
             }, { jobId: `notification:${notification.id}` });
-        } else {
-            await notification.updateOne({ deliveryStatus: 'SKIPPED' });
+        } catch (error) {
+            await notification.updateOne({
+                deliveryStatus: 'FAILED',
+                lastDeliveryError: error.message,
+            });
+            console.error('[notifications] queue failed', error.message);
         }
     }
 
     return notification;
 };
 
+export const notifyUsers = async (recipients, options) => {
+    const unique = [...new Set(recipients.filter(Boolean).map((id) => String(id)))];
+    const results = [];
+    for (let i = 0; i < unique.length; i += 50) {
+        const batch = unique.slice(i, i + 50);
+        const created = await Promise.allSettled(
+            batch.map((recipient) => notifyUser({
+                ...options,
+                recipient,
+                dedupeKey: options.dedupeKeyFor
+                    ? options.dedupeKeyFor(recipient)
+                    : options.dedupeKey,
+            })),
+        );
+        results.push(...created);
+    }
+    return results;
+};
+
 export const notifyTopic = async ({
     topic,
+    eventType = 'SYSTEM_ANNOUNCEMENT',
+    locale = 'en',
     title,
     body,
-    eventType = 'SYSTEM_ANNOUNCEMENT',
-    category = 'SYSTEM',
-    priority = 'Normal',
+    category,
+    priority,
     data = {},
 }) => {
+    const template = resolveTemplate(eventType, locale);
     const notification = await Notification.create({
-        title,
-        message: body,
-        body,
+        title: title || template.title,
+        message: body || template.body,
+        body: body || template.body,
         eventType,
-        category,
-        priority,
+        category: category || template.category,
+        priority: mapPriorityForStorage(priority || template.priority),
         channel: 'PUSH',
         deliveryStatus: 'QUEUED',
-        data: { ...data, eventType },
+        data: { eventType, action: template.action, version: '1', ...data },
     });
     await notificationQueue.add('send-topic-push', {
         notificationId: notification.id,
         topic,
+        eventType,
+        channel: 'PUSH',
     }, { jobId: `notification:${notification.id}` });
     return notification;
 };

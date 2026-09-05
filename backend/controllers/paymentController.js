@@ -4,6 +4,7 @@ import Transaction from '../models/Transaction.js';
 import Booking from '../models/Booking.js';
 import User from '../models/User.js';
 import Settings from '../models/Settings.js';
+import { notifyUser, safeNotify } from '../services/notificationService.js';
 
 let razorpay = null;
 if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
@@ -50,6 +51,25 @@ const finalizeJobAfterPayment = async (booking, io) => {
             });
         }
     }
+
+    safeNotify(async () => {
+        await notifyUser({
+            recipient: booking.customer,
+            eventType: 'JOB_COMPLETED',
+            entityId: booking._id,
+            bookingId: booking._id,
+            dedupeKey: `JOB_COMPLETED:${booking._id}`,
+        });
+        if (booking.worker) {
+            await notifyUser({
+                recipient: booking.worker,
+                eventType: 'JOB_COMPLETED',
+                entityId: booking._id,
+                bookingId: booking._id,
+                dedupeKey: `JOB_COMPLETED:${booking._id}:${booking.worker}`,
+            });
+        }
+    });
 };
 
 const creditWorkerWallet = async ({
@@ -252,6 +272,13 @@ export const verifyPayment = async (req, res) => {
                     'invoice.paymentStatus': 'FAILED',
                 });
             }
+            safeNotify(() => notifyUser({
+                recipient: transaction.customerId || req.user.id,
+                eventType: 'PAYMENT_FAILED',
+                entityId: bookingId || transaction.bookingId,
+                bookingId: bookingId || transaction.bookingId,
+                dedupeKey: `PAYMENT_FAILED:${transaction._id}`,
+            }));
             return res.status(400).json({
                 success: false,
                 message: 'Invalid Razorpay payment signature',
@@ -292,6 +319,32 @@ export const verifyPayment = async (req, res) => {
             });
 
             await finalizeJobAfterPayment(booking, req.app.get('io'));
+
+            safeNotify(async () => {
+                await notifyUser({
+                    recipient: booking.customer,
+                    eventType: 'PAYMENT_SUCCESS',
+                    entityId: booking._id,
+                    bookingId: booking._id,
+                    dedupeKey: `PAYMENT_SUCCESS:${booking._id}:${finalPaymentId}`,
+                });
+                if (booking.worker) {
+                    await notifyUser({
+                        recipient: booking.worker,
+                        eventType: 'PAYMENT_RECEIVED',
+                        entityId: booking._id,
+                        bookingId: booking._id,
+                        dedupeKey: `PAYMENT_RECEIVED:${booking._id}:${finalPaymentId}`,
+                    });
+                    await notifyUser({
+                        recipient: booking.worker,
+                        eventType: 'WALLET_CREDITED',
+                        entityId: booking._id,
+                        bookingId: booking._id,
+                        dedupeKey: `WALLET_CREDITED:${finalPaymentId}`,
+                    });
+                }
+            });
         }
 
         return res.status(200).json({

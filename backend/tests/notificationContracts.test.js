@@ -30,3 +30,12 @@ test('Notification stores event and delivery orchestration metadata', () => {
     assert.ok(Notification.schema.indexes().some(([fields, options]) =>
         fields.dedupeKey === 1 && options?.unique === true));
 });
+
+test('notification templates resolve English and Hindi copy', async () => {
+    const { resolveTemplate } = await import('../services/notificationTemplates.js');
+    const en = resolveTemplate('BOOKING_ACCEPTED', 'en');
+    const hi = resolveTemplate('BOOKING_ACCEPTED', 'hi');
+    assert.equal(en.category, 'BOOKING');
+    assert.equal(en.action, 'booking_details');
+    assert.notEqual(en.title, hi.title);
+});

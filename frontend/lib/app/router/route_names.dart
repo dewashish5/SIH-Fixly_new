@@ -52,6 +52,9 @@ abstract final class RouteNames {
   static const workerProfileTab = '/worker/profile-tab';
   static const workerIncoming = '/worker/incoming';
   static const workerJobDetail = '/worker/job/:id';
+
+  static String workerJobDetailPath(String bookingId) =>
+      '/worker/job/$bookingId';
   static const workerActiveJob = '/worker/active-job';
   static const workerNavigation = '/worker/navigation';
   static const workerAvailability = '/worker/availability';

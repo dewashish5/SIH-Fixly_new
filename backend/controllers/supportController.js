@@ -1,5 +1,6 @@
 import SupportTicket from '../models/SupportTicket.js';
 import { fail, ok, isObjectId } from '../utils/http.js';
+import { notifyUser, safeNotify } from '../services/notificationService.js';
 
 const CATEGORIES = new Set([
     'SERVICE_DISPUTE', 'WORKER_CUSTOMER_ISSUE', 'PAYMENT', 'SAFETY', 'BOOKING', 'ACCOUNT', 'OTHER',
@@ -70,6 +71,14 @@ export const addTicketMessage = async (req, res) => {
         ticket.lastMessageAt = new Date();
         if (req.user.role === 'admin') ticket.status = 'WAITING_FOR_USER';
         await ticket.save();
+        if (req.user.role === 'admin') {
+            safeNotify(() => notifyUser({
+                recipient: ticket.createdBy,
+                eventType: 'SUPPORT_REPLY',
+                entityId: ticket._id,
+                dedupeKey: `SUPPORT_REPLY:${ticket._id}:${ticket.messages.length}`,
+            }));
+        }
         return ok(res, { data: ticket });
     } catch (error) {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);
@@ -110,6 +119,14 @@ export const adminPatchTicket = async (req, res) => {
         if (priority) ticket.priority = priority;
         if (status === 'RESOLVED' || status === 'CLOSED') ticket.resolvedAt = new Date();
         await ticket.save();
+        if (status) {
+            safeNotify(() => notifyUser({
+                recipient: ticket.createdBy,
+                eventType: 'SUPPORT_STATUS_UPDATED',
+                entityId: ticket._id,
+                dedupeKey: `SUPPORT_STATUS_UPDATED:${ticket._id}:${ticket.status}`,
+            }));
+        }
         return ok(res, { data: ticket });
     } catch (error) {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);

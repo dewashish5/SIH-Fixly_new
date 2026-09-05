@@ -1,6 +1,7 @@
 import WorkerCertificate from '../models/WorkerCertificate.js';
 import User from '../models/User.js';
 import { fail, ok, isObjectId } from '../utils/http.js';
+import { notifyUser, safeNotify } from '../services/notificationService.js';
 
 export const createCertificate = async (req, res) => {
     try {
@@ -78,6 +79,14 @@ export const adminReviewCertificate = async (req, res) => {
         item.status = status;
         item.reviewNote = reviewNote || null;
         await item.save();
+        if (status === 'approved' || status === 'rejected') {
+            safeNotify(() => notifyUser({
+                recipient: item.worker,
+                eventType: status === 'approved' ? 'CERTIFICATE_APPROVED' : 'CERTIFICATE_REJECTED',
+                entityId: item._id,
+                dedupeKey: `CERTIFICATE_${status.toUpperCase()}:${item._id}`,
+            }));
+        }
         return ok(res, { data: item });
     } catch (error) {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);
@@ -106,6 +115,14 @@ export const adminReviewWorkerVerification = async (req, res) => {
         worker.kycDocuments.declineReason = status === 'rejected' ? (declineReason || 'Rejected') : null;
         worker.isVerified = status === 'approved';
         await worker.save();
+        if (status === 'approved' || status === 'rejected') {
+            safeNotify(() => notifyUser({
+                recipient: worker._id,
+                eventType: status === 'approved' ? 'KYC_APPROVED' : 'KYC_REJECTED',
+                entityId: worker._id,
+                dedupeKey: `KYC_${status.toUpperCase()}:${worker._id}:${worker.kycDocuments?.updatedAt || Date.now()}`,
+            }));
+        }
         return ok(res, { data: { status: worker.kycDocuments.status, isVerified: worker.isVerified } });
     } catch (error) {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);

@@ -90,6 +90,11 @@
 			</array>
 		</dict>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+	</array>
 	<key>GIDClientID</key>
 	<string>343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta.apps.googleusercontent.com</string>
 	<key>GIDServerClientID</key>

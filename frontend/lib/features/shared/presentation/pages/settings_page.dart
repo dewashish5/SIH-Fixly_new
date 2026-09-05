@@ -21,8 +21,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _bookingAlerts = true;
-  bool _promotions = false;
   bool _biometricLock = false;
 
   void _showInfoDialog({
@@ -288,19 +286,19 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                       title: Text(
-                        'Booking Updates',
+                        'Service & booking alerts',
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       subtitle: Text(
-                        'Get real-time job status and worker arrival alerts',
+                        'Job status, arrival, and payment alerts',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: context.muted,
                         ),
                       ),
-                      value: _bookingAlerts,
-                      onChanged: (val) => setState(() => _bookingAlerts = val),
+                      value: session.systemNotificationsEnabled,
+                      onChanged: cubit.setSystemNotificationsEnabled,
                     ),
                     const Divider(height: 1),
                     SwitchListTile(
@@ -329,8 +327,8 @@ class _SettingsPageState extends State<SettingsPage> {
                           color: context.muted,
                         ),
                       ),
-                      value: _promotions,
-                      onChanged: (val) => setState(() => _promotions = val),
+                      value: session.marketingNotificationsEnabled,
+                      onChanged: cubit.setMarketingNotificationsEnabled,
                     ),
                   ],
                 ),

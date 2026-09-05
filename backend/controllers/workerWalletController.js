@@ -3,6 +3,7 @@ import Booking from '../models/Booking.js';
 import User from '../models/User.js';
 import PayoutRequest from '../models/PayoutRequest.js';
 import { fail, ok } from '../utils/http.js';
+import { notifyUser, safeNotify } from '../services/notificationService.js';
 
 const MIN_WITHDRAW = 100;
 
@@ -162,6 +163,12 @@ export const requestWithdraw = async (req, res) => {
             amount,
             status: 'requested',
         });
+        safeNotify(() => notifyUser({
+            recipient: req.user.id,
+            eventType: 'PAYOUT_REQUESTED',
+            entityId: payout._id,
+            dedupeKey: `PAYOUT_REQUESTED:${payout._id}`,
+        }));
         return ok(res, { data: payout }, 201);
     } catch (error) {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);
@@ -172,6 +179,42 @@ export const adminListPayouts = async (_req, res) => {
     try {
         const items = await PayoutRequest.find().populate('worker', 'name email').sort({ createdAt: -1 });
         return ok(res, { data: items });
+    } catch (error) {
+        return fail(res, 500, 'INTERNAL_ERROR', error.message);
+    }
+};
+
+const PAYOUT_TRANSITIONS = {
+    requested: ['processing'],
+    processing: ['paid', 'rejected'],
+};
+
+const PAYOUT_EVENTS = {
+    processing: 'PAYOUT_PROCESSING',
+    paid: 'PAYOUT_PAID',
+    rejected: 'PAYOUT_REJECTED',
+};
+
+export const adminUpdatePayoutStatus = async (req, res) => {
+    try {
+        const { status, note } = req.body || {};
+        const payout = await PayoutRequest.findById(req.params.id);
+        if (!payout) return fail(res, 404, 'NOT_FOUND', 'Payout not found');
+        const allowed = PAYOUT_TRANSITIONS[payout.status] || [];
+        if (!allowed.includes(status)) {
+            return fail(res, 400, 'VALIDATION_ERROR', `Cannot change payout from ${payout.status} to ${status}`);
+        }
+        payout.status = status;
+        if (note) payout.note = note;
+        if (status === 'paid') payout.paidAt = new Date();
+        await payout.save();
+        safeNotify(() => notifyUser({
+            recipient: payout.worker,
+            eventType: PAYOUT_EVENTS[status],
+            entityId: payout._id,
+            dedupeKey: `${PAYOUT_EVENTS[status]}:${payout._id}`,
+        }));
+        return ok(res, { data: payout });
     } catch (error) {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);
     }
