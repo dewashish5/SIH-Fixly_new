@@ -58,6 +58,11 @@ abstract final class RouteNames {
   static const workerWallet = '/worker/wallet';
   static const workerProfile = '/worker/profile';
   static const workerReliability = '/worker/reliability';
+  static const workerOtpEntry = '/worker/otp-entry';
+  static const workerAddParts = '/worker/add-parts';
+  static const workerRating = '/worker/rating';
+
+  static const customerWorkerArrived = '/customer/worker-arrived';
 
   static const sharedProfile = '/shared/profile';
   static const sharedEditProfile = '/shared/edit-profile';

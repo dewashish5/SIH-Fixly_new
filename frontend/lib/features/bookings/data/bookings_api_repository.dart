@@ -371,18 +371,52 @@ class BookingsApiRepository {
     }
     final customer = json['customer'];
     var customerName = 'Customer';
+    String? customerPhone;
+    String? customerAvatar;
     if (customer is Map) {
       customerName = (customer['name'] as String?) ?? customerName;
+      customerPhone = customer['phone']?.toString();
+      customerAvatar = (customer['avatar'] ?? customer['profileImage'])?.toString();
     }
-    final statusRaw = (json['status'] ?? '').toString().toUpperCase();
-    final status = switch (statusRaw) {
+    final rawStatus = (json['status'] ?? '').toString().toUpperCase();
+    final status = switch (rawStatus) {
       'PENDING' => JobStatus.incoming,
       'SEARCHING' => JobStatus.incoming,
       'APPROVED' => JobStatus.active,
+      'ACCEPTED' => JobStatus.active,
+      'ARRIVED' => JobStatus.active,
+      'IN_PROGRESS' => JobStatus.active,
       'COMPLETED' => JobStatus.completed,
       'CANCELLED' => JobStatus.completed,
       _ => JobStatus.active,
     };
+
+    List<String> strings(dynamic value) => value is List
+        ? value.whereType<String>().where((s) => s.isNotEmpty).toList()
+        : const [];
+
+    DateTime? parseDate(dynamic v) => v is String ? DateTime.tryParse(v) : null;
+
+    // Service metadata
+    final service = json['service'];
+    String? serviceCategory;
+    String? serviceImage;
+    if (service is Map) {
+      serviceCategory = service['category']?.toString();
+      serviceImage = (service['image'] ?? service['imageUrl'])?.toString();
+    }
+
+    // Invoice breakdown
+    final invoice = json['invoice'];
+    double? baseServiceFee;
+    double? platformFee;
+    double? extraPartsTotal;
+    if (invoice is Map) {
+      baseServiceFee = (invoice['baseServiceFee'] as num?)?.toDouble();
+      platformFee = (invoice['platformFee'] as num?)?.toDouble();
+      extraPartsTotal = (invoice['extraPartsTotal'] as num?)?.toDouble();
+    }
+
     return WorkerJob(
       id: booking.id,
       title: booking.serviceTitle,
@@ -393,8 +427,23 @@ class BookingsApiRepository {
       distanceKm: 0,
       customerLat: customerLat,
       customerLng: customerLng,
+      customerPhone: customerPhone,
+      customerAvatar: customerAvatar,
+      problemDescription: json['problemDescription']?.toString(),
+      problemPhotos: strings(json['problemPhotos']),
+      serviceCategory: serviceCategory,
+      serviceImage: serviceImage,
+      arrivalOtp: json['arrivalOtp']?.toString(),
+      baseServiceFee: baseServiceFee,
+      platformFee: platformFee,
+      extraPartsTotal: extraPartsTotal,
+      addOns: _mapAddOns(json['addOns']),
+      jobStartedAt: parseDate(json['jobStartedAt']),
+      jobCompletedAt: parseDate(json['jobCompletedAt']),
+      rawStatus: rawStatus,
     );
   }
+
 
   static Booking mapBooking(
     Map<String, dynamic> json, {
@@ -532,8 +581,9 @@ class BookingsApiRepository {
       case 'ACCEPTED':
       case 'APPROVED':
       case 'EN_ROUTE':
-      case 'ARRIVED':
         return BookingStatus.accepted;
+      case 'ARRIVED':
+        return BookingStatus.arrived;
       case 'IN_PROGRESS':
       case 'STARTED':
         return BookingStatus.inProgress;

@@ -336,6 +336,8 @@ String _statusLabel(BookingStatus status) {
       return 'Paid';
     case BookingStatus.inProgress:
       return 'In progress';
+    case BookingStatus.arrived:
+      return 'Arrived';
     case BookingStatus.accepted:
       return 'Accepted';
     case BookingStatus.searching:

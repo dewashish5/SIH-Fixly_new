@@ -17,6 +17,7 @@ class ReviewsApiRepository {
     String comment = '',
     List<String> traits = const [],
     List<String> photoPaths = const [],
+    String reviewerRole = 'customer', // 'customer' or 'worker'
   }) async {
     final map = <String, dynamic>{
       'bookingId': bookingId,
@@ -24,6 +25,7 @@ class ReviewsApiRepository {
       'rating': rating,
       'comment': comment,
       'traits': traits.join(','),
+      'reviewerRole': reviewerRole,
     };
     if (photoPaths.isNotEmpty) {
       final files = <MultipartFile>[];
@@ -48,3 +50,4 @@ class ReviewsApiRepository {
     }
   }
 }
+

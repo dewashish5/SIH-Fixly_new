@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
 
+import '../../../../core/network/api_config.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
@@ -27,8 +31,67 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
   final PaymentsApiRepository _payments;
   final RazorpayCheckoutService _razorpay;
 
+  Timer? _statusPollTimer;
+  io.Socket? _statusSocket;
+
   void selectService(ServiceItem service) {
     emit(state.copyWith(service: service, step: BookingStatus.draft));
+  }
+
+  /// Load an existing booking into state (e.g. from order history tap).
+  void loadFromBooking(Booking booking) {
+    _repo.activeBooking = booking;
+    emit(state.copyWith(
+      booking: booking,
+      step: booking.status,
+      clearError: true,
+    ));
+  }
+
+  /// Start polling booking status every 5s (for finding-worker / accepted screens).
+  void startStatusPolling(String bookingId) {
+    _statusPollTimer?.cancel();
+    _statusPollTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      await refreshBooking();
+    });
+  }
+
+  void stopStatusPolling() {
+    _statusPollTimer?.cancel();
+    _statusPollTimer = null;
+  }
+
+  /// Connect to socket and listen for real-time booking_status_update events.
+  void listenToSocketUpdates(String bookingId) {
+    _statusSocket?.disconnect();
+    _statusSocket?.dispose();
+
+    final socket = io.io(
+      ApiConfig.baseUrl,
+      io.OptionBuilder()
+          .setTransports(['websocket'])
+          .disableAutoConnect()
+          .enableReconnection()
+          .build(),
+    );
+    _statusSocket = socket;
+
+    socket.onConnect((_) {
+      socket.emit('join_booking_room', bookingId);
+    });
+
+    void onStatusUpdate(dynamic data) async {
+      // Refresh booking to get latest data including the new status
+      await refreshBooking();
+    }
+
+    socket.on('booking_status_update', onStatusUpdate);
+    socket.on('booking:status', onStatusUpdate);
+    socket.on('status_update', onStatusUpdate);
+    socket.connect();
+
+    // Also start polling as fallback
+    startStatusPolling(bookingId);
   }
 
   Future<void> submitBookingDetails({
@@ -122,7 +185,7 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
         serviceTitle: booking.serviceTitle,
       );
       _repo.activeBooking = updated;
-      emit(state.copyWith(booking: updated, clearError: true));
+      emit(state.copyWith(booking: updated, step: updated.status, clearError: true));
     } on ApiException catch (e) {
       emit(state.copyWith(errorMessage: e.message));
     }
@@ -206,6 +269,7 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
 
   @override
   Future<void> close() {
+    _statusPollTimer?.cancel();
     _razorpay.dispose();
     return super.close();
   }

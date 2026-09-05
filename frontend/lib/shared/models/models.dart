@@ -250,7 +250,7 @@ class ServiceItem extends Equatable {
   ];
 }
 
-enum BookingStatus { draft, searching, accepted, inProgress, completed, paid }
+enum BookingStatus { draft, searching, accepted, arrived, inProgress, completed, paid }
 
 class BookingAddOn extends Equatable {
   const BookingAddOn({
@@ -456,6 +456,20 @@ class WorkerJob extends Equatable {
     required this.distanceKm,
     this.customerLat,
     this.customerLng,
+    this.customerPhone,
+    this.customerAvatar,
+    this.problemDescription,
+    this.problemPhotos = const [],
+    this.serviceCategory,
+    this.serviceImage,
+    this.arrivalOtp,
+    this.baseServiceFee,
+    this.platformFee,
+    this.extraPartsTotal,
+    this.addOns = const [],
+    this.jobStartedAt,
+    this.jobCompletedAt,
+    this.rawStatus,
   });
 
   final String id;
@@ -467,8 +481,30 @@ class WorkerJob extends Equatable {
   final double distanceKm;
   final double? customerLat;
   final double? customerLng;
+  final String? customerPhone;
+  final String? customerAvatar;
+  final String? problemDescription;
+  final List<String> problemPhotos;
+  final String? serviceCategory;
+  final String? serviceImage;
+  final String? arrivalOtp;
+  final double? baseServiceFee;
+  final double? platformFee;
+  final double? extraPartsTotal;
+  final List<BookingAddOn> addOns;
+  final DateTime? jobStartedAt;
+  final DateTime? jobCompletedAt;
+  /// Raw backend status string e.g. 'APPROVED', 'ARRIVED', 'IN_PROGRESS'
+  final String? rawStatus;
 
-  WorkerJob copyWith({JobStatus? status}) {
+  WorkerJob copyWith({
+    JobStatus? status,
+    String? rawStatus,
+    List<BookingAddOn>? addOns,
+    double? extraPartsTotal,
+    DateTime? jobStartedAt,
+    DateTime? jobCompletedAt,
+  }) {
     return WorkerJob(
       id: id,
       title: title,
@@ -479,12 +515,28 @@ class WorkerJob extends Equatable {
       distanceKm: distanceKm,
       customerLat: customerLat,
       customerLng: customerLng,
+      customerPhone: customerPhone,
+      customerAvatar: customerAvatar,
+      problemDescription: problemDescription,
+      problemPhotos: problemPhotos,
+      serviceCategory: serviceCategory,
+      serviceImage: serviceImage,
+      arrivalOtp: arrivalOtp,
+      baseServiceFee: baseServiceFee,
+      platformFee: platformFee,
+      extraPartsTotal: extraPartsTotal ?? this.extraPartsTotal,
+      addOns: addOns ?? this.addOns,
+      jobStartedAt: jobStartedAt ?? this.jobStartedAt,
+      jobCompletedAt: jobCompletedAt ?? this.jobCompletedAt,
+      rawStatus: rawStatus ?? this.rawStatus,
     );
   }
 
   @override
-  List<Object?> get props => [id, title, pay, status, customerLat, customerLng];
+  List<Object?> get props =>
+      [id, title, pay, status, rawStatus, customerLat, customerLng, addOns];
 }
+
 
 class WalletTransaction extends Equatable {
   const WalletTransaction({

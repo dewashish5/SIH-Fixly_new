@@ -1,6 +1,6 @@
 part of 'active_job_cubit.dart';
 
-enum ActiveJobStatus { initial, loading, loaded, completed, failure }
+enum ActiveJobStatus { initial, loading, loaded, inProgress, navigating, completed, reviewSubmitted, failure }
 
 class ActiveJobState extends Equatable {
   const ActiveJobState({

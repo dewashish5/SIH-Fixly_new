@@ -27,6 +27,7 @@ import '../../features/customer/presentation/pages/customer_service_detail_page.
 import '../../features/customer/presentation/pages/customer_tracking_page.dart';
 import '../../features/customer/presentation/pages/customer_work_started_page.dart';
 import '../../features/customer/presentation/pages/customer_worker_accepted_page.dart';
+import '../../features/customer/presentation/pages/customer_worker_arrived_page.dart';
 import '../../features/customer/presentation/pages/customer_worker_profile_page.dart';
 import '../../features/customer/presentation/pages/customer_workers_page.dart';
 import '../../features/demo/presentation/pages/demo_hub_page.dart';
@@ -57,6 +58,7 @@ import '../../features/worker/presentation/pages/onboarding/worker_onboarding_st
 import '../../features/worker/presentation/pages/onboarding/worker_payout_page.dart';
 import '../../features/worker/presentation/pages/onboarding/worker_work_profile_page.dart';
 import '../../features/worker/presentation/pages/worker_active_job_page.dart';
+import '../../features/worker/presentation/pages/worker_add_parts_page.dart';
 import '../../features/worker/presentation/pages/worker_availability_status_page.dart';
 import '../../features/worker/presentation/pages/worker_dashboard_page.dart';
 import '../../features/worker/presentation/pages/worker_earnings_page.dart';
@@ -64,7 +66,9 @@ import '../../features/worker/presentation/pages/worker_incoming_orders_page.dar
 import '../../features/worker/presentation/pages/worker_job_feed_page.dart';
 import '../../features/worker/presentation/pages/worker_navigation_page.dart';
 import '../../features/worker/presentation/pages/worker_order_detail_page.dart';
+import '../../features/worker/presentation/pages/worker_otp_entry_page.dart';
 import '../../features/worker/presentation/pages/worker_profile_page.dart';
+import '../../features/worker/presentation/pages/worker_rating_page.dart';
 import '../../features/worker/presentation/pages/worker_reliability_page.dart';
 import '../../features/worker/presentation/pages/worker_wallet_page.dart';
 import '../../core/widgets/customer_main_shell.dart';
@@ -277,6 +281,10 @@ GoRouter createAppRouter() {
             (_, s) => const CustomerRatingPage(),
           ),
           _page(
+            RouteNames.customerWorkerArrived,
+            (_, s) => const CustomerWorkerArrivedPage(),
+          ),
+          _page(
             RouteNames.customerBookingConfirmation,
             (_, s) => const CustomerBookingConfirmationPage(),
           ),
@@ -398,6 +406,34 @@ GoRouter createAppRouter() {
         (_, s) => BlocProvider(
           create: (_) => ActiveJobCubit()..load(),
           child: const WorkerActiveJobPage(),
+        ),
+        overlay: true,
+      ),
+      _page(
+        RouteNames.workerOtpEntry,
+        (_, s) => WorkerOtpEntryPage(
+          bookingId: s.uri.queryParameters['bookingId'] ?? '',
+        ),
+        overlay: true,
+      ),
+      _page(
+        RouteNames.workerAddParts,
+        (_, s) => BlocProvider(
+          create: (_) => ActiveJobCubit()..load(),
+          child: WorkerAddPartsPage(
+            bookingId: s.uri.queryParameters['bookingId'] ?? '',
+          ),
+        ),
+        overlay: true,
+      ),
+      _page(
+        RouteNames.workerRating,
+        (_, s) => BlocProvider(
+          create: (_) => ActiveJobCubit()..load(),
+          child: WorkerRatingPage(
+            bookingId: s.uri.queryParameters['bookingId'] ?? '',
+            customerId: s.uri.queryParameters['customerId'] ?? '',
+          ),
         ),
         overlay: true,
       ),

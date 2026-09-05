@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
@@ -337,15 +338,8 @@ class _BookingDetails extends StatelessWidget {
             ),
           ),
         ],
-        if (booking.status == BookingStatus.accepted ||
-            booking.status == BookingStatus.inProgress) ...[
-          const SizedBox(height: 20),
-          PrimaryButton(
-            label: 'Live tracking',
-            onPressed: () =>
-                context.push('/customer/tracking?bookingId=${booking.id}'),
-          ),
-        ],
+        const SizedBox(height: 24),
+        _StatusActions(booking: booking),
       ],
     );
   }
@@ -547,6 +541,8 @@ String _statusLabel(BookingStatus status) {
       return 'Paid';
     case BookingStatus.inProgress:
       return 'In progress';
+    case BookingStatus.arrived:
+      return 'Arrived';
     case BookingStatus.accepted:
       return 'Accepted';
     case BookingStatus.searching:
@@ -563,6 +559,7 @@ Color _statusColor(BookingStatus status) {
       return AppColors.success;
     case BookingStatus.inProgress:
     case BookingStatus.accepted:
+    case BookingStatus.arrived:
       return AppColors.primary;
     default:
       return AppColors.outline;
@@ -580,4 +577,91 @@ String _paymentLabel(String status) {
             : '${word[0].toUpperCase()}${word.substring(1)}',
       )
       .join(' ');
+}
+
+class _StatusActions extends StatelessWidget {
+  const _StatusActions({required this.booking});
+  final Booking booking;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (booking.status) {
+      case BookingStatus.searching:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SecondaryButton(
+              label: 'Cancel Booking',
+              onPressed: () async {
+                await BookingsApiRepository().cancel(booking.id);
+                if (context.mounted) context.pop();
+              },
+            ),
+          ],
+        );
+      case BookingStatus.accepted:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            PrimaryButton(
+              label: 'Track Worker Live',
+              onPressed: () => context.push('/customer/tracking?bookingId=${booking.id}'),
+            ),
+          ],
+        );
+      case BookingStatus.arrived:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF4FF),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFB4C5FF)),
+              ),
+              child: const Text(
+                'Worker has arrived! Share OTP to start work.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        );
+      case BookingStatus.inProgress:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.build_circle_outlined, color: AppColors.success),
+                  SizedBox(width: 8),
+                  Text('Work is in progress...'),
+                ],
+              ),
+            ),
+          ],
+        );
+      case BookingStatus.completed:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            PrimaryButton(
+              label: 'Pay Now',
+              onPressed: () {
+                context.push(RouteNames.customerInvoice.replaceFirst(':id', booking.id));
+              },
+            ),
+          ],
+        );
+      default:
+        return const SizedBox.shrink();
+    }
+  }
 }
