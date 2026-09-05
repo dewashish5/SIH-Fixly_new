@@ -10,6 +10,7 @@ import '../../../../core/location/location_service.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/app_session_cubit.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class OtpPage extends StatefulWidget {
   const OtpPage({super.key});
@@ -68,12 +69,7 @@ class _OtpPageState extends State<OtpPage> with SingleTickerProviderStateMixin {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(cubit.state.errorMessage ?? 'Invalid OTP. Please try again.'),
-        backgroundColor: AppColors.error,
-      ),
-    );
+    ToastUtils.showError(context: context, message: cubit.state.errorMessage ?? 'Invalid OTP. Please try again.');
     cubit.resetOtpStatus();
   }
 
@@ -95,17 +91,13 @@ class _OtpPageState extends State<OtpPage> with SingleTickerProviderStateMixin {
 
     if (success) {
       _startCooldown();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.otpResent)),
-      );
+      ToastUtils.showToast(context: context, message: l10n.otpResent);
       return;
     }
 
     final msg = cubit.state.errorMessage;
     if (msg != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: AppColors.error),
-      );
+      ToastUtils.showError(context: context, message: msg);
     }
   }
 

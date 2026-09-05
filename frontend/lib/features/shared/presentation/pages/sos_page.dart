@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/core_widgets.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class SosPage extends StatelessWidget {
   const SosPage({super.key});
@@ -60,20 +61,14 @@ class SosPage extends StatelessWidget {
                     PrimaryButton(
                       label: 'Call emergency helpline',
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Calling 112 (mock)')),
-                        );
+                        ToastUtils.showToast(context: context, message: 'Calling 112 (mock)');
                       },
                     ),
                     const SizedBox(height: 12),
                     SecondaryButton(
                       label: 'Share location with cooperative',
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Location shared (mock)'),
-                          ),
-                        );
+                        ToastUtils.showToast(context: context, message: 'Location shared (mock)');
                       },
                     ),
                     const SizedBox(height: 12),

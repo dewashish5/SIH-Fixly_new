@@ -8,6 +8,7 @@ import '../../../../core/constants/app_strings.dart';
 import '../../../../core/utils/validators.dart';
 import '../cubit/app_session_cubit.dart';
 import '../widgets/auth_screen_layout.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -49,12 +50,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted || !success) {
         final msg = _cubit.state.errorMessage;
         if (mounted && msg != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(msg),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+          ToastUtils.showError(context: context, message: msg);
         }
         return;
       }
@@ -78,12 +74,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!success) {
         final msg = _cubit.state.errorMessage;
         if (msg != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(msg),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+          ToastUtils.showError(context: context, message: msg);
         }
         return;
       }
@@ -97,22 +88,16 @@ class _LoginPageState extends State<LoginPage> {
     final l10n = context.l10n;
     final email = _emailController.text.trim();
     if (Validators.email(email) != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.forgotPasswordHint)));
+      ToastUtils.showToast(context: context, message: l10n.forgotPasswordHint);
       return;
     }
     try {
       await _cubit.requestPasswordReset(email);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.forgotPasswordSent)));
+      ToastUtils.showToast(context: context, message: l10n.forgotPasswordSent);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.forgotPasswordSent)));
+      ToastUtils.showToast(context: context, message: l10n.forgotPasswordSent);
     }
   }
 

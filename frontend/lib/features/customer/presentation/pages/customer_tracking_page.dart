@@ -9,6 +9,7 @@ import '../cubit/booking_flow_cubit.dart';
 import '../cubit/tracking_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../shared/models/models.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class CustomerTrackingPage extends StatefulWidget {
   const CustomerTrackingPage({super.key, this.bookingId});
@@ -74,12 +75,7 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                 previous.step != current.step &&
                 current.step == BookingStatus.arrived,
             listener: (context, state) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Worker has arrived! Check your booking for OTP.'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
+              ToastUtils.showToast(context: context, message: 'Worker has arrived! Check your booking for OTP.');
             },
           ),
         ],

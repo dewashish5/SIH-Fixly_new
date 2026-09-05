@@ -8,6 +8,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/booking_flow_cubit.dart';
 import '../../../reviews/data/reviews_api_repository.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class CustomerRatingPage extends StatefulWidget {
   const CustomerRatingPage({super.key});
@@ -56,8 +57,7 @@ class _CustomerRatingPageState extends State<CustomerRatingPage> {
       } catch (e) {
         if (!mounted) return;
         setState(() => _submitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
+        ToastUtils.showToast(context: context, message: e.toString(),
         );
         return;
       }

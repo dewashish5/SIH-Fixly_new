@@ -9,6 +9,7 @@ import '../constants/map_constants.dart';
 import '../location/app_location.dart';
 import '../location/location_service.dart';
 import 'fixly_map_view.dart';
+import '../utils/toast_utils.dart';
 
 /// Interactive modal sheet to search address, pan/drag on map, and change location.
 class LocationPickerSheet extends StatefulWidget {
@@ -173,9 +174,7 @@ class _LocationPickerSheetState extends State<LocationPickerSheet> {
           _mapCenter = MapCoordinate(lat: lat, lng: lng);
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not fetch GPS location.')),
-        );
+        ToastUtils.showToast(context: context, message: 'Could not fetch GPS location.');
       }
     } finally {
       if (mounted) setState(() => _isLocatingGps = false);

@@ -10,6 +10,7 @@ import '../../../../shared/widgets/shared_widgets.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
 import '../cubit/job_feed_cubit.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class WorkerOrderDetailPage extends StatefulWidget {
   const WorkerOrderDetailPage({required this.jobId, super.key});
@@ -60,9 +61,7 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _accepting = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ToastUtils.showToast(context: context, message: e.toString());
     }
   }
 

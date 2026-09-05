@@ -13,6 +13,7 @@ import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../../../home/data/home_api_repository.dart';
 import '../cubit/booking_flow_cubit.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class CustomerBookingPage extends StatefulWidget {
   const CustomerBookingPage({
@@ -191,9 +192,7 @@ class _CustomerBookingPageState extends State<CustomerBookingPage> {
     if (bookingCubit.state.errorMessage == null) {
       context.push(RouteNames.customerBookingConfirmation);
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(bookingCubit.state.errorMessage!)));
+      ToastUtils.showToast(context: context, message: bookingCubit.state.errorMessage!);
     }
   }
 

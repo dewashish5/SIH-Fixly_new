@@ -9,6 +9,7 @@ import '../../../../../core/widgets/core_widgets.dart';
 import '../../../../../shared/models/models.dart';
 import '../../../../../shared/widgets/shared_widgets.dart';
 import '../../cubit/worker_onboarding_cubit.dart';
+import '../../../../../core/utils/toast_utils.dart';
 
 class WorkerOnboardingStatusPage extends StatefulWidget {
   const WorkerOnboardingStatusPage({super.key});
@@ -34,12 +35,7 @@ class _WorkerOnboardingStatusPageState
     if (!mounted) return;
     final msg = cubit.state.errorMessage;
     if (cubit.state.status == WorkerOnboardingStatus.failure && msg != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ApiException.userFacingMessage(msg)),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      ToastUtils.showError(context: context, message: ApiException.userFacingMessage(msg));
       return;
     }
     // Only leave this screen when API says user.isVerified.

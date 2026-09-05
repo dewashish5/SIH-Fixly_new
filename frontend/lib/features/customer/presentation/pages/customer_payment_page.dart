@@ -7,6 +7,7 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/booking_flow_cubit.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class CustomerPaymentPage extends StatefulWidget {
   const CustomerPaymentPage({super.key});
@@ -34,9 +35,7 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
     }
     final error = cubit.state.errorMessage;
     if (error != null && error.isNotEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
+      ToastUtils.showToast(context: context, message: error);
     }
   }
 

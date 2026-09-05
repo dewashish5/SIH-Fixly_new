@@ -17,6 +17,7 @@ import '../../../../../shared/models/models.dart';
 import '../../../../../shared/widgets/shared_widgets.dart';
 import '../../cubit/worker_onboarding_cubit.dart';
 import 'worker_onboarding_layout.dart';
+import '../../../../../core/utils/toast_utils.dart';
 
 class WorkerPayoutPage extends StatefulWidget {
   const WorkerPayoutPage({super.key});
@@ -72,12 +73,7 @@ class _WorkerPayoutPageState extends State<WorkerPayoutPage> {
     final cubit = context.read<WorkerOnboardingCubit>();
     final error = await cubit.verifyBankAccount();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(error ?? 'Bank account verified successfully'),
-        backgroundColor: error == null ? AppColors.success : AppColors.error,
-      ),
-    );
+    ToastUtils.showError(context: context, message: error ?? 'Bank account verified successfully');
   }
 
   Future<void> _verifyUpi() async {
@@ -87,12 +83,7 @@ class _WorkerPayoutPageState extends State<WorkerPayoutPage> {
 
     final error = await cubit.verifyUpiId();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(error ?? 'UPI ID verified successfully'),
-        backgroundColor: error == null ? AppColors.success : AppColors.error,
-      ),
-    );
+    ToastUtils.showError(context: context, message: error ?? 'UPI ID verified successfully');
   }
 
   Future<void> _submit() async {
@@ -108,12 +99,7 @@ class _WorkerPayoutPageState extends State<WorkerPayoutPage> {
 
     final error = cubit.validateStep(3);
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ApiException.userFacingMessage(error)),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      ToastUtils.showError(context: context, message: ApiException.userFacingMessage(error));
       return;
     }
 
@@ -122,16 +108,9 @@ class _WorkerPayoutPageState extends State<WorkerPayoutPage> {
     if (!mounted) return;
     if (!ok) {
       final msg = cubit.state.errorMessage;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            ApiException.userFacingMessage(
+      ToastUtils.showError(context: context, message: ApiException.userFacingMessage(
               msg ?? 'Could not submit worker profile',
-            ),
-          ),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+            ),);
       return;
     }
     context.go(RouteNames.workerOnboardingStatus);

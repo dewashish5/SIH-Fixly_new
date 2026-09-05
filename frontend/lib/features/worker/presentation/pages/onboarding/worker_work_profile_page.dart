@@ -20,6 +20,7 @@ import '../../../../../core/widgets/fixly_map_view.dart';
 import '../../../../../shared/widgets/category_chip.dart';
 import '../../cubit/worker_onboarding_cubit.dart';
 import 'worker_onboarding_layout.dart';
+import '../../../../../core/utils/toast_utils.dart';
 
 class WorkerWorkProfilePage extends StatefulWidget {
   const WorkerWorkProfilePage({super.key});
@@ -153,17 +154,13 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
     if (file == null || !mounted) return;
     final path = file.path;
     if (path == null || path.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not read that file. Try again.')),
-      );
+      ToastUtils.showToast(context: context, message: 'Could not read that file. Try again.');
       return;
     }
     final bytes = file.lengthSync() ?? await file.length();
     if (bytes > 5 * 1024 * 1024) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('File must be 5 MB or smaller.')),
-      );
+      ToastUtils.showToast(context: context, message: 'File must be 5 MB or smaller.');
       return;
     }
     if (!mounted) return;
@@ -186,12 +183,7 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
     }
     final error = cubit.validateStep(2);
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ApiException.userFacingMessage(error)),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      ToastUtils.showError(context: context, message: ApiException.userFacingMessage(error));
       return;
     }
     cubit.setStep(2);

@@ -11,6 +11,7 @@ import '../../../../core/constants/app_strings.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/profile_cubit.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -154,25 +155,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
             homePincode: _pincodeController.text.trim(),
           );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.profileSaved),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ToastUtils.showToast(context: context, message: context.l10n.profileSaved);
         context.pop();
       }
     } catch (_) {
       if (!mounted) return;
       final message = context.read<ProfileCubit>().state.errorMessage;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message ?? 'Could not save profile'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastUtils.showError(context: context, message: message ?? 'Could not save profile');
     }
   }
 

@@ -10,6 +10,7 @@ import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/widgets/fixly_map_view.dart';
 import '../../../../shared/models/models.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class WorkerNavigationPage extends StatefulWidget {
   const WorkerNavigationPage({super.key, this.bookingId});
@@ -212,9 +213,7 @@ class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
                       ? null
                       : () {
                           setState(() => _navigationStarted = true);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(l10n.navigationStarted)),
-                          );
+                          ToastUtils.showToast(context: context, message: l10n.navigationStarted);
                         },
                 ),
               ],

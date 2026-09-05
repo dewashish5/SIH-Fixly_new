@@ -21,6 +21,7 @@ import '../../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../../cubit/worker_onboarding_cubit.dart';
 import 'worker_identity_photo_widgets.dart';
 import 'worker_onboarding_layout.dart';
+import '../../../../../core/utils/toast_utils.dart';
 
 class WorkerIdentityPage extends StatefulWidget {
   const WorkerIdentityPage({super.key});
@@ -123,12 +124,7 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
 
     final error = cubit.validateStep(1);
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ApiException.userFacingMessage(error)),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      ToastUtils.showError(context: context, message: ApiException.userFacingMessage(error));
       return;
     }
 

@@ -6,6 +6,7 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/active_job_cubit.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class WorkerRatingPage extends StatefulWidget {
   const WorkerRatingPage({super.key, required this.bookingId, this.customerId});
@@ -32,9 +33,7 @@ class _WorkerRatingPageState extends State<WorkerRatingPage> {
 
   void _submit() {
     if (_rating == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a rating')),
-      );
+      ToastUtils.showToast(context: context, message: 'Please select a rating');
       return;
     }
     
@@ -63,9 +62,7 @@ class _WorkerRatingPageState extends State<WorkerRatingPage> {
           if (state.status == ActiveJobStatus.reviewSubmitted) {
             context.go(RouteNames.workerDashboard);
           } else if (state.status == ActiveJobStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.error ?? 'Failed to submit review')),
-            );
+            ToastUtils.showToast(context: context, message: state.error ?? 'Failed to submit review');
           }
         },
         child: AppScaffold(

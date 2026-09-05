@@ -9,6 +9,7 @@ import '../../../../core/location/location_service.dart';
 import '../../../../core/utils/validators.dart';
 import '../cubit/app_session_cubit.dart';
 import '../widgets/auth_screen_layout.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -52,12 +53,7 @@ class _SignupPageState extends State<SignupPage> {
       if (!mounted || !success) {
         final msg = _cubit.state.errorMessage;
         if (mounted && msg != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(msg),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+          ToastUtils.showError(context: context, message: msg);
         }
         return;
       }
@@ -90,12 +86,7 @@ class _SignupPageState extends State<SignupPage> {
       if (!success) {
         final msg = _cubit.state.errorMessage;
         if (msg != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(msg),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+          ToastUtils.showError(context: context, message: msg);
         }
         return;
       }

@@ -8,6 +8,7 @@ import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
 import '../cubit/active_job_cubit.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class WorkerOtpEntryPage extends StatefulWidget {
   const WorkerOtpEntryPage({super.key, required this.bookingId});
@@ -86,9 +87,7 @@ class _WorkerOtpEntryPageState extends State<WorkerOtpEntryPage> {
         if (state.status == ActiveJobStatus.inProgress) {
           context.go(RouteNames.workerActiveJob);
         } else if (state.status == ActiveJobStatus.failure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.error ?? 'Failed to verify OTP')),
-          );
+          ToastUtils.showToast(context: context, message: state.error ?? 'Failed to verify OTP');
         }
       },
       child: AppScaffold(

@@ -6,6 +6,7 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/active_job_cubit.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class WorkerAddPartsPage extends StatefulWidget {
   const WorkerAddPartsPage({super.key, required this.bookingId});
@@ -58,9 +59,7 @@ class _WorkerAddPartsPageState extends State<WorkerAddPartsPage> {
         if (state.status == ActiveJobStatus.completed) {
           context.push('${RouteNames.workerRating}?bookingId=${widget.bookingId}');
         } else if (state.status == ActiveJobStatus.failure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.error ?? 'Failed to complete job')),
-          );
+          ToastUtils.showToast(context: context, message: state.error ?? 'Failed to complete job');
         }
       },
       child: AppScaffold(

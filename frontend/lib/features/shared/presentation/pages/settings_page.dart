@@ -11,6 +11,7 @@ import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -65,13 +66,7 @@ class _SettingsPageState extends State<SettingsPage> {
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Temporary cache cleared successfully'),
-                  backgroundColor: AppColors.success,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              ToastUtils.showToast(context: context, message: 'Temporary cache cleared successfully');
             },
             child: const Text('Clear'),
           ),

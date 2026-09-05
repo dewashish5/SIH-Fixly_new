@@ -22,6 +22,7 @@ import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../../../shared/widgets/category_icon_tile.dart';
 import '../cubit/customer_home_cubit.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class CustomerHomePage extends StatelessWidget {
   const CustomerHomePage({super.key});
@@ -62,9 +63,7 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
       final ok = await LocationService.instance.ensureOnAppOpen(context);
       if (!mounted) return;
       if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not get current location')),
-        );
+        ToastUtils.showToast(context: context, message: 'Could not get current location');
       }
       setState(() {});
     } finally {

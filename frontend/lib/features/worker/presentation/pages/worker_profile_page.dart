@@ -14,6 +14,7 @@ import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/widgets/shared_widgets.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../../../shared/presentation/cubit/profile_cubit.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class WorkerProfilePage extends StatefulWidget {
   const WorkerProfilePage({super.key});
@@ -65,14 +66,10 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
     try {
       await context.read<ProfileCubit>().refreshCurrentLocation();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Current location saved to your profile')),
-      );
+      ToastUtils.showToast(context: context, message: 'Current location saved to your profile');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not save location: $e')));
+      ToastUtils.showToast(context: context, message: 'Could not save location: $e');
     } finally {
       if (mounted) setState(() => _refreshingLocation = false);
     }
