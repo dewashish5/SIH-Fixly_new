@@ -11,10 +11,12 @@ class FirebaseBootstrap {
   FirebaseBootstrap._();
 
   static bool _initialized = false;
+  static bool _firebaseReady = false;
   static GoogleAuthConfig? _config;
 
   static GoogleAuthConfig? get config => _config;
   static String? get webClientId => _config?.webClientId;
+  static bool get isFirebaseReady => _firebaseReady;
 
   static Future<void> init() async {
     if (_initialized) return;
@@ -55,8 +57,9 @@ class FirebaseBootstrap {
 
   static Future<GoogleAuthConfig?> _tryLoadGoogleServicesJson() async {
     try {
-      final raw =
-          await rootBundle.loadString('assets/config/google-services.json');
+      final raw = await rootBundle.loadString(
+        'assets/config/google-services.json',
+      );
       final json = Map<String, dynamic>.from(jsonDecode(raw) as Map);
       return GoogleAuthConfig.fromGoogleServicesJson(json);
     } catch (_) {
@@ -66,8 +69,9 @@ class FirebaseBootstrap {
 
   static Future<GoogleAuthConfig?> _tryLoadGoogleServiceInfoPlist() async {
     try {
-      final raw = await rootBundle
-          .loadString('assets/config/GoogleService-Info.plist');
+      final raw = await rootBundle.loadString(
+        'assets/config/GoogleService-Info.plist',
+      );
       return GoogleAuthConfig.fromGoogleServiceInfoPlist(raw);
     } catch (_) {
       return null;
@@ -105,6 +109,7 @@ class FirebaseBootstrap {
           iosBundleId: platform.iosBundleId,
         ),
       );
+      _firebaseReady = true;
     } catch (e) {
       debugPrint('Firebase Core init skipped: $e');
     }
@@ -112,11 +117,7 @@ class FirebaseBootstrap {
 }
 
 class _PlatformFirebase {
-  const _PlatformFirebase({
-    this.apiKey,
-    this.appId,
-    this.iosBundleId,
-  });
+  const _PlatformFirebase({this.apiKey, this.appId, this.iosBundleId});
 
   final String? apiKey;
   final String? appId;

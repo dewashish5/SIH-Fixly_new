@@ -491,7 +491,7 @@ GoRouter createAppRouter() {
       _page(
         RouteNames.sharedNotifications,
         (_, s) => BlocProvider(
-          create: (_) => NotificationsCubit()..load(),
+          create: (_) => NotificationsCubit(),
           child: const NotificationsPage(),
         ),
         overlay: true,

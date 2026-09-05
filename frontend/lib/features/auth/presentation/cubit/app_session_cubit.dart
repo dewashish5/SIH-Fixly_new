@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,6 +10,7 @@ import '../../../../core/auth/google_auth_service.dart';
 import '../../../../core/location/location_service.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/preferences/app_preferences.dart';
+import '../../../../core/notifications/notification_service.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../data/auth_api_repository.dart';
@@ -81,6 +84,12 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         phone: session.user.phone,
         status: AppSessionStatus.authenticated,
         clearError: true,
+      ),
+    );
+    unawaited(
+      NotificationService.instance.onAuthenticated(
+        role: session.user.role == UserRole.worker ? 'worker' : 'customer',
+        locale: state.locale,
       ),
     );
   }
@@ -356,6 +365,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   }
 
   Future<void> signOut() async {
+    await NotificationService.instance.onSignedOut();
     await _auth.logout();
     _repo.currentUser = null;
     _restoreCompleted = false;
@@ -384,6 +394,12 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         role: session.user.role == UserRole.worker ? 'worker' : 'customer',
         status: AppSessionStatus.authenticated,
         clearError: true,
+      ),
+    );
+    unawaited(
+      NotificationService.instance.onAuthenticated(
+        role: session.user.role == UserRole.worker ? 'worker' : 'customer',
+        locale: state.locale,
       ),
     );
   }

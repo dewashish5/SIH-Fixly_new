@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import PushToken from '../models/PushToken.js';
 import Notification from '../models/Notification.js';
 import { fail, ok, isObjectId } from '../utils/http.js';
 
@@ -61,6 +62,21 @@ export const registerDeviceToken = async (req, res) => {
     try {
         const token = req.body.token || req.body.deviceToken;
         if (!token) return fail(res, 400, 'VALIDATION_ERROR', 'token required');
+        const deviceId = req.body.deviceId || req.headers['x-device-id'];
+        if (!deviceId) return fail(res, 400, 'VALIDATION_ERROR', 'deviceId required');
+        await PushToken.findOneAndUpdate(
+            { token },
+            {
+                user: req.user.id,
+                deviceId,
+                platform: req.body.platform || 'unknown',
+                appVersion: req.body.appVersion || null,
+                locale: req.body.locale || 'en',
+                isActive: true,
+                lastSeenAt: new Date(),
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true },
+        );
         await User.findByIdAndUpdate(req.user.id, { $addToSet: { pushTokens: token } });
         return ok(res, { data: { registered: true } });
     } catch (error) {
@@ -72,6 +88,10 @@ export const removeDeviceToken = async (req, res) => {
     try {
         const token = req.body.token || req.body.deviceToken;
         if (!token) return fail(res, 400, 'VALIDATION_ERROR', 'token required');
+        await PushToken.findOneAndUpdate(
+            { user: req.user.id, token },
+            { isActive: false, lastSeenAt: new Date() },
+        );
         await User.findByIdAndUpdate(req.user.id, { $pull: { pushTokens: token } });
         return ok(res, { data: { removed: true } });
     } catch (error) {

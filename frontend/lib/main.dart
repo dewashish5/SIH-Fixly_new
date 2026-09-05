@@ -4,6 +4,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'app/app.dart';
 import 'core/firebase/firebase_bootstrap.dart';
 import 'core/network/api_client.dart';
+import 'core/notifications/notification_service.dart';
 import 'core/preferences/app_preferences.dart';
 
 Future<void> main() async {
@@ -16,5 +17,6 @@ Future<void> main() async {
     debugPrint('Google Sign-In bootstrap failed: $e');
   }
   await ApiServices.init();
+  await NotificationService.instance.initialize();
   runApp(const App());
 }

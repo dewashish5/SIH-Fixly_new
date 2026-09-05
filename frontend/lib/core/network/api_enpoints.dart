@@ -12,6 +12,15 @@ abstract final class ApiEndpoints {
   static const String me = '/api/auth/me';
   static const String usersMe = '/api/users/me';
 
+  // --- Notifications ---
+  static const String notifications = '/api/notifications';
+  static const String markAllNotificationsRead = '/api/notifications/read-all';
+  static String markNotificationRead(String id) =>
+      '/api/notifications/$id/read';
+  static String deleteNotification(String id) => '/api/notifications/$id';
+  static const String registerDeviceToken = '/api/notifications/device-token';
+  static const String removeDeviceToken = '/api/notifications/device-token';
+
   // --- Home & Services ---
   static const String home = '/api/home/home';
   static const String categories = '/api/services/categories';

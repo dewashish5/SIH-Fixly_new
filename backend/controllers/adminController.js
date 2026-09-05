@@ -6,6 +6,7 @@ import Service from '../models/Service.js';
 import Review from '../models/Review.js';
 import Transaction from '../models/Transaction.js';
 import Notification from '../models/Notification.js';
+import { notifyTopic } from '../services/notificationService.js';
 import Settings from '../models/Settings.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import { sendEmail as sendEmailHelper } from '../utils/sendEmail.js';
@@ -1393,17 +1394,32 @@ export const sendAdminNotification = async (req, res) => {
         }
 
         const audience = targetAudience || recipientType || 'All Users';
-
-        const newNotif = await Notification.create({
-            title,
-            message,
-            category: category || 'System',
-            targetAudience: audience,
-            recipientEmail: recipientEmail || null,
-            sendEmail: Boolean(sendEmail),
-            priority: priority || 'Normal',
-            unread: true
-        });
+        const topicByAudience = {
+            'All Users': 'fixly_all',
+            'Workers Only': 'fixly_workers',
+            Workers: 'fixly_workers',
+            'Customers Only': 'fixly_customers',
+            Customers: 'fixly_customers',
+        };
+        const topic = topicByAudience[audience];
+        const newNotif = topic
+            ? await notifyTopic({
+                topic,
+                title,
+                body: message,
+                category: category || 'SYSTEM',
+                priority: priority || 'Normal',
+            })
+            : await Notification.create({
+                title,
+                message,
+                category: category || 'System',
+                targetAudience: audience,
+                recipientEmail: recipientEmail || null,
+                sendEmail: Boolean(sendEmail),
+                priority: priority || 'Normal',
+                unread: true,
+            });
 
         const io = req.app.get('io');
         if (io) {

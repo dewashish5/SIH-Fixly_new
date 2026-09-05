@@ -250,7 +250,15 @@ class ServiceItem extends Equatable {
   ];
 }
 
-enum BookingStatus { draft, searching, accepted, arrived, inProgress, completed, paid }
+enum BookingStatus {
+  draft,
+  searching,
+  accepted,
+  arrived,
+  inProgress,
+  completed,
+  paid,
+}
 
 class BookingAddOn extends Equatable {
   const BookingAddOn({
@@ -499,6 +507,7 @@ class WorkerJob extends Equatable {
   final List<BookingAddOn> addOns;
   final DateTime? jobStartedAt;
   final DateTime? jobCompletedAt;
+
   /// Raw backend status string e.g. 'APPROVED', 'ARRIVED', 'IN_PROGRESS'
   final String? rawStatus;
 
@@ -538,10 +547,17 @@ class WorkerJob extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [id, title, pay, status, rawStatus, customerLat, customerLng, addOns];
+  List<Object?> get props => [
+    id,
+    title,
+    pay,
+    status,
+    rawStatus,
+    customerLat,
+    customerLng,
+    addOns,
+  ];
 }
-
 
 class WalletTransaction extends Equatable {
   const WalletTransaction({
@@ -561,8 +577,7 @@ class WalletTransaction extends Equatable {
   final String? transactionId;
 
   @override
-  List<Object?> get props =>
-      [id, label, amount, isCredit, date, transactionId];
+  List<Object?> get props => [id, label, amount, isCredit, date, transactionId];
 }
 
 class NotificationItem extends Equatable {
@@ -572,16 +587,66 @@ class NotificationItem extends Equatable {
     required this.body,
     required this.time,
     this.read = false,
+    this.category,
+    this.eventType,
+    this.entityType,
+    this.entityId,
+    this.bookingId,
+    this.action,
+    this.data = const {},
   });
+
+  factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    final rawDate = json['createdAt'] ?? json['time'];
+    return NotificationItem(
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      body: (json['body'] ?? json['message'])?.toString() ?? '',
+      time: DateTime.tryParse(rawDate?.toString() ?? '') ?? DateTime.now(),
+      read: json['isRead'] == true || json['read'] == true,
+      category: json['category']?.toString(),
+      eventType: json['eventType']?.toString(),
+      entityType: json['entityType']?.toString(),
+      entityId: json['entityId']?.toString(),
+      bookingId: json['bookingId']?.toString(),
+      action:
+          (json['action'] ??
+                  (json['data'] is Map ? json['data']['action'] : null))
+              ?.toString(),
+      data: json['data'] is Map
+          ? Map<String, dynamic>.from(json['data'] as Map)
+          : const {},
+    );
+  }
 
   final String id;
   final String title;
   final String body;
   final DateTime time;
   final bool read;
+  final String? category;
+  final String? eventType;
+  final String? entityType;
+  final String? entityId;
+  final String? bookingId;
+  final String? action;
+  final Map<String, dynamic> data;
 
   @override
-  List<Object?> get props => [id, title, body, time, read];
+  List<Object?> get props => [
+    id,
+    title,
+    body,
+    time,
+    read,
+    category,
+    eventType,
+    entityType,
+    entityId,
+    bookingId,
+    action,
+    data,
+  ];
 }
 
 enum WorkerGender { male, female, other }

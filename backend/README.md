@@ -57,6 +57,9 @@ Create a `.env` file in the root directory (already populated for you):
 PORT=8000
 MONGO_URI=your_mongodb_connection_string
 REDIS_URL=redis://localhost:6379
+FCM_PROJECT_ID=your_firebase_project_id
+FCM_CLIENT_EMAIL=firebase-adminsdk@example.iam.gserviceaccount.com
+FCM_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\nreplace_me\\n-----END PRIVATE KEY-----\\n"
 JWT_SECRET=your_access_token_secret
 REFRESH_SECRET=your_refresh_token_secret
 SMTP_HOST=smtp.gmail.com

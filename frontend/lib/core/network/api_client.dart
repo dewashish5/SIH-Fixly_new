@@ -12,21 +12,22 @@ class ApiClient {
     required TokenStorage tokenStorage,
     required DeviceId deviceId,
     Dio? dio,
-  })  : _tokens = tokenStorage,
-        _deviceId = deviceId,
-        _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: ApiConfig.baseUrl,
-                connectTimeout: const Duration(seconds: 20),
-                sendTimeout: const Duration(seconds: 120),
-                receiveTimeout: const Duration(seconds: 30),
-                headers: {
-                  'Accept': 'application/json',
-                  'Content-Type': 'application/json',
-                },
-              ),
-            ) {
+  }) : _tokens = tokenStorage,
+       _deviceId = deviceId,
+       _dio =
+           dio ??
+           Dio(
+             BaseOptions(
+               baseUrl: ApiConfig.baseUrl,
+               connectTimeout: const Duration(seconds: 20),
+               sendTimeout: const Duration(seconds: 120),
+               receiveTimeout: const Duration(seconds: 30),
+               headers: {
+                 'Accept': 'application/json',
+                 'Content-Type': 'application/json',
+               },
+             ),
+           ) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -110,11 +111,7 @@ class ApiClient {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.refreshToken,
-        data: {
-          'userId': userId,
-          'deviceId': device,
-          'refreshToken': refresh,
-        },
+        data: {'userId': userId, 'deviceId': device, 'refreshToken': refresh},
         options: Options(extra: {'retried': true}),
       );
       final data = res.data;
@@ -122,10 +119,7 @@ class ApiClient {
       final access = data['accessToken'] as String?;
       if (access == null || access.isEmpty) return false;
       final newRefresh = data['refreshToken'] as String?;
-      await _tokens.saveTokens(
-        accessToken: access,
-        refreshToken: newRefresh,
-      );
+      await _tokens.saveTokens(accessToken: access, refreshToken: newRefresh);
       return true;
     } catch (_) {
       return false;
@@ -199,11 +193,7 @@ class ApiClient {
         opts.headers = headers;
         opts.contentType = Headers.multipartFormDataContentType;
       }
-      final res = await _dio.post<dynamic>(
-        path,
-        data: data,
-        options: opts,
-      );
+      final res = await _dio.post<dynamic>(path, data: data, options: opts);
       final body = res.data;
       if (body is Map<String, dynamic>) return body;
       if (body is Map) return Map<String, dynamic>.from(body);
@@ -213,10 +203,7 @@ class ApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> patch(
-    String path, {
-    Object? data,
-  }) async {
+  Future<Map<String, dynamic>> patch(String path, {Object? data}) async {
     clearGetCache();
     try {
       final res = await _dio.patch<Map<String, dynamic>>(path, data: data);
@@ -226,10 +213,17 @@ class ApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> put(
-    String path, {
-    Object? data,
-  }) async {
+  Future<Map<String, dynamic>> delete(String path, {Object? data}) async {
+    clearGetCache();
+    try {
+      final res = await _dio.delete<Map<String, dynamic>>(path, data: data);
+      return res.data ?? {};
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> put(String path, {Object? data}) async {
     clearGetCache();
     try {
       final res = await _dio.put<Map<String, dynamic>>(path, data: data);

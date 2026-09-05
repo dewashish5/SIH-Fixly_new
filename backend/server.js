@@ -11,6 +11,7 @@ import events from 'events';
 import connectDB from './config/db.js';
 import "./worker/emailWorker.js";
 import "./worker/uploadWorker.js";
+import "./worker/notificationWorker.js";
 
 // Middlewares
 import { initSocket } from './config/socket.js';

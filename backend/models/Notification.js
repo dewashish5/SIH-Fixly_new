@@ -22,11 +22,27 @@ const notificationSchema = new mongoose.Schema({
     recipientEmail: { type: String, default: null },
     sendEmail: { type: Boolean, default: false },
     priority: { type: String, enum: ['High', 'Medium', 'Normal', 'Urgent', 'Emergency', 'Low'], default: 'Normal' },
+    eventType: { type: String, default: null, index: true },
+    entityType: { type: String, default: null },
+    entityId: { type: String, default: null },
+    bookingId: { type: String, default: null },
+    dedupeKey: { type: String, default: null, unique: true, sparse: true },
+    channel: { type: String, enum: ['IN_APP', 'PUSH', 'EMAIL', 'MULTI'], default: 'IN_APP' },
+    deliveryStatus: {
+        type: String,
+        enum: ['PENDING', 'QUEUED', 'SENT', 'FAILED', 'PARTIAL', 'SKIPPED'],
+        default: 'PENDING',
+    },
+    deliveryAttempts: { type: Number, default: 0 },
+    lastDeliveryError: { type: String, default: null },
+    sentAt: { type: Date, default: null },
+    deliveredAt: { type: Date, default: null },
     unread: { type: Boolean, default: true },
     isRead: { type: Boolean, default: false },
     data: { type: mongoose.Schema.Types.Mixed, default: {} },
 }, { timestamps: true });
 
 notificationSchema.index({ recipient: 1, createdAt: -1 });
+notificationSchema.index({ deliveryStatus: 1, createdAt: -1 });
 
 export default mongoose.model('Notification', notificationSchema);
