@@ -15,12 +15,16 @@ class CustomerWorkerAcceptedPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocListener<BookingFlowCubit, BookingFlowState>(
-      listenWhen: (previous, current) => previous.step != current.step,
+      listenWhen: (previous, current) =>
+          previous.step != current.step ||
+          previous.booking?.paymentStatus != current.booking?.paymentStatus,
       listener: (context, state) {
         if (state.step == BookingStatus.arrived) {
           context.pushReplacement(RouteNames.customerWorkerArrived);
         } else if (state.step == BookingStatus.inProgress) {
           context.pushReplacement(RouteNames.customerWorkStarted);
+        } else if (state.step == BookingStatus.paid || state.booking?.paymentStatus == 'PAID') {
+          context.push(RouteNames.customerRating);
         }
       },
       child: AppScaffold(
@@ -32,6 +36,10 @@ class CustomerWorkerAcceptedPage extends StatelessWidget {
             final workerId = booking?.workerId;
             final arrivalOtp = booking?.arrivalOtp ?? '----';
             final digits = arrivalOtp.padRight(4, '-').substring(0, 4).split('');
+            final isAwaitingPayment = booking?.rawStatus == 'PAYMENT_PENDING' ||
+                booking?.status == BookingStatus.completed;
+            final isPaid = booking?.status == BookingStatus.paid ||
+                booking?.paymentStatus == 'PAID';
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -224,16 +232,28 @@ class CustomerWorkerAcceptedPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   
-                  PrimaryButton(
-                    label: 'Track Worker Live',
-                    onPressed: () {
-                      if (booking?.id != null) {
-                        context.push('${RouteNames.customerTracking}?bookingId=${booking!.id}');
-                      } else {
-                        context.push(RouteNames.customerTracking);
-                      }
-                    },
-                  ),
+                  if (isPaid) ...[
+                    PrimaryButton(
+                      label: 'Rate & Review Specialist',
+                      onPressed: () => context.push(RouteNames.customerRating),
+                    ),
+                  ] else if (isAwaitingPayment) ...[
+                    PrimaryButton(
+                      label: 'Pay Now (₹${booking?.estimatedPrice.toStringAsFixed(0) ?? '0'})',
+                      onPressed: () => context.push(RouteNames.customerPayment),
+                    ),
+                  ] else ...[
+                    PrimaryButton(
+                      label: 'Track Worker Live',
+                      onPressed: () {
+                        if (booking?.id != null) {
+                          context.push('${RouteNames.customerTracking}?bookingId=${booking!.id}');
+                        } else {
+                          context.push(RouteNames.customerTracking);
+                        }
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   SecondaryButton(
                     label: 'Need Help?',

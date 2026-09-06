@@ -100,18 +100,30 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
           ),
           BlocListener<BookingFlowCubit, BookingFlowState>(
             listenWhen: (previous, current) =>
-                previous.step != current.step &&
-                current.step == BookingStatus.arrived,
+                previous.step != current.step ||
+                previous.booking?.paymentStatus != current.booking?.paymentStatus,
             listener: (context, state) {
-              ToastUtils.showToast(
-                context: context,
-                message: 'Worker arrived! Share OTP to start.',
-              );
+              if (state.step == BookingStatus.paid || state.booking?.paymentStatus == 'PAID') {
+                context.push(RouteNames.customerRating);
+              } else if (state.step == BookingStatus.inProgress) {
+                // Return to booking details where job progress is shown
+                context.pop();
+              } else if (state.step == BookingStatus.arrived) {
+                ToastUtils.showToast(
+                  context: context,
+                  message: 'Worker arrived! Share OTP to start.',
+                );
+              }
             },
           ),
         ],
         child: BlocBuilder<TrackingCubit, TrackingState>(
           builder: (context, state) {
+            final booking = context.watch<BookingFlowCubit>().state.booking;
+            final isAwaitingPayment = booking?.rawStatus == 'PAYMENT_PENDING' ||
+                booking?.status == BookingStatus.completed;
+            final isPaid = booking?.status == BookingStatus.paid ||
+                booking?.paymentStatus == 'PAID';
             final target = state.customerPosition;
             final worker = state.workerPosition;
             final start = state.startPosition ?? worker;
@@ -469,6 +481,36 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                               ],
                             ),
                           ),
+                          if (isPaid) ...[
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                minimumSize: const Size(double.infinity, 48),
+                              ),
+                              onPressed: () => context.push(RouteNames.customerRating),
+                              child: const Text('Rate & Review Specialist', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                            ),
+                          ] else if (isAwaitingPayment) ...[
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF16A34A),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                minimumSize: const Size(double.infinity, 48),
+                              ),
+                              onPressed: () => context.push(
+                                '${RouteNames.customerPayment}?bookingId=${booking?.id ?? ''}&amount=${booking?.totalPrice ?? 0}',
+                              ),
+                              child: Text(
+                                'Pay Now (₹${(booking?.totalPrice ?? booking?.estimatedPrice ?? 0).toStringAsFixed(0)})',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     );

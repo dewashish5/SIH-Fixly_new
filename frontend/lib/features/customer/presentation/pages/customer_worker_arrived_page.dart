@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../cubit/booking_flow_cubit.dart';
@@ -15,10 +14,14 @@ class CustomerWorkerArrivedPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocListener<BookingFlowCubit, BookingFlowState>(
-      listenWhen: (previous, current) => previous.step != current.step,
+      listenWhen: (previous, current) =>
+          previous.step != current.step ||
+          previous.booking?.paymentStatus != current.booking?.paymentStatus,
       listener: (context, state) {
         if (state.step == BookingStatus.inProgress) {
           context.pushReplacement(RouteNames.customerWorkStarted);
+        } else if (state.step == BookingStatus.paid || state.booking?.paymentStatus == 'PAID') {
+          context.push(RouteNames.customerRating);
         }
       },
       child: AppScaffold(
@@ -29,6 +32,10 @@ class CustomerWorkerArrivedPage extends StatelessWidget {
             final workerName = booking?.workerName ?? 'Worker';
             final arrivalOtp = booking?.arrivalOtp ?? '----';
             final digits = arrivalOtp.padRight(4, '-').substring(0, 4).split('');
+            final isAwaitingPayment = booking?.rawStatus == 'PAYMENT_PENDING' ||
+                booking?.status == BookingStatus.completed;
+            final isPaid = booking?.status == BookingStatus.paid ||
+                booking?.paymentStatus == 'PAID';
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -182,16 +189,28 @@ class CustomerWorkerArrivedPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
                   
-                  PrimaryButton(
-                    label: 'View Live Location Map',
-                    onPressed: () {
-                      if (booking?.id != null) {
-                        context.push('${RouteNames.customerTracking}?bookingId=${booking!.id}');
-                      } else {
-                        context.push(RouteNames.customerTracking);
-                      }
-                    },
-                  ),
+                  if (isPaid) ...[
+                    PrimaryButton(
+                      label: 'Rate & Review Specialist',
+                      onPressed: () => context.push(RouteNames.customerRating),
+                    ),
+                  ] else if (isAwaitingPayment) ...[
+                    PrimaryButton(
+                      label: 'Pay Now (₹${booking?.estimatedPrice.toStringAsFixed(0) ?? '0'})',
+                      onPressed: () => context.push(RouteNames.customerPayment),
+                    ),
+                  ] else ...[
+                    PrimaryButton(
+                      label: 'View Live Location Map',
+                      onPressed: () {
+                        if (booking?.id != null) {
+                          context.push('${RouteNames.customerTracking}?bookingId=${booking!.id}');
+                        } else {
+                          context.push(RouteNames.customerTracking);
+                        }
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   SecondaryButton(
                     label: 'Worker Not Arrived?',

@@ -85,7 +85,7 @@ export const notifyUser = async ({
                 recipientUserId: String(recipient),
                 eventType: eventType || null,
                 channel: 'PUSH',
-            }, { jobId: `notification:${notification.id}` });
+            }, { jobId: `notification_${notification.id}` });
         } catch (error) {
             await notification.updateOne({
                 deliveryStatus: 'FAILED',
@@ -144,6 +144,6 @@ export const notifyTopic = async ({
         topic,
         eventType,
         channel: 'PUSH',
-    }, { jobId: `notification:${notification.id}` });
+    }, { jobId: `notification_${notification.id}` });
     return notification;
 };

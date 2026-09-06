@@ -1,0 +1,79 @@
+backend 
+
+error1: 
+📑 Swagger Docs live at: http://localhost:8005/api-docs
+(node:82955) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:82955) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:82955) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:82955) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:82955) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+Email sent successfully: <ab8c5b4b-0347-5473-bc53-99b0ec41b20f@gmail.com>
+Job 6 completed successfully.
+(node:82955) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+User Connected: QQakJNrhnPeEiZdFAAAC
+
+error 2:
+------
+(node:82955) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:82955) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+Email sent successfully: <ab8c5b4b-0347-5473-bc53-99b0ec41b20f@gmail.com>
+Job 6 completed successfully.
+(node:82955) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+User Connected: QQakJNrhnPeEiZdFAAAC
+[notifications] queue failed Custom Id cannot contain :
+
+
+error 3:
+![alt text](<Screenshot 2026-09-06 at 2.17.17 PM.png>)
+backend ke andar fix kro ki rating fake kyu aarhi hai initially worker or customer ka if uska regstration ke baad first jo bhi hoga to rating hai to rating 0 rhega 
+
+
+
+
+
+
+Flutter 
+error 1:
+Exception has occurred.
+PlatformException (PlatformException(PermissionHandler.PermissionManager, A request for permissions is already running, please wait for it to finish before doing another request (note that you can request multiple permissions at the same time)., null, null))![alt text](<Screenshot 2026-09-06 at 2.12.08 PM.png>)
+
+error 2:
+Exception has occurred.
+NoSuchMethodError (NoSuchMethodError: Class 'WorkerJob' has no instance getter 'serviceName'.
+Receiver: Instance of 'WorkerJob'
+Tried calling: serviceName)
+![alt text](<Screenshot 2026-09-06 at 2.15.20 PM.png>)
+E/flutter ( 5519): [ERROR:flutter/runtime/dart_vm_initializer.cc(40)] Unhandled Exception: NoSuchMethodError: Class 'WorkerJob' has no instance getter 'serviceName'.
+E/flutter ( 5519): Receiver: Instance of 'WorkerJob'
+E/flutter ( 5519): Tried calling: serviceName
+E/flutter ( 5519): #0      Object.noSuchMethod (dart:core-patch/object_patch.dart:38:5)
+E/flutter ( 5519): #1      _WorkerActiveJobPageState._makeWebRTCCall (package:fixly/features/worker/presentation/pages/worker_active_job_page.dart:272:29)
+E/flutter ( 5519): #2      _WorkerActiveJobPageState._buildCustomerCard.<anonymous closure> (package:fixly/features/worker/presentation/pages/worker_active_job_page.dart:246:36)
+E/flutter ( 5519): #3      _InkResponseState.handleTap (package:flutter/src/material/ink_well.dart:1224:21)
+E/flutter ( 5519): #4      GestureRecognizer.invokeCallback (package:flutter/src/gestures/recognizer.dart:362:24)
+E/flutter ( 5519): #5      TapGestureRecognizer.handleTapUp (package:flutter/src/gestures/tap.dart:758:11)
+E/flutter ( 5519): #6      BaseTapGestureRecognizer._checkUp (package:flutter/src/gestures/tap.dart:383:5)
+E/flutter ( 5519): #7      BaseTapGestureRecognizer.acceptGesture (package:flutter/src/gestures/tap.dart:353:7)
+E/flutter ( 5519): #8      GestureArenaManager.sweep (package:flutter/src/gestures/arena.dart:173:27)
+E/flutter ( 5519): #9      GestureBinding.handleEvent (package:flutter/src/gestures/binding.dart:542:20)
+E/flutter ( 5519): #10     GestureBinding.dispatchEvent (package:flutter/src/gestures/binding.dart:508:22)
+E/flutter ( 5519): #11     RendererBinding.dispatchEvent (package:flutter/src/rendering/binding.dart:473:11)
+E/flutter ( 5519): #12     GestureBinding._handlePointerEventImmediately (package:flutter/src/gestures/binding.dart:447:7)
+E/flutter ( 5519): #13     GestureBinding.handlePointerEvent (package:flutter/src/gestures/binding.dart:404:5)
+E/flutter ( 5519): #14     GestureBinding._flushPointerEventQueue (package:flutter/src/gestures/binding.dart:351:7)
+E/flutter ( 5519): #15     GestureBinding._handlePointerDataPacket (package:flutter/src/gestures/binding.dart:310:9)
+E/flutter ( 5519): #16     _invoke1 (dart:ui/hooks.dart:457:13)
+E/flutter ( 5519): #17     PlatformDispatcher._dispatchPointerDataPacket (dart:ui/platform_dispatcher.dart:473:7)
+E/flutter ( 5519): #18     _dispatchPointerDataPacket (dart:ui/hooks.dart:374:31)
+E/flutter ( 5519):
+
+error 3:
+payment not working razorpay payment kam nhi kr rha button me click krne se razorpay ui nhi khul rha aur yaha amount ka bhi data correct nhi aarha customer screen me payment screen me data fetch krne ki api hit nhi ho rhi data null aarha check kro backend me and fix kro isko bhi api bni hui hai implement kro 
+![alt text](<Screenshot 2026-09-06 at 2.23.16 PM.png>)
+
+error4:
+isme map to kam kr rha hai tracking ap isko mt kch krna ...
+and worker jaise hi otp dalke arrived krta hai to jo status haina us user ki screen me tracking se ek piche screen booking dtail vale me navigate krdo and us screen ko refresh automatic kr dena taki vha tracking button ki jgah job progress dikhe 
+![alt text](<Screenshot 2026-09-06 at 2.32.54 PM.png>)
+

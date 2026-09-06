@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/network/worker_realtime_service.dart';
 import '../../../../shared/models/models.dart';
 import '../../../auth/data/auth_api_repository.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
@@ -28,6 +30,10 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
   final PaymentsApiRepository _payments;
   final WorkersApiRepository _workers;
 
+  StreamSubscription? _incomingSub;
+  StreamSubscription? _claimedSub;
+  StreamSubscription? _statusSub;
+
   Future<void> load() async {
     emit(state.copyWith(status: WorkerDashboardStatus.loading, clearError: true));
     try {
@@ -49,6 +55,23 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
       final incoming = results[3] as List<WorkerJob>;
       final active = results[4] as List<WorkerJob>;
       final reliability = results[5] as Map<String, dynamic>;
+
+      // Initialize Socket.io for worker and subscribe to active booking
+      WorkerRealtimeService.instance.initForWorker(userId);
+      if (active.isNotEmpty) {
+        WorkerRealtimeService.instance.trackBooking(active.first.id);
+      }
+
+      _incomingSub ??= WorkerRealtimeService.instance.incomingJobsStream.listen((_) {
+        _silentRefresh();
+      });
+      _claimedSub ??= WorkerRealtimeService.instance.jobClaimedStream.listen((_) {
+        _silentRefresh();
+      });
+      _statusSub ??= WorkerRealtimeService.instance.bookingStatusStream.listen((_) {
+        _silentRefresh();
+      });
+
       emit(
         WorkerDashboardState(
           status: WorkerDashboardStatus.loaded,
@@ -68,6 +91,29 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
     }
   }
 
+  Future<void> _silentRefresh() async {
+    try {
+      final userId = await ApiServices.tokens.userId;
+      if (userId == null || isClosed) return;
+      final results = await Future.wait([
+        _payments.workerEarningsSummary(),
+        _bookings.workerIncoming(),
+        _bookings.workerActive(),
+      ]);
+      final summary = results[0] as Map<String, dynamic>;
+      final incoming = results[1] as List<WorkerJob>;
+      final active = results[2] as List<WorkerJob>;
+      if (!isClosed) {
+        emit(state.copyWith(
+          todayEarnings: (summary['today'] as num?)?.toDouble() ?? state.todayEarnings,
+          completedJobs: (summary['completedJobs'] as num?)?.toInt() ?? state.completedJobs,
+          incomingCount: incoming.length,
+          activeJob: active.isEmpty ? null : active.first,
+        ));
+      }
+    } catch (_) {}
+  }
+
   Future<void> toggleAvailability() async {
     final next = !state.isAvailable;
     try {
@@ -77,4 +123,13 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
       emit(state.copyWith(error: e.message));
     }
   }
+
+  @override
+  Future<void> close() {
+    _incomingSub?.cancel();
+    _claimedSub?.cancel();
+    _statusSub?.cancel();
+    return super.close();
+  }
 }
+

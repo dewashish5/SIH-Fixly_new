@@ -61,3 +61,28 @@ export const authorize = (...allowedRoles) => {
         next();
     };
 };
+
+// ==========================================
+// 3. OPTIONAL PROTECT MIDDLEWARE
+// ==========================================
+export const optionalProtect = async (req, res, next) => {
+    try {
+        let token;
+        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+            token = req.headers.authorization.split(' ')[1];
+        }
+        if (!token) {
+            req.user = null;
+            return next();
+        }
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = {
+            id: decoded.id,
+            role: decoded.role,
+        };
+        next();
+    } catch {
+        req.user = null;
+        next();
+    }
+};

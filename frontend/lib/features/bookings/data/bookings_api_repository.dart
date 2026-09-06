@@ -291,11 +291,12 @@ class BookingsApiRepository {
     return getById(bookingId, serviceTitle: serviceTitle);
   }
 
-  Future<void> complete(String bookingId) async {
+  Future<Map<String, dynamic>> complete(String bookingId) async {
     final res = await _api.post(ApiEndpoints.completeBooking(bookingId));
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Complete failed');
     }
+    return Map<String, dynamic>.from(res);
   }
 
   Future<void> addParts({
@@ -472,6 +473,7 @@ class BookingsApiRepository {
       jobStartedAt: parseDate(json['jobStartedAt']),
       jobCompletedAt: parseDate(json['jobCompletedAt']),
       rawStatus: rawStatus,
+      invoice: invoice is Map ? BookingInvoice.fromJson(Map<String, dynamic>.from(invoice)) : null,
     );
   }
 
@@ -603,6 +605,7 @@ class BookingsApiRepository {
       customerPhone: customerPhone,
       customerLat: customerLat,
       customerLng: customerLng,
+      rawStatus: json['status']?.toString(),
     );
   }
 
@@ -621,6 +624,8 @@ class BookingsApiRepository {
       case 'IN_PROGRESS':
       case 'STARTED':
         return BookingStatus.inProgress;
+      case 'PAYMENT_PENDING':
+      case 'AWAITING_PAYMENT':
       case 'COMPLETED':
         return BookingStatus.completed;
       case 'PAID':

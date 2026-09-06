@@ -45,6 +45,7 @@ class _WorkerAddPartsPageState extends State<WorkerAddPartsPage> {
       context.read<ActiveJobCubit>().completeJob();
     } else {
       context.read<ActiveJobCubit>().addExtraParts(_parts).then((_) {
+        if (!mounted) return;
         context.read<ActiveJobCubit>().completeJob();
       });
     }

@@ -287,7 +287,9 @@ GoRouter createAppRouter() {
           ),
           _page(
             RouteNames.customerPayment,
-            (_, s) => const CustomerPaymentPage(),
+            (_, s) => CustomerPaymentPage(
+              bookingId: s.uri.queryParameters['bookingId'],
+            ),
           ),
           _page(
             RouteNames.customerPayments,

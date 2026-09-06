@@ -63,7 +63,7 @@ class RazorpayCheckoutService {
     _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, (_) {});
 
     final options = <String, dynamic>{
-      'key': order.keyId,
+      'key': order.keyId.isNotEmpty ? order.keyId : 'rzp_test_RuFVNyVj523a8U',
       'amount': order.amountPaise.round(),
       'currency': order.currency,
       'name': 'Fixly',
@@ -80,6 +80,36 @@ class RazorpayCheckoutService {
 
     _razorpay!.open(options);
     return completer.future;
+  }
+
+  Future<bool> processPayment({
+    required String bookingId,
+    required double amountRupees,
+    required String description,
+    String? customerName,
+    String? email,
+    String? phone,
+    PaymentsApiRepository? paymentsRepo,
+  }) async {
+    final repo = paymentsRepo ?? PaymentsApiRepository();
+    final order = await repo.createOrder(
+      bookingId: bookingId,
+      amountRupees: amountRupees,
+    );
+    final result = await openCheckout(
+      order: order,
+      description: description,
+      customerName: customerName,
+      email: email,
+      phone: phone,
+    );
+    final verified = await repo.verify(
+      razorpayOrderId: result.orderId,
+      razorpayPaymentId: result.paymentId,
+      razorpaySignature: result.signature,
+      bookingId: bookingId,
+    );
+    return verified;
   }
 
   void dispose() {

@@ -24,6 +24,10 @@ class BookingFlowState extends Equatable {
   final String? errorMessage;
 
   double get displayPrice {
+    final totalPrice = booking?.totalPrice;
+    if (totalPrice != null && totalPrice > 0) {
+      return totalPrice;
+    }
     if (booking != null && booking!.estimatedPrice > 0) {
       return booking!.estimatedPrice;
     }

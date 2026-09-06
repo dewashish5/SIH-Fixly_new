@@ -51,7 +51,7 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
   /// Start polling booking status every 5s (for finding-worker / accepted screens).
   void startStatusPolling(String bookingId) {
     _statusPollTimer?.cancel();
-    _statusPollTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+    _statusPollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       await refreshBooking();
     });
   }
@@ -176,13 +176,13 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
     }
   }
 
-  Future<void> refreshBooking() async {
-    final booking = state.booking;
-    if (booking == null) return;
+  Future<void> refreshBooking([String? bookingId]) async {
+    final idToFetch = bookingId ?? state.booking?.id;
+    if (idToFetch == null) return;
     try {
       final updated = await _bookings.getById(
-        booking.id,
-        serviceTitle: booking.serviceTitle,
+        idToFetch,
+        serviceTitle: state.booking?.serviceTitle ?? 'Fixly Service',
       );
       _repo.activeBooking = updated;
       emit(state.copyWith(booking: updated, step: updated.status, clearError: true));
@@ -191,8 +191,12 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
     }
   }
 
-  double _payableAmount() {
-    final booking = state.booking;
+  double _payableAmount([Booking? targetBooking]) {
+    final booking = targetBooking ?? state.booking;
+    final totalPrice = booking?.totalPrice;
+    if (totalPrice != null && totalPrice > 0) {
+      return totalPrice;
+    }
     if (booking != null && booking.estimatedPrice > 0) {
       return booking.estimatedPrice;
     }
@@ -203,17 +207,22 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
   }
 
   Future<bool> payWithRazorpay({
+    String? bookingId,
+    double? amountOverride,
     String? customerName,
     String? email,
     String? phone,
   }) async {
-    final booking = state.booking;
-    if (booking == null) return false;
+    final targetBookingId = bookingId ?? state.booking?.id;
+    if (targetBookingId == null) return false;
     emit(state.copyWith(isLoading: true, clearError: true));
     try {
-      await refreshBooking();
-      final current = state.booking ?? booking;
-      final amount = _payableAmount();
+      await refreshBooking(targetBookingId);
+      final current = state.booking;
+      if (current == null) {
+        throw ApiException('Booking details not found');
+      }
+      final amount = amountOverride ?? _payableAmount(current);
       if (amount <= 0) {
         throw ApiException('Invalid payment amount');
       }
@@ -242,13 +251,18 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
         throw ApiException('Payment verification failed');
       }
 
-      final paid = current.copyWith(status: BookingStatus.paid);
-      _repo.activeBooking = paid;
+      await refreshBooking(current.id);
+      final updated = state.booking ??
+          current.copyWith(
+            status: BookingStatus.paid,
+            paymentStatus: 'PAID',
+          );
+      _repo.activeBooking = updated;
       emit(
         state.copyWith(
           isLoading: false,
           step: BookingStatus.paid,
-          booking: paid,
+          booking: updated,
         ),
       );
       return true;

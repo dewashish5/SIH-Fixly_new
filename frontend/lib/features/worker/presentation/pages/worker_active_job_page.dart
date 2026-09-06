@@ -265,17 +265,16 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
         'peerName': customerName,
         'peerRole': 'customer',
         'peerAvatar': job.customerAvatar as String?,
-        'serviceTitle': job.serviceName as String? ?? 'Fixly Service',
-        'isIncoming': false,
+        'serviceTitle': job.title,
       },
     );
 
     final success = await WebRTCCallService.instance.startCall(
-      bookingId: bookingId,
+      bookingId: job.id,
       expectedPeerName: customerName,
       expectedPeerRole: 'customer',
       expectedPeerAvatar: job.customerAvatar as String?,
-      expectedServiceTitle: job.serviceName as String? ?? 'Fixly Service',
+      expectedServiceTitle: job.title,
     );
 
     if (!success && mounted) {
@@ -387,13 +386,54 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
           ),
           const SizedBox(height: 16),
           SwipeActionButton(
-            label: 'Swipe to Complete Job',
+            label: 'Swipe to Request Payment',
             onCompleted: () => _showCompleteDialog(context, job.id),
           ),
           const SizedBox(height: 12),
           SecondaryButton(
-            label: 'Complete Job',
+            label: 'Request Payment',
             onPressed: () => _showCompleteDialog(context, job.id),
+          ),
+        ],
+      );
+    } else if (rawStatus == 'PAYMENT_PENDING') {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFBEB),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFDE68A)),
+        ),
+        child: const Column(
+          children: [
+            Icon(Icons.hourglass_top, color: Color(0xFFD97706), size: 36),
+            SizedBox(height: 12),
+            Text(
+              'Awaiting Customer Payment',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Color(0xFF92400E)),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Customer has been asked to pay via Razorpay.\nThis screen will automatically update upon payment.',
+              style: TextStyle(fontSize: 13, color: Color(0xFFB45309), height: 1.4),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    } else if (rawStatus == 'PAYMENT_PAID' || job.invoice?.paymentStatus == 'PAID') {
+      return Column(
+        children: [
+          const Text(
+            'Payment Received Successfully!',
+            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 16),
+          SwipeActionButton(
+            label: 'Swipe to Complete Job',
+            onCompleted: () => context.read<ActiveJobCubit>().completeJob(),
           ),
         ],
       );

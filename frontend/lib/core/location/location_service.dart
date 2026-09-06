@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'app_location.dart';
 import 'location_permission_dialogs.dart';
+import '../notifications/notification_service.dart';
 
 /// Asks location permission (themed) + refreshes GPS once per app open.
 class LocationService {
@@ -57,6 +58,7 @@ class LocationService {
     if (!await _ensurePermission(context)) {
       return _finishWithOptionalDebugFallback('signup permission denied');
     }
+    await NotificationService.instance.requestPermissionsAndSync();
     return refreshCurrentPosition();
   }
 
@@ -186,7 +188,12 @@ class LocationService {
     final proceed = await LocationPermissionDialogs.showRationale(context);
     if (!proceed) return false;
 
-    status = await Permission.locationWhenInUse.request();
+    try {
+      status = await Permission.locationWhenInUse.request();
+    } catch (e) {
+      debugPrint('Location permission request error: $e');
+      status = await Permission.locationWhenInUse.status;
+    }
 
     if (status.isPermanentlyDenied && context.mounted) {
       await LocationPermissionDialogs.showOpenSettings(context);

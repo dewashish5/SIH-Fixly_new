@@ -124,7 +124,10 @@ class LiveTrackingSocket {
         value['bearing'];
     final heading = rawHeading is num ? rawHeading.toDouble() : null;
 
-    return MapCoordinate(lat: lat, lng: lng, heading: heading);
+    final rawTs = data['timestamp'] ?? value['timestamp'];
+    final timestamp = rawTs is num ? rawTs.toInt() : null;
+
+    return MapCoordinate(lat: lat, lng: lng, heading: heading, timestamp: timestamp);
   }
 
   Future<void> dispose() async {

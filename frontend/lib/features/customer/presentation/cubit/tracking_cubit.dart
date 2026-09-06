@@ -116,19 +116,32 @@ class TrackingCubit extends Cubit<TrackingState> {
 
     // Connect real-time socket
     _socket.connect(bookingId);
-    _socketSubscription = _socket.positions.listen(_onPosition);
+    _socketSubscription = _socket.positions.listen((pos) {
+      _lastSocketTime = DateTime.now();
+      _onPosition(pos);
+    });
     _connectionSubscription = _socket.connectionState.listen((connected) {
       if (!isClosed) emit(state.copyWith(isSocketConnected: connected));
     });
 
-    // Fallback polling every 8s
+    // Fallback polling every 8s — only used if socket is disconnected or hasn't emitted recently
     _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) async {
+      final now = DateTime.now();
+      if (_socket.isConnected &&
+          _lastSocketTime != null &&
+          now.difference(_lastSocketTime!).inSeconds < 10) {
+        // Socket is alive and fresh; skip stale HTTP DB poll to avoid pulling bike backwards!
+        return;
+      }
       try {
         final position = await _bookings.trackWorkerPosition(bookingId);
         if (position != null) _onPosition(position);
       } catch (_) {}
     });
   }
+
+  DateTime? _lastSocketTime;
+  int _lastPositionTimestamp = 0;
 
   Future<void> _loadRoute(MapCoordinate from, MapCoordinate to) async {
     try {
@@ -140,13 +153,28 @@ class TrackingCubit extends Cubit<TrackingState> {
   }
 
   void _onPosition(MapCoordinate position) {
+    // Timestamp order check: ignore older delayed coordinates
+    if (position.timestamp != null && position.timestamp! > 0) {
+      if (position.timestamp! < _lastPositionTimestamp) {
+        return; // Stale packet, ignore!
+      }
+      _lastPositionTimestamp = position.timestamp!;
+    }
+
     final target = state.customerPosition;
     final previous = state.workerPosition ?? position;
 
-    // Calculate heading: prefer socket heading or calculate bearing from previous point
-    final heading = position.heading != null && position.heading! > 0
-        ? TrackingHelpers.normalizeHeading(position.heading!)
-        : TrackingHelpers.bearingDegrees(previous, position);
+    final distFromPrev = TrackingHelpers.distanceMeters(previous, position);
+
+    // Calculate heading: if jitter movement < 2.5m, preserve previous heading to prevent bike flipping 180°
+    double heading;
+    if (position.heading != null && position.heading! > 0) {
+      heading = TrackingHelpers.normalizeHeading(position.heading!);
+    } else if (distFromPrev < 2.5 && previous.heading != null && previous.heading! > 0) {
+      heading = previous.heading!;
+    } else {
+      heading = TrackingHelpers.bearingDegrees(previous, position);
+    }
 
     final targetPos = position.copyWith(heading: heading);
 
@@ -168,7 +196,7 @@ class TrackingCubit extends Cubit<TrackingState> {
             ? TrackingPhase.nearby
             : TrackingPhase.enRoute;
 
-    // Smooth interpolation over 480ms (6 steps x 80ms) to prevent Pigeon channel queue saturation
+    // Smooth interpolation over 480ms (6 steps x 80ms)
     _animationTimer?.cancel();
     var tick = 0;
     const totalTicks = 6;
@@ -181,7 +209,7 @@ class TrackingCubit extends Cubit<TrackingState> {
         emit(
           state.copyWith(
             workerPosition: current,
-            workerHeading: current.heading ?? heading,
+            workerHeading: heading,
             distanceMeters: totalDist,
             etaMinutes: eta,
             phase: phase,

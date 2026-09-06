@@ -314,6 +314,35 @@ class BookingInvoice extends Equatable {
   final DateTime? jobStartedAt;
   final DateTime? jobCompletedAt;
 
+  factory BookingInvoice.fromJson(Map<String, dynamic> json) {
+    return BookingInvoice(
+      bookingId: json['bookingId']?.toString() ?? '',
+      serviceName: json['serviceName']?.toString() ?? 'Service',
+      status: json['status']?.toString() ?? 'PENDING',
+      baseServiceFee: (json['baseServiceFee'] as num?)?.toDouble() ?? 0,
+      extraPartsTotal: (json['extraPartsTotal'] as num?)?.toDouble() ?? 0,
+      platformFee: (json['platformFee'] as num?)?.toDouble() ?? 0,
+      totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
+      paymentStatus: json['paymentStatus']?.toString(),
+      paymentMethod: json['paymentMethod']?.toString(),
+      transactionId: json['transactionId']?.toString(),
+      customerName: json['customerName']?.toString(),
+      customerPhone: json['customerPhone']?.toString(),
+      workerName: json['workerName']?.toString(),
+      workerPhone: json['workerPhone']?.toString(),
+      addOns: (json['addOns'] as List?)
+              ?.map((e) => BookingAddOn(
+                    title: e['title']?.toString() ?? '',
+                    price: (e['price'] as num?)?.toDouble() ?? 0,
+                    quantity: (e['quantity'] as num?)?.toInt() ?? 1,
+                  ))
+              .toList() ??
+          const [],
+      jobStartedAt: json['jobStartedAt'] != null ? DateTime.tryParse(json['jobStartedAt'].toString()) : null,
+      jobCompletedAt: json['jobCompletedAt'] != null ? DateTime.tryParse(json['jobCompletedAt'].toString()) : null,
+    );
+  }
+
   @override
   List<Object?> get props => [bookingId, totalAmount, paymentStatus, addOns];
 }
@@ -354,6 +383,7 @@ class Booking extends Equatable {
     this.customerPhone,
     this.customerLat,
     this.customerLng,
+    this.rawStatus,
   });
 
   final String id;
@@ -390,6 +420,16 @@ class Booking extends Equatable {
   final String? customerPhone;
   final double? customerLat;
   final double? customerLng;
+  final String? rawStatus;
+
+  double get totalPrice {
+    final base = baseServiceFee ?? estimatedPrice;
+    final extra = extraPartsTotal ?? 0.0;
+    final platform = platformFee ?? 0.0;
+    final addOnsTotal = addOns.fold<double>(0.0, (sum, a) => sum + (a.price * a.quantity));
+    final calculated = base + extra + platform + addOnsTotal;
+    return calculated > 0 ? calculated : estimatedPrice;
+  }
 
   Booking copyWith({
     BookingStatus? status,
@@ -400,6 +440,8 @@ class Booking extends Equatable {
     double? baseServiceFee,
     double? platformFee,
     double? extraPartsTotal,
+    String? rawStatus,
+    String? paymentStatus,
   }) {
     return Booking(
       id: id,
@@ -424,7 +466,7 @@ class Booking extends Equatable {
       problemPhotos: problemPhotos,
       problemVideos: problemVideos,
       paymentMethod: paymentMethod,
-      paymentStatus: paymentStatus,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
       transactionId: transactionId,
       arrivalOtp: arrivalOtp,
       createdAt: createdAt,
@@ -436,6 +478,7 @@ class Booking extends Equatable {
       customerPhone: customerPhone,
       customerLat: customerLat,
       customerLng: customerLng,
+      rawStatus: rawStatus ?? this.rawStatus,
     );
   }
 
@@ -483,6 +526,7 @@ class WorkerJob extends Equatable {
     this.jobStartedAt,
     this.jobCompletedAt,
     this.rawStatus,
+    this.invoice,
   });
 
   final String id;
@@ -510,6 +554,9 @@ class WorkerJob extends Equatable {
 
   /// Raw backend status string e.g. 'APPROVED', 'ARRIVED', 'IN_PROGRESS'
   final String? rawStatus;
+  final BookingInvoice? invoice;
+
+  String get bookingId => id;
 
   WorkerJob copyWith({
     JobStatus? status,
@@ -518,6 +565,7 @@ class WorkerJob extends Equatable {
     double? extraPartsTotal,
     DateTime? jobStartedAt,
     DateTime? jobCompletedAt,
+    BookingInvoice? invoice,
   }) {
     return WorkerJob(
       id: id,
@@ -543,6 +591,7 @@ class WorkerJob extends Equatable {
       jobStartedAt: jobStartedAt ?? this.jobStartedAt,
       jobCompletedAt: jobCompletedAt ?? this.jobCompletedAt,
       rawStatus: rawStatus ?? this.rawStatus,
+      invoice: invoice ?? this.invoice,
     );
   }
 

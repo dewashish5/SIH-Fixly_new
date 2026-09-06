@@ -5,6 +5,7 @@ import Booking from '../models/Booking.js';
 import User from '../models/User.js';
 import Settings from '../models/Settings.js';
 import { notifyUser, safeNotify } from '../services/notificationService.js';
+import { getTargetBookingRooms } from '../sockets/tracking.js';
 
 let razorpay = null;
 if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
@@ -18,55 +19,36 @@ const razorpayMode = () =>
     process.env.RAZORPAY_KEY_ID?.startsWith('rzp_live') ? 'live' : 'test';
 
 const finalizeJobAfterPayment = async (booking, io) => {
-    booking.status = 'COMPLETED';
-    booking.jobCompletedAt = booking.jobCompletedAt || new Date();
-    await booking.save();
-
-    if (booking.worker) {
-        const updatePayload = {};
-        if (booking.serviceAddress?.location?.coordinates?.length === 2) {
-            updatePayload.location = {
-                type: 'Point',
-                coordinates: booking.serviceAddress.location.coordinates,
-            };
-        }
-        if (Object.keys(updatePayload).length) {
-            await User.findByIdAndUpdate(booking.worker, { $set: updatePayload });
-        }
-    }
-
     if (io) {
-        io.to(`booking_${booking._id}`).emit('booking_status_update', {
+        const targetRooms = [
+            ...getTargetBookingRooms(booking._id),
+            ...getTargetBookingRooms(booking.bookingId),
+        ];
+        io.to(targetRooms).emit('booking_status_update', {
             bookingId: booking._id,
-            status: 'COMPLETED',
+            canonicalBookingId: booking.bookingId,
+            status: booking.status,
             paymentStatus: 'PAID',
             transactionId: booking.invoice?.transactionId,
             invoice: booking.invoice,
         });
-        if (booking.worker) {
-            io.emit('worker:availability_changed', {
-                workerId: String(booking.worker),
-                isAvailable: true,
-                status: 'AVAILABLE',
-            });
-        }
     }
 
     safeNotify(async () => {
         await notifyUser({
             recipient: booking.customer,
-            eventType: 'JOB_COMPLETED',
+            eventType: 'PAYMENT_SUCCESS',
             entityId: booking._id,
             bookingId: booking._id,
-            dedupeKey: `JOB_COMPLETED:${booking._id}`,
+            dedupeKey: `PAYMENT_SUCCESS:${booking._id}`,
         });
         if (booking.worker) {
             await notifyUser({
                 recipient: booking.worker,
-                eventType: 'JOB_COMPLETED',
+                eventType: 'PAYMENT_RECEIVED',
                 entityId: booking._id,
                 bookingId: booking._id,
-                dedupeKey: `JOB_COMPLETED:${booking._id}:${booking.worker}`,
+                dedupeKey: `PAYMENT_RECEIVED:${booking._id}:${booking.worker}`,
             });
         }
     });
@@ -163,7 +145,7 @@ export const createOrder = async (req, res) => {
         if (booking.invoice?.paymentStatus === 'PAID') {
             return res.status(400).json({ success: false, message: 'Booking already paid' });
         }
-        if (!['IN_PROGRESS', 'COMPLETED'].includes(booking.status)) {
+        if (!['IN_PROGRESS', 'PAYMENT_PENDING', 'COMPLETED'].includes(booking.status)) {
             return res.status(400).json({
                 success: false,
                 message: 'Payment is available after the job is in progress',
@@ -202,7 +184,7 @@ export const createOrder = async (req, res) => {
                     paymentMethod: 'Razorpay',
                     status: 'pending',
                 },
-                { new: true }
+                { returnDocument: 'after' }
             )
             : await Transaction.create({
                 customerId,
@@ -310,6 +292,7 @@ export const verifyPayment = async (req, res) => {
             booking.invoice.paymentStatus = 'PAID';
             booking.invoice.paymentMethod = 'Razorpay';
             booking.invoice.transactionId = finalPaymentId;
+            await booking.save();
 
             await creditWorkerWallet({
                 workerId: booking.worker || transaction.workerId,

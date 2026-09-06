@@ -71,7 +71,7 @@ const workerProfileSchema = new mongoose.Schema({
     skills: [{ type: String }],
     certifications: [{ type: String }],
     workAddress: { type: String, default: null },
-    rating: { type: Number, default: 5.0 },
+    rating: { type: Number, default: 0.0 },
     totalJobs: { type: Number, default: 0 },
     recentWorkPhotos: [{ type: String }],
     badges: [{ type: String }], // e.g., 'Background Checked', 'Top Rated'

@@ -2,6 +2,7 @@ import Booking from '../models/Booking.js';
 import User from '../models/User.js';
 import redis from '../config/redis.js';
 import { notifyUser, safeNotify } from '../services/notificationService.js';
+import { getTargetBookingRooms } from '../sockets/tracking.js';
 
 // 1. Worker Accepts Booking Request (transitions SEARCHING -> ACCEPTED with Distributed Lock & Concurrency Control)
 export const acceptBooking = async (req, res) => {
@@ -56,7 +57,7 @@ export const acceptBooking = async (req, res) => {
                     status: 'APPROVED'
                 }
             },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!booking) {
@@ -132,27 +133,34 @@ export const verifyArrivalOtp = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid Secure PIN' });
         }
 
-        booking.status = 'ARRIVED';
+        booking.status = 'IN_PROGRESS';
+        booking.jobStartedAt = booking.jobStartedAt || Date.now();
         await booking.save();
 
         // Notify client via Socket.io
         const io = req.app.get('io');
         if (io) {
-            io.to(`booking_${bookingId}`).emit('booking_status_update', {
-                bookingId,
-                status: 'ARRIVED'
+            const targetRooms = [
+                ...getTargetBookingRooms(bookingId),
+                ...getTargetBookingRooms(booking.bookingId),
+            ];
+            io.to(targetRooms).emit('booking_status_update', {
+                bookingId: booking._id,
+                canonicalBookingId: booking.bookingId,
+                status: 'IN_PROGRESS',
+                jobStartedAt: booking.jobStartedAt,
             });
         }
 
         safeNotify(() => notifyUser({
             recipient: booking.customer,
-            eventType: 'WORKER_ARRIVED',
+            eventType: 'JOB_STARTED',
             entityId: booking._id,
             bookingId: booking._id,
-            dedupeKey: `WORKER_ARRIVED:${booking._id}`,
+            dedupeKey: `JOB_STARTED:${booking._id}`,
         }));
 
-        return res.status(200).json({ success: true, message: 'Worker arrival verified', booking });
+        return res.status(200).json({ success: true, message: 'Worker arrival verified & job started', booking });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
@@ -259,10 +267,38 @@ export const completeJob = async (req, res) => {
         await booking.save();
 
         if (booking.invoice.paymentStatus !== 'PAID') {
-            return res.status(400).json({
-                success: false,
-                code: 'PAYMENT_REQUIRED',
-                message: 'Customer payment is required before this job can be completed',
+            booking.status = 'PAYMENT_PENDING';
+            await booking.save();
+
+            const io = req.app.get('io');
+            if (io) {
+                const targetRooms = [
+                    ...getTargetBookingRooms(bookingId),
+                    ...getTargetBookingRooms(booking.bookingId),
+                ];
+                io.to(targetRooms).emit('booking_status_update', {
+                    bookingId: booking._id,
+                    canonicalBookingId: booking.bookingId,
+                    status: 'PAYMENT_PENDING',
+                    invoice: booking.invoice,
+                });
+            }
+
+            safeNotify(async () => {
+                await notifyUser({
+                    recipient: booking.customer,
+                    eventType: 'INVOICE_UPDATED',
+                    entityId: booking._id,
+                    bookingId: booking._id,
+                    dedupeKey: `PAYMENT_PENDING:${booking._id}`,
+                });
+            });
+
+            return res.status(200).json({
+                success: true,
+                status: 'PAYMENT_PENDING',
+                message: 'Work completed. Awaiting customer payment.',
+                booking,
             });
         }
 
@@ -289,9 +325,15 @@ export const completeJob = async (req, res) => {
         // Notify client via Socket.io
         const io = req.app.get('io');
         if (io) {
-            io.to(`booking_${bookingId}`).emit('booking_status_update', {
-                bookingId,
+            const targetRooms = [
+                ...getTargetBookingRooms(bookingId),
+                ...getTargetBookingRooms(booking.bookingId),
+            ];
+            io.to(targetRooms).emit('booking_status_update', {
+                bookingId: booking._id,
+                canonicalBookingId: booking.bookingId,
                 status: 'COMPLETED',
+                paymentStatus: 'PAID',
                 invoice: booking.invoice
             });
             // Broadcast availability change: worker has completed the job and is now FREE/AVAILABLE

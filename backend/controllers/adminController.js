@@ -152,7 +152,7 @@ export const updateAdminMe = async (req, res) => {
         const user = await User.findByIdAndUpdate(
             req.user.id,
             { $set: updates },
-            { new: true }
+            { returnDocument: 'after' }
         ).select('-password -activeDeviceId');
 
         if (!user || user.role !== 'admin') {

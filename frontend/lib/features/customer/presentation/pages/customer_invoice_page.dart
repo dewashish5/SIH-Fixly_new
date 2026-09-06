@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/network/api_exception.dart';
+import '../../../../core/utils/toast_utils.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
+import '../../../payments/services/razorpay_checkout_service.dart';
 
 class CustomerInvoicePage extends StatefulWidget {
   const CustomerInvoicePage({required this.bookingId, super.key});
@@ -23,6 +26,12 @@ class _CustomerInvoicePageState extends State<CustomerInvoicePage> {
     _invoice = BookingsApiRepository().invoice(widget.bookingId);
   }
 
+  void _reload() {
+    setState(() {
+      _invoice = BookingsApiRepository().invoice(widget.bookingId);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
@@ -38,20 +47,80 @@ class _CustomerInvoicePageState extends State<CustomerInvoicePage> {
               child: Text(snapshot.error?.toString() ?? 'Invoice unavailable'),
             );
           }
-          return _InvoiceContent(invoice: snapshot.data!);
+          return _InvoiceContent(
+            invoice: snapshot.data!,
+            onPaymentSuccess: _reload,
+          );
         },
       ),
     );
   }
 }
 
-class _InvoiceContent extends StatelessWidget {
-  const _InvoiceContent({required this.invoice});
+class _InvoiceContent extends StatefulWidget {
+  const _InvoiceContent({
+    required this.invoice,
+    required this.onPaymentSuccess,
+  });
 
   final BookingInvoice invoice;
+  final VoidCallback onPaymentSuccess;
+
+  @override
+  State<_InvoiceContent> createState() => _InvoiceContentState();
+}
+
+class _InvoiceContentState extends State<_InvoiceContent> {
+  final RazorpayCheckoutService _razorpay = RazorpayCheckoutService();
+  bool _isPaying = false;
+
+  @override
+  void dispose() {
+    _razorpay.dispose();
+    super.dispose();
+  }
+
+  Future<void> _payWithRazorpay() async {
+    final invoice = widget.invoice;
+    if (invoice.totalAmount <= 0) {
+      ToastUtils.showToast(context: context, message: 'Invalid payment amount');
+      return;
+    }
+
+    setState(() => _isPaying = true);
+    try {
+      final verified = await _razorpay.processPayment(
+        bookingId: invoice.bookingId,
+        amountRupees: invoice.totalAmount,
+        description: '${invoice.serviceName} invoice payment',
+        customerName: invoice.customerName,
+        phone: invoice.customerPhone,
+      );
+
+      if (!mounted) return;
+      setState(() => _isPaying = false);
+
+      if (verified) {
+        ToastUtils.showToast(context: context, message: 'Payment successful!');
+        widget.onPaymentSuccess();
+      } else {
+        ToastUtils.showToast(context: context, message: 'Payment verification failed');
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _isPaying = false);
+      ToastUtils.showToast(context: context, message: e.message);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isPaying = false);
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      ToastUtils.showToast(context: context, message: msg);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final invoice = widget.invoice;
     final theme = Theme.of(context);
     return ListView(
       children: [
@@ -159,10 +228,23 @@ class _InvoiceContent extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 24),
-        PrimaryButton(
-          label: 'Close invoice',
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        if (invoice.paymentStatus != 'PAID') ...[
+          PrimaryButton(
+            label: 'Pay ₹${invoice.totalAmount.toInt()} with Razorpay',
+            loading: _isPaying,
+            onPressed: _isPaying ? null : _payWithRazorpay,
+          ),
+          const SizedBox(height: 12),
+          SecondaryButton(
+            label: 'Close invoice',
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ] else ...[
+          PrimaryButton(
+            label: 'Close invoice',
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
       ],
     );
   }

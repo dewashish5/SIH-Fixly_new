@@ -158,7 +158,7 @@ export const getNearbyWorkers = async (req, res) => {
                 const roundedDistance = parseFloat(distanceKm.toFixed(1));
                 const profile = worker.workerProfile || {};
                 const workerRate = profile.rate ?? profile.hourlyRate ?? 0;
-                const rating = Number((profile.rating || 5.0).toFixed(1));
+                const rating = Number((profile.rating || 0.0).toFixed(1));
                 const totalJobs = profile.totalJobs || 0;
                 
                 // Formatted Title (e.g. "Master Plumber", "Senior Electrician", or category)

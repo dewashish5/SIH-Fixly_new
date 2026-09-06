@@ -5,10 +5,13 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/network/api_exception.dart';
+import '../../../../core/utils/toast_utils.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
+import '../../../payments/services/razorpay_checkout_service.dart';
 
 class BookingDetailPage extends StatefulWidget {
   const BookingDetailPage({required this.bookingId, super.key});
@@ -588,13 +591,71 @@ String _paymentLabel(String status) {
       .join(' ');
 }
 
-class _StatusActions extends StatelessWidget {
+class _StatusActions extends StatefulWidget {
   const _StatusActions({required this.booking, this.onRefresh});
   final Booking booking;
   final VoidCallback? onRefresh;
 
+  @override
+  State<_StatusActions> createState() => _StatusActionsState();
+}
+
+class _StatusActionsState extends State<_StatusActions> {
+  final RazorpayCheckoutService _razorpay = RazorpayCheckoutService();
+  bool _isPaying = false;
+
+  @override
+  void dispose() {
+    _razorpay.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handlePayment() async {
+    final booking = widget.booking;
+    final currentUser = context.read<AppSessionCubit>().currentUser;
+    final amount = booking.totalPrice;
+
+    if (amount <= 0) {
+      ToastUtils.showToast(context: context, message: 'Invalid payment amount');
+      return;
+    }
+
+    setState(() => _isPaying = true);
+    try {
+      final verified = await _razorpay.processPayment(
+        bookingId: booking.id,
+        amountRupees: amount,
+        description: '${booking.serviceTitle} payment',
+        customerName: currentUser?.name ?? booking.customerName,
+        email: currentUser?.email,
+        phone: currentUser?.phone ?? booking.customerPhone,
+      );
+
+      if (!mounted) return;
+      setState(() => _isPaying = false);
+
+      if (verified) {
+        ToastUtils.showToast(context: context, message: 'Payment successful!');
+        widget.onRefresh?.call();
+        // After paying, open the invoice!
+        context.push(RouteNames.customerInvoice.replaceFirst(':id', booking.id));
+      } else {
+        ToastUtils.showToast(context: context, message: 'Payment verification failed');
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _isPaying = false);
+      ToastUtils.showToast(context: context, message: e.message);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isPaying = false);
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      ToastUtils.showToast(context: context, message: msg);
+    }
+  }
+
   void _showEditBookingDialog(BuildContext context) {
-    final descCtrl = TextEditingController(text: booking.problemDescription ?? '');
+    final descCtrl = TextEditingController(text: widget.booking.problemDescription ?? '');
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -629,14 +690,14 @@ class _StatusActions extends StatelessWidget {
               Navigator.pop(dialogCtx);
               try {
                 await BookingsApiRepository().updateBooking(
-                  bookingId: booking.id,
+                  bookingId: widget.booking.id,
                   problemDescription: descCtrl.text.trim(),
                 );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Booking updated & sent to workers!')),
                   );
-                  onRefresh?.call();
+                  widget.onRefresh?.call();
                 }
               } catch (e) {
                 if (context.mounted) {
@@ -655,6 +716,11 @@ class _StatusActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final booking = widget.booking;
+    final isPaid = booking.status == BookingStatus.paid ||
+        booking.paymentStatus == 'PAID';
+    final amount = booking.totalPrice;
+
     switch (booking.status) {
       case BookingStatus.searching:
       case BookingStatus.draft:
@@ -726,6 +792,7 @@ class _StatusActions extends StatelessWidget {
       case BookingStatus.inProgress:
         final role = context.read<AppSessionCubit>().currentUser?.role;
         final isWorker = role == UserRole.worker;
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -747,26 +814,35 @@ class _StatusActions extends StatelessWidget {
             if (!isWorker) ...[
               const SizedBox(height: 12),
               PrimaryButton(
-                label: 'Pay Now',
-                onPressed: () => context.push(RouteNames.customerPayment),
+                label: isPaid ? 'View Invoice' : 'Pay Now (₹${amount.toInt()})',
+                loading: _isPaying,
+                onPressed: _isPaying
+                    ? null
+                    : () => isPaid
+                        ? context.push(
+                            RouteNames.customerInvoice.replaceFirst(':id', booking.id))
+                        : _handlePayment(),
               ),
             ],
           ],
         );
       case BookingStatus.completed:
+      case BookingStatus.paid:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             PrimaryButton(
-              label: 'Pay Now',
-              onPressed: () {
-                context.push(RouteNames.customerInvoice.replaceFirst(':id', booking.id));
-              },
+              label: isPaid ? 'View Invoice' : 'Pay Now (₹${amount.toInt()})',
+              loading: _isPaying,
+              onPressed: _isPaying
+                  ? null
+                  : () => isPaid
+                      ? context.push(
+                          RouteNames.customerInvoice.replaceFirst(':id', booking.id))
+                      : _handlePayment(),
             ),
           ],
         );
-      default:
-        return const SizedBox.shrink();
     }
   }
 }

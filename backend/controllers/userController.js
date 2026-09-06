@@ -128,7 +128,7 @@ export const updateLanguage = async (req, res) => {
         const user = await User.findByIdAndUpdate(
             req.user.id,
             { preferredLanguage: language },
-            { new: true },
+            { returnDocument: 'after' },
         ).select('-password');
         return ok(res, { data: { preferredLanguage: user.preferredLanguage } });
     } catch (error) {
@@ -148,7 +148,7 @@ export const updateLocation = async (req, res) => {
         const user = await User.findByIdAndUpdate(
             req.user.id,
             { location: { type: 'Point', coordinates: pair } },
-            { new: true },
+            { returnDocument: 'after' },
         ).select('-password');
         return ok(res, { data: { location: user.location } });
     } catch (error) {
@@ -163,7 +163,7 @@ export const updateEmergencyContact = async (req, res) => {
         const user = await User.findByIdAndUpdate(
             req.user.id,
             { emergencyContact: { name, phone, relation: relation || null } },
-            { new: true },
+            { returnDocument: 'after' },
         ).select('-password');
         return ok(res, { data: { emergencyContact: user.emergencyContact } });
     } catch (error) {

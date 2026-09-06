@@ -24,7 +24,7 @@ export const markNotificationRead = async (req, res) => {
         const item = await Notification.findOneAndUpdate(
             { _id: req.params.id, recipient: req.user.id },
             { isRead: true, unread: false },
-            { new: true },
+            { returnDocument: 'after' },
         );
         if (!item) return fail(res, 404, 'NOT_FOUND', 'Notification not found');
         return ok(res, { data: item });
@@ -64,20 +64,25 @@ export const registerDeviceToken = async (req, res) => {
         if (!token) return fail(res, 400, 'VALIDATION_ERROR', 'token required');
         const deviceId = req.body.deviceId || req.headers['x-device-id'];
         if (!deviceId) return fail(res, 400, 'VALIDATION_ERROR', 'deviceId required');
+        const updateDoc = {
+            deviceId,
+            platform: req.body.platform || 'unknown',
+            appVersion: req.body.appVersion || null,
+            locale: req.body.locale || 'en',
+            isActive: true,
+            lastSeenAt: new Date(),
+        };
+        if (req.user?.id) {
+            updateDoc.user = req.user.id;
+        }
         await PushToken.findOneAndUpdate(
             { token },
-            {
-                user: req.user.id,
-                deviceId,
-                platform: req.body.platform || 'unknown',
-                appVersion: req.body.appVersion || null,
-                locale: req.body.locale || 'en',
-                isActive: true,
-                lastSeenAt: new Date(),
-            },
+            updateDoc,
             { upsert: true, new: true, setDefaultsOnInsert: true },
         );
-        await User.findByIdAndUpdate(req.user.id, { $addToSet: { pushTokens: token } });
+        if (req.user?.id) {
+            await User.findByIdAndUpdate(req.user.id, { $addToSet: { pushTokens: token } });
+        }
         return ok(res, { data: { registered: true } });
     } catch (error) {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:go_router/go_router.dart';
 
 import '../firebase/firebase_bootstrap.dart';
 import '../preferences/app_preferences.dart';
@@ -132,7 +133,10 @@ class NotificationService {
             callerAvatar: extra?['callerAvatar']?.toString(),
             serviceTitleParam: extra?['serviceTitle']?.toString(),
           );
-          rootNavigatorKey.currentState?.pushNamed('/call');
+          final context = rootNavigatorKey.currentContext;
+          if (context != null) {
+            context.push('/call');
+          }
         }
       } else if (event is CallEventActionCallDecline) {
         WebRTCCallService.instance.rejectCall(reason: 'DECLINED');
@@ -142,6 +146,20 @@ class NotificationService {
     });
 
     _initialized = true;
+
+    // Proactively sync device FCM token to backend on app cold-start
+    unawaited(_syncToken(locale: AppPreferences.instance.locale));
+  }
+
+  Future<void> requestPermissionsAndSync() async {
+    await initialize();
+    if (!_initialized) return;
+    try {
+      await _permissions.request();
+      await _syncToken(locale: AppPreferences.instance.locale);
+    } catch (error) {
+      debugPrint('FCM requestPermissionsAndSync skipped: $error');
+    }
   }
 
   Future<void> onAuthenticated({

@@ -59,6 +59,14 @@ export const registerSocketHandlers = (io) => {
             }
         });
 
+        // 1b. Join Worker Room (For real-time job requests, alerts, availability)
+        socket.on('join_worker_room', (workerId) => {
+            if (!workerId) return;
+            const clean = String(workerId).trim();
+            socket.join(`worker_${clean}`);
+            socket.join('workers_all');
+        });
+
         // 2. Real-time Worker Location Update (Broadcast via Socket.io & Cache in Redis with 60s TTL)
         socket.on('worker_location_update', async (data) => {
             const { bookingId, lat, lng, heading } = data || {};

@@ -11,7 +11,6 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
-import '../../../../shared/widgets/shared_widgets.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../../../shared/presentation/cubit/profile_cubit.dart';
 import '../../../../core/utils/toast_utils.dart';

@@ -594,7 +594,7 @@ export const listWorkerActive = async (req, res) => {
         const { page, limit, skip } = paginate(req);
         const query = {
             worker: req.user.id,
-            status: { $in: ['APPROVED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS'] },
+            status: { $in: ['APPROVED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS', 'PAYMENT_PENDING'] },
         };
         const [bookings, total] = await Promise.all([
             populateBooking(Booking.find(query).sort({ updatedAt: -1 }).skip(skip).limit(limit)),

@@ -51,24 +51,28 @@ class MapCoordinate {
     required this.lng,
     this.label,
     this.heading,
+    this.timestamp,
   });
 
   final double lat;
   final double lng;
   final String? label;
   final double? heading;
+  final int? timestamp;
 
   MapCoordinate copyWith({
     double? lat,
     double? lng,
     String? label,
     double? heading,
+    int? timestamp,
   }) {
     return MapCoordinate(
       lat: lat ?? this.lat,
       lng: lng ?? this.lng,
       label: label ?? this.label,
       heading: heading ?? this.heading,
+      timestamp: timestamp ?? this.timestamp,
     );
   }
 
@@ -84,13 +88,14 @@ class MapCoordinate {
           lat == other.lat &&
           lng == other.lng &&
           label == other.label &&
-          heading == other.heading;
+          heading == other.heading &&
+          timestamp == other.timestamp;
 
   @override
-  int get hashCode => Object.hash(lat, lng, label, heading);
+  int get hashCode => Object.hash(lat, lng, label, heading, timestamp);
 
   @override
   String toString() =>
-      'MapCoordinate(lat: $lat, lng: $lng, label: $label, heading: $heading)';
+      'MapCoordinate(lat: $lat, lng: $lng, label: $label, heading: $heading, timestamp: $timestamp)';
 }
 

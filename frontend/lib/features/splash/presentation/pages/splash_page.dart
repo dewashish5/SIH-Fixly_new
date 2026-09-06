@@ -12,6 +12,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/map_constants.dart';
 import '../../../../core/constants/map_token_loader.dart';
 import '../../../../core/location/location_service.dart';
+import '../../../../core/notifications/notification_service.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
 
 class SplashPage extends StatefulWidget {
@@ -71,6 +72,7 @@ class _SplashPageState extends State<SplashPage>
 
     if (mounted) {
       await LocationService.instance.ensureOnAppOpen(context);
+      await NotificationService.instance.requestPermissionsAndSync();
     }
 
     if (!mounted) return;

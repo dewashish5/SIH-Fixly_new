@@ -27,11 +27,18 @@ class AppPreferences {
     _migratedNotificationPrefs = true;
     final prefs = _prefs;
     if (prefs == null) return;
-    if (prefs.containsKey(_keyTransactional)) return;
-    final legacy = prefs.getBool(_keyNotifications) ?? true;
-    prefs.setBool(_keyTransactional, legacy);
-    prefs.setBool(_keySystem, legacy);
-    prefs.setBool(_keyMarketing, false);
+    if (!prefs.containsKey(_keyNotifications)) {
+      prefs.setBool(_keyNotifications, true);
+    }
+    if (!prefs.containsKey(_keyTransactional)) {
+      prefs.setBool(_keyTransactional, true);
+    }
+    if (!prefs.containsKey(_keySystem)) {
+      prefs.setBool(_keySystem, true);
+    }
+    if (!prefs.containsKey(_keyMarketing)) {
+      prefs.setBool(_keyMarketing, true);
+    }
   }
 
   SharedPreferences get _require {
@@ -86,7 +93,7 @@ class AppPreferences {
       _prefs?.getBool(_keySystem) ?? true;
 
   bool get marketingNotificationsEnabled =>
-      _prefs?.getBool(_keyMarketing) ?? false;
+      _prefs?.getBool(_keyMarketing) ?? true;
 
   Future<void> setNotificationsEnabled(bool value) =>
       setTransactionalNotificationsEnabled(value);
@@ -102,5 +109,15 @@ class AppPreferences {
 
   Future<void> setMarketingNotificationsEnabled(bool value) async {
     await _require.setBool(_keyMarketing, value);
+  }
+
+  String? get activeWorkerJobId => _prefs?.getString('pref_active_worker_job_id');
+
+  Future<void> setActiveWorkerJobId(String? id) async {
+    if (id == null) {
+      await _require.remove('pref_active_worker_job_id');
+    } else {
+      await _require.setString('pref_active_worker_job_id', id);
+    }
   }
 }

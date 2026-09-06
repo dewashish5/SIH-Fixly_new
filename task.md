@@ -17,9 +17,25 @@
   - [x] 2.7 Replace direct phone calls with WebRTC calls in `CustomerTrackingPage`, `WorkerNavigationPage`, `WorkerActiveJobPage` <!-- id: 13 -->
   - [x] 2.8 Verify Flutter build & run `flutter analyze` <!-- id: 14 -->
 
-- [ ] 3. FCM Startup Token Sync & Notification Permissions <!-- id: 25 -->
-  - [ ] 3.1 Update Backend `PushToken.js` (user optional), `authMiddleware.js` (optionalProtect), `notificationController.js`, `notification-routes.js` <!-- id: 26 -->
-  - [ ] 3.2 Update `AppPreferences` to default all notifications to true <!-- id: 27 -->
-  - [ ] 3.3 Update `NotificationService` & `NotificationPermissionService` to request permission & send FCM token on startup <!-- id: 28 -->
-  - [ ] 3.4 Bundle notification permission prompt with other permissions (`location_service.dart`, `splash_page.dart`, `worker_navigation_page.dart`, `webrtc_call_service.dart`) <!-- id: 29 -->
-  - [ ] 3.5 Run backend tests & `flutter analyze` verification <!-- id: 30 -->
+- [x] 3. Real-Time Worker Socket.IO & Booking Lifecycle <!-- id: 25 -->
+  - [x] 3.1 Backend Updates: `Booking.js` (PAYMENT_PENDING status), `activeJobController.js` (verify OTP -> IN_PROGRESS, complete job -> PAYMENT_PENDING), `paymentController.js` (COMPLETED/PAID broadcast to all room aliases), `tracking.js` (worker room & timestamp) <!-- id: 26 -->
+  - [x] 3.2 Backend FCM startup support: `PushToken.js` (user optional), `authMiddleware.js` (optionalProtect), `notification-routes.js`, `notificationController.js` <!-- id: 27 -->
+  - [x] 3.3 Create `WorkerRealtimeService` & integrate with `WorkerDashboardPage`, `WorkerActiveJobPage`, `JobFeedCubit` (StreamBuilder & auto-updates without pull-to-refresh) <!-- id: 28 -->
+  - [x] 3.4 Fix tracking map bike movement (timestamp order check, stale HTTP poll suppression, jitter filter, forward smooth lerp) <!-- id: 29 -->
+  - [x] 3.5 Fix worker arrival OTP flow: verify arrival OTP transitions directly to `IN_PROGRESS` and redirects directly to `WorkerActiveJobPage` with "Swipe to Complete Job" <!-- id: 30 -->
+  - [x] 3.6 Implement Worker Complete -> Customer Payment switch: worker swipe complete emits PAYMENT_PENDING -> customer screen dynamically replaces Tracking button with Payment button <!-- id: 31 -->
+  - [x] 3.7 Implement Payment -> Auto Review flow: Razorpay payment success emits COMPLETED/PAID -> both Customer and Worker auto-navigate to their respective Review screens <!-- id: 32 -->
+  - [x] 3.8 App startup FCM token sync & default notification permissions <!-- id: 33 -->
+  - [x] 3.9 Verification: Backend `npm test` & Frontend `flutter analyze` <!-- id: 34 -->
+
+- [ ] 4. Error Resolution, Payment & Persistence Lifecycle <!-- id: 35 -->
+  - [ ] 4.1 Backend Mongoose fix: replace `{ new: true }` with `{ returnDocument: 'after' }` <!-- id: 36 -->
+  - [ ] 4.2 Backend BullMQ fix: eliminate colon in custom job IDs (`notification_${id}`) <!-- id: 37 -->
+  - [ ] 4.3 Backend & Frontend Zero Initial Rating: reset defaults to 0.0, remove fake seed reviews, remove hardcoded 4.9 ★ <!-- id: 38 -->
+  - [ ] 4.4 Flutter crash fix: add `serviceName` alias on `WorkerJob` and fix `worker_active_job_page.dart` <!-- id: 39 -->
+  - [ ] 4.5 Flutter permission collision fix: sequentialize/batch location and notification permissions <!-- id: 40 -->
+  - [ ] 4.6 Razorpay payment fix & live invoice sync: allow `PAYMENT_PENDING` in `createOrder`, pass `bookingId` to `CustomerPaymentPage`, fetch fresh booking data, periodic 3s parts sync <!-- id: 41 -->
+  - [ ] 4.7 Redirection flow: Customer tracking auto-pops to details on `IN_PROGRESS`; worker has "Swipe to Request Payment", on payment worker receives push & reveals "Swipe to Complete Job" <!-- id: 42 -->
+  - [ ] 4.8 Worker state persistence: persist active job across app kill/close; auto-restore straight to active job on relaunch <!-- id: 43 -->
+  - [ ] 4.9 Full verification: Backend `npm test` & Frontend `flutter analyze` <!-- id: 44 -->
+

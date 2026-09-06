@@ -4,13 +4,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
+import '../../../../shared/models/models.dart';
 import '../cubit/booking_flow_cubit.dart';
 import '../../../../core/utils/toast_utils.dart';
 
 class CustomerPaymentPage extends StatefulWidget {
-  const CustomerPaymentPage({super.key});
+  const CustomerPaymentPage({super.key, this.bookingId});
+
+  final String? bookingId;
 
   @override
   State<CustomerPaymentPage> createState() => _CustomerPaymentPageState();
@@ -21,16 +23,23 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<BookingFlowCubit>().refreshBooking();
+      context.read<BookingFlowCubit>().refreshBooking(widget.bookingId);
     });
   }
 
   Future<void> _handlePay() async {
     final cubit = context.read<BookingFlowCubit>();
-    final success = await cubit.payWithRazorpay();
+    final success = await cubit.payWithRazorpay(bookingId: widget.bookingId);
     if (!mounted) return;
     if (success) {
-      context.push(RouteNames.customerRating);
+      final bookingId = cubit.state.booking?.id ?? widget.bookingId;
+      if (bookingId != null && bookingId.isNotEmpty) {
+        context.pushReplacement(
+          RouteNames.customerInvoice.replaceFirst(':id', bookingId),
+        );
+      } else {
+        context.pushReplacement(RouteNames.customerRating);
+      }
       return;
     }
     final error = cubit.state.errorMessage;
@@ -41,9 +50,25 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Payment & Invoice',
-      body: BlocBuilder<BookingFlowCubit, BookingFlowState>(
+    return BlocListener<BookingFlowCubit, BookingFlowState>(
+      listenWhen: (previous, current) =>
+          previous.step != current.step ||
+          previous.booking?.paymentStatus != current.booking?.paymentStatus,
+      listener: (context, state) {
+        if (state.step == BookingStatus.paid || state.booking?.paymentStatus == 'PAID') {
+          final bookingId = state.booking?.id ?? widget.bookingId;
+          if (bookingId != null && bookingId.isNotEmpty) {
+            context.pushReplacement(
+              RouteNames.customerInvoice.replaceFirst(':id', bookingId),
+            );
+          } else {
+            context.pushReplacement(RouteNames.customerRating);
+          }
+        }
+      },
+      child: AppScaffold(
+        title: 'Payment & Invoice',
+        body: BlocBuilder<BookingFlowCubit, BookingFlowState>(
         builder: (context, state) {
           final booking = state.booking;
           final amount = state.displayPrice;
@@ -184,8 +209,9 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
           );
         },
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _InvoiceRow extends StatelessWidget {

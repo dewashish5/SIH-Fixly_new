@@ -1,4 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class NotificationPermissionService {
   NotificationPermissionService({FirebaseMessaging? messaging})
@@ -18,10 +20,16 @@ class NotificationPermissionService {
   }
 
   Future<AuthorizationStatus> request() async {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        await Permission.notification.request();
+      } catch (_) {}
+    }
     final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
+      provisional: false,
     );
     return settings.authorizationStatus;
   }
