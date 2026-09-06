@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../services/webrtc_call_service.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/utils/toast_utils.dart';
 import '../cubit/active_job_cubit.dart';
@@ -220,24 +220,67 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
               ),
             ],
           ),
-          if (job.customerPhone != null) ...[
-            const SizedBox(height: 12),
-            Row(
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: Row(
               children: [
-                const Icon(Icons.phone, size: 20, color: AppColors.primary),
+                const Icon(Icons.lock_outline, size: 18, color: Color(0xFF16A34A)),
                 const SizedBox(width: 8),
-                Text(job.customerPhone!),
+                const Text(
+                  'Encrypted Audio Call',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF16A34A), fontWeight: FontWeight.w500),
+                ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.call, color: AppColors.primary),
-                  onPressed: () => launchUrl(Uri.parse('tel:${job.customerPhone}')),
+                  icon: const Icon(Icons.call, color: Color(0xFF16A34A)),
+                  onPressed: () => _makeWebRTCCall(job),
                 ),
               ],
             ),
-          ]
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _makeWebRTCCall(dynamic job) async {
+    final bookingId = job.bookingId as String?;
+    if (bookingId == null || bookingId.isEmpty) {
+      ToastUtils.showToast(context: context, message: 'Booking ID not available');
+      return;
+    }
+
+    final customerName = job.customerName as String? ?? 'Customer';
+
+    context.push(
+      RouteNames.call,
+      extra: {
+        'bookingId': bookingId,
+        'peerName': customerName,
+        'peerRole': 'customer',
+        'peerAvatar': job.customerAvatar as String?,
+        'serviceTitle': job.serviceName as String? ?? 'Fixly Service',
+        'isIncoming': false,
+      },
+    );
+
+    final success = await WebRTCCallService.instance.startCall(
+      bookingId: bookingId,
+      expectedPeerName: customerName,
+      expectedPeerRole: 'customer',
+      expectedPeerAvatar: job.customerAvatar as String?,
+      expectedServiceTitle: job.serviceName as String? ?? 'Fixly Service',
+    );
+
+    if (!success && mounted) {
+      ToastUtils.showToast(context: context, message: 'Could not connect call');
+    }
   }
 
   Widget _buildProblemDescriptionCard(dynamic job, BuildContext context) {

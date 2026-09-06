@@ -77,6 +77,10 @@
       "description": "Direct media file uploads (Single & Multiple)"
     },
     {
+      "name": "WebRTC Calling",
+      "description": "Masked audio calling via WebRTC + Socket.io, STUN/TURN ICE config, and Wi-Fi firewall diagnostics"
+    },
+    {
       "name": "General",
       "description": "System health check and platform operational status"
     }
@@ -2536,6 +2540,9 @@
           "200": {
             "description": "OK"
           },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "Unauthorized"
           },
@@ -2909,6 +2916,245 @@
           }
         },
         "summary": "Verify Customer Arrival OTP",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/webrtc/call/history": {
+      "get": {
+        "description": "Get WebRTC Call History",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "WebRTC Calling"
+        ],
+        "summary": "Get WebRTC Call History",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/webrtc/call/initiate": {
+      "post": {
+        "description": "Initiate WebRTC Audio Call Session for Booking",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "bookingId": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "WebRTC Calling"
+        ],
+        "summary": "Initiate WebRTC Audio Call Session for Booking",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/webrtc/call/network-diagnostics": {
+      "post": {
+        "description": "Report Network & Firewall Restriction Diagnostics",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "bookingId": {
+                  "example": "any"
+                },
+                "networkType": {
+                  "example": "any"
+                },
+                "iceConnectionState": {
+                  "example": "any"
+                },
+                "candidateType": {
+                  "example": "any"
+                },
+                "details": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "WebRTC Calling"
+        ],
+        "summary": "Report Network & Firewall Restriction Diagnostics",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/webrtc/call/status/{bookingId}": {
+      "get": {
+        "description": "Get WebRTC Call Status from Redis",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "WebRTC Calling"
+        ],
+        "summary": "Get WebRTC Call Status from Redis",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/webrtc/config/ice-servers": {
+      "get": {
+        "description": "Get STUN/TURN ICE Server Configuration",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "WebRTC Calling"
+        ],
+        "summary": "Get STUN/TURN ICE Server Configuration",
         "security": [
           {
             "bearerAuth": []
@@ -4743,6 +4989,56 @@
         ]
       }
     },
+    "/api/admin/worker-payouts/{id}/status": {
+      "patch": {
+        "description": "Modify admin worker-payouts status",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "example": "any"
+                },
+                "note": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Modify admin worker-payouts status",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/admin/workers": {
       "get": {
         "description": "List All Workers with Verification & Category Filters",
@@ -5266,6 +5562,38 @@
         ]
       }
     },
+    "/api/payments/config": {
+      "get": {
+        "description": "Get payments config",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        },
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Get payments config"
+      }
+    },
     "/api/payments/create-order": {
       "post": {
         "description": "Create Razorpay Order for Booking Payment",
@@ -5300,14 +5628,23 @@
           "200": {
             "description": "OK"
           },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "404": {
             "description": "Not Found"
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "tags": [
@@ -5367,6 +5704,9 @@
           },
           "500": {
             "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
           }
         },
         "tags": [
@@ -5482,6 +5822,9 @@
                 },
                 "traits": {
                   "example": "any"
+                },
+                "reviewerRole": {
+                  "example": "any"
                 }
               }
             }
@@ -5493,6 +5836,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "409": {
+            "description": "Conflict"
           },
           "500": {
             "description": "Internal Server Error"
@@ -6750,6 +7096,11 @@
             "type": "string"
           },
           {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
             "name": "body",
             "in": "body",
             "schema": {
@@ -6759,6 +7110,18 @@
                   "example": "any"
                 },
                 "deviceToken": {
+                  "example": "any"
+                },
+                "deviceId": {
+                  "example": "any"
+                },
+                "platform": {
+                  "example": "any"
+                },
+                "appVersion": {
+                  "example": "any"
+                },
+                "locale": {
                   "example": "any"
                 }
               }
@@ -6829,6 +7192,45 @@
           "Notifications"
         ],
         "summary": "Mark All In-App Notifications as Read"
+      }
+    },
+    "/api/notifications/test": {
+      "post": {
+        "description": "Create / Submit notifications test",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "eventType": {
+                  "example": "any"
+                },
+                "title": {
+                  "example": "any"
+                },
+                "body": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Create / Submit notifications test"
       }
     },
     "/api/notifications/{id}": {

@@ -78,4 +78,5 @@ abstract final class RouteNames {
   static const sharedSupportTicket = '/shared/support-ticket';
 
   static const systemState = '/system/:type';
+  static const call = '/call';
 }

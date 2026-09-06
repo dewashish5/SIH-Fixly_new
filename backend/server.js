@@ -36,6 +36,7 @@ import notificationRoutes from './routes/notification-routes.js';
 import supportRoutes from './routes/support-routes.js';
 import cooperativeRoutes from './routes/cooperative-routes.js';
 import welfareRoutes from './routes/welfare-routes.js';
+import webrtcRoutes from './routes/webrtc-call-routes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -117,6 +118,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/cooperative', cooperativeRoutes);
 app.use('/api/welfare', welfareRoutes);
+app.use('/api/webrtc', webrtcRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

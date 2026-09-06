@@ -1,11 +1,16 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_callkit_incoming/entities/entities.dart';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../firebase/firebase_bootstrap.dart';
 import '../preferences/app_preferences.dart';
+import '../../services/webrtc_call_service.dart';
+import '../../app/router/app_router.dart';
 import 'notification_channels.dart';
 import 'notification_payload.dart';
 import 'notification_permission_service.dart';
@@ -15,8 +20,53 @@ import 'notification_topic_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // OS renders notification+data payloads. Keep this handler empty to avoid
-  // a second local notification for the same message.
+  await Firebase.initializeApp();
+
+  final data = message.data;
+  if (data['type'] == 'INCOMING_CALL') {
+    final params = CallKitParams(
+      id: data['callSessionId'] ?? 'call_${DateTime.now().millisecondsSinceEpoch}',
+      nameCaller: data['callerName'] ?? 'Fixly User',
+      appName: 'Fixly',
+      avatar: data['callerAvatar'],
+      handle: data['serviceTitle'] ?? 'Audio Calling',
+      type: 0, // 0 = Audio Call
+      duration: 30000,
+      extra: <String, dynamic>{
+        'bookingId': data['bookingId'],
+        'callerId': data['callerId'],
+        'callerRole': data['callerRole'],
+        'serviceTitle': data['serviceTitle'],
+        'callerName': data['callerName'],
+        'callerAvatar': data['callerAvatar'],
+      },
+      android: const AndroidParams(
+        isCustomNotification: true,
+        isShowLogo: false,
+        ringtonePath: 'system_ringtone_default',
+        backgroundColor: '#0F172A',
+        actionColor: '#10B981',
+      ),
+      ios: const IOSParams(
+        iconName: 'AppIcon',
+        handleType: 'generic',
+        supportsVideo: false,
+        maximumCallGroups: 1,
+        maximumCallsPerCallGroup: 1,
+        audioSessionMode: 'voiceChat',
+        audioSessionActive: true,
+      ),
+    );
+
+    await FlutterCallkitIncoming.showCallkitIncoming(params);
+  } else if (data['type'] == 'CANCEL_CALL') {
+    final callSessionId = data['callSessionId'];
+    if (callSessionId != null) {
+      await FlutterCallkitIncoming.endCall(callSessionId.toString());
+    } else {
+      await FlutterCallkitIncoming.endAllCalls();
+    }
+  }
 }
 
 class NotificationService {
@@ -67,6 +117,30 @@ class NotificationService {
         NotificationPayload.fromMap(initial.data),
       );
     }
+
+    // CallKit Native Action Listener (Accept, Decline, End)
+    FlutterCallkitIncoming.onEvent.listen((event) async {
+      if (event == null) return;
+      if (event is CallEventActionCallAccept) {
+        final extra = event.callKitParams.extra;
+        final bookingId = extra?['bookingId']?.toString();
+        if (bookingId != null) {
+          await WebRTCCallService.instance.acceptCall(
+            bookingId: bookingId,
+            callerName: extra?['callerName']?.toString(),
+            callerRole: extra?['callerRole']?.toString(),
+            callerAvatar: extra?['callerAvatar']?.toString(),
+            serviceTitleParam: extra?['serviceTitle']?.toString(),
+          );
+          rootNavigatorKey.currentState?.pushNamed('/call');
+        }
+      } else if (event is CallEventActionCallDecline) {
+        WebRTCCallService.instance.rejectCall(reason: 'DECLINED');
+      } else if (event is CallEventActionCallEnded) {
+        WebRTCCallService.instance.hangUp();
+      }
+    });
+
     _initialized = true;
   }
 
@@ -197,6 +271,20 @@ class NotificationService {
   }
 
   Future<void> _showForegroundMessage(RemoteMessage message) async {
+    final data = message.data;
+    if (data['type'] == 'INCOMING_CALL') {
+      await firebaseMessagingBackgroundHandler(message);
+      return;
+    } else if (data['type'] == 'CANCEL_CALL') {
+      final callSessionId = data['callSessionId'];
+      if (callSessionId != null) {
+        await FlutterCallkitIncoming.endCall(callSessionId.toString());
+      } else {
+        await FlutterCallkitIncoming.endAllCalls();
+      }
+      return;
+    }
+
     final notification = message.notification;
     if (notification == null) return;
     final payload = NotificationPayload.fromMap(message.data);

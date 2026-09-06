@@ -7,6 +7,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/otp_page.dart';
 import '../../features/auth/presentation/pages/signup_page.dart';
 import '../../features/cooperative/presentation/pages/cooperative_welcome_page.dart';
+import '../../screens/call_screen.dart';
 import '../../features/customer/presentation/cubit/booking_flow_cubit.dart';
 import '../../features/customer/presentation/cubit/tracking_cubit.dart';
 import '../../features/customer/presentation/pages/customer_ai_discovery_page.dart';
@@ -93,6 +94,17 @@ GoRouter createAppRouter() {
       _page(RouteNames.signup, (_, s) => const SignupPage()),
       _page(RouteNames.otp, (_, s) => const OtpPage()),
       if (kDebugMode) _page(RouteNames.demo, (_, s) => const DemoHubPage()),
+      _page(RouteNames.call, (_, s) {
+        final extra = s.extra as Map<String, dynamic>?;
+        return CallScreen(
+          bookingId: extra?['bookingId'] as String?,
+          peerName: extra?['peerName'] as String?,
+          peerRole: extra?['peerRole'] as String?,
+          peerAvatar: extra?['peerAvatar'] as String?,
+          serviceTitle: extra?['serviceTitle'] as String?,
+          isIncoming: (extra?['isIncoming'] as bool?) ?? false,
+        );
+      }),
 
       StatefulShellRoute(
         builder: (context, state, navigationShell) {

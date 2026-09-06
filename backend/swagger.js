@@ -36,6 +36,7 @@ const doc = {
         { name: 'Welfare', description: 'Social welfare schemes, insurance coverage & claim filing' },
         { name: 'AI Assistant', description: 'AI worker matching, problem diagnostics & regional demand forecasting' },
         { name: 'Upload', description: 'Direct media file uploads (Single & Multiple)' },
+        { name: 'WebRTC Calling', description: 'Masked audio calling via WebRTC + Socket.io, STUN/TURN ICE config, and Wi-Fi firewall diagnostics' },
         { name: 'General', description: 'System health check and platform operational status' }
     ],
     definitions: {
@@ -440,6 +441,13 @@ const ROUTE_SUMMARIES = {
     'POST /api/upload/': 'Upload Single Image / Document to Cloudinary',
     'POST /api/upload/many': 'Upload Multiple Media Files (Batch Upload)',
 
+    // WebRTC Calling
+    'POST /api/webrtc/call/initiate': 'Initiate WebRTC Audio Call Session for Booking',
+    'GET /api/webrtc/config/ice-servers': 'Get STUN/TURN ICE Server Configuration',
+    'POST /api/webrtc/call/network-diagnostics': 'Report Network & Firewall Restriction Diagnostics',
+    'GET /api/webrtc/call/status/{bookingId}': 'Get WebRTC Call Status from Redis',
+    'GET /api/webrtc/call/history': 'Get WebRTC Call History',
+
     // General
     'GET /': 'Health Check & Platform Status'
 };
@@ -449,6 +457,7 @@ const TAG_ORDER = [
     'Workers',
     'Services',
     'Bookings',
+    'WebRTC Calling',
     'Admin',
     'Payments',
     'Reviews',
@@ -470,6 +479,7 @@ function getTagForPath(path) {
     if (path.startsWith('/api/workers')) return 'Workers';
     if (path.startsWith('/api/services')) return 'Services';
     if (path.startsWith('/api/bookings')) return 'Bookings';
+    if (path.startsWith('/api/webrtc')) return 'WebRTC Calling';
     if (path.startsWith('/api/admin')) return 'Admin';
     if (path.startsWith('/api/payments')) return 'Payments';
     if (path.startsWith('/api/reviews')) return 'Reviews';
@@ -524,6 +534,7 @@ async function runSwagger() {
                                 path.includes('/me') ||
                                 path.startsWith('/api/bookings') ||
                                 path.startsWith('/api/worker-wallet') ||
+                                path.startsWith('/api/webrtc') ||
                                 path.startsWith('/api/users');
 
             if (isProtected && (!op.security || op.security.length === 0)) {

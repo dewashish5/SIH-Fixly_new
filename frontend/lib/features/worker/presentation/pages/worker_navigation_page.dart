@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../services/webrtc_call_service.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/constants/map_constants.dart';
 import '../../../../core/location/app_location.dart';
@@ -188,10 +188,36 @@ class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
     );
   }
 
-  Future<void> _makePhoneCall(String? phone) async {
-    final uri = Uri.parse('tel:${phone ?? "9876543210"}');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+
+  Future<void> _makeWebRTCCall() async {
+    final bookingId = _job?.id ?? widget.bookingId;
+    if (bookingId == null || bookingId.isEmpty) {
+      ToastUtils.showToast(context: context, message: 'Booking ID not available');
+      return;
+    }
+
+    final customerName = _job?.customerName ?? 'Customer';
+
+    context.push(
+      RouteNames.call,
+      extra: {
+        'bookingId': bookingId,
+        'peerName': customerName,
+        'peerRole': 'customer',
+        'serviceTitle': _job?.title ?? 'Fixly Service',
+        'isIncoming': false,
+      },
+    );
+
+    final success = await WebRTCCallService.instance.startCall(
+      bookingId: bookingId,
+      expectedPeerName: customerName,
+      expectedPeerRole: 'customer',
+      expectedServiceTitle: _job?.title ?? 'Fixly Service',
+    );
+
+    if (!success && mounted) {
+      ToastUtils.showToast(context: context, message: 'Could not connect call');
     }
   }
 
@@ -465,7 +491,7 @@ class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
                           style: IconButton.styleFrom(
                             backgroundColor: const Color(0xFFEFF6FF),
                           ),
-                          onPressed: () => _makePhoneCall(_job?.customerPhone),
+                          onPressed: _makeWebRTCCall,
                         ),
                       ],
                     ),

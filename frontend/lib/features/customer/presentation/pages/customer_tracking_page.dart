@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../app/router/route_names.dart';
+import '../../../../services/webrtc_call_service.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/constants/map_constants.dart';
@@ -42,13 +43,39 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
     );
   }
 
-  Future<void> _makePhoneCall(String? phoneNumber) async {
-    final phone = phoneNumber ?? '9876543210';
-    final uri = Uri.parse('tel:$phone');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else if (mounted) {
-      ToastUtils.showToast(context: context, message: 'Could not launch dialer');
+
+  Future<void> _makeWebRTCCall(TrackingState state) async {
+    final bookingId = state.bookingId ?? widget.bookingId;
+    if (bookingId == null || bookingId.isEmpty) {
+      ToastUtils.showToast(context: context, message: 'Booking ID not available');
+      return;
+    }
+
+    final peerName = state.workerName ?? 'Worker';
+    final peerAvatar = state.workerAvatar;
+
+    context.push(
+      RouteNames.call,
+      extra: {
+        'bookingId': bookingId,
+        'peerName': peerName,
+        'peerRole': 'worker',
+        'peerAvatar': peerAvatar,
+        'serviceTitle': 'Fixly Service',
+        'isIncoming': false,
+      },
+    );
+
+    final success = await WebRTCCallService.instance.startCall(
+      bookingId: bookingId,
+      expectedPeerName: peerName,
+      expectedPeerRole: 'worker',
+      expectedPeerAvatar: peerAvatar,
+      expectedServiceTitle: 'Fixly Service',
+    );
+
+    if (!success && mounted) {
+      ToastUtils.showToast(context: context, message: 'Could not connect call');
     }
   }
 
@@ -347,7 +374,7 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                                     backgroundColor: Colors.white,
                                     elevation: 2,
                                   ),
-                                  onPressed: () => _makePhoneCall(state.workerPhone),
+                                  onPressed: () => _makeWebRTCCall(state),
                                 ),
                               ],
                             ),
