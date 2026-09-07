@@ -243,25 +243,30 @@ class _FixlyMapViewState extends State<FixlyMapView> {
         debugPrint('FixlyMapView locationComponent error: $e');
       }
     }
-    await mapboxMap.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
-    await mapboxMap.compass.updateSettings(CompassSettings(enabled: false));
-    await mapboxMap.logo.updateSettings(
-      LogoSettings(marginBottom: 8, marginLeft: 8),
-    );
-    await mapboxMap.attribution.updateSettings(
-      AttributionSettings(marginBottom: 8, marginRight: 8),
-    );
-    await mapboxMap.gestures.updateSettings(
-      GesturesSettings(
-        scrollEnabled: true,
-        pinchToZoomEnabled: true,
-        doubleTapToZoomInEnabled: true,
-        doubleTouchToZoomOutEnabled: true,
-        quickZoomEnabled: true,
-        pitchEnabled: true,
-        rotateEnabled: true,
-      ),
-    );
+    
+    try {
+      await mapboxMap.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
+      await mapboxMap.compass.updateSettings(CompassSettings(enabled: false));
+      await mapboxMap.logo.updateSettings(
+        LogoSettings(marginBottom: 8, marginLeft: 8),
+      );
+      await mapboxMap.attribution.updateSettings(
+        AttributionSettings(marginBottom: 8, marginRight: 8),
+      );
+      await mapboxMap.gestures.updateSettings(
+        GesturesSettings(
+          scrollEnabled: true,
+          pinchToZoomEnabled: true,
+          doubleTapToZoomInEnabled: true,
+          doubleTouchToZoomOutEnabled: true,
+          quickZoomEnabled: true,
+          pitchEnabled: true,
+          rotateEnabled: true,
+        ),
+      );
+    } catch (e) {
+      debugPrint('FixlyMapView mapbox settings error: $e');
+    }
 
     _polylineManager = await mapboxMap.annotations
         .createPolylineAnnotationManager();

@@ -60,6 +60,7 @@ import {
     adminAssignWorkerToSociety,
     listSocieties,
     getSocietyById,
+} from '../controllers/cooperativeController.js';
 import { adminWelfareSummary } from '../controllers/welfareController.js';
 import { adminListPayouts, adminUpdatePayoutStatus } from '../controllers/workerWalletController.js';
 import {
