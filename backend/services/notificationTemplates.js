@@ -215,6 +215,15 @@ const templates = {
         action: 'booking_details',
         channel: 'MULTI',
     },
+    EMERGENCY_BOOKING_ALERT: {
+        en: { title: 'URGENT: Emergency SOS Job Nearby', body: 'An emergency SOS service request needs immediate attention in your area.' },
+        hi: { title: 'अति आवश्यक: आपातकालीन सेवा अनुरोध', body: 'आपके पास तुरंत आपातकालीन सेवा (SOS) का नया अनुरोध आया है।' },
+        category: 'SAFETY',
+        priority: 'EMERGENCY',
+        entityType: 'booking',
+        action: 'worker_job',
+        channel: 'MULTI',
+    },
     SYSTEM_ANNOUNCEMENT: {
         en: { title: 'Fixly announcement', body: 'There is a new platform update.' },
         hi: { title: 'Fixly घोषणा', body: 'प्लेटफ़ॉर्म पर एक नया अपडेट है।' },

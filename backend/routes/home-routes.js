@@ -12,6 +12,7 @@ import upload from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
+router.get('/', protect, getHomeData);
 router.get('/home', protect, getHomeData);
 router.get('/banners', getBanners);
 router.get('/categories', getCategories);

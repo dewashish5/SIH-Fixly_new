@@ -1,5 +1,6 @@
 import Booking from '../models/Booking.js';
 import User from '../models/User.js';
+import { getPlatformSettings } from './settingsService.js';
 
 const BUSY_STATUSES = ['APPROVED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS'];
 
@@ -29,7 +30,8 @@ export const findEligibleWorkerIds = async (booking, serviceCategory = null) => 
     if (!Array.isArray(jobCoords) || jobCoords.length !== 2) return [];
 
     const [jobLng, jobLat] = jobCoords;
-    const defaultRadius = parseFloat(process.env.WORKER_SEARCH_RADIUS_KM) || 10;
+    const settings = await getPlatformSettings();
+    const defaultRadius = Number(settings.workerSearchRadiusKm) || 10;
     const busyWorkers = await Booking.distinct('worker', {
         status: { $in: BUSY_STATUSES },
         worker: { $ne: null },
@@ -51,9 +53,21 @@ export const findEligibleWorkerIds = async (booking, serviceCategory = null) => 
             const distance = haversineKm(jobLat, jobLng, coords[1], coords[0]);
             if (distance > radius) return false;
             if (!serviceCategory) return true;
-            const skills = worker.workerProfile?.skills || [];
-            if (!skills.length) return true;
-            return skills.some((skill) => String(skill).toLowerCase() === String(serviceCategory).toLowerCase());
+            const targetCat = String(serviceCategory).toLowerCase().trim();
+            const primaryCat = String(worker.workerProfile?.category || '').toLowerCase().trim();
+            if (primaryCat && (primaryCat === targetCat || primaryCat.includes(targetCat) || targetCat.includes(primaryCat))) {
+                return true;
+            }
+            const categories = (worker.workerProfile?.categories || []).map((c) => String(c).toLowerCase().trim());
+            if (categories.some((c) => c === targetCat || c.includes(targetCat) || targetCat.includes(c))) {
+                return true;
+            }
+            const skills = (worker.workerProfile?.skills || []).map((s) => String(s).toLowerCase().trim());
+            if (skills.length && skills.some((s) => s === targetCat || s.includes(targetCat) || targetCat.includes(s))) {
+                return true;
+            }
+            // If worker has no category or skills specified, allow as fallback
+            return !primaryCat && !categories.length && !skills.length;
         })
         .map((worker) => String(worker._id));
 };

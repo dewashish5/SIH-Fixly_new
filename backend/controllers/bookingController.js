@@ -8,16 +8,20 @@ import redis from '../config/redis.js';
 import { uploadMulterFiles } from '../utils/cloudinary.js';
 import { notifyUser, notifyUsers, safeNotify } from '../services/notificationService.js';
 import { findEligibleWorkerIds } from '../services/eligibleWorkers.js';
+import { getPlatformSettings } from '../services/settingsService.js';
 
 // Screen 5 & 6: Estimate Price Breakdown
 export const calculateEstimate = async (req, res) => {
     // #swagger.tags = ['Bookings']
-    // #swagger.parameters['body'] = { in: 'body', description: 'Estimate Input', required: true, schema: { serviceId: '64f1bc000000000000000002', estimatedHours: 2 } }
+    // #swagger.parameters['body'] = { in: 'body', description: 'Estimate Input', required: true, schema: { serviceId: '64f1bc000000000000000002', estimatedHours: 2, isEmergency: false, bookingType: 'STANDARD' } }
     try {
-        const { serviceId, estimatedHours = 1 } = req.body;
+        const { serviceId, estimatedHours = 1, isEmergency, bookingType } = req.body;
 
-        const defaultLaborRate = parseFloat(process.env.DEFAULT_LABOR_RATE_PER_HR) || 45;
-        const platformFee = parseFloat(process.env.DEFAULT_PLATFORM_FEE) || 15;
+        const settings = await getPlatformSettings();
+        const platformFee = settings.customerPlatformFee !== undefined && settings.customerPlatformFee !== null
+            ? Number(settings.customerPlatformFee)
+            : 0;
+        const defaultLaborRate = Number(settings.defaultLaborRatePerHour) || 50;
 
         const service = await Service.findById(serviceId);
         const basePrice = service ? service.basePrice : defaultLaborRate;
@@ -27,20 +31,26 @@ export const calculateEstimate = async (req, res) => {
         const materialsMin = 20;
         const materialsMax = 40;
 
+        const isSos = isEmergency === true || String(bookingType).toUpperCase() === 'EMERGENCY_SOS';
+        const urgentFee = isSos
+            ? (Number(settings.emergencySurchargeFixed) || Math.round(laborMin * (Number(settings.emergencySurchargePercent || 20) / 100)) || 50)
+            : 0;
+
         return res.status(200).json({
             success: true,
             estimate: {
                 laborEstimate: { min: laborMin, max: laborMax },
                 materialsParts: { min: materialsMin, max: materialsMax },
                 serviceFee: platformFee,
+                urgentFee,
+                isEmergency: isSos,
                 totalEstimate: {
-                    min: laborMin + materialsMin + platformFee,
-                    max: laborMax + materialsMax + platformFee
+                    min: laborMin + materialsMin + platformFee + urgentFee,
+                    max: laborMax + materialsMax + platformFee + urgentFee
                 },
                 baseServiceFee: laborMin,
                 demandAdjustment: 0,
-                urgentFee: 0,
-                estimatedTotal: laborMin + materialsMin + platformFee,
+                estimatedTotal: laborMin + materialsMin + platformFee + urgentFee,
                 currency: 'INR',
                 isEstimate: true,
             }
@@ -53,9 +63,20 @@ export const calculateEstimate = async (req, res) => {
 // Screen 8: Create New Booking (Customer creates booking; Initial status: PENDING)
 export const createBooking = async (req, res) => {
     // #swagger.tags = ['Bookings']
-    // #swagger.description = 'Customer creates a new booking request without invoice or schedule time (Status starts as PENDING until worker approves)'
+    // #swagger.description = 'Customer creates a new booking request with scheduling and emergency SOS support'
     try {
-        const { serviceId, workerId, problemDescription, problemPhotos, addressLine, coordinates } = req.body;
+        const {
+            serviceId,
+            workerId,
+            problemDescription,
+            problemPhotos,
+            addressLine,
+            coordinates,
+            scheduledTime,
+            timeSlot,
+            bookingType = 'STANDARD',
+            isEmergency = false
+        } = req.body;
 
         if (!serviceId) {
             return res.status(400).json({ success: false, message: 'serviceId is required' });
@@ -112,26 +133,48 @@ export const createBooking = async (req, res) => {
             }
         }
 
-        const platformFee = parseFloat(process.env.DEFAULT_PLATFORM_FEE) || 15;
-        const totalAmount = baseFee + platformFee;
+        // Determine booking urgency and scheduling
+        const isSos = isEmergency === true || String(bookingType).toUpperCase() === 'EMERGENCY_SOS';
+        const finalBookingType = isSos ? 'EMERGENCY_SOS' : (scheduledTime ? 'SCHEDULED' : (bookingType || 'STANDARD'));
+
+        let parsedScheduledTime = Date.now();
+        if (scheduledTime) {
+            const parsed = new Date(scheduledTime);
+            if (!isNaN(parsed.getTime())) {
+                parsedScheduledTime = parsed;
+            }
+        }
+
+        const settings = await getPlatformSettings();
+        const platformFee = settings.customerPlatformFee !== undefined && settings.customerPlatformFee !== null
+            ? Number(settings.customerPlatformFee)
+            : 0;
+        const urgentFee = isSos
+            ? (Number(settings.emergencySurchargeFixed) || Math.round(baseFee * (Number(settings.emergencySurchargePercent || 20) / 100)) || 50)
+            : 0;
+        const totalAmount = baseFee + platformFee + urgentFee;
 
         // Create booking with initial status: 'PENDING'
         const booking = await Booking.create({
             customer: req.user.id,
             worker: workerId || null,
             service: serviceId,
+            bookingType: finalBookingType,
+            isEmergency: isSos,
+            timeSlot: timeSlot || (isSos ? 'Immediate (SOS Emergency)' : null),
             problemDescription: problemDescription || null,
             problemPhotos: photoUrls,
             serviceAddress: {
                 addressLine,
                 location: { type: 'Point', coordinates: coords }
             },
-            scheduledTime: Date.now(),
+            scheduledTime: parsedScheduledTime,
             status: 'PENDING', // Initial phase is always PENDING
             invoice: {
                 baseServiceFee: baseFee,
                 extraPartsTotal: 0,
                 platformFee: platformFee,
+                urgentFee: urgentFee,
                 totalAmount: totalAmount,
                 paymentStatus: 'PENDING',
                 paymentMethod: 'UPI'
@@ -147,6 +190,17 @@ export const createBooking = async (req, res) => {
 
         const io = req.app.get('io');
         if (io) {
+            if (isSos) {
+                // High-priority SOS broadcast to all nearby workers
+                io.emit('emergency:booking_requested', {
+                    bookingId: booking._id,
+                    booking: populatedBooking,
+                    coordinates: coords,
+                    category: service?.category,
+                    urgentFee
+                });
+            }
+
             if (workerId) {
                 io.emit('worker:booking_requested', {
                     workerId: String(workerId),
@@ -156,16 +210,19 @@ export const createBooking = async (req, res) => {
                 io.emit('booking:new_available', {
                     bookingId: booking._id,
                     coordinates: coords,
-                    category: service?.category
+                    category: service?.category,
+                    isEmergency: isSos,
+                    bookingType: finalBookingType
                 });
             }
         }
 
         safeNotify(async () => {
+            const eventType = isSos ? 'EMERGENCY_BOOKING_ALERT' : 'NEW_BOOKING_AVAILABLE';
             if (workerId) {
                 await notifyUser({
                     recipient: workerId,
-                    eventType: 'BOOKING_ASSIGNED',
+                    eventType: isSos ? 'EMERGENCY_BOOKING_ALERT' : 'BOOKING_ASSIGNED',
                     entityId: booking._id,
                     bookingId: booking._id,
                     dedupeKey: `BOOKING_ASSIGNED:${booking._id}:${workerId}`,
@@ -174,16 +231,18 @@ export const createBooking = async (req, res) => {
             }
             const workerIds = await findEligibleWorkerIds(booking, service?.category);
             await notifyUsers(workerIds, {
-                eventType: 'NEW_BOOKING_AVAILABLE',
+                eventType,
                 entityId: booking._id,
                 bookingId: booking._id,
-                dedupeKeyFor: (id) => `NEW_BOOKING_AVAILABLE:${booking._id}:${id}`,
+                dedupeKeyFor: (id) => `${eventType}:${booking._id}:${id}`,
             });
         });
 
         return res.status(201).json({
             success: true,
-            message: 'Booking created successfully. Waiting for worker approval.',
+            message: isSos
+                ? 'SOS Emergency booking dispatched to all nearby verified workers!'
+                : 'Booking created successfully. Waiting for worker approval.',
             booking: populatedBooking
         });
     } catch (error) {
@@ -572,7 +631,8 @@ export const listWorkerIncoming = async (req, res) => {
         }
 
         const workerId = req.user.id;
-        const defaultRadius = parseFloat(process.env.WORKER_SEARCH_RADIUS_KM) || 10;
+        const settings = await getPlatformSettings();
+        const defaultRadius = Number(settings.workerSearchRadiusKm) || 10;
         const radiusInKm = parseFloat(req.query.radiusInKm) || defaultRadius;
 
         // Fetch worker profile to get current location & skills

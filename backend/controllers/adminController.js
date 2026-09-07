@@ -8,7 +8,7 @@ import Transaction from '../models/Transaction.js';
 import Notification from '../models/Notification.js';
 import { notifyTopic } from '../services/notificationService.js';
 import Settings from '../models/Settings.js';
-import { invalidatePlatformSettings } from '../services/settingsService.js';
+import { getPlatformSettings, clearSettingsCache } from '../services/settingsService.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import { sendEmail as sendEmailHelper } from '../utils/sendEmail.js';
 import redis from '../config/redis.js';
@@ -1738,24 +1738,7 @@ export const uploadAdminFile = async (req, res) => {
  */
 export const getSettings = async (req, res) => {
     try {
-        let settings = await Settings.findOne();
-        if (!settings) {
-            settings = await Settings.create({
-                customerPlatformFee: 0,
-                workerCommissionPercent: 5,
-                platformCommissionPercent: 5,
-                cooperativeWelfarePercent: 5,
-                workerSearchRadiusKm: 15,
-                defaultLaborRatePerHour: 350,
-                autoDispatchEnabled: true,
-                emergencyHotline: '+91 98765 43210',
-                emailNotifications: true,
-                smsAlerts: true,
-                payoutSchedule: 'Instant Automated UPI',
-                twoFactorAuth: false
-            });
-        }
-
+        const settings = await getPlatformSettings();
         return res.status(200).json({
             success: true,
             settings
@@ -1772,20 +1755,11 @@ export const getSettings = async (req, res) => {
  */
 export const updateSettings = async (req, res) => {
     try {
-        const payload = { ...req.body };
-        if (payload.workerCommissionPercent !== undefined && payload.platformCommissionPercent === undefined) {
-            payload.platformCommissionPercent = payload.workerCommissionPercent;
-        }
-        if (payload.platformCommissionPercent !== undefined && payload.workerCommissionPercent === undefined) {
-            payload.workerCommissionPercent = payload.platformCommissionPercent;
-        }
-
-        const settings = await Settings.findOneAndUpdate({}, payload, { new: true, upsert: true });
-        await invalidatePlatformSettings();
-
+        const settings = await Settings.findOneAndUpdate({}, { $set: req.body }, { new: true, upsert: true });
+        await clearSettingsCache();
         return res.status(200).json({
             success: true,
-            message: 'Platform settings and commission rates updated successfully!',
+            message: 'Platform settings, customer fees, and worker commission rates updated successfully!',
             settings
         });
     } catch (error) {

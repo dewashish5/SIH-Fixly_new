@@ -1,15 +1,20 @@
 import mongoose from 'mongoose';
 
 const settingsSchema = new mongoose.Schema({
-    customerPlatformFee: { type: Number, default: 0 },
-    workerCommissionPercent: { type: Number, default: 5 },
-    platformCommissionPercent: { type: Number, default: 5 }, // legacy alias
-    cooperativeWelfarePercent: { type: Number, default: 5 },
-    workerSearchRadiusKm: { type: Number, default: 15 },
-    defaultLaborRatePerHour: { type: Number, default: 350 },
+    // Dynamic Customer & Worker Margins (Customizable from Admin Panel)
+    customerPlatformFee: { type: Number, default: 0 }, // ₹ amount charged to customer on booking (if 0, ₹0)
+    workerCommissionPercent: { type: Number, default: 0 }, // % margin deducted from worker earnings (if 0, 0% deducted)
+    cooperativeWelfarePercent: { type: Number, default: 0 }, // % welfare contribution deducted from worker (if 0, 0% deducted)
+    platformCommissionPercent: { type: Number, default: 0 }, // Backward compatibility alias
+    
+    // Dynamic Operation Parameters (No hardcoded process.env fallbacks)
+    workerSearchRadiusKm: { type: Number, default: 10 },
+    defaultLaborRatePerHour: { type: Number, default: 50 },
+    emergencySurchargePercent: { type: Number, default: 20 },
+    emergencySurchargeFixed: { type: Number, default: 50 },
+
     autoDispatchEnabled: { type: Boolean, default: true },
     emergencyHotline: { type: String, default: '+91 98765 43210' },
-    workerDeclineTemplates: [{ type: String }],
     emailNotifications: { type: Boolean, default: true },
     smsAlerts: { type: Boolean, default: true },
     payoutSchedule: { type: String, default: 'Instant Automated UPI' },

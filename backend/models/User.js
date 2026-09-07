@@ -18,7 +18,10 @@ const addressSchema = new mongoose.Schema({
 const walletTransactionSchema = new mongoose.Schema({
     transactionId: { type: String },
     bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
-    amount: { type: Number, required: true },
+    amount: { type: Number, required: true }, // Net amount credited/debited
+    grossAmount: { type: Number, default: 0 }, // Total job amount before deductions
+    platformFeeDeducted: { type: Number, default: 0 }, // Platform/fair charges cut
+    welfareDeducted: { type: Number, default: 0 }, // Welfare fund contribution cut
     type: { type: String, enum: ['CREDIT', 'DEBIT'], default: 'CREDIT' },
     description: { type: String },
     createdAt: { type: Date, default: Date.now }
@@ -76,7 +79,9 @@ const workerProfileSchema = new mongoose.Schema({
     recentWorkPhotos: [{ type: String }],
     badges: [{ type: String }], // e.g., 'Background Checked', 'Top Rated'
 
-    // Step 3: Payout & Welfare
+    // Step 3: Payout & Welfare & Cooperative Society
+    society: { type: mongoose.Schema.Types.ObjectId, ref: 'CooperativeSociety', default: null },
+    societyMemberId: { type: String, default: null }, // Unique Member ID issued by Primary Labour Cooperative Society
     eshramUan: { type: String, default: null },
     payoutMethod: { type: String, enum: ['bank', 'upi'], default: 'bank' },
     bank: { type: bankDetailsSchema, default: {} },

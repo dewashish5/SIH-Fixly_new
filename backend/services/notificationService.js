@@ -1,4 +1,6 @@
 import Notification from '../models/Notification.js';
+import User from '../models/User.js';
+import redis from '../config/redis.js';
 import { notificationQueue } from '../queues/notificationQueue.js';
 import { mapPriorityForStorage, resolveTemplate } from './notificationTemplates.js';
 
@@ -15,7 +17,7 @@ export const safeNotify = (task) => {
 export const notifyUser = async ({
     recipient,
     eventType,
-    locale = 'en',
+    locale = null,
     entityId = null,
     bookingId = null,
     data = {},
@@ -30,7 +32,24 @@ export const notifyUser = async ({
 }) => {
     if (!recipient) return null;
 
-    const template = eventType ? resolveTemplate(eventType, locale) : null;
+    let userLocale = locale;
+    if (!userLocale) {
+        try {
+            const cachedLang = await redis.get(`user:lang:${recipient}`);
+            if (cachedLang) {
+                userLocale = cachedLang;
+            } else {
+                const u = await User.findById(recipient).select('preferredLanguage').lean();
+                if (u?.preferredLanguage) {
+                    userLocale = u.preferredLanguage;
+                    await redis.set(`user:lang:${recipient}`, u.preferredLanguage, 'EX', 86400 * 30);
+                }
+            }
+        } catch (_) {}
+    }
+    userLocale = userLocale || 'en';
+
+    const template = eventType ? resolveTemplate(eventType, userLocale) : null;
     const resolvedTitle = title || template?.title;
     const resolvedBody = body || template?.body;
     const resolvedCategory = category || template?.category || 'SYSTEM';

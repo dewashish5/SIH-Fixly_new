@@ -4,6 +4,9 @@ import Transaction from '../models/Transaction.js';
 import Booking from '../models/Booking.js';
 import User from '../models/User.js';
 import Settings from '../models/Settings.js';
+import WelfareAccount from '../models/WelfareAccount.js';
+import WelfareTransaction from '../models/WelfareTransaction.js';
+import { getPlatformSettings } from '../services/settingsService.js';
 import { notifyUser, safeNotify } from '../services/notificationService.js';
 import { getTargetBookingRooms } from '../sockets/tracking.js';
 
@@ -75,17 +78,19 @@ const creditWorkerWallet = async ({
         return worker.workerProfile.walletBalance || 0;
     }
 
-    const settings =
-        (await Settings.findOne()) || {
-            platformCommissionPercent: 5,
-            cooperativeWelfarePercent: 5,
-        };
-    const commPercent = settings.platformCommissionPercent ?? 5;
-    const welfarePercent = settings.cooperativeWelfarePercent ?? 5;
-    const workerNetRatio = Math.max(0, 100 - (commPercent + welfarePercent)) / 100;
-    const totalAmt =
-        transaction.amount || booking.invoice?.totalAmount || 0;
-    const workerPayout = Math.round(totalAmt * workerNetRatio);
+    const settings = await getPlatformSettings();
+    const commPercent = settings.workerCommissionPercent !== undefined && settings.workerCommissionPercent !== null
+        ? Number(settings.workerCommissionPercent)
+        : (Number(settings.platformCommissionPercent) || 0);
+    const welfarePercent = settings.cooperativeWelfarePercent !== undefined && settings.cooperativeWelfarePercent !== null
+        ? Number(settings.cooperativeWelfarePercent)
+        : 0;
+
+    const totalAmt = Number(transaction.amount || booking.invoice?.totalAmount || 0);
+    const platformCommissionDeducted = Math.round(totalAmt * (commPercent / 100));
+    const welfareAmount = Math.round(totalAmt * (welfarePercent / 100));
+    const totalDeductions = platformCommissionDeducted + welfareAmount;
+    const workerPayout = Math.max(0, totalAmt - totalDeductions);
 
     worker.workerProfile.walletBalance = Number(
         (worker.workerProfile.walletBalance || 0) + workerPayout
@@ -100,11 +105,43 @@ const creditWorkerWallet = async ({
         transactionId: paymentId,
         bookingId: booking._id,
         amount: workerPayout,
+        grossAmount: totalAmt,
+        platformFeeDeducted: platformCommissionDeducted,
+        welfareDeducted: welfareAmount,
         type: 'CREDIT',
-        description: `Earnings credited for Booking ${booking.bookingId || booking._id} (Razorpay ID: ${paymentId})`,
+        description: `Job earnings credited. Total: ₹${totalAmt}, Platform fee cut: -₹${platformCommissionDeducted} (${commPercent}%), Welfare contribution cut: -₹${welfareAmount} (${welfarePercent}%), Net Payout: ₹${workerPayout}`,
         createdAt: new Date(),
     });
     await worker.save();
+
+    // Cooperative Welfare Fund Accounting Sync
+    if (welfareAmount > 0) {
+        try {
+            let welfareAcc = await WelfareAccount.findOne({ worker: workerId });
+            if (!welfareAcc) {
+                welfareAcc = await WelfareAccount.create({ worker: workerId });
+            }
+            welfareAcc.balance = (welfareAcc.balance || 0) + welfareAmount;
+            welfareAcc.totalContributed = (welfareAcc.totalContributed || 0) + welfareAmount;
+            welfareAcc.lastContribution = new Date();
+            if (welfareAcc.totalContributed >= 500) {
+                welfareAcc.trainingEligible = true;
+                welfareAcc.insuranceActive = true;
+            }
+            await welfareAcc.save();
+
+            await WelfareTransaction.create({
+                worker: workerId,
+                amount: welfareAmount,
+                type: 'contribution',
+                note: `Cooperative welfare contribution for Booking ${booking.bookingId || booking._id}`,
+                booking: booking._id,
+            });
+        } catch (welfareErr) {
+            console.warn('Welfare account sync warning:', welfareErr.message);
+        }
+    }
+
     return workerPayout;
 };
 
@@ -399,6 +436,9 @@ export const getWorkerWalletAndHistory = async (req, res) => {
                 description: t.description,
                 type: t.type || 'CREDIT',
                 amount: t.amount,
+                grossAmount: t.grossAmount || t.amount,
+                platformFeeDeducted: t.platformFeeDeducted || 0,
+                welfareDeducted: t.welfareDeducted || 0,
                 bookingId: t.bookingId,
                 createdAt: t.createdAt,
             }));

@@ -2,31 +2,26 @@ import mongoose from 'mongoose';
 
 const cooperativeSchema = new mongoose.Schema({
     name: { type: String, default: 'Fixly Cooperative Federation' },
-    federationName: { type: String, default: 'National Labour Cooperative Federation of India' },
+    federationName: { type: String, default: 'National Labour Cooperative Federation' },
     registrationNumber: { type: String, default: 'FED-COOP-2026-001' },
     state: { type: String, default: null },
     district: { type: String, default: null },
-    commissionRate: { type: Number, default: 0.05 },
-    welfareContributionRate: { type: Number, default: 0.05 },
+    commissionRate: { type: Number, default: 0.05 }, // 5% Cooperative Platform operational fee
+    welfareContributionRate: { type: Number, default: 0.05 }, // 5% dedicated to worker welfare fund
     insuranceEnabled: { type: Boolean, default: true },
+    emergencySurchargePercent: { type: Number, default: 20 }, // +20% for emergency SOS jobs
     fairWagePolicy: { type: String, default: 'Cooperative Minimum Fair Wage Guarantee Policy v1.0' },
     minimumWageFloor: {
-        type: Map,
-        of: Number,
-        default: () => ({
-            electrical: 450,
-            plumbing: 400,
-            carpentry: 400,
-            cleaning: 300,
-            painting: 400,
-            appliance: 450,
-            gardening: 300,
-            default: 350
-        })
+        plumbing: { type: Number, default: 350 },
+        electrical: { type: Number, default: 400 },
+        carpentry: { type: Number, default: 400 },
+        cleaning: { type: Number, default: 250 },
+        painting: { type: Number, default: 350 },
+        appliance: { type: Number, default: 350 },
+        gardening: { type: Number, default: 250 },
+        default: { type: Number, default: 300 }
     },
-    emergencySurchargePercent: { type: Number, default: 20 },
-    emergencySurchargeFixed: { type: Number, default: 50 },
-    welfareBalance: { type: Number, default: 0 },
+    welfareReserveBalance: { type: Number, default: 0 },
     active: { type: Boolean, default: true },
 }, { timestamps: true });
 

@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import redis from '../config/redis.js';
 import { fail, ok, isObjectId } from '../utils/http.js';
 
 const publicUser = (user) => {
@@ -123,14 +124,34 @@ export const updateMyProfile = async (req, res) => {
 
 export const updateLanguage = async (req, res) => {
     try {
-        const language = req.body.language || req.body.preferredLanguage;
-        if (!language) return fail(res, 400, 'VALIDATION_ERROR', 'language required');
+        const raw = String(req.body.language || req.body.preferredLanguage || '').trim().toLowerCase();
+        let normalized = 'en';
+        if (raw === 'hi' || raw === 'hindi') {
+            normalized = 'hi';
+        } else if (raw === 'en' || raw === 'english') {
+            normalized = 'en';
+        } else {
+            return fail(res, 400, 'VALIDATION_ERROR', 'Language must be either "hi" (Hindi) or "en" (English)');
+        }
+
         const user = await User.findByIdAndUpdate(
             req.user.id,
-            { preferredLanguage: language },
+            { preferredLanguage: normalized },
             { returnDocument: 'after' },
         ).select('-password');
-        return ok(res, { data: { preferredLanguage: user.preferredLanguage } });
+
+        if (!user) return fail(res, 404, 'NOT_FOUND', 'User not found');
+
+        // Sync into Redis so notifications and mobile requests immediately pick it up
+        try {
+            await redis.set(`user:lang:${req.user.id}`, normalized, 'EX', 86400 * 30);
+        } catch (_) {}
+
+        return ok(res, {
+            data: { preferredLanguage: user.preferredLanguage },
+            preferredLanguage: user.preferredLanguage,
+            message: normalized === 'hi' ? 'भाषा सफलतापूर्वक हिंदी में सेट की गई।' : 'Language successfully updated to English.'
+        });
     } catch (error) {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);
     }

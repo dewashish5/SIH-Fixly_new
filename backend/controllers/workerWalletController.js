@@ -47,6 +47,9 @@ const summarize = async (workerId, from, to) => {
             description: t.description,
             type: t.type || 'CREDIT',
             amount: t.amount,
+            grossAmount: t.grossAmount || t.amount,
+            platformFeeDeducted: t.platformFeeDeducted || 0,
+            welfareDeducted: t.welfareDeducted || 0,
             bookingId: t.bookingId,
             createdAt: t.createdAt,
         }));
@@ -185,7 +188,7 @@ export const adminListPayouts = async (_req, res) => {
 };
 
 const PAYOUT_TRANSITIONS = {
-    requested: ['processing'],
+    requested: ['processing', 'paid', 'rejected'],
     processing: ['paid', 'rejected'],
 };
 
@@ -206,7 +209,24 @@ export const adminUpdatePayoutStatus = async (req, res) => {
         }
         payout.status = status;
         if (note) payout.note = note;
-        if (status === 'paid') payout.paidAt = new Date();
+
+        if (status === 'paid') {
+            payout.paidAt = new Date();
+            const worker = await User.findById(payout.worker);
+            if (worker && worker.workerProfile) {
+                worker.workerProfile.walletBalance = Math.max(0, (worker.workerProfile.walletBalance || 0) - payout.amount);
+                worker.workerProfile.walletTransactions = worker.workerProfile.walletTransactions || [];
+                worker.workerProfile.walletTransactions.push({
+                    transactionId: `PAYOUT-${payout._id}`,
+                    amount: payout.amount,
+                    type: 'DEBIT',
+                    description: `Payout withdrawal settled to bank/UPI (${payout.note || 'Admin settlement approved'})`,
+                    createdAt: new Date(),
+                });
+                await worker.save();
+            }
+        }
+
         await payout.save();
         safeNotify(() => notifyUser({
             recipient: payout.worker,
@@ -214,7 +234,7 @@ export const adminUpdatePayoutStatus = async (req, res) => {
             entityId: payout._id,
             dedupeKey: `${PAYOUT_EVENTS[status]}:${payout._id}`,
         }));
-        return ok(res, { data: payout });
+        return ok(res, { data: payout, message: `Payout status updated to ${status} and worker wallet updated.` });
     } catch (error) {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);
     }

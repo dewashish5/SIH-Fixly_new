@@ -2004,7 +2004,7 @@
         "tags": [
           "Bookings"
         ],
-        "description": "Customer creates a new booking request without invoice or schedule time (Status starts as PENDING until worker approves)",
+        "description": "Customer creates a new booking request with scheduling and emergency SOS support",
         "parameters": [
           {
             "name": "authorization",
@@ -2038,6 +2038,18 @@
                   "example": "any"
                 },
                 "coordinates": {
+                  "example": "any"
+                },
+                "scheduledTime": {
+                  "example": "any"
+                },
+                "timeSlot": {
+                  "example": "any"
+                },
+                "bookingType": {
+                  "example": "any"
+                },
+                "isEmergency": {
                   "example": "any"
                 }
               }
@@ -2098,6 +2110,14 @@
                 "estimatedHours": {
                   "type": "number",
                   "example": 2
+                },
+                "isEmergency": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "bookingType": {
+                  "type": "string",
+                  "example": "STANDARD"
                 }
               }
             }
@@ -2539,9 +2559,6 @@
         "responses": {
           "200": {
             "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
           },
           "401": {
             "description": "Unauthorized"
@@ -3736,10 +3753,204 @@
         ]
       }
     },
+    "/api/admin/cooperative/assign-worker": {
+      "post": {
+        "description": "Create / Submit admin cooperative assign-worker",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "workerId": {
+                  "example": "any"
+                },
+                "societyId": {
+                  "example": "any"
+                },
+                "societyMemberId": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Create / Submit admin cooperative assign-worker",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/admin/cooperative/members": {
       "get": {
         "description": "List Cooperative Enrolled Worker Members",
         "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "societyId",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List Cooperative Enrolled Worker Members",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/cooperative/societies": {
+      "get": {
+        "description": "Get admin cooperative societies",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Get admin cooperative societies",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "description": "Create / Submit admin cooperative societies",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "example": "any"
+                },
+                "registrationNumber": {
+                  "example": "any"
+                },
+                "state": {
+                  "example": "any"
+                },
+                "district": {
+                  "example": "any"
+                },
+                "wardOrArea": {
+                  "example": "any"
+                },
+                "officeAddress": {
+                  "example": "any"
+                },
+                "contactPhone": {
+                  "example": "any"
+                },
+                "presidentName": {
+                  "example": "any"
+                },
+                "secretaryName": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Create / Submit admin cooperative societies",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/cooperative/societies/{id}": {
+      "get": {
+        "description": "Get admin cooperative societies",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
           {
             "name": "authorization",
             "in": "header",
@@ -3757,7 +3968,40 @@
         "tags": [
           "Admin"
         ],
-        "summary": "List Cooperative Enrolled Worker Members",
+        "summary": "Get admin cooperative societies",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "description": "Update admin cooperative societies",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Update admin cooperative societies",
         "security": [
           {
             "bearerAuth": []
@@ -7129,8 +7373,8 @@
           }
         ],
         "responses": {
-          "401": {
-            "description": "Unauthorized"
+          "default": {
+            "description": ""
           }
         },
         "tags": [
@@ -7313,6 +7557,108 @@
         "summary": "Get Cooperative Registration & Welfare Policy Info"
       }
     },
+    "/api/cooperative/my-society": {
+      "get": {
+        "description": "Get cooperative my-society",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "tags": [
+          "Cooperative"
+        ],
+        "summary": "Get cooperative my-society"
+      }
+    },
+    "/api/cooperative/societies": {
+      "get": {
+        "description": "Get cooperative societies",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "tags": [
+          "Cooperative"
+        ],
+        "summary": "Get cooperative societies"
+      }
+    },
+    "/api/cooperative/societies/{id}": {
+      "get": {
+        "description": "Get cooperative societies",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "tags": [
+          "Cooperative"
+        ],
+        "summary": "Get cooperative societies"
+      }
+    },
     "/api/welfare/": {
       "get": {
         "description": "Get Worker Welfare Program Overview & Fund Status",
@@ -7432,6 +7778,59 @@
           "Welfare"
         ],
         "summary": "Get Worker Welfare Contribution History"
+      }
+    },
+    "/api/ai/agent/chat": {
+      "post": {
+        "tags": [
+          "AI Assistant"
+        ],
+        "description": "Interact with Hey Flexi Conversational AI voice/text booking assistant",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "example": "any"
+                },
+                "conversationState": {
+                  "example": "any"
+                },
+                "coordinates": {
+                  "example": "any"
+                },
+                "addressLine": {
+                  "example": "any"
+                },
+                "language": {
+                  "example": "any"
+                },
+                "lang": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Create / Submit ai agent chat"
       }
     },
     "/api/ai/analyze-issue": {
@@ -7702,6 +8101,59 @@
           "General"
         ],
         "summary": "Health Check & Platform Status"
+      }
+    },
+    "/api/agent/chat": {
+      "post": {
+        "tags": [
+          "General"
+        ],
+        "description": "Interact with Hey Flexi Conversational AI voice/text booking assistant",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "x-device-id",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "example": "any"
+                },
+                "conversationState": {
+                  "example": "any"
+                },
+                "coordinates": {
+                  "example": "any"
+                },
+                "addressLine": {
+                  "example": "any"
+                },
+                "language": {
+                  "example": "any"
+                },
+                "lang": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Create / Submit agent chat"
       }
     }
   },

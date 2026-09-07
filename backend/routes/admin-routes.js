@@ -55,12 +55,11 @@ import {
     adminGetCooperative,
     adminUpdateCooperative,
     adminCooperativeMembers,
-    adminListSocieties,
     adminCreateSociety,
-    adminGetSocietyById,
     adminUpdateSociety,
     adminAssignWorkerToSociety,
-} from '../controllers/cooperativeController.js';
+    listSocieties,
+    getSocietyById,
 import { adminWelfareSummary } from '../controllers/welfareController.js';
 import { adminListPayouts, adminUpdatePayoutStatus } from '../controllers/workerWalletController.js';
 import {
@@ -194,9 +193,9 @@ router.post('/support/tickets/:id/messages', addTicketMessage);
 router.get('/cooperative', adminGetCooperative);
 router.put('/cooperative', adminUpdateCooperative);
 router.get('/cooperative/members', adminCooperativeMembers);
-router.get('/cooperative/societies', adminListSocieties);
+router.get('/cooperative/societies', listSocieties);
 router.post('/cooperative/societies', adminCreateSociety);
-router.get('/cooperative/societies/:id', adminGetSocietyById);
+router.get('/cooperative/societies/:id', getSocietyById);
 router.put('/cooperative/societies/:id', adminUpdateSociety);
 router.post('/cooperative/assign-worker', adminAssignWorkerToSociety);
 router.get('/welfare/summary', adminWelfareSummary);

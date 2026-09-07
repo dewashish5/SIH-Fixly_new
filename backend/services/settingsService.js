@@ -2,57 +2,46 @@ import Settings from '../models/Settings.js';
 import redis from '../config/redis.js';
 
 const SETTINGS_CACHE_KEY = 'app:platform:settings';
-const CACHE_TTL_SECONDS = 86400; // 24 hours
 
 export const getPlatformSettings = async () => {
     try {
-        if (redis) {
-            const cached = await redis.get(SETTINGS_CACHE_KEY);
-            if (cached) {
-                return JSON.parse(cached);
-            }
+        const cached = await redis.get(SETTINGS_CACHE_KEY);
+        if (cached) {
+            return JSON.parse(cached);
         }
-    } catch (err) {
-        console.warn('Redis settings cache error:', err.message);
+    } catch (_) {
+        // Redis not reachable or bypassed
     }
 
     let settings = await Settings.findOne().lean();
     if (!settings) {
-        const created = await Settings.create({
+        settings = await Settings.create({
             customerPlatformFee: 0,
-            workerCommissionPercent: 5,
-            platformCommissionPercent: 5,
-            cooperativeWelfarePercent: 5,
-            workerSearchRadiusKm: 15,
-            defaultLaborRatePerHour: 350,
+            workerCommissionPercent: 0,
+            cooperativeWelfarePercent: 0,
+            workerSearchRadiusKm: 10,
+            defaultLaborRatePerHour: 50,
+            emergencySurchargePercent: 20,
+            emergencySurchargeFixed: 50,
             autoDispatchEnabled: true,
             emergencyHotline: '+91 98765 43210',
+            emailNotifications: true,
+            smsAlerts: true,
+            payoutSchedule: 'Instant Automated UPI',
+            twoFactorAuth: false
         });
-        settings = created.toObject ? created.toObject() : created;
+        if (settings.toObject) settings = settings.toObject();
     }
 
     try {
-        if (redis) {
-            await redis.setex(SETTINGS_CACHE_KEY, CACHE_TTL_SECONDS, JSON.stringify(settings));
-        }
-    } catch (err) {
-        console.warn('Redis cache set error:', err.message);
-    }
+        await redis.set(SETTINGS_CACHE_KEY, JSON.stringify(settings), 'EX', 3600);
+    } catch (_) {}
 
     return settings;
 };
 
-export const invalidatePlatformSettings = async () => {
+export const clearSettingsCache = async () => {
     try {
-        if (redis) {
-            await redis.del(SETTINGS_CACHE_KEY);
-        }
-    } catch (err) {
-        console.warn('Redis cache invalidate error:', err.message);
-    }
-};
-
-export default {
-    getPlatformSettings,
-    invalidatePlatformSettings
+        await redis.del(SETTINGS_CACHE_KEY);
+    } catch (_) {}
 };

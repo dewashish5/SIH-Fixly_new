@@ -6,8 +6,9 @@ import Booking from '../models/Booking.js';
 import Review from '../models/Review.js';
 import redis from '../config/redis.js';
 import { uploadDataUriOrUrl } from '../utils/cloudinary.js';
-import { buildCategoryCondition } from '../utils/workerCategoryFilter.js';
 import { updateUserProfile } from './authController.js';
+import { getPlatformSettings } from '../services/settingsService.js';
+import { buildCategoryCondition } from '../utils/workerCategoryFilter.js';
 
 // Haversine formula to calculate accurate distance between two coordinates in kilometers
 const calculateHaversineDistanceKm = (lat1, lon1, lat2, lon2) => {
@@ -42,8 +43,9 @@ export const getNearbyWorkers = async (req, res) => {
     // #swagger.parameters['limit'] = { in: 'query', description: 'Batch size limit from .env (default 5)', type: 'integer', default: 5 }
     // #swagger.parameters['page'] = { in: 'query', description: 'Alternative page number for scroll (1 for first batch, 2 for next, etc.)', type: 'integer', default: 1 }
     try {
-        const defaultRadius = parseFloat(process.env.WORKER_SEARCH_RADIUS_KM) || 10;
-        const defaultPageLimit = parseInt(process.env.DEFAULT_WORKER_PAGE_LIMIT, 10) || 5;
+        const settings = await getPlatformSettings();
+        const defaultRadius = Number(settings.workerSearchRadiusKm) || 10;
+        const defaultPageLimit = 5;
 
         const {
             lng,
@@ -97,7 +99,7 @@ export const getNearbyWorkers = async (req, res) => {
 
         const andConditions = [];
 
-        // STEP 1: Category Filter (Matches workerProfile.category, categories array, or categoryRates)
+        // STEP 1: Category Filter (Matches workerProfile.category, categories array, or categoryRates with alias normalization)
         if (category && category.trim()) {
             andConditions.push(buildCategoryCondition(category));
         }

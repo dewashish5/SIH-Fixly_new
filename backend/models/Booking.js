@@ -45,6 +45,14 @@ const bookingSchema = new mongoose.Schema({
         default: 'PENDING'
     },
 
+    bookingType: {
+        type: String,
+        enum: ['STANDARD', 'SCHEDULED', 'EMERGENCY_SOS'],
+        default: 'STANDARD'
+    },
+    isEmergency: { type: Boolean, default: false },
+    timeSlot: { type: String, default: null }, // e.g., "09:00 AM - 11:00 AM", "Immediate"
+
     problemDescription: { type: String, default: null },
     problemPhotos: [{ type: String }],
 
@@ -76,7 +84,8 @@ const bookingSchema = new mongoose.Schema({
     invoice: {
         baseServiceFee: { type: Number, default: 0 },
         extraPartsTotal: { type: Number, default: 0 },
-        platformFee: { type: Number, default: 15 },
+        platformFee: { type: Number, default: null },
+        urgentFee: { type: Number, default: 0 },
         totalAmount: { type: Number, default: 0 },
         paymentStatus: { type: String, enum: ['PENDING', 'PAID', 'FAILED'], default: 'PENDING' },
         paymentMethod: { type: String, default: 'UPI' },
