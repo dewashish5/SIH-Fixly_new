@@ -1,9 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -33,10 +30,7 @@ class _SettingsPageState extends State<SettingsPage> {
       builder: (ctx) => AlertDialog(
         title: Text(title),
         content: SingleChildScrollView(
-          child: Text(
-            content,
-            style: Theme.of(ctx).textTheme.bodyMedium,
-          ),
+          child: Text(content, style: Theme.of(ctx).textTheme.bodyMedium),
         ),
         actions: [
           TextButton(
@@ -64,7 +58,10 @@ class _SettingsPageState extends State<SettingsPage> {
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
-              ToastUtils.showToast(context: context, message: 'Temporary cache cleared successfully');
+              ToastUtils.showToast(
+                context: context,
+                message: 'Temporary cache cleared successfully',
+              );
             },
             child: const Text('Clear'),
           ),
@@ -117,7 +114,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ButtonSegment(
                           value: ThemeMode.system,
                           label: Text(l10n.themeSystem),
-                          icon: const Icon(Icons.brightness_auto_rounded, size: 18),
+                          icon: const Icon(
+                            Icons.brightness_auto_rounded,
+                            size: 18,
+                          ),
                         ),
                         ButtonSegment(
                           value: ThemeMode.light,
@@ -149,10 +149,7 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(height: AppSpacing.xl),
 
               // Language Section
-              _SectionLabel(
-                icon: Icons.language_rounded,
-                text: l10n.language,
-              ),
+              _SectionLabel(icon: Icons.language_rounded, text: l10n.language),
               const SizedBox(height: AppSpacing.xs),
               _SettingsCard(
                 child: Column(
@@ -452,16 +449,6 @@ class _SettingsPageState extends State<SettingsPage> {
                             'All platform services are provided under the Fair Work & Cooperative Standards. Disputes are handled promptly by our support and safety arbitration team.',
                       ),
                     ),
-                    if (kDebugMode) ...[
-                      const Divider(height: 1),
-                      _SettingsNavTile(
-                        icon: Icons.grid_view_rounded,
-                        title: l10n.screenGallery,
-                        subtitle: 'Developer preview of UI components',
-                        iconColor: AppColors.secondary,
-                        onTap: () => context.push(RouteNames.demo),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -480,7 +467,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${l10n.appVersion} • v1.0.4 (Build 2026)',
+                      '${l10n.appVersion} v1.0.4',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: context.muted,
                       ),
@@ -516,10 +503,10 @@ class _SectionLabel extends StatelessWidget {
           Text(
             text,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: context.muted,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2,
-                ),
+              color: context.muted,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
           ),
         ],
       ),
@@ -556,14 +543,12 @@ class _SettingsNavTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.iconColor,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -574,26 +559,22 @@ class _SettingsNavTile extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: (iconColor ?? scheme.primary).withValues(alpha: 0.1),
+          color: scheme.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: iconColor ?? scheme.primary,
-        ),
+        child: Icon(icon, size: 20, color: scheme.primary),
       ),
       title: Text(
         title,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
       ),
       subtitle: Text(
         subtitle,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: context.muted,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: context.muted),
       ),
       trailing: const Icon(Icons.chevron_right_rounded),
       onTap: onTap,

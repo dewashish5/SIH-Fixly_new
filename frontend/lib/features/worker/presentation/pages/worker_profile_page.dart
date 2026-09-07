@@ -178,6 +178,14 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                                 context.push(RouteNames.sharedOrderHistory),
                           ),
                           _WorkerMenuTile(
+                            icon: Icons.account_balance_wallet_outlined,
+                            iconColor: AppColors.primary,
+                            title: 'Wallet & Payouts',
+                            subtitle: 'Earnings, withdraw funds & transactions',
+                            onTap: () =>
+                                context.push(RouteNames.workerWallet),
+                          ),
+                          _WorkerMenuTile(
                             icon: Icons.support_agent_rounded,
                             iconColor: AppColors.primary,
                             title: l10n.support,

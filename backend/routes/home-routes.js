@@ -6,12 +6,14 @@ import {
     getExtraPartsCatalog,
     createCategory
 } from '../controllers/homeController.js';
+import { getBanners } from '../controllers/bannerController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import upload from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
 router.get('/home', protect, getHomeData);
+router.get('/banners', getBanners);
 router.get('/categories', getCategories);
 router.post('/categories', upload.single('image'), createCategory);
 router.get('/services/:serviceId', getServiceDetails);

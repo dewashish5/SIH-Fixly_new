@@ -58,6 +58,12 @@ import {
 } from '../controllers/cooperativeController.js';
 import { adminWelfareSummary } from '../controllers/welfareController.js';
 import { adminListPayouts, adminUpdatePayoutStatus } from '../controllers/workerWalletController.js';
+import {
+    adminGetBanners,
+    adminCreateBanner,
+    adminUpdateBanner,
+    adminDeleteBanner
+} from '../controllers/bannerController.js';
 
 const router = express.Router();
 
@@ -186,5 +192,11 @@ router.get('/cooperative/members', adminCooperativeMembers);
 router.get('/welfare/summary', adminWelfareSummary);
 router.get('/worker-payouts', adminListPayouts);
 router.patch('/worker-payouts/:id/status', adminUpdatePayoutStatus);
+
+// Promotional Coupon Banners Management
+router.get('/banners', adminGetBanners);
+router.post('/banners', adminCreateBanner);
+router.put('/banners/:id', adminUpdateBanner);
+router.delete('/banners/:id', adminDeleteBanner);
 
 export default router;

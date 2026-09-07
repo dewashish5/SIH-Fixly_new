@@ -23,6 +23,7 @@ abstract final class ApiEndpoints {
 
   // --- Home & Services ---
   static const String home = '/api/home/home';
+  static const String banners = '/api/home/banners';
   static const String categories = '/api/services/categories';
   static const String homeCategories = '/api/home/categories';
   static String serviceById(String serviceId) => '/api/services/$serviceId';

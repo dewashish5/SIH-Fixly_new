@@ -195,6 +195,21 @@ class WorkersApiRepository {
       }
     }
 
+    final categoriesRaw = profileMap['categories'] ?? json['categories'] ?? profileMap['categoryRates'] ?? json['categoryRates'];
+    final categories = <String>[];
+    if (categoriesRaw is List) {
+      for (final c in categoriesRaw) {
+        if (c is String && c.trim().isNotEmpty) {
+          categories.add(c.trim());
+        } else if (c is Map && c['category'] != null) {
+          categories.add(c['category'].toString().trim());
+        }
+      }
+    }
+    if (category != null && category.isNotEmpty && !categories.any((c) => c.toLowerCase() == category.toLowerCase())) {
+      categories.insert(0, category);
+    }
+
     return WorkerProfile(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       name: (json['name'] as String?) ?? 'Worker',
@@ -210,6 +225,7 @@ class WorkersApiRepository {
                   profileMap['identityProofPhoto'])
               ?.toString(),
       category: category,
+      categories: categories,
       title: (json['title'] ?? profileMap['title'])?.toString(),
       hourlyRate: hourlyRate > 0 ? hourlyRate : null,
       minimumCharge: (json['minimumCharge'] as num?)?.toDouble(),

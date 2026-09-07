@@ -6,6 +6,7 @@ import Booking from '../models/Booking.js';
 import Review from '../models/Review.js';
 import redis from '../config/redis.js';
 import { uploadDataUriOrUrl } from '../utils/cloudinary.js';
+import { buildCategoryCondition } from '../utils/workerCategoryFilter.js';
 import { updateUserProfile } from './authController.js';
 
 // Haversine formula to calculate accurate distance between two coordinates in kilometers
@@ -98,15 +99,7 @@ export const getNearbyWorkers = async (req, res) => {
 
         // STEP 1: Category Filter (Matches workerProfile.category, categories array, or categoryRates)
         if (category && category.trim()) {
-            const trimmedCat = category.trim();
-            const catRegex = new RegExp(`^${trimmedCat}$`, 'i');
-            andConditions.push({
-                $or: [
-                    { 'workerProfile.category': { $regex: catRegex } },
-                    { 'workerProfile.categories': { $elemMatch: { $regex: catRegex } } },
-                    { 'workerProfile.categoryRates.category': { $elemMatch: { $regex: catRegex } } }
-                ]
-            });
+            andConditions.push(buildCategoryCondition(category));
         }
 
         // STEP 2: Skills Filter (Matches workerProfile.skills against requested skill / skills)

@@ -67,12 +67,12 @@ class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
       final destination =
           job == null || job.customerLat == null || job.customerLng == null
               ? (current != null
-                  ? MapCoordinate(lat: current.lat + 0.012, lng: current.lng + 0.010, label: 'Customer')
+                  ? MapCoordinate(lat: current.lat + 0.012, lng: current.lng + 0.010, label: "Worker's Destination")
                   : MapConstants.current)
               : MapCoordinate(
                   lat: job.customerLat!,
                   lng: job.customerLng!,
-                  label: 'Customer',
+                  label: "Worker's Destination",
                 );
 
       // Determine initial worker departure location
@@ -322,6 +322,7 @@ class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
             child: destination == null
                 ? Center(child: Text(_error ?? 'Customer location unavailable'))
                 : FixlyMapView(
+                    isCustomerView: false,
                     expand: true,
                     borderRadius: BorderRadius.zero,
                     center: worker ?? destination,
@@ -335,6 +336,9 @@ class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
                     claimGestures: true,
                     showZoomControls: true,
                     showRecenterButton: true,
+                    show3DControl: true,
+                    showNavigationOption: true,
+                    controlsBottomPadding: 160.0,
                   ),
           ),
 

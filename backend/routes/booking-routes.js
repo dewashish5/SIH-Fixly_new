@@ -3,6 +3,7 @@ import {
     calculateEstimate,
     createBooking,
     getBookingDetails,
+    updateBooking,
     cancelBooking,
     getLiveTracking,
     getBookingInvoice,
@@ -35,6 +36,7 @@ router.post('/estimate', protect, calculateEstimate);
 router.post('/', protect, upload.array('photos', 5), createBooking);
 router.get('/:bookingId/review', protect, getBookingReview);
 router.get('/:bookingId', protect, getBookingDetails);
+router.patch('/:bookingId', protect, updateBooking);
 router.patch('/:bookingId/cancel', protect, cancelBooking);
 router.post('/:bookingId/decline', protect, declineBooking);
 

@@ -260,7 +260,8 @@ GoRouter createAppRouter() {
             (_, s) => CustomerBookingPage(
               workerId: s.uri.queryParameters['workerId'],
               serviceId: s.uri.queryParameters['serviceId'],
-              categoryId: s.uri.queryParameters['category'],
+              categoryId: s.uri.queryParameters['category'] ??
+                  s.uri.queryParameters['categoryId'],
             ),
           ),
           _page(

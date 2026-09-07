@@ -99,6 +99,7 @@ class WorkerProfile extends Equatable {
     this.avatarUrl,
     this.insured = false,
     this.category,
+    this.categories = const [],
     this.title,
     this.hourlyRate,
     this.minimumCharge,
@@ -130,6 +131,7 @@ class WorkerProfile extends Equatable {
   final String? avatarUrl;
   final bool insured;
   final String? category;
+  final List<String> categories;
   final String? title;
   final double? hourlyRate;
   final double? minimumCharge;
@@ -161,6 +163,7 @@ class WorkerProfile extends Equatable {
     reliabilityScore,
     insured,
     category,
+    categories,
     title,
     hourlyRate,
     minimumCharge,
@@ -917,3 +920,70 @@ class OnboardingFormData extends Equatable {
 }
 
 enum PayoutMethod { bank, upi }
+
+class CouponBanner extends Equatable {
+  const CouponBanner({
+    required this.id,
+    required this.title,
+    required this.code,
+    required this.discount,
+    this.description = '',
+    this.imageUrl = '',
+    this.gradientColors = const ['#1E3A8A', '#3B82F6'],
+    this.category = 'all',
+    this.targetUserRole = 'all',
+    this.minOrderValue = 0,
+    this.maxDiscount = 500,
+    this.validUntil,
+    this.isActive = true,
+  });
+
+  final String id;
+  final String title;
+  final String code;
+  final String discount;
+  final String description;
+  final String imageUrl;
+  final List<String> gradientColors;
+  final String category;
+  final String targetUserRole;
+  final double minOrderValue;
+  final double maxDiscount;
+  final DateTime? validUntil;
+  final bool isActive;
+
+  factory CouponBanner.fromJson(Map<String, dynamic> json) {
+    return CouponBanner(
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      code: json['code']?.toString() ?? '',
+      discount: json['discount']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      imageUrl: json['imageUrl']?.toString() ?? '',
+      gradientColors: (json['gradient'] as List?)?.map((e) => e.toString()).toList() ??
+          const ['#1E3A8A', '#3B82F6'],
+      category: json['category']?.toString() ?? 'all',
+      targetUserRole: json['targetUserRole']?.toString() ?? 'all',
+      minOrderValue: (json['minOrderValue'] as num?)?.toDouble() ?? 0,
+      maxDiscount: (json['maxDiscount'] as num?)?.toDouble() ?? 500,
+      validUntil: json['validUntil'] != null
+          ? DateTime.tryParse(json['validUntil'].toString())
+          : null,
+      isActive: json['isActive'] != false,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        id,
+        title,
+        code,
+        discount,
+        description,
+        imageUrl,
+        gradientColors,
+        category,
+        validUntil,
+        isActive,
+      ];
+}

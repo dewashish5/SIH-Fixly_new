@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -9,6 +11,7 @@ import '../../app/theme/app_colors.dart';
 import '../constants/map_constants.dart';
 import '../constants/map_geo_utils.dart';
 import '../utils/navigation_math.dart';
+import '../utils/tracking_helpers.dart';
 
 /// Mapbox map with route, worker progress, and service-area circle.
 class FixlyMapView extends StatefulWidget {
@@ -23,6 +26,8 @@ class FixlyMapView extends StatefulWidget {
     this.routeProgress,
     this.serviceRadiusKm,
     this.showDestinationPin = true,
+    this.showStartPin = true,
+    this.showUserLocation = false,
     this.routeStart,
     this.workerPosition,
     this.followWorker = false,
@@ -31,8 +36,18 @@ class FixlyMapView extends StatefulWidget {
     this.claimGestures = false,
     this.showZoomControls = true,
     this.showRecenterButton = false,
+    this.show3DControl = true,
+    this.showCompassButton = true,
+    this.showMovementControls = false,
+    this.showNavigationOption = true,
+    this.isCustomerView = true,
+    this.initial3D = false,
+    this.isNavigating,
+    this.onNavigationChanged,
+    this.controlsBottomPadding = 12.0,
     this.onLocationChanged,
     this.onMapIdled,
+    this.onMapTap,
   });
 
   final double height;
@@ -44,6 +59,8 @@ class FixlyMapView extends StatefulWidget {
   final double? routeProgress;
   final double? serviceRadiusKm;
   final bool showDestinationPin;
+  final bool showStartPin;
+  final bool showUserLocation;
 
   /// Trip start origin pin (defaults to [MapConstants.workerApproachStart]).
   final MapCoordinate? routeStart;
@@ -57,7 +74,6 @@ class FixlyMapView extends StatefulWidget {
   final List<MapCoordinate> routeCoordinates;
   final double? workerHeading;
 
-
   /// Win gesture arena vs parent [ScrollView] so user can pan/zoom the map.
   final bool claimGestures;
 
@@ -67,17 +83,50 @@ class FixlyMapView extends StatefulWidget {
   /// Show floating recenter button to return to [center].
   final bool showRecenterButton;
 
+  /// Show 2D/3D perspective toggle button.
+  final bool show3DControl;
+
+  /// Show compass button to reset rotation north.
+  final bool showCompassButton;
+
+  /// Show directional movement pan D-pad buttons.
+  final bool showMovementControls;
+
+  /// Show "Start Navigation" button for turn-by-turn navigation.
+  final bool showNavigationOption;
+
+  /// Whether map is viewed from customer perspective (destination = "Your Location")
+  /// or worker perspective (destination = "Destination", worker = "Your Location").
+  final bool isCustomerView;
+
+  /// Initial 3D tilted camera perspective.
+  final bool initial3D;
+
+  /// Controlled navigation active state.
+  final bool? isNavigating;
+
+  /// Callback when navigation state toggles.
+  final ValueChanged<bool>? onNavigationChanged;
+
+  /// Bottom padding for map control buttons.
+  final double controlsBottomPadding;
+
   /// Callback when user moves the map / center coordinate (fires continuously during drag).
   final ValueChanged<MapCoordinate>? onLocationChanged;
 
   /// Callback fired ONCE after map becomes idle (user stopped dragging).
   final ValueChanged<MapCoordinate>? onMapIdled;
 
+  /// Callback when user taps anywhere on the map with the tapped coordinate.
+  final ValueChanged<MapCoordinate>? onMapTap;
+
   @override
   State<FixlyMapView> createState() => _FixlyMapViewState();
 }
 
 class _FixlyMapViewState extends State<FixlyMapView> {
+  static const double _zoomFollowThreshold = 14.5;
+
   MapboxMap? _mapboxMap;
   PolylineAnnotationManager? _polylineManager;
   PolygonAnnotationManager? _polygonManager;
@@ -87,14 +136,26 @@ class _FixlyMapViewState extends State<FixlyMapView> {
   PointAnnotation? _destinationMarker;
   PointAnnotation? _workerMarker;
   PointAnnotation? _startMarker;
+  PointAnnotation? _userMarker;
   Uint8List? _startImage;
-  Uint8List? _stopImage;
+  Uint8List? _destinationMarkerImage;
   Uint8List? _bikeImage;
+  Uint8List? _userLocationImage;
   String? _mapError;
   Timer? _idleDebounce;
   bool _isDisposed = false;
   bool _isRefreshing = false;
   bool _refreshQueued = false;
+  bool _is3D = false;
+  bool _isNavigating = false;
+  CameraViewportState? _initialViewport;
+
+  @override
+  void initState() {
+    super.initState();
+    _is3D = widget.initial3D;
+    _isNavigating = widget.isNavigating ?? false;
+  }
 
   @override
   void dispose() {
@@ -110,21 +171,54 @@ class _FixlyMapViewState extends State<FixlyMapView> {
   @override
   void didUpdateWidget(covariant FixlyMapView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.isNavigating != null && widget.isNavigating != _isNavigating) {
+      if (widget.isNavigating!) {
+        _startNavigation();
+      } else {
+        _stopNavigation();
+      }
+    }
+
+    if (oldWidget.center?.lat != widget.center?.lat ||
+        oldWidget.center?.lng != widget.center?.lng ||
+        oldWidget.zoom != widget.zoom) {
+      final newCenter = widget.center ?? MapConstants.current;
+      if (newCenter != null) {
+        _initialViewport = CameraViewportState(
+          center: Point(coordinates: Position(newCenter.lng, newCenter.lat)),
+          zoom: widget.zoom,
+        );
+      }
+    }
     if (_mapboxMap == null) return;
 
+    final workerMoved =
+        oldWidget.workerPosition?.lat != widget.workerPosition?.lat ||
+        oldWidget.workerPosition?.lng != widget.workerPosition?.lng ||
+        oldWidget.workerHeading != widget.workerHeading;
+
+    if (workerMoved && widget.workerPosition != null) {
+      _onWorkerMoved(widget.workerPosition!);
+    }
+
+    final roleChanged = oldWidget.isCustomerView != widget.isCustomerView;
+    if (roleChanged) {
+      _destinationMarkerImage = null;
+    }
+
     final changed =
+        roleChanged ||
         oldWidget.routeProgress != widget.routeProgress ||
         oldWidget.serviceRadiusKm != widget.serviceRadiusKm ||
         oldWidget.routeEnd != widget.routeEnd ||
         oldWidget.routeStart?.lat != widget.routeStart?.lat ||
         oldWidget.routeStart?.lng != widget.routeStart?.lng ||
-        oldWidget.workerPosition?.lat != widget.workerPosition?.lat ||
-        oldWidget.workerPosition?.lng != widget.workerPosition?.lng ||
         oldWidget.routeCoordinates != widget.routeCoordinates ||
-        oldWidget.workerHeading != widget.workerHeading ||
         oldWidget.center?.lat != widget.center?.lat ||
         oldWidget.center?.lng != widget.center?.lng ||
         oldWidget.showDestinationPin != widget.showDestinationPin ||
+        oldWidget.showStartPin != widget.showStartPin ||
+        oldWidget.showUserLocation != widget.showUserLocation ||
         oldWidget.followWorker != widget.followWorker;
 
     if (changed) {
@@ -135,8 +229,20 @@ class _FixlyMapViewState extends State<FixlyMapView> {
   Future<void> _onMapCreated(MapboxMap mapboxMap) async {
     _mapboxMap = mapboxMap;
     _startImage = await _loadAsset('assets/icons/start.png');
-    _stopImage = await _loadAsset('assets/icons/stop.png');
+    _destinationMarkerImage =
+        await _createDestinationMarkerImage(isCustomerView: widget.isCustomerView);
     _bikeImage = await _loadAsset('assets/icons/bike_marker.png');
+    _userLocationImage = await _createUserLocationPuckImage();
+
+    if (widget.showUserLocation) {
+      try {
+        await mapboxMap.location.updateSettings(
+          LocationComponentSettings(enabled: true, pulsingEnabled: true),
+        );
+      } catch (e) {
+        debugPrint('FixlyMapView locationComponent error: $e');
+      }
+    }
     await mapboxMap.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
     await mapboxMap.compass.updateSettings(CompassSettings(enabled: false));
     await mapboxMap.logo.updateSettings(
@@ -175,6 +281,113 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     }
   }
 
+  Future<Uint8List> _createDestinationMarkerImage({bool isCustomerView = true}) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    const double width = 64.0;
+    const double height = 76.0;
+
+    // Soft drop shadow at the ground touchpoint
+    final shadowPaint = Paint()
+      ..color = const Color(0x38000000)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: const Offset(width / 2, height - 6),
+        width: 22,
+        height: 8,
+      ),
+      shadowPaint,
+    );
+
+    // Modern pin body pointing downward to (width / 2, height - 8)
+    final path = Path();
+    path.moveTo(width / 2, height - 8);
+    path.cubicTo(
+      width / 2 - 16,
+      height - 28,
+      width / 2 - 22,
+      height - 42,
+      width / 2 - 22,
+      28,
+    );
+    path.arcToPoint(
+      const Offset(width / 2 + 22, 28),
+      radius: const Radius.circular(22),
+    );
+    path.cubicTo(
+      width / 2 + 22,
+      height - 42,
+      width / 2 + 16,
+      height - 28,
+      width / 2,
+      height - 8,
+    );
+    path.close();
+
+    // Customer view: Primary Blue ("Your Location")
+    // Worker view: Accent Coral/Red-Orange ("Destination")
+    final pinColor = isCustomerView ? const Color(0xFF2563EB) : const Color(0xFFEA580C);
+    final pinPaint = Paint()
+      ..color = pinColor
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, pinPaint);
+
+    // Crisp White Border
+    final borderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+    canvas.drawPath(path, borderPaint);
+
+    // Inner White Disc
+    final innerDiscPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(const Offset(width / 2, 28), 10, innerDiscPaint);
+
+    // Inner Focal Dot
+    final innerDotColor = isCustomerView ? const Color(0xFF1D4ED8) : const Color(0xFFC2410C);
+    final innerDotPaint = Paint()
+      ..color = innerDotColor
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(const Offset(width / 2, 28), 5.5, innerDotPaint);
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(width.toInt(), height.toInt());
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
+  Future<Uint8List> _createUserLocationPuckImage() async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    const size = 64.0;
+
+    // Outer glow / pulse circle
+    final outerPaint = Paint()
+      ..color = const Color(0x332563EB)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(const Offset(size / 2, size / 2), 26, outerPaint);
+
+    // White ring
+    final borderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(const Offset(size / 2, size / 2), 15, borderPaint);
+
+    // Inner bright blue dot
+    final innerPaint = Paint()
+      ..color = const Color(0xFF2563EB)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(const Offset(size / 2, size / 2), 11, innerPaint);
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
   void _onCameraChanged() {
     if (widget.onLocationChanged == null && widget.onMapIdled == null) return;
     _idleDebounce?.cancel();
@@ -189,6 +402,17 @@ class _FixlyMapViewState extends State<FixlyMapView> {
 
   void _onMapIdle() {
     _idleDebounce?.cancel();
+    if (widget.show3DControl && _mapboxMap != null) {
+      _mapboxMap!
+          .getCameraState()
+          .then((camera) {
+            final is3D = camera.pitch > 25.0;
+            if (is3D != _is3D && mounted) {
+              setState(() => _is3D = is3D);
+            }
+          })
+          .catchError((_) {});
+    }
     // Fire onMapIdled ONCE when map becomes idle.
     if (widget.onMapIdled != null) {
       _notifyMapIdled();
@@ -254,13 +478,17 @@ class _FixlyMapViewState extends State<FixlyMapView> {
 
   Future<void> _recenter() async {
     final mapboxMap = _mapboxMap;
-    final center = widget.center ?? MapConstants.current;
-    if (mapboxMap == null || center == null) return;
+    final target = widget.workerPosition ?? widget.center ?? MapConstants.current;
+    if (mapboxMap == null || target == null) return;
     try {
+      final camera = await mapboxMap.getCameraState();
+      final heading = widget.workerHeading ?? target.heading ?? 0.0;
       await mapboxMap.easeTo(
         CameraOptions(
-          center: Point(coordinates: Position(center.lng, center.lat)),
-          zoom: widget.zoom,
+          center: Point(coordinates: Position(target.lng, target.lat)),
+          zoom: _isNavigating ? 17.8 : widget.zoom,
+          pitch: _isNavigating ? 58.0 : (_is3D ? 60.0 : camera.pitch),
+          bearing: _isNavigating ? heading : 0.0,
         ),
         MapAnimationOptions(duration: 400),
       );
@@ -269,6 +497,410 @@ class _FixlyMapViewState extends State<FixlyMapView> {
     }
   }
 
+  Future<void> _toggle3D() async {
+    final mapboxMap = _mapboxMap;
+    if (mapboxMap == null) return;
+    try {
+      final camera = await mapboxMap.getCameraState();
+      final isCurrently3D = camera.pitch > 25.0;
+      final targetPitch = isCurrently3D ? 0.0 : 60.0;
+      final next3D = !isCurrently3D;
+
+      final heading = widget.workerHeading ??
+          widget.workerPosition?.heading ??
+          camera.bearing;
+
+      await mapboxMap.easeTo(
+        CameraOptions(
+          center: camera.center,
+          zoom: next3D ? math.max(camera.zoom, 15.5) : camera.zoom,
+          bearing: next3D && heading != 0.0 ? heading : camera.bearing,
+          pitch: targetPitch,
+        ),
+        MapAnimationOptions(duration: 450),
+      );
+      if (mounted) setState(() => _is3D = next3D);
+    } catch (e) {
+      debugPrint('FixlyMapView toggle3D error: $e');
+    }
+  }
+
+  Future<void> _resetBearing() async {
+    final mapboxMap = _mapboxMap;
+    if (mapboxMap == null) return;
+    try {
+      final camera = await mapboxMap.getCameraState();
+      await mapboxMap.easeTo(
+        CameraOptions(
+          center: camera.center,
+          zoom: camera.zoom,
+          bearing: 0.0,
+          pitch: camera.pitch,
+        ),
+        MapAnimationOptions(duration: 350),
+      );
+    } catch (e) {
+      debugPrint('FixlyMapView resetBearing error: $e');
+    }
+  }
+
+  Future<void> _panByDirection(double dx, double dy) async {
+    final mapboxMap = _mapboxMap;
+    if (mapboxMap == null) return;
+    try {
+      final camera = await mapboxMap.getCameraState();
+      final currentLat = camera.center.coordinates.lat.toDouble();
+      final currentLng = camera.center.coordinates.lng.toDouble();
+      final zoom = camera.zoom;
+      final step = (0.003 * math.pow(2, 14.5 - zoom)).clamp(0.0002, 0.05);
+      final latRad = currentLat * math.pi / 180.0;
+      final cosLat = math.cos(latRad).abs().clamp(0.01, 1.0);
+      final newLat = (currentLat + dy * step).clamp(-85.0, 85.0);
+      final newLng =
+          ((currentLng + dx * (step / cosLat) + 180.0) % 360.0) - 180.0;
+      await mapboxMap.easeTo(
+        CameraOptions(center: Point(coordinates: Position(newLng, newLat))),
+        MapAnimationOptions(duration: 200),
+      );
+    } catch (e) {
+      debugPrint('FixlyMapView pan error: $e');
+    }
+  }
+
+  MapCoordinate _calculateLookAheadCoordinate(
+    MapCoordinate pos,
+    double headingDegrees,
+    double distanceMeters,
+  ) {
+    const earthRadius = 6371000.0;
+    final rad = headingDegrees * math.pi / 180.0;
+    final dLat = (distanceMeters * math.cos(rad)) / earthRadius * (180.0 / math.pi);
+    final cosLat = math.cos(pos.lat * math.pi / 180.0);
+    final safeCos = cosLat.abs() < 0.001 ? 0.001 : cosLat;
+    final dLng = (distanceMeters * math.sin(rad)) / (earthRadius * safeCos) * (180.0 / math.pi);
+    return MapCoordinate(
+      lat: (pos.lat + dLat).clamp(-85.0, 85.0),
+      lng: ((pos.lng + dLng + 180.0) % 360.0) - 180.0,
+      heading: headingDegrees,
+    );
+  }
+
+  Future<void> _onWorkerMoved(MapCoordinate worker) async {
+    final map = _mapboxMap;
+    if (map == null || _isDisposed) return;
+
+    // Immediately update live worker pin geometry & rotation
+    if (_workerMarker != null && _pointManager != null) {
+      final rotation = widget.workerHeading ??
+          worker.heading ??
+          _workerMarker!.iconRotate ??
+          0.0;
+      try {
+        _workerMarker!
+          ..geometry = Point(coordinates: Position(worker.lng, worker.lat))
+          ..iconRotate = rotation;
+        await _pointManager!.update(_workerMarker!);
+      } catch (_) {}
+    }
+
+    if (_isNavigating && mounted) {
+      setState(() {});
+    }
+
+    try {
+      final camera = await map.getCameraState();
+      final currentZoom = camera.zoom;
+
+      // Auto-move camera only when zoomed in (zoom >= 14.5) or in active navigation
+      // If zoomed out, respect user's overview perspective and do not pull camera
+      final isZoomedIn = currentZoom >= _zoomFollowThreshold || _isNavigating;
+      if (!isZoomedIn && !widget.followWorker) {
+        return;
+      }
+
+      final heading = widget.workerHeading ?? worker.heading ?? camera.bearing;
+      final targetPitch = _isNavigating ? 58.0 : (_is3D ? 60.0 : camera.pitch);
+      final targetBearing = _isNavigating ? heading : camera.bearing;
+
+      // Offset camera forward in heading direction so oncoming roads are clear
+      final targetCoord = (targetPitch > 20.0 && heading != 0.0)
+          ? _calculateLookAheadCoordinate(worker, heading, _isNavigating ? 45.0 : 28.0)
+          : worker;
+
+      await map.easeTo(
+        CameraOptions(
+          center: Point(coordinates: Position(targetCoord.lng, targetCoord.lat)),
+          zoom: _isNavigating ? math.max(currentZoom, 17.5) : currentZoom,
+          pitch: targetPitch,
+          bearing: targetBearing,
+        ),
+        MapAnimationOptions(duration: 400),
+      );
+    } catch (e) {
+      debugPrint('FixlyMapView _onWorkerMoved camera error: $e');
+    }
+  }
+
+  Future<void> _startNavigation() async {
+    final map = _mapboxMap;
+    if (map == null || _isDisposed) return;
+
+    final targetWorker = widget.workerPosition ??
+        widget.routeStart ??
+        widget.center ??
+        MapConstants.current;
+    if (targetWorker == null) return;
+
+    setState(() {
+      _isNavigating = true;
+      _is3D = true;
+    });
+    widget.onNavigationChanged?.call(true);
+
+    try {
+      final heading = widget.workerHeading ??
+          targetWorker.heading ??
+          (widget.routeEnd != null
+              ? NavigationMath.bearingDegrees(targetWorker, widget.routeEnd!)
+              : 0.0);
+
+      const targetZoom = 17.8;
+      const targetPitch = 58.0;
+
+      final targetCoord = heading != 0.0
+          ? _calculateLookAheadCoordinate(targetWorker, heading, 45.0)
+          : targetWorker;
+
+      await map.easeTo(
+        CameraOptions(
+          center: Point(coordinates: Position(targetCoord.lng, targetCoord.lat)),
+          zoom: targetZoom,
+          pitch: targetPitch,
+          bearing: heading,
+        ),
+        MapAnimationOptions(duration: 650),
+      );
+    } catch (e) {
+      debugPrint('FixlyMapView _startNavigation error: $e');
+    }
+  }
+
+  Future<void> _stopNavigation() async {
+    setState(() => _isNavigating = false);
+    widget.onNavigationChanged?.call(false);
+    await _fitCamera();
+  }
+
+  _ManeuverInfo _getCurrentManeuver() {
+    final destination = widget.routeEnd ?? widget.center;
+    final worker = widget.workerPosition ?? widget.routeStart ?? widget.center;
+
+    if (destination == null || worker == null) {
+      return const _ManeuverInfo(
+        icon: Icons.navigation_rounded,
+        title: 'Navigating route',
+        subtitle: 'Follow highlighted path',
+        distanceToManeuver: 0,
+      );
+    }
+
+    final totalDist = TrackingHelpers.distanceMeters(worker, destination);
+    final distStr = TrackingHelpers.formatDistance(totalDist);
+    final etaStr = TrackingHelpers.formatEta(TrackingHelpers.estimateEtaMinutes(totalDist));
+
+    if (totalDist <= 35.0) {
+      return _ManeuverInfo(
+        icon: Icons.sports_score_rounded,
+        title: 'You have arrived!',
+        subtitle: widget.isCustomerView
+            ? 'Worker has arrived at your location'
+            : 'Arrived at customer destination',
+        distanceToManeuver: totalDist,
+      );
+    }
+
+    final coords = widget.routeCoordinates;
+    if (coords.length >= 3) {
+      int closestIdx = 0;
+      double minD = double.infinity;
+      for (int i = 0; i < coords.length; i++) {
+        final d = TrackingHelpers.distanceMeters(worker, coords[i]);
+        if (d < minD) {
+          minD = d;
+          closestIdx = i;
+        }
+      }
+
+      for (int i = closestIdx + 1; i < coords.length - 1; i++) {
+        final b1 = NavigationMath.bearingDegrees(coords[i - 1], coords[i]);
+        final b2 = NavigationMath.bearingDegrees(coords[i], coords[i + 1]);
+        var diff = (b2 - b1) % 360.0;
+        if (diff > 180.0) diff -= 360.0;
+        if (diff < -180.0) diff += 360.0;
+
+        if (diff.abs() >= 20.0) {
+          double distToTurn = TrackingHelpers.distanceMeters(worker, coords[closestIdx]);
+          for (int j = closestIdx; j < i; j++) {
+            distToTurn += TrackingHelpers.distanceMeters(coords[j], coords[j + 1]);
+          }
+
+          final IconData turnIcon;
+          final String turnName;
+          if (diff > 45) {
+            turnIcon = Icons.turn_right_rounded;
+            turnName = 'Turn right';
+          } else if (diff > 15) {
+            turnIcon = Icons.turn_slight_right_rounded;
+            turnName = 'Slight right';
+          } else if (diff < -45) {
+            turnIcon = Icons.turn_left_rounded;
+            turnName = 'Turn left';
+          } else {
+            turnIcon = Icons.turn_slight_left_rounded;
+            turnName = 'Slight left';
+          }
+
+          final formattedDistToTurn = TrackingHelpers.formatDistance(distToTurn);
+          return _ManeuverInfo(
+            icon: turnIcon,
+            title: 'In $formattedDistToTurn, $turnName',
+            subtitle: '$distStr remaining • $etaStr',
+            distanceToManeuver: distToTurn,
+          );
+        }
+      }
+    }
+
+    return _ManeuverInfo(
+      icon: Icons.straight_rounded,
+      title: 'Head toward ${widget.isCustomerView ? "Your Location" : "Destination"}',
+      subtitle: '$distStr • $etaStr',
+      distanceToManeuver: totalDist,
+    );
+  }
+
+  Widget _buildNavigationHUD() {
+    final maneuver = _getCurrentManeuver();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.15),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.4),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Icon(maneuver.icon, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  maneuver.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  maneuver.subtitle,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Material(
+            color: Colors.white.withValues(alpha: 0.14),
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: _stopNavigation,
+              child: const Padding(
+                padding: EdgeInsets.all(8),
+                child: Icon(Icons.close_rounded, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStartNavigationButton() {
+    return Material(
+      color: const Color(0xFF0F172A),
+      borderRadius: BorderRadius.circular(24),
+      elevation: 4,
+      shadowColor: Colors.black.withValues(alpha: 0.3),
+      child: InkWell(
+        onTap: _startNavigation,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.16),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.navigation_rounded, color: Color(0xFF38BDF8), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Start Navigation',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Future<void> _refreshAnnotations({bool fitCamera = true}) async {
     if (_isDisposed || !mounted || _mapboxMap == null) return;
@@ -289,12 +921,16 @@ class _FixlyMapViewState extends State<FixlyMapView> {
         return;
       }
 
-      final destination = widget.center ?? MapConstants.current;
+      final destination =
+          widget.routeEnd ?? widget.center ?? MapConstants.current;
       if (destination == null) {
         return;
       }
-      final start = widget.routeStart ?? MapConstants.workerApproachStart;
-      final worker = widget.workerPosition ??
+      final start =
+          widget.routeStart ??
+          (widget.routeEnd != null ? MapConstants.workerApproachStart : null);
+      final worker =
+          widget.workerPosition ??
           (widget.routeEnd == null || start == null
               ? null
               : MapConstants.lerpRoute(
@@ -312,7 +948,9 @@ class _FixlyMapViewState extends State<FixlyMapView> {
         final areaOptions = PolygonAnnotationOptions(
           geometry: polygon,
           fillColor: AppColors.primary.withValues(alpha: 0.18).toARGB32(),
-          fillOutlineColor: AppColors.primary.withValues(alpha: 0.85).toARGB32(),
+          fillOutlineColor: AppColors.primary
+              .withValues(alpha: 0.85)
+              .toARGB32(),
           fillOpacity: 0.75,
         );
         try {
@@ -336,7 +974,8 @@ class _FixlyMapViewState extends State<FixlyMapView> {
         _areaPolygon = null;
       }
 
-      if (widget.routeEnd != null && (widget.routeCoordinates.length >= 2 || start != null)) {
+      if (widget.routeEnd != null &&
+          (widget.routeCoordinates.length >= 2 || start != null)) {
         final coordinates = widget.routeCoordinates.length >= 2
             ? widget.routeCoordinates
             : [start ?? worker ?? destination, widget.routeEnd!];
@@ -375,21 +1014,42 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       }
 
       if (widget.showDestinationPin) {
+        final rawLabel = destination.label?.trim();
+        final String destinationLabel;
+        if (widget.isCustomerView) {
+          if (rawLabel == null ||
+              rawLabel.isEmpty ||
+              rawLabel.toLowerCase() == 'destination' ||
+              rawLabel.toLowerCase() == 'customer' ||
+              rawLabel.toLowerCase().contains("worker's destination")) {
+            destinationLabel = "Your Location";
+          } else {
+            destinationLabel = rawLabel;
+          }
+        } else {
+          if (rawLabel == null ||
+              rawLabel.isEmpty ||
+              rawLabel.toLowerCase() == 'your location' ||
+              rawLabel.toLowerCase().contains("worker's destination")) {
+            destinationLabel = "Destination";
+          } else {
+            destinationLabel = rawLabel;
+          }
+        }
+
         final destinationOptions = PointAnnotationOptions(
           geometry: Point(
             coordinates: Position(destination.lng, destination.lat),
           ),
-          image: _stopImage,
-          iconImage: _stopImage == null ? 'marker-15' : null,
-          iconSize: 1.35,
-          iconColor: AppColors.accent.toARGB32(),
+          image: _destinationMarkerImage,
+          iconSize: 0.9,
           iconAnchor: IconAnchor.BOTTOM,
-          textField: destination.label ?? 'Destination',
+          textField: destinationLabel,
           textSize: 12,
           textColor: AppColors.onSurface.toARGB32(),
           textHaloColor: Colors.white.toARGB32(),
-          textHaloWidth: 1.5,
-          textOffset: [0, 0.8],
+          textHaloWidth: 2.0,
+          textOffset: [0, 0.6],
           textAnchor: TextAnchor.TOP,
         );
         try {
@@ -398,6 +1058,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
           } else {
             _destinationMarker!
               ..geometry = destinationOptions.geometry
+              ..image = destinationOptions.image
               ..textField = destinationOptions.textField;
             await pointManager.update(_destinationMarker!);
           }
@@ -411,8 +1072,10 @@ class _FixlyMapViewState extends State<FixlyMapView> {
         _destinationMarker = null;
       }
 
-      // Only render start marker if distinct from worker bike
-      final isStartDistinct = start != null &&
+      // Only render start marker if distinct from worker bike and enabled
+      final isStartDistinct =
+          widget.showStartPin &&
+          start != null &&
           (worker == null ||
               (start.lat - worker.lat).abs() > 0.0001 ||
               (start.lng - worker.lng).abs() > 0.0001);
@@ -452,12 +1115,49 @@ class _FixlyMapViewState extends State<FixlyMapView> {
         _startMarker = null;
       }
 
+      if (widget.showUserLocation) {
+        _userLocationImage ??= await _createUserLocationPuckImage();
+        final userOptions = PointAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(destination.lng, destination.lat),
+          ),
+          image: _userLocationImage,
+          iconSize: 0.8,
+          iconAnchor: IconAnchor.CENTER,
+        );
+        try {
+          if (_userMarker == null) {
+            _userMarker = await pointManager.create(userOptions);
+          } else {
+            _userMarker!
+              ..geometry = userOptions.geometry
+              ..image = userOptions.image;
+            await pointManager.update(_userMarker!);
+          }
+        } catch (_) {
+          _userMarker = null;
+        }
+      } else if (_userMarker != null) {
+        try {
+          await pointManager.delete(_userMarker!);
+        } catch (_) {}
+        _userMarker = null;
+      }
+
       if (worker != null) {
-        final rotation = widget.workerHeading ??
+        final rotation =
+            widget.workerHeading ??
             worker.heading ??
             (start != null && widget.routeEnd != null
                 ? NavigationMath.bikeIconRotation(start, widget.routeEnd!)
                 : 0.0);
+
+        final String workerLabel;
+        if (widget.isCustomerView) {
+          workerLabel = worker.label ?? 'Worker';
+        } else {
+          workerLabel = 'Your Location';
+        }
 
         final workerOptions = PointAnnotationOptions(
           geometry: Point(coordinates: Position(worker.lng, worker.lat)),
@@ -467,7 +1167,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
           iconColor: _bikeImage == null ? AppColors.primary.toARGB32() : null,
           iconRotate: rotation,
           iconAnchor: IconAnchor.CENTER,
-          textField: worker.label ?? 'Worker',
+          textField: workerLabel,
           textSize: 12,
           textColor: AppColors.primary.toARGB32(),
           textHaloColor: Colors.white.toARGB32(),
@@ -490,10 +1190,12 @@ class _FixlyMapViewState extends State<FixlyMapView> {
           _workerMarker = null;
         }
 
-        if (widget.followWorker && _mapboxMap != null) {
+        if (widget.followWorker && _mapboxMap != null && !_isNavigating) {
           try {
             await _mapboxMap!.easeTo(
-              CameraOptions(center: Point(coordinates: Position(worker.lng, worker.lat))),
+              CameraOptions(
+                center: Point(coordinates: Position(worker.lng, worker.lat)),
+              ),
               MapAnimationOptions(duration: 250),
             );
           } catch (_) {}
@@ -505,7 +1207,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
         _workerMarker = null;
       }
 
-      if (fitCamera) await _fitCamera();
+      if (fitCamera && !_isNavigating) await _fitCamera();
     } catch (e) {
       debugPrint('FixlyMapView _refreshAnnotations error: $e');
     } finally {
@@ -538,6 +1240,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
         CameraOptions(
           center: Point(coordinates: Position(center.lng, center.lat)),
           zoom: widget.zoom,
+          pitch: _is3D ? 60.0 : 0.0,
         ),
       );
       return;
@@ -545,7 +1248,7 @@ class _FixlyMapViewState extends State<FixlyMapView> {
 
     final camera = await mapboxMap.cameraForCoordinatesPadding(
       points,
-      CameraOptions(),
+      CameraOptions(pitch: _is3D ? 60.0 : 0.0),
       MbxEdgeInsets(top: 56, left: 40, bottom: 56, right: 40),
       widget.routeEnd != null ? 15.5 : 13.5,
       null,
@@ -579,23 +1282,33 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       return SizedBox(height: widget.height, child: placeholder);
     }
 
+    _initialViewport ??= CameraViewportState(
+      center: Point(coordinates: Position(center.lng, center.lat)),
+      zoom: widget.zoom,
+    );
+
     final mapCore = MapConstants.hasToken && _mapError == null
         ? MapWidget(
             key: const ValueKey('fixly-map-canvas'),
-            styleUri: MapboxStyles.MAPBOX_STREETS,
+            styleUri: MapboxStyles.STANDARD,
             textureView: true,
             gestureRecognizers: widget.claimGestures
                 ? <Factory<OneSequenceGestureRecognizer>>{
                     Factory<EagerGestureRecognizer>(EagerGestureRecognizer.new),
                   }
                 : null,
-            viewport: CameraViewportState(
-              center: Point(coordinates: Position(center.lng, center.lat)),
-              zoom: widget.zoom,
-            ),
+            viewport: _initialViewport,
             onMapCreated: _onMapCreated,
             onCameraChangeListener: (_) => _onCameraChanged(),
             onMapIdleListener: (_) => _onMapIdle(),
+            // ignore: deprecated_member_use
+            onTapListener: widget.onMapTap != null
+                ? (gestureContext) {
+                    final lat = gestureContext.point.coordinates.lat.toDouble();
+                    final lng = gestureContext.point.coordinates.lng.toDouble();
+                    widget.onMapTap!(MapCoordinate(lat: lat, lng: lng));
+                  }
+                : null,
             onMapLoadErrorListener: (event) {
               if (!mounted) return;
               setState(() => _mapError = event.message);
@@ -616,9 +1329,10 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       fit: StackFit.expand,
       children: [
         mapCore,
-        // sprite icons (marker-15) often missing — center pin always visible for location maps
+        // Fallback center pin only if destination annotation marker not yet created
         if (widget.showDestinationPin &&
             widget.routeEnd == null &&
+            _destinationMarker == null &&
             _mapError == null &&
             MapConstants.hasToken)
           IgnorePointer(
@@ -640,19 +1354,142 @@ class _FixlyMapViewState extends State<FixlyMapView> {
               ),
             ),
           ),
-        if (widget.routeEnd != null &&
-            _mapError == null &&
-            MapConstants.hasToken)
-          const Positioned(top: 12, left: 12, child: _MapLegend()),
-        if (widget.showZoomControls &&
+
+        // Turn-by-Turn Guidance HUD when active
+        if (_isNavigating && MapConstants.hasToken && _mapError == null)
+          Positioned(
+            top: 10,
+            left: 10,
+            right: 10,
+            child: SafeArea(
+              bottom: false,
+              child: _buildNavigationHUD(),
+            ),
+          ),
+
+        // Start Navigation Floating Pill Button
+        if (widget.showNavigationOption &&
+            !_isNavigating &&
+            (widget.routeEnd != null || widget.routeCoordinates.isNotEmpty) &&
+            MapConstants.hasToken &&
+            _mapError == null)
+          Positioned(
+            left: 12,
+            bottom: widget.showMovementControls ? null : widget.controlsBottomPadding,
+            top: widget.showMovementControls ? 12 : null,
+            child: SafeArea(
+              bottom: false,
+              top: widget.showMovementControls,
+              child: _buildStartNavigationButton(),
+            ),
+          ),
+
+        if (widget.showMovementControls &&
+            MapConstants.hasToken &&
+            _mapError == null)
+          Positioned(
+            left: 12,
+            bottom: widget.controlsBottomPadding,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.94),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.16),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _MapMiniArrowBtn(
+                    icon: Icons.keyboard_arrow_up_rounded,
+                    tooltip: 'Pan North',
+                    onTap: () => _panByDirection(0, 1),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _MapMiniArrowBtn(
+                        icon: Icons.keyboard_arrow_left_rounded,
+                        tooltip: 'Pan West',
+                        onTap: () => _panByDirection(-1, 0),
+                      ),
+                      _MapMiniArrowBtn(
+                        icon: Icons.adjust_rounded,
+                        tooltip: 'Recenter',
+                        size: 26,
+                        iconSize: 15,
+                        color: AppColors.primary,
+                        onTap: _recenter,
+                      ),
+                      _MapMiniArrowBtn(
+                        icon: Icons.keyboard_arrow_right_rounded,
+                        tooltip: 'Pan East',
+                        onTap: () => _panByDirection(1, 0),
+                      ),
+                    ],
+                  ),
+                  _MapMiniArrowBtn(
+                    icon: Icons.keyboard_arrow_down_rounded,
+                    tooltip: 'Pan South',
+                    onTap: () => _panByDirection(0, -1),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        if ((widget.showZoomControls ||
+                widget.showRecenterButton ||
+                widget.show3DControl ||
+                widget.showCompassButton) &&
             MapConstants.hasToken &&
             _mapError == null)
           Positioned(
             right: 12,
-            bottom: 12,
+            bottom: widget.controlsBottomPadding,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (widget.show3DControl) ...[
+                  Material(
+                    color: _is3D ? AppColors.primary : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    elevation: 3,
+                    shadowColor: Colors.black.withValues(alpha: 0.2),
+                    child: _MapControlBtn(
+                      tooltip: _is3D ? '2D Map View' : '3D Perspective View',
+                      onTap: _toggle3D,
+                      customChild: Text(
+                        _is3D ? '2D' : '3D',
+                        style: TextStyle(
+                          color: _is3D ? Colors.white : AppColors.primary,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (widget.showCompassButton) ...[
+                  Material(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    elevation: 3,
+                    shadowColor: Colors.black.withValues(alpha: 0.2),
+                    child: _MapControlBtn(
+                      icon: Icons.navigation_rounded,
+                      tooltip: 'Reset North',
+                      onTap: _resetBearing,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 if (widget.showRecenterButton) ...[
                   Material(
                     color: Colors.white,
@@ -667,39 +1504,40 @@ class _FixlyMapViewState extends State<FixlyMapView> {
                   ),
                   const SizedBox(height: 8),
                 ],
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.18),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                if (widget.showZoomControls)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.18),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _MapControlBtn(
+                          icon: Icons.add_rounded,
+                          tooltip: 'Zoom in',
+                          onTap: _zoomIn,
+                        ),
+                        Container(
+                          width: 24,
+                          height: 1,
+                          color: Colors.grey.withValues(alpha: 0.25),
+                        ),
+                        _MapControlBtn(
+                          icon: Icons.remove_rounded,
+                          tooltip: 'Zoom out',
+                          onTap: _zoomOut,
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _MapControlBtn(
-                        icon: Icons.add_rounded,
-                        tooltip: 'Zoom in',
-                        onTap: _zoomIn,
-                      ),
-                      Container(
-                        width: 24,
-                        height: 1,
-                        color: Colors.grey.withValues(alpha: 0.25),
-                      ),
-                      _MapControlBtn(
-                        icon: Icons.remove_rounded,
-                        tooltip: 'Zoom out',
-                        onTap: _zoomOut,
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -730,66 +1568,6 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       width: double.infinity,
       height: widget.height,
       child: content,
-    );
-  }
-}
-
-class _MapLegend extends StatelessWidget {
-  const _MapLegend();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            _LegendRow(color: AppColors.primary, label: 'Worker'),
-            SizedBox(height: 6),
-            _LegendRow(color: AppColors.accent, label: 'Destination'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LegendRow extends StatelessWidget {
-  const _LegendRow({required this.color, required this.label});
-
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
-        ),
-      ],
     );
   }
 }
@@ -947,9 +1725,15 @@ class _MapGridPainter extends CustomPainter {
 }
 
 class _MapControlBtn extends StatelessWidget {
-  const _MapControlBtn({required this.icon, required this.onTap, this.tooltip});
+  const _MapControlBtn({
+    required this.onTap,
+    this.icon,
+    this.customChild,
+    this.tooltip,
+  });
 
-  final IconData icon;
+  final IconData? icon;
+  final Widget? customChild;
   final VoidCallback onTap;
   final String? tooltip;
 
@@ -965,10 +1749,71 @@ class _MapControlBtn extends StatelessWidget {
           child: SizedBox(
             width: 36,
             height: 36,
-            child: Icon(icon, size: 20, color: AppColors.onSurface),
+            child: Center(
+              child:
+                  customChild ??
+                  Icon(icon, size: 20, color: AppColors.onSurface),
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _MapMiniArrowBtn extends StatelessWidget {
+  const _MapMiniArrowBtn({
+    required this.icon,
+    required this.onTap,
+    this.tooltip,
+    this.size = 28,
+    this.iconSize = 18,
+    this.color,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String? tooltip;
+  final double size;
+  final double iconSize;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Tooltip(
+          message: tooltip ?? '',
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Center(
+              child: Icon(
+                icon,
+                size: iconSize,
+                color: color ?? AppColors.onSurface.withValues(alpha: 0.85),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ManeuverInfo {
+  const _ManeuverInfo({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.distanceToManeuver,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final double distanceToManeuver;
 }

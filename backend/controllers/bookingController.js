@@ -212,6 +212,95 @@ export const getBookingDetails = async (req, res) => {
     }
 };
 
+// Customer edits the problem details of an existing booking.
+export const updateBooking = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { problemDescription, scheduledTime, serviceAddress } = req.body || {};
+        const booking = await Booking.findById(bookingId);
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+        if (String(booking.customer) !== String(req.user.id)) {
+            return res.status(403).json({ success: false, message: 'You can only edit your own booking' });
+        }
+        if (['COMPLETED', 'CANCELLED'].includes(booking.status)) {
+            return res.status(400).json({ success: false, message: 'Completed or cancelled bookings cannot be edited' });
+        }
+
+        if (problemDescription !== undefined) {
+            booking.problemDescription = String(problemDescription).trim() || null;
+        }
+        if (scheduledTime !== undefined) {
+            const parsedTime = new Date(scheduledTime);
+            if (Number.isNaN(parsedTime.getTime())) {
+                return res.status(400).json({ success: false, message: 'Invalid scheduledTime' });
+            }
+            booking.scheduledTime = parsedTime;
+        }
+        if (serviceAddress !== undefined) {
+            if (!serviceAddress || typeof serviceAddress !== 'object') {
+                return res.status(400).json({ success: false, message: 'Invalid serviceAddress' });
+            }
+            if (serviceAddress.addressLine !== undefined) {
+                const addressLine = String(serviceAddress.addressLine).trim();
+                if (!addressLine) {
+                    return res.status(400).json({ success: false, message: 'addressLine cannot be empty' });
+                }
+                booking.serviceAddress.addressLine = addressLine;
+            }
+            if (Array.isArray(serviceAddress.coordinates)) {
+                if (serviceAddress.coordinates.length !== 2 || serviceAddress.coordinates.some((value) => Number.isNaN(Number(value)))) {
+                    return res.status(400).json({ success: false, message: 'Invalid service coordinates' });
+                }
+                booking.serviceAddress.location = {
+                    type: 'Point',
+                    coordinates: serviceAddress.coordinates.map(Number),
+                };
+            }
+        }
+
+        // Editing reopens the request so available workers can receive it again.
+        booking.status = 'PENDING';
+        booking.worker = null;
+        booking.declinedBy = null;
+        booking.declineReason = null;
+        await booking.save();
+
+        const populatedBooking = await Booking.findById(booking._id)
+            .populate('service', 'name title category icon basePrice')
+            .populate('worker', 'name phone avatar workerProfile rating')
+            .populate('customer', 'name phone')
+            .lean();
+        const service = populatedBooking?.service;
+        const category = service?.category;
+
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('booking:updated', { bookingId: booking._id, booking: populatedBooking });
+        }
+        safeNotify(async () => {
+            if (!category) return;
+            const workerIds = await findEligibleWorkerIds(booking, category);
+            await notifyUsers(workerIds, {
+                eventType: 'NEW_BOOKING_AVAILABLE',
+                entityId: booking._id,
+                bookingId: booking._id,
+                dedupeKeyFor: (id) => `NEW_BOOKING_AVAILABLE:${booking._id}:${id}`,
+            });
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Booking updated successfully',
+            booking: populatedBooking,
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // Cancel Booking
 export const cancelBooking = async (req, res) => {
     try {

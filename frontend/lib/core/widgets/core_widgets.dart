@@ -17,6 +17,7 @@ class AppScaffold extends StatelessWidget {
     this.leading,
     this.bottom,
     this.floatingActionButton,
+    this.bottomNavigationBar,
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
     this.showBack,
   });
@@ -28,6 +29,7 @@ class AppScaffold extends StatelessWidget {
   final Widget? leading;
   final PreferredSizeWidget? bottom;
   final Widget? floatingActionButton;
+  final Widget? bottomNavigationBar;
   final EdgeInsets padding;
 
   /// When null, back shows only if *this* route can pop (not the root stack).
@@ -68,6 +70,7 @@ class AppScaffold extends StatelessWidget {
               bottom: bottom,
             ),
       floatingActionButton: floatingActionButton,
+      bottomNavigationBar: bottomNavigationBar,
       body: SafeArea(
         child: Padding(padding: padding, child: body),
       ),

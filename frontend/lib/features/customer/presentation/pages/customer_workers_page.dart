@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/network/api_config.dart';
 import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
@@ -109,18 +111,7 @@ class _WorkerListTile extends StatelessWidget {
         onTap: onTap,
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-              child: Text(
-                worker.name.isNotEmpty ? worker.name[0] : 'W',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
+            _WorkerAvatar(worker: worker),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -151,6 +142,81 @@ class _WorkerListTile extends StatelessWidget {
             ),
             const Icon(Icons.chevron_right),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkerAvatar extends StatelessWidget {
+  const _WorkerAvatar({required this.worker});
+
+  final WorkerProfile worker;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatar = worker.avatarUrl?.trim();
+    Widget imageWidget;
+
+    if (avatar != null && avatar.isNotEmpty) {
+      if (avatar.startsWith('data:image')) {
+        try {
+          final commaIndex = avatar.indexOf(',');
+          final base64String =
+              commaIndex != -1 ? avatar.substring(commaIndex + 1) : avatar;
+          final bytes = base64Decode(base64String);
+          imageWidget = Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _fallback(),
+          );
+        } catch (_) {
+          imageWidget = _fallback();
+        }
+      } else {
+        final fullUrl = avatar.startsWith('http')
+            ? avatar
+            : '${ApiConfig.baseUrl}${avatar.startsWith('/') ? '' : '/'}$avatar';
+        imageWidget = Image.network(
+          fullUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _fallback(),
+        );
+      }
+    } else {
+      imageWidget = _fallback();
+    }
+
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: imageWidget,
+      ),
+    );
+  }
+
+  Widget _fallback() {
+    final initial = worker.name.trim().isNotEmpty
+        ? worker.name.trim()[0].toUpperCase()
+        : 'W';
+    return Container(
+      color: AppColors.primary.withValues(alpha: 0.1),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primary,
         ),
       ),
     );

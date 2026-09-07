@@ -38,7 +38,7 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
           : MapCoordinate(
               lat: booking!.customerLat!,
               lng: booking.customerLng!,
-              label: 'Customer',
+              label: "Worker's Destination",
             ),
     );
   }
@@ -135,6 +135,7 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                 // 1. Full Screen Interactive Mapbox Map
                 Positioned.fill(
                   child: FixlyMapView(
+                    isCustomerView: true,
                     expand: true,
                     borderRadius: BorderRadius.zero,
                     center: worker ?? target,
@@ -148,6 +149,9 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                     claimGestures: true,
                     showZoomControls: true,
                     showRecenterButton: true,
+                    show3DControl: true,
+                    showNavigationOption: false,
+                    controlsBottomPadding: 160.0,
                   ),
                 ),
 

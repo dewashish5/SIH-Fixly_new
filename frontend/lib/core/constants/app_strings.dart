@@ -188,7 +188,7 @@ class AppStrings {
   String get language => isHi ? 'भाषा' : 'Language';
   String get english => isHi ? 'English' : 'English';
   String get hindi => isHi ? 'हिन्दी' : 'Hindi';
-  String get appVersion => isHi ? 'फिक्सली v0.1.0' : 'Fixly v0.1.0';
+  String get appVersion => isHi ? 'संस्करण' : 'Version';
   String get profileSaved => isHi ? 'प्रोफ़ाइल सहेजी गई' : 'Profile saved';
   String get insuredMember => isHi ? 'बीमा सदस्य' : 'Insured member';
   String get customerMember => isHi ? 'ग्राहक सदस्य' : 'Customer member';
@@ -236,7 +236,8 @@ class AppStrings {
   String get workerProfile => isHi ? 'कार्यकर्ता प्रोफ़ाइल' : 'Worker Profile';
   String get aiDiscovery => isHi ? 'AI खोज' : 'AI Discovery';
   String get aiMatchedWorkers => isHi ? 'AI मेल कार्यकर्ता' : 'AI Matched Workers';
-  String get destination => isHi ? 'गंतव्य' : 'Destination';
+  String get destination => isHi ? 'कार्यकर्ता गंतव्य' : "Worker's Destination";
+  String get workersDestination => isHi ? 'कार्यकर्ता गंतव्य' : "Worker's Destination";
   String get skipToWorkStarted =>
       isHi ? 'कार्य शुरू पर जाएं' : 'Skip to Work Started';
 

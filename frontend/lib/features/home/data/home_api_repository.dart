@@ -11,10 +11,12 @@ class HomeBundle {
   const HomeBundle({
     required this.categories,
     required this.topServices,
+    this.banners = const [],
   });
 
   final List<ServiceCategory> categories;
   final List<ServiceItem> topServices;
+  final List<CouponBanner> banners;
 }
 
 class HomeApiRepository {
@@ -22,6 +24,47 @@ class HomeApiRepository {
       : _api = client ?? ApiServices.client;
 
   final ApiClient _api;
+
+  static const List<CouponBanner> defaultBanners = [
+    CouponBanner(
+      id: 'ban_1',
+      title: 'Flat 50% Off First Booking',
+      code: 'FIXLY50',
+      discount: '50% OFF',
+      description: 'Get 50% discount up to ₹150 on your first home service',
+      gradientColors: ['#1E3A8A', '#3B82F6'],
+    ),
+    CouponBanner(
+      id: 'ban_2',
+      title: 'AC & Appliance Mega Saver',
+      code: 'COOL20',
+      discount: '20% OFF',
+      description: 'Save up to ₹250 on all AC & appliance repair bookings',
+      gradientColors: ['#047857', '#10B981'],
+    ),
+    CouponBanner(
+      id: 'ban_3',
+      title: 'Super Weekend Special',
+      code: 'WEEKEND100',
+      discount: '₹100 FLAT',
+      description: 'Flat ₹100 instant cash discount on electrician & plumber orders',
+      gradientColors: ['#7C2D12', '#EA580C'],
+    ),
+  ];
+
+  Future<List<CouponBanner>> fetchBanners() async {
+    try {
+      final res = await _api.get(ApiEndpoints.banners);
+      if (res['success'] == true && res['banners'] is List) {
+        final list = (res['banners'] as List)
+            .whereType<Map>()
+            .map((e) => CouponBanner.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+        if (list.isNotEmpty) return list;
+      }
+    } catch (_) {}
+    return defaultBanners;
+  }
 
   Future<HomeBundle> fetchHome({bool forceNetwork = false}) async {
     final res = await _api.get(ApiEndpoints.home, forceNetwork: forceNetwork);
@@ -38,9 +81,24 @@ class HomeApiRepository {
       categories = _mapCategoryList(data['categories'], topServices);
     }
 
+    List<CouponBanner> banners = defaultBanners;
+    if (data['banners'] is List && (data['banners'] as List).isNotEmpty) {
+      banners = (data['banners'] as List)
+          .whereType<Map>()
+          .map((e) => CouponBanner.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } else {
+      try {
+        banners = await fetchBanners();
+      } catch (_) {
+        banners = defaultBanners;
+      }
+    }
+
     return HomeBundle(
       categories: categories,
       topServices: topServices,
+      banners: banners,
     );
   }
 

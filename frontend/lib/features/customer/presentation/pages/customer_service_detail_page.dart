@@ -118,7 +118,10 @@ class _CustomerServiceDetailPageState extends State<CustomerServiceDetailPage> {
                   const SizedBox(height: 32),
                   AccentButton(
                     label: 'Book Now',
-                    onPressed: () => context.push(RouteNames.customerBooking),
+                    onPressed: () => context.push(
+                      '${RouteNames.customerBooking}?serviceId=${service.id}'
+                      '&category=${Uri.encodeComponent(service.categoryId)}',
+                    ),
                   ),
                   const SizedBox(height: 12),
                   SecondaryButton(

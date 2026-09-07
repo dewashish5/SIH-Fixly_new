@@ -43,6 +43,7 @@ dependencies:
   flutter_webrtc: ^1.6.1
   flutter_callkit_incoming: ^3.1.5
   http: ^1.6.0
+  video_player: ^2.14.0
 
 dev_dependencies:
   flutter_test:

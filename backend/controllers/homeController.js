@@ -3,6 +3,8 @@ dotenv.config();
 
 import redis from '../config/redis.js';
 import Service from '../models/Service.js';
+import Banner from '../models/Banner.js';
+import { seedDefaultBannersIfEmpty } from './bannerController.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 
 // Screen 1: Home Dashboard Data (Redis Cached)
@@ -18,13 +20,16 @@ export const getHomeData = async (req, res) => {
         const limit = parseInt(process.env.HOME_SERVICES_LIMIT, 10) || 6;
         const ttl = parseInt(process.env.CACHE_TTL_HOME, 10) || 3600;
 
+        await seedDefaultBannersIfEmpty();
         const categories = await Service.distinct('category');
         const topServices = await Service.find({ isActive: true }).limit(limit).lean();
+        const banners = await Banner.find({ isActive: true }).sort({ priority: -1, createdAt: -1 }).lean();
 
         const responsePayload = {
             categories,
             topServices,
-            featuredOffers: [
+            banners,
+            featuredOffers: banners.length > 0 ? banners : [
                 { id: 'off_1', title: 'Spring Cleaning Special', discount: '20% OFF', code: 'SPRING20' },
                 { id: 'off_2', title: 'First-Time User Discount', discount: '15% OFF', code: 'NEW15' }
             ]

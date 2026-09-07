@@ -52,9 +52,10 @@ class SearchCubit extends Cubit<SearchState> {
               .toList();
     emit(state.copyWith(results: results, isSearching: false));
 
-    if (q.isNotEmpty) {
-      await _loadWorkers(q);
-    }
+    // The search screen also shows the complete specialist directory when
+    // there is no text query. Omitting category lets the API return every
+    // available specialist across all categories.
+    await _loadWorkers(q.isEmpty ? null : q);
   }
 
   void clear() {
@@ -93,7 +94,7 @@ class SearchCubit extends Cubit<SearchState> {
     await _loadWorkers(categoryId);
   }
 
-  Future<void> _loadWorkers(String categoryOrSkill) async {
+  Future<void> _loadWorkers(String? categoryOrSkill) async {
     emit(
       state.copyWith(
         isLoadingWorkers: true,
@@ -117,7 +118,7 @@ class SearchCubit extends Cubit<SearchState> {
       );
       final workers = page.workers;
 
-      final normalizedTarget = categoryOrSkill.toLowerCase().trim();
+      final normalizedTarget = categoryOrSkill?.toLowerCase().trim() ?? '';
 
       // Top matching rank:
       // 1. Workers with skills explicitly matching target keyword/category
@@ -125,16 +126,20 @@ class SearchCubit extends Cubit<SearchState> {
       // 3. Number of jobs completed
       final sorted = List<WorkerProfile>.from(workers)
         ..sort((a, b) {
-          final aMatchesSkill = a.skills.any(
-            (s) =>
-                s.toLowerCase().contains(normalizedTarget) ||
-                normalizedTarget.contains(s.toLowerCase()),
-          );
-          final bMatchesSkill = b.skills.any(
-            (s) =>
-                s.toLowerCase().contains(normalizedTarget) ||
-                normalizedTarget.contains(s.toLowerCase()),
-          );
+          final aMatchesSkill =
+              normalizedTarget.isNotEmpty &&
+              a.skills.any(
+                (s) =>
+                    s.toLowerCase().contains(normalizedTarget) ||
+                    normalizedTarget.contains(s.toLowerCase()),
+              );
+          final bMatchesSkill =
+              normalizedTarget.isNotEmpty &&
+              b.skills.any(
+                (s) =>
+                    s.toLowerCase().contains(normalizedTarget) ||
+                    normalizedTarget.contains(s.toLowerCase()),
+              );
 
           if (aMatchesSkill && !bMatchesSkill) return -1;
           if (!aMatchesSkill && bMatchesSkill) return 1;
@@ -161,15 +166,16 @@ class SearchCubit extends Cubit<SearchState> {
   Future<void> loadMoreWorkers() async {
     if (state.isLoadingWorkers ||
         state.isLoadingMoreWorkers ||
-        !state.hasMoreWorkers ||
-        state.categoryId == null) {
+        !state.hasMoreWorkers) {
       return;
     }
     emit(state.copyWith(isLoadingMoreWorkers: true));
     try {
       final loc = AppLocation.instance;
       final page = await _workers.fetchNearbyPage(
-        category: state.categoryId,
+        category:
+            state.categoryId ??
+            (state.query.trim().isEmpty ? null : state.query.trim()),
         sortBy: 'top_rated',
         lat: loc.hasFix ? loc.lat : 28.6139,
         lng: loc.hasFix ? loc.lng : 77.2090,

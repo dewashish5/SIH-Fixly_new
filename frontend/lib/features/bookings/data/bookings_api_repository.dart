@@ -313,17 +313,13 @@ class BookingsApiRepository {
   }
 
   Future<List<Booking>> history() async {
-    try {
-      final res = await _api.get(ApiEndpoints.bookingHistory);
-      final data = res['data'] ?? res['bookings'];
-      if (data is! List) return const [];
-      return data
-          .whereType<Map>()
-          .map((e) => mapBooking(Map<String, dynamic>.from(e)))
-          .toList();
-    } catch (_) {
-      return const [];
-    }
+    final res = await _api.get(ApiEndpoints.bookingHistory);
+    final data = res['data'] ?? res['bookings'];
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map((e) => mapBooking(Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   Future<WorkerJob> workerJobById(String bookingId) async {
