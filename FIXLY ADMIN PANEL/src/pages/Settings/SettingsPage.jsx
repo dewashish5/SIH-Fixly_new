@@ -56,12 +56,7 @@ export default function SettingsPage() {
     workerSearchRadiusKm: 15,
     defaultLaborRatePerHour: 350,
     autoDispatchEnabled: true,
-    emergencyHotline: '+91 98765 43210',
-    workerDeclineTemplates: [
-      'Your request to join as a worker has been declined.',
-      'Documents unclear or incomplete. Please re-upload clear Aadhaar and PAN photos.',
-      'Identity details do not match our records. Please correct and resubmit.'
-    ]
+    emergencyHotline: '+91 98765 43210'
   });
   const [savingPlatform, setSavingPlatform] = useState(false);
 
@@ -173,10 +168,7 @@ export default function SettingsPage() {
         workerSearchRadiusKm: settings.workerSearchRadiusKm ?? 15,
         defaultLaborRatePerHour: settings.defaultLaborRatePerHour ?? 350,
         autoDispatchEnabled: settings.autoDispatchEnabled !== false,
-        emergencyHotline: settings.emergencyHotline || '+91 98765 43210',
-        workerDeclineTemplates: settings.workerDeclineTemplates?.length
-          ? settings.workerDeclineTemplates
-          : platformForm.workerDeclineTemplates
+        emergencyHotline: settings.emergencyHotline || '+91 98765 43210'
       });
     }
   }, [settings]);
@@ -425,7 +417,6 @@ export default function SettingsPage() {
           { key: 'wage_floors', label: 'Wage Floors & Policy', icon: DollarSign },
           { key: 'societies', label: 'Cooperative Societies', icon: Building2 },
           { key: 'banners', label: 'Promotions & Coupons', icon: Tag },
-          { key: 'decline', label: 'Decline Templates', icon: MessageSquareText },
           { key: 'profile', label: 'Admin Identity', icon: User },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -1446,95 +1437,6 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
-      )}
-
-      {/* ========================================================= */}
-      {/* TAB 5: DECLINE MESSAGE TEMPLATES */}
-      {/* ========================================================= */}
-      {activeTab === 'decline' && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const cleaned = (platformForm.workerDeclineTemplates || [])
-              .map((t) => String(t || '').trim())
-              .filter(Boolean);
-            updateSettings({ ...platformForm, workerDeclineTemplates: cleaned });
-          }}
-          style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}
-        >
-          <div style={{ backgroundColor: '#ffffff', padding: '22px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-              <MessageSquareText size={18} color="#15803d" />
-              <h3 style={{ fontSize: '15.5px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                Worker Verification Decline Message Templates
-              </h3>
-            </div>
-            <p style={{ fontSize: '12.5px', color: '#64748b', marginBottom: '16px', lineHeight: 1.45 }}>
-              Quick-pick templates used in the Approvals queue when rejecting worker verification. The selected reason is delivered via push notification and displayed in the worker's mobile app.
-            </p>
-
-            {(platformForm.workerDeclineTemplates || []).map((text, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                <textarea
-                  value={text}
-                  onChange={(e) => {
-                    const next = [...(platformForm.workerDeclineTemplates || [])];
-                    next[idx] = e.target.value;
-                    setPlatformForm({ ...platformForm, workerDeclineTemplates: next });
-                  }}
-                  rows={2}
-                  style={{
-                    flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1',
-                    fontSize: '13px', fontFamily: 'inherit'
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = (platformForm.workerDeclineTemplates || []).filter((_, i) => i !== idx);
-                    setPlatformForm({ ...platformForm, workerDeclineTemplates: next });
-                  }}
-                  style={{
-                    padding: '8px 10px', borderRadius: '8px', border: '1px solid #fecaca',
-                    background: '#fef2f2', color: '#dc2626', cursor: 'pointer', height: 'fit-content'
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-
-            <button
-              type="button"
-              onClick={() =>
-                setPlatformForm({
-                  ...platformForm,
-                  workerDeclineTemplates: [...(platformForm.workerDeclineTemplates || []), '']
-                })
-              }
-              style={{
-                padding: '8px 14px', borderRadius: '8px', border: '1px dashed #94a3b8',
-                background: '#f8fafc', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer'
-              }}
-            >
-              + Add Template
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              type="submit"
-              style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '10px 24px', backgroundColor: '#15803d', color: '#ffffff',
-                borderRadius: '8px', fontSize: '13.5px', fontWeight: '700', border: 'none', cursor: 'pointer'
-              }}
-            >
-              <Save size={15} />
-              <span>Save Decline Templates</span>
-            </button>
-          </div>
-        </form>
       )}
 
       {/* ========================================================= */}

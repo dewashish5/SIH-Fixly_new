@@ -263,8 +263,39 @@ export const completeJob = async (req, res) => {
         booking.invoice = booking.invoice || {};
         const extraPartsTotal = (booking.addOns || []).reduce((sum, item) => sum + item.price, 0);
         booking.invoice.extraPartsTotal = extraPartsTotal;
-        booking.invoice.totalAmount = (booking.invoice.baseServiceFee || 0) + extraPartsTotal + (booking.invoice.platformFee || 0);
+        booking.invoice.totalAmount = (booking.invoice.baseServiceFee || 0) + extraPartsTotal + (booking.invoice.platformFee || 0) + (booking.invoice.urgentFee || 0);
         await booking.save();
+
+        if (!booking.completionOtpVerified) {
+            // Worker marked done, but OTP not verified yet
+            const io = req.app.get('io');
+            if (io) {
+                const targetRooms = [
+                    ...getTargetBookingRooms(bookingId),
+                    ...getTargetBookingRooms(booking.bookingId),
+                ];
+                io.to(targetRooms).emit('booking_completion_otp_required', {
+                    bookingId: booking._id,
+                    message: 'Worker has marked job done. Please provide completion OTP.'
+                });
+            }
+
+            safeNotify(async () => {
+                await notifyUser({
+                    recipient: booking.customer,
+                    eventType: 'COMPLETION_OTP_SENT',
+                    entityId: booking._id,
+                    bookingId: booking._id,
+                    dedupeKey: `COMPLETION_OTP_SENT:${booking._id}`,
+                });
+            });
+
+            return res.status(200).json({
+                success: true,
+                status: 'AWAITING_OTP',
+                message: 'Work marked done. Awaiting customer completion OTP.',
+            });
+        }
 
         if (booking.invoice.paymentStatus !== 'PAID') {
             booking.status = 'PAYMENT_PENDING';
@@ -366,6 +397,30 @@ export const completeJob = async (req, res) => {
         });
 
         return res.status(200).json({ success: true, message: 'Job completed successfully', invoice: booking.invoice });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+export const verifyCompletionOtp = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { otp } = req.body;
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+        if (booking.status !== 'IN_PROGRESS') {
+            return res.status(400).json({ success: false, message: 'Invalid booking status for completion OTP' });
+        }
+
+        if (String(booking.completionOtp) !== String(otp)) {
+            return res.status(400).json({ success: false, message: 'Invalid completion OTP' });
+        }
+
+        booking.completionOtpVerified = true;
+        await booking.save();
+
+        return res.status(200).json({ success: true, message: 'Completion OTP verified successfully' });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }

@@ -44,23 +44,81 @@ export const submitVerification = async (req, res) => {
             aadhaarFrontPhoto: governmentIdFrontUrl,
             aadhaarBackPhoto: governmentIdBackUrl || null,
             selfieImageUrl,
-            status: 'submitted',
+            status: 'PROCESSING',
             declineReason: null,
+            manualReviewReason: null,
         };
+        await user.save();
 
-        const pan = Array.isArray(additionalDocuments)
-            ? additionalDocuments.find((d) => String(d.type || '').toLowerCase().includes('pan'))
-            : null;
-        if (pan) {
-            user.kycDocuments.panNumber = pan.number || user.kycDocuments.panNumber;
-            user.kycDocuments.panFrontPhoto = pan.frontUrl || user.kycDocuments.panFrontPhoto;
-            user.kycDocuments.panBackPhoto = pan.backUrl || user.kycDocuments.panBackPhoto;
+        let aiResult = null;
+        try {
+            const aiRes = await fetch('http://127.0.0.1:8004/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ documentUrl: governmentIdFrontUrl, selfieUrl: selfieImageUrl })
+            });
+            if (aiRes.ok) {
+                aiResult = await aiRes.json();
+            }
+        } catch (err) {
+            console.error('AI KYC Service failed:', err.message);
         }
 
+        let newStatus = 'MANUAL_REVIEW';
+        let reason = 'AI service unavailable or failed';
+        
+        if (aiResult && aiResult.success) {
+            user.kycDocuments.livenessScore = aiResult.selfie.livenessScore;
+            user.kycDocuments.faceMatchScore = aiResult.faceMatch.score;
+            user.kycDocuments.documentFaceDetected = aiResult.document.faceDetected;
+            user.kycDocuments.selfieFaceDetected = aiResult.selfie.faceDetected;
+
+            const livenessPassed = aiResult.selfie.livenessPassed;
+            const faceMatch = aiResult.faceMatch.score;
+
+            if (!livenessPassed) {
+                newStatus = 'REJECTED';
+                reason = 'Liveness check failed';
+            } else if (!aiResult.document.faceDetected) {
+                newStatus = 'MANUAL_REVIEW';
+                reason = 'Document face missing';
+            } else if (faceMatch >= 85) {
+                newStatus = 'APPROVED';
+                reason = 'High AI confidence';
+            } else if (faceMatch >= 50) {
+                newStatus = 'MANUAL_REVIEW';
+                reason = 'Moderate AI confidence';
+            } else {
+                newStatus = 'REJECTED';
+                reason = 'Low AI face match score';
+            }
+        }
+
+        user.kycDocuments.status = newStatus;
+        if (newStatus === 'APPROVED') {
+            user.isVerified = true;
+        } else if (newStatus === 'REJECTED') {
+            user.kycDocuments.declineReason = reason;
+        } else if (newStatus === 'MANUAL_REVIEW') {
+            user.kycDocuments.manualReviewReason = reason;
+        }
         await user.save();
+
+        const VerificationAuditLog = (await import('../models/VerificationAuditLog.js')).default;
+        await VerificationAuditLog.create({
+            workerId: user._id,
+            action: 'AI_EVALUATED',
+            actorType: 'AI',
+            oldStatus: 'PROCESSING',
+            newStatus,
+            reason,
+            metadata: aiResult || {}
+        });
+
         return ok(res, {
             verification: {
-                status: 'submitted',
+                status: newStatus,
+                message: reason,
                 submittedAt: new Date().toISOString(),
             },
         });

@@ -72,6 +72,15 @@ const bookingSchema = new mongoose.Schema({
         default: () => Math.floor(1000 + Math.random() * 9000).toString()
     },
 
+    completionOtp: {
+        type: String,
+        default: () => Math.floor(1000 + Math.random() * 9000).toString()
+    },
+    completionOtpVerified: {
+        type: Boolean,
+        default: false
+    },
+
     addOns: { type: [addOnItemSchema], default: [] },
 
     jobStartedAt: { type: Date, default: null },

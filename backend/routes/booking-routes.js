@@ -16,6 +16,7 @@ import {
 } from '../controllers/bookingController.js';
 import {
     verifyArrivalOtp,
+    verifyCompletionOtp,
     addExtraParts,
     completeJob,
     acceptBooking,
@@ -44,6 +45,7 @@ router.post('/:bookingId/decline', protect, declineBooking);
 router.get('/:bookingId/track', protect, getLiveTracking);
 router.post('/:bookingId/accept', protect, acceptBooking);
 router.post('/:bookingId/verify-otp', protect, verifyArrivalOtp);
+router.post('/:bookingId/verify-completion-otp', protect, verifyCompletionOtp);
 router.post('/:bookingId/start-job', protect, startJob);
 
 // Job Execution & Extra Parts

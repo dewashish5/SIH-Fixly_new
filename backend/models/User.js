@@ -184,11 +184,17 @@ const userSchema = new mongoose.Schema({
         govermentIdNumber: { type: String, default: null },
         status: {
             type: String,
-            enum: ['none', 'submitted', 'approved', 'rejected'],
-            default: 'none'
+            enum: ['NOT_STARTED', 'DOCUMENT_UPLOADED', 'SELFIE_UPLOADED', 'PROCESSING', 'APPROVED', 'MANUAL_REVIEW', 'REJECTED'],
+            default: 'NOT_STARTED'
         },
-        // Admin message shown on Flutter verification screen when rejected
+        livenessScore: { type: Number, default: null },
+        faceMatchScore: { type: Number, default: null },
+        documentFaceDetected: { type: Boolean, default: null },
+        selfieFaceDetected: { type: Boolean, default: null },
+        aiDecision: { type: String, default: null },
+        // Admin message shown on Flutter verification screen when rejected or manual review requested
         declineReason: { type: String, default: null },
+        manualReviewReason: { type: String, default: null },
     },
 
     payoutDetails: { type: mongoose.Schema.Types.Mixed, default: null },

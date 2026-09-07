@@ -252,3 +252,45 @@ export const adminCooperativeMembers = async (req, res) => {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);
     }
 };
+
+// 11. Worker: Request to join a Cooperative Society
+export const workerJoinSociety = async (req, res) => {
+    try {
+        if (req.user.role !== 'worker') return fail(res, 403, 'FORBIDDEN', 'Worker role required');
+        const { societyId } = req.body;
+        
+        if (!isObjectId(societyId)) {
+            return fail(res, 400, 'VALIDATION_ERROR', 'Valid societyId required');
+        }
+
+        const society = await CooperativeSociety.findById(societyId);
+        if (!society) return fail(res, 404, 'NOT_FOUND', 'Cooperative Society not found');
+
+        const worker = await User.findById(req.user.id);
+        if (!worker) return fail(res, 404, 'NOT_FOUND', 'Worker not found');
+
+        if (!worker.workerProfile) worker.workerProfile = {};
+        
+        worker.workerProfile.society = societyId;
+        if (!worker.workerProfile.societyMemberId) {
+            worker.workerProfile.societyMemberId = `MEM-${society.district.toUpperCase().slice(0, 3)}-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+
+        await worker.save();
+
+        const count = await User.countDocuments({ role: 'worker', 'workerProfile.society': societyId });
+        society.activeMembersCount = count;
+        await society.save();
+
+        return ok(res, {
+            data: {
+                societyId: society._id,
+                societyName: society.name,
+                societyMemberId: worker.workerProfile.societyMemberId,
+            },
+            message: 'Successfully affiliated with Cooperative Society'
+        });
+    } catch (error) {
+        return fail(res, 500, 'INTERNAL_ERROR', error.message);
+    }
+};

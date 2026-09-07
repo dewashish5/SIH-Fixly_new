@@ -182,6 +182,9 @@ export const createOrder = async (req, res) => {
         if (booking.invoice?.paymentStatus === 'PAID') {
             return res.status(400).json({ success: false, message: 'Booking already paid' });
         }
+        if (!booking.completionOtpVerified) {
+            return res.status(400).json({ success: false, message: 'Completion OTP must be verified before payment can be initiated' });
+        }
         if (!['IN_PROGRESS', 'PAYMENT_PENDING', 'COMPLETED'].includes(booking.status)) {
             return res.status(400).json({
                 success: false,

@@ -52,7 +52,39 @@ export const serviceDiscovery = async (req, res) => {
     try {
         const text = String(req.body.text || req.body.problemDescription || '').toLowerCase();
         if (!text) return res.status(400).json({ success: false, code: 'VALIDATION_ERROR', message: 'text required' });
+        
+        let aiResult = null;
+        try {
+            // Attempt to call the canonical Python AI service
+            const response = await fetch('http://127.0.0.1:8002/discover', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            if (response.ok) {
+                aiResult = await response.json();
+            }
+        } catch (err) {
+            console.error('AI Service Discovery failed, falling back to Node classifier:', err.message);
+        }
+
         const services = await Service.find({ isActive: true }).lean();
+
+        if (aiResult && aiResult.top_matches) {
+            // AI service succeeded
+            const suggestions = aiResult.top_matches.map((match) => {
+                const s = services.find((srv) => srv.category === match.category);
+                return {
+                    categoryId: match.category,
+                    serviceId: s ? s._id : null,
+                    title: s ? s.title : match.category,
+                    confidence: match.probability || match.score || 0.5,
+                };
+            });
+            return res.status(200).json({ success: true, suggestions });
+        }
+
+        // Fallback: Node keyword matcher
         const scored = services.map((s) => {
             const hay = `${s.title || ''} ${s.category || ''} ${s.description || ''}`.toLowerCase();
             let score = 0;
@@ -61,6 +93,7 @@ export const serviceDiscovery = async (req, res) => {
             }
             return { service: s, score };
         }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
+        
         const fallback = scored.length ? scored : services.slice(0, 3).map((s) => ({ service: s, score: 0.2 }));
         const max = Math.max(...fallback.map((x) => x.score), 1);
         return res.status(200).json({

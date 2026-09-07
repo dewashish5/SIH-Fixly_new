@@ -514,30 +514,52 @@ export const getWorkerById = async (req, res) => {
  */
 export const updateWorkerStatus = async (req, res) => {
     try {
-        const { isVerified, badges, category, rate } = req.body;
+        const { isVerified, badges, category, rate, kycStatus, declineReason } = req.body;
 
-        const updateData = {};
-        if (isVerified !== undefined) updateData.isVerified = isVerified;
-        if (badges) updateData['workerProfile.badges'] = badges;
-        if (category) updateData['workerProfile.category'] = category;
-        if (rate !== undefined) {
-            updateData['workerProfile.rate'] = Number(rate);
-        }
-
-        const worker = await User.findOneAndUpdate(
-            { _id: req.params.id, role: 'worker' },
-            { $set: updateData },
-            { returnDocument: 'after' }
-        ).select('-password');
-
+        const worker = await User.findOne({ _id: req.params.id, role: 'worker' });
         if (!worker) {
             return res.status(404).json({ success: false, message: 'Worker not found' });
         }
 
+        const oldStatus = worker.kycDocuments?.status || 'NOT_STARTED';
+
+        if (isVerified !== undefined) worker.isVerified = isVerified;
+        if (badges) worker.workerProfile.badges = badges;
+        if (category) worker.workerProfile.category = category;
+        if (rate !== undefined) worker.workerProfile.rate = Number(rate);
+
+        if (kycStatus) {
+            worker.kycDocuments = worker.kycDocuments || {};
+            worker.kycDocuments.status = kycStatus;
+            
+            if (kycStatus === 'rejected') {
+                worker.kycDocuments.declineReason = declineReason || 'Declined by admin';
+            } else if (kycStatus === 'approved') {
+                worker.kycDocuments.declineReason = null;
+            }
+        }
+
+        await worker.save();
+
+        if (kycStatus && kycStatus !== oldStatus) {
+            const VerificationAuditLog = (await import('../models/VerificationAuditLog.js')).default;
+            await VerificationAuditLog.create({
+                workerId: worker._id,
+                action: kycStatus === 'approved' ? 'MANUAL_APPROVED' : 'MANUAL_REJECTED',
+                actorType: 'ADMIN',
+                actorId: req.user.id,
+                oldStatus,
+                newStatus: kycStatus,
+                reason: declineReason || 'Admin action'
+            });
+        }
+
+        const updatedWorker = await User.findById(worker._id).select('-password');
+
         return res.status(200).json({
             success: true,
             message: 'Worker profile updated successfully',
-            worker
+            worker: updatedWorker
         });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });

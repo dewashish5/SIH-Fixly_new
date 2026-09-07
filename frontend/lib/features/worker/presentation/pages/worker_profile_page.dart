@@ -186,6 +186,14 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                                 context.push(RouteNames.workerWallet),
                           ),
                           _WorkerMenuTile(
+                            icon: Icons.groups_rounded,
+                            iconColor: AppColors.secondary,
+                            title: 'Cooperative Society',
+                            subtitle: 'Affiliation & welfare benefits',
+                            onTap: () =>
+                                context.push('/worker/cooperative'), // Or defined RouteName
+                          ),
+                          _WorkerMenuTile(
                             icon: Icons.support_agent_rounded,
                             iconColor: AppColors.primary,
                             title: l10n.support,

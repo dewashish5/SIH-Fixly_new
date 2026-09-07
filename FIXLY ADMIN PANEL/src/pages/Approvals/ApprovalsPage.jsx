@@ -87,15 +87,11 @@ export default function ApprovalsPage() {
   const [declineText, setDeclineText] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const templates = useMemo(() => {
-    const t = settings?.workerDeclineTemplates;
-    return Array.isArray(t) && t.length
-      ? t
-      : [
-          'Your request to join as a worker has been declined.',
-          'Documents unclear or incomplete. Please re-upload clear Aadhaar and PAN photos.',
-        ];
-  }, [settings]);
+  const templates = [
+      'Your request to join as a worker has been declined.',
+      'Documents unclear or incomplete. Please re-upload clear Aadhaar and PAN photos.',
+      'Identity details do not match our records. Please correct and resubmit.'
+  ];
 
   const loadList = useCallback(async () => {
     setLoading(true);
@@ -222,6 +218,7 @@ export default function ApprovalsPage() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {[
           { key: 'pending', label: 'Pending review' },
+          { key: 'MANUAL_REVIEW', label: 'Manual Review' },
           { key: 'rejected', label: 'Declined' },
           { key: 'approved', label: 'Approved' },
         ].map((t) => (
@@ -358,6 +355,18 @@ export default function ApprovalsPage() {
                       <strong>Decline message:</strong> {kyc.declineReason}
                     </div>
                   )}
+                  {kyc.manualReviewReason && (
+                    <div style={{ gridColumn: '1 / -1', background: '#fef9c3', padding: 10, borderRadius: 8, color: '#854d0e' }}>
+                      <strong>AI Manual Review Required:</strong> {kyc.manualReviewReason}
+                    </div>
+                  )}
+                  {(kyc.livenessScore !== undefined && kyc.livenessScore !== null) && (
+                    <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: 10, borderRadius: 8, color: '#334155', display: 'flex', gap: 16 }}>
+                      <div><strong>Liveness Score:</strong> {kyc.livenessScore}</div>
+                      <div><strong>Face Match Score:</strong> {kyc.faceMatchScore}</div>
+                      <div><strong>Doc Face Detected:</strong> {kyc.documentFaceDetected ? 'Yes' : 'No'}</div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -374,7 +383,7 @@ export default function ApprovalsPage() {
                   </div>
                 </div>
 
-                {((kyc.status === 'submitted' || kyc.status === 'none' || !kyc.status) &&
+                {((['submitted', 'none', 'NOT_STARTED', 'MANUAL_REVIEW', 'PROCESSING'].includes(kyc.status) || !kyc.status) &&
                   !selected.isVerified) &&
                   !declineOpen && (
                   <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>

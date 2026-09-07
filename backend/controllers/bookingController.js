@@ -18,13 +18,31 @@ export const calculateEstimate = async (req, res) => {
         const { serviceId, estimatedHours = 1, isEmergency, bookingType } = req.body;
 
         const settings = await getPlatformSettings();
+        const Cooperative = (await import('../models/Cooperative.js')).default;
+        let federation = await Cooperative.findOne({ active: true });
+        if (!federation) federation = await Cooperative.create({});
+
         const platformFee = settings.customerPlatformFee !== undefined && settings.customerPlatformFee !== null
             ? Number(settings.customerPlatformFee)
             : 0;
         const defaultLaborRate = Number(settings.defaultLaborRatePerHour) || 50;
 
         const service = await Service.findById(serviceId);
-        const basePrice = service ? service.basePrice : defaultLaborRate;
+        
+        let floor = federation.minimumWageFloor?.default || 300;
+        if (service && service.category) {
+            const cat = service.category.toLowerCase();
+            if (cat.includes('plumb')) floor = federation.minimumWageFloor?.plumbing || floor;
+            else if (cat.includes('electr')) floor = federation.minimumWageFloor?.electrical || floor;
+            else if (cat.includes('carpent')) floor = federation.minimumWageFloor?.carpentry || floor;
+            else if (cat.includes('clean')) floor = federation.minimumWageFloor?.cleaning || floor;
+            else if (cat.includes('paint')) floor = federation.minimumWageFloor?.painting || floor;
+            else if (cat.includes('appliance')) floor = federation.minimumWageFloor?.appliance || floor;
+            else if (cat.includes('garden')) floor = federation.minimumWageFloor?.gardening || floor;
+        }
+        
+        let basePrice = service ? service.basePrice : defaultLaborRate;
+        if (basePrice < floor) basePrice = floor; // Enforce Federation Minimum Wage Floor
 
         const laborMin = basePrice * estimatedHours;
         const laborMax = laborMin + 45;
@@ -132,6 +150,23 @@ export const createBooking = async (req, res) => {
                 baseFee = worker.workerProfile.rate;
             }
         }
+        
+        const Cooperative = (await import('../models/Cooperative.js')).default;
+        let federation = await Cooperative.findOne({ active: true });
+        if (!federation) federation = await Cooperative.create({});
+
+        let floor = federation.minimumWageFloor?.default || 300;
+        if (service && service.category) {
+            const cat = service.category.toLowerCase();
+            if (cat.includes('plumb')) floor = federation.minimumWageFloor?.plumbing || floor;
+            else if (cat.includes('electr')) floor = federation.minimumWageFloor?.electrical || floor;
+            else if (cat.includes('carpent')) floor = federation.minimumWageFloor?.carpentry || floor;
+            else if (cat.includes('clean')) floor = federation.minimumWageFloor?.cleaning || floor;
+            else if (cat.includes('paint')) floor = federation.minimumWageFloor?.painting || floor;
+            else if (cat.includes('appliance')) floor = federation.minimumWageFloor?.appliance || floor;
+            else if (cat.includes('garden')) floor = federation.minimumWageFloor?.gardening || floor;
+        }
+        if (baseFee < floor) baseFee = floor;
 
         // Determine booking urgency and scheduling
         const isSos = isEmergency === true || String(bookingType).toUpperCase() === 'EMERGENCY_SOS';
