@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "fixly",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "frontend",
+      "program": "frontend/lib/main.dart",
+      "args": ["--dart-define-from-file=dart_defines.json"]
+    }
+  ]
+}
