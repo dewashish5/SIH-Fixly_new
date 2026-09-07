@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../shared/models/models.dart';
 import '../../../home/data/home_api_repository.dart';
