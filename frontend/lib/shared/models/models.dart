@@ -387,6 +387,10 @@ class Booking extends Equatable {
     this.customerLat,
     this.customerLng,
     this.rawStatus,
+    this.bookingType,
+    this.isEmergency = false,
+    this.urgentFee,
+    this.timeSlot,
   });
 
   final String id;
@@ -424,6 +428,10 @@ class Booking extends Equatable {
   final double? customerLat;
   final double? customerLng;
   final String? rawStatus;
+  final String? bookingType;
+  final bool isEmergency;
+  final double? urgentFee;
+  final String? timeSlot;
 
   double get totalPrice {
     final base = baseServiceFee ?? estimatedPrice;

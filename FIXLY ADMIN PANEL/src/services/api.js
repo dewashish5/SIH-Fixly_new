@@ -200,6 +200,56 @@ export const api = {
     return res.data;
   },
 
+  // Cooperative Federation Governance
+  getCooperative: async () => {
+    const res = await adminApi.get('/cooperative');
+    return res.data;
+  },
+  updateCooperative: async (coopData) => {
+    const res = await adminApi.put('/cooperative', coopData);
+    return res.data;
+  },
+
+  // Primary Cooperative Societies
+  getSocieties: async (params = {}) => {
+    const res = await adminApi.get('/cooperative/societies', { params });
+    return res.data;
+  },
+  createSociety: async (societyData) => {
+    const res = await adminApi.post('/cooperative/societies', societyData);
+    return res.data;
+  },
+  getSocietyById: async (id) => {
+    const res = await adminApi.get(`/cooperative/societies/${id}`);
+    return res.data;
+  },
+  updateSociety: async (id, societyData) => {
+    const res = await adminApi.put(`/cooperative/societies/${id}`, societyData);
+    return res.data;
+  },
+  assignWorkerToSociety: async (data) => {
+    const res = await adminApi.post('/cooperative/assign-worker', data);
+    return res.data;
+  },
+
+  // Promotional Coupon Banners
+  getBanners: async () => {
+    const res = await adminApi.get('/banners');
+    return res.data;
+  },
+  createBanner: async (bannerData) => {
+    const res = await adminApi.post('/banners', bannerData);
+    return res.data;
+  },
+  updateBanner: async (id, bannerData) => {
+    const res = await adminApi.put(`/banners/${id}`, bannerData);
+    return res.data;
+  },
+  deleteBanner: async (id) => {
+    const res = await adminApi.delete(`/banners/${id}`);
+    return res.data;
+  },
+
   // Image Upload (Cloudinary / File)
   uploadImage: async (file) => {
     const formData = new FormData();

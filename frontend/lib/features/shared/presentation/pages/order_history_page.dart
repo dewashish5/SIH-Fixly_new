@@ -373,16 +373,21 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                                   ),
                                 ),
                               if (order.displayId != null && order.displayId!.isNotEmpty) ...[
-                                Text(
-                                  ' • ',
-                                  style: TextStyle(color: Theme.of(context).hintColor, fontSize: 11),
-                                ),
-                                Text(
-                                  order.displayId!,
-                                  style: TextStyle(
-                                    color: Theme.of(context).hintColor,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
+                                if (order.serviceCategory != null && order.serviceCategory!.isNotEmpty)
+                                  Text(
+                                    ' • ',
+                                    style: TextStyle(color: Theme.of(context).hintColor, fontSize: 11),
+                                  ),
+                                Flexible(
+                                  child: Text(
+                                    order.displayId!,
+                                    style: TextStyle(
+                                      color: Theme.of(context).hintColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
@@ -438,51 +443,6 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-
-                // Problem description snippet if available
-                if (order.problemDescription != null && order.problemDescription!.trim().isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white.withValues(alpha: 0.05)
-                          : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.notes_rounded, size: 14, color: Theme.of(context).hintColor),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            order.problemDescription!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Theme.of(context).textTheme.bodySmall?.color,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        if (order.problemPhotos.isNotEmpty) ...[
-                          const SizedBox(width: 6),
-                          Icon(Icons.photo_library_outlined, size: 13, color: AppColors.primary),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${order.problemPhotos.length}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
 
                 const SizedBox(height: 10),
 

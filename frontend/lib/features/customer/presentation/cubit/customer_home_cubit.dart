@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:fixly/core/constants/app_constants.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/network/api_exception.dart';

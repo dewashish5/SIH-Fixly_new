@@ -125,6 +125,9 @@ class BookingsApiRepository {
     List<String> problemPhotoUrls = const [],
     List<String> problemVideoUrls = const [],
     Map<String, dynamic>? invoice,
+    String? bookingType,
+    bool isEmergency = false,
+    String? timeSlot,
   }) async {
     final loc = AppLocation.instance;
     final useLng = lng ?? (loc.hasFix ? loc.requireLng : null);
@@ -154,6 +157,9 @@ class BookingsApiRepository {
       if (scheduledTime != null)
         'scheduledTime': scheduledTime.toUtc().toIso8601String(),
       if (invoice != null) 'invoice': invoice,
+      if (bookingType != null) 'bookingType': bookingType,
+      if (isEmergency) 'isEmergency': true,
+      if (timeSlot != null) 'timeSlot': timeSlot,
     };
 
     final res = await _api.post(ApiEndpoints.createBooking, data: data);
@@ -602,6 +608,11 @@ class BookingsApiRepository {
       customerLat: customerLat,
       customerLng: customerLng,
       rawStatus: json['status']?.toString(),
+      bookingType: json['bookingType']?.toString(),
+      isEmergency: json['isEmergency'] == true || (json['bookingType']?.toString() == 'EMERGENCY_SOS'),
+      urgentFee: (invoice is Map ? (invoice['urgentFee'] as num?)?.toDouble() : null) ??
+          (json['urgentFee'] as num?)?.toDouble(),
+      timeSlot: json['timeSlot']?.toString(),
     );
   }
 
