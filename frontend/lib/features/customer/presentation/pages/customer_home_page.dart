@@ -48,6 +48,7 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
   bool _locating = false;
   String? _selectedCategoryId; // null = 'All'
   bool _isMapExpanded = false;
+  bool _isProgrammaticScroll = false;
   double? _dragStartY;
   final ScrollController _scrollController = ScrollController();
   late final AnimationController _mapExpandController;
@@ -71,6 +72,7 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
   }
 
   void _onScroll() {
+    if (_isProgrammaticScroll) return;
     if (_scrollController.hasClients && _scrollController.offset > 20 && _isMapExpanded) {
       setState(() => _isMapExpanded = false);
       _mapExpandController.reverse();
@@ -266,6 +268,7 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
                                   onLocationTap: _refreshLocation,
                                   onMapToggleTap: () {
                                     if (!_isMapExpanded) {
+                                      _isProgrammaticScroll = true;
                                       setState(() {
                                         _isMapExpanded = true;
                                       });
@@ -275,7 +278,9 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
                                         0,
                                         duration: const Duration(milliseconds: 300),
                                         curve: Curves.easeOut,
-                                      );
+                                      ).then((_) {
+                                        _isProgrammaticScroll = false;
+                                      });
                                     }
                                   },
                                   onNotificationsTap: () =>
