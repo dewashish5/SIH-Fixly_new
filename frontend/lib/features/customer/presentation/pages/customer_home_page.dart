@@ -394,7 +394,7 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => context.push(RouteNames.customerSearch),
+          onTap: () => context.goCustomerTab(1),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -595,7 +595,7 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
           ),
           const SizedBox(width: 8),
           ElevatedButton(
-            onPressed: () => context.push(RouteNames.customerSearch),
+            onPressed: () => context.goCustomerTab(1),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,

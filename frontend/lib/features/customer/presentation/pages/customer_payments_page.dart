@@ -35,6 +35,7 @@ class _CustomerPaymentsPageState extends State<CustomerPaymentsPage> {
     final dateFormat = DateFormat('d MMM yyyy, hh:mm a');
     return AppScaffold(
       title: 'Payment history',
+      showBack: true,
       body: AppRefreshIndicator(
         onRefresh: _refresh,
         child: FutureBuilder<WalletSnapshot>(
