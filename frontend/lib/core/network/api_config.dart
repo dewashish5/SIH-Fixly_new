@@ -23,8 +23,8 @@ class ApiConfig {
   static String get baseUrl => _envUrl.isNotEmpty
       ? _envUrl
       : Platform.isAndroid
-      ? 'http://10.0.2.2:8005' // Android Emulator -> localhost
+      ? 'http://192.168.1.5:8000' // Android physical device -> local IP
       : Platform.isIOS
-      ? 'http://localhost:8005' // iOS Simulator -> localhost
-      : 'http://localhost:8005'; // Fallback (Web/macOS/Windows/Linux)
+      ? 'http://192.168.1.5:8000' // iOS physical device -> local IP
+      : 'http://192.168.1.5:8000'; // Fallback (Web/macOS/Windows/Linux)
 }

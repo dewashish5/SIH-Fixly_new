@@ -44,9 +44,38 @@ class _CustomerHomeView extends StatefulWidget {
   State<_CustomerHomeView> createState() => _CustomerHomeViewState();
 }
 
-class _CustomerHomeViewState extends State<_CustomerHomeView> {
+class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerProviderStateMixin {
   bool _locating = false;
   String? _selectedCategoryId; // null = 'All'
+  bool _isMapExpanded = false;
+  double? _dragStartY;
+  final ScrollController _scrollController = ScrollController();
+  late final AnimationController _mapExpandController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    _mapExpandController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _mapExpandController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients && _scrollController.offset > 20 && _isMapExpanded) {
+      setState(() => _isMapExpanded = false);
+      _mapExpandController.reverse();
+    }
+  }
 
   String get _locationLabel {
     final label = AppLocation.instance.addressLabel?.trim();
@@ -148,51 +177,127 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
 
             return AppRefreshIndicator(
               onRefresh: _refreshAll,
-              child: NestedScrollView(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (scrollInfo) {
+                  if (scrollInfo is ScrollStartNotification && scrollInfo.dragDetails != null) {
+                    _dragStartY = scrollInfo.dragDetails!.globalPosition.dy;
+                  }
+                  
+                  final screenHeight = MediaQuery.of(context).size.height;
+                  final isTopHalf = _dragStartY != null && _dragStartY! < screenHeight / 2;
+                  
+                  // If not top half, or map is already open, let normal pull-to-refresh work
+                  if (!isTopHalf || _isMapExpanded) return false;
+
+                  bool isOverscrollingDown = false;
+                  if (scrollInfo is ScrollUpdateNotification) {
+                    if (scrollInfo.metrics.pixels < 0 && (scrollInfo.scrollDelta ?? 0) < 0) {
+                      isOverscrollingDown = true;
+                    }
+                  } else if (scrollInfo is OverscrollNotification) {
+                    if (scrollInfo.overscroll < 0) {
+                      isOverscrollingDown = true;
+                    }
+                  }
+
+                  if (isOverscrollingDown) {
+                    if (!_isMapExpanded) {
+                      setState(() => _isMapExpanded = true);
+                      _mapExpandController.forward();
+                    }
+                    return true; // Cancel notification bubbling to block RefreshIndicator
+                  }
+
+                  // Block any overscroll notifications from reaching RefreshIndicator while closed
+                  if (scrollInfo.metrics.pixels < 0) {
+                    return true;
+                  }
+                  
+                  return false;
+                },
+                child: NestedScrollView(
+                  controller: _scrollController,
                 headerSliverBuilder: (context, innerBoxIsScrolled) {
                   return [
-                    SliverAppBar(
-                      pinned: true,
-                      expandedHeight: statusBarH + 390,
-                      toolbarHeight: 100,
-                      backgroundColor: scheme.surface,
-                      elevation: 0,
-                      flexibleSpace: FlexibleSpaceBar(
-                        collapseMode: CollapseMode.pin,
-                        background: _HomeMapHero(
-                          statusBarH: statusBarH,
-                          locating: _locating,
-                          onCurrentLocationTap: _refreshLocation,
-                          onMapTap: _onMapLocationTapped,
-                        ),
-                      ),
-                      title: Padding(
-                        padding: const EdgeInsets.only(
-                          left: 0,
-                          right: 0,
-                          bottom: 8,
-                        ),
-                        child: _AppBarTitleContent(
-                          userName: userName,
-                          locationLabel: _locationLabel,
-                          locating: _locating,
-                          onOpenLocationPicker: _refreshLocation,
-                          onNotificationsTap: () =>
-                              context.push(RouteNames.sharedNotifications),
-                        ),
-                      ),
-                      bottom: PreferredSize(
-                        preferredSize: const Size.fromHeight(24),
-                        child: Container(
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: scheme.surface,
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(24),
+                    AnimatedBuilder(
+                      animation: _mapExpandController,
+                      builder: (context, child) {
+                        final curveValue = Curves.easeInOutCubic.transform(_mapExpandController.value);
+                        final currentHeight = 154.0 + (statusBarH + 390.0 - 154.0) * curveValue;
+                        
+                        return SliverAppBar(
+                          pinned: true,
+                          expandedHeight: currentHeight,
+                          toolbarHeight: 130,
+                          backgroundColor: scheme.surface,
+                          elevation: 0,
+                          flexibleSpace: FlexibleSpaceBar(
+                            collapseMode: CollapseMode.pin,
+                            background: curveValue > 0.0
+                                ? ClipRect(
+                                    child: Align(
+                                      alignment: Alignment.bottomCenter,
+                                      heightFactor: curveValue,
+                                      child: _HomeMapHero(
+                                        statusBarH: statusBarH,
+                                        locating: _locating,
+                                        onCurrentLocationTap: _refreshLocation,
+                                        onMapTap: _onMapLocationTapped,
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                          title: AnimatedOpacity(
+                            opacity: _isMapExpanded ? 0.0 : 1.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: IgnorePointer(
+                              ignoring: _isMapExpanded,
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 8,
+                                ),
+                                child: _AppBarTitleContent(
+                                  userName: userName,
+                                  locationLabel: _locationLabel,
+                                  locating: _locating,
+                                  onLocationTap: _refreshLocation,
+                                  onMapToggleTap: () {
+                                    if (!_isMapExpanded) {
+                                      setState(() {
+                                        _isMapExpanded = true;
+                                      });
+                                      _mapExpandController.forward();
+                                      // Scroll to top to ensure map is fully visible
+                                      _scrollController.animateTo(
+                                        0,
+                                        duration: const Duration(milliseconds: 300),
+                                        curve: Curves.easeOut,
+                                      );
+                                    }
+                                  },
+                                  onNotificationsTap: () =>
+                                      context.push(RouteNames.sharedNotifications),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                          bottom: PreferredSize(
+                            preferredSize: const Size.fromHeight(24),
+                            child: Container(
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: scheme.surface,
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(24),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ];
                 },
@@ -249,6 +354,7 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> {
                     ],
                   ),
                 ),
+              ),
               ),
             );
           },
@@ -1312,14 +1418,16 @@ class _AppBarTitleContent extends StatelessWidget {
     required this.userName,
     required this.locationLabel,
     required this.locating,
-    required this.onOpenLocationPicker,
+    required this.onLocationTap,
+    required this.onMapToggleTap,
     required this.onNotificationsTap,
   });
 
   final String userName;
   final String locationLabel;
   final bool locating;
-  final VoidCallback onOpenLocationPicker;
+  final VoidCallback onLocationTap;
+  final VoidCallback onMapToggleTap;
   final VoidCallback onNotificationsTap;
 
   @override
@@ -1327,106 +1435,143 @@ class _AppBarTitleContent extends StatelessWidget {
     final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.timeGreeting(DateTime.now().hour),
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurface.withValues(alpha: 0.8),
-                ),
-              ),
-              const SizedBox(height: 1),
-              Text(
-                userName,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: scheme.onSurface,
-                  letterSpacing: -0.3,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              InkWell(
-                onTap: onOpenLocationPicker,
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.location_on_rounded,
-                        color: AppColors.primary400,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          locationLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSurface.withValues(alpha: 0.95),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        size: 16,
-                        color: scheme.onSurface.withValues(alpha: 0.85),
-                      ),
-                      if (locating) ...[
-                        const SizedBox(width: 8),
-                        const SizedBox(
-                          width: 12,
-                          height: 12,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 1.5,
-                            color: AppColors.primary400,
-                          ),
-                        ),
-                      ],
-                    ],
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.timeGreeting(DateTime.now().hour),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurface.withValues(alpha: 0.8),
+                    ),
                   ),
+                  const SizedBox(height: 1),
+                  Text(
+                    userName,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onSurface,
+                      letterSpacing: -0.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  InkWell(
+                    onTap: onLocationTap,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.location_on_rounded,
+                            color: AppColors.primary400,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              locationLabel,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                                color: scheme.onSurface.withValues(alpha: 0.95),
+                              ),
+                            ),
+                          ),
+                          if (locating) ...[
+                            const SizedBox(width: 8),
+                            const SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: AppColors.primary400,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: scheme.onSurface.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: scheme.onSurface.withValues(alpha: 0.1),
+                  width: 1,
                 ),
               ),
-            ],
-          ),
+              child: IconButton(
+                icon: Icon(
+                  Icons.notifications_outlined,
+                  color: scheme.onSurface,
+                  size: 22,
+                ),
+                tooltip: l10n.notifications,
+                onPressed: onNotificationsTap,
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: scheme.onSurface.withValues(alpha: 0.08),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: scheme.onSurface.withValues(alpha: 0.1),
-              width: 1,
+        const SizedBox(height: 6),
+        Center(
+          child: GestureDetector(
+            onVerticalDragUpdate: (details) {
+              // Open map if pulled down intentionally
+              if (details.primaryDelta != null && details.primaryDelta! > 2.0) {
+                onMapToggleTap();
+              }
+            },
+            child: InkWell(
+              onTap: onMapToggleTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'see map',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface.withValues(alpha: 0.75),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 16,
+                      color: scheme.onSurface.withValues(alpha: 0.75),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-          child: IconButton(
-            icon: Icon(
-              Icons.notifications_outlined,
-              color: scheme.onSurface,
-              size: 22,
-            ),
-            tooltip: l10n.notifications,
-            onPressed: onNotificationsTap,
-            padding: EdgeInsets.zero,
           ),
         ),
       ],
