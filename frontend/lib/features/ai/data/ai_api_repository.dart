@@ -27,6 +27,9 @@ class AiAgentResponse {
     this.action,
     this.booking,
     this.bookings = const [],
+    this.workers = const [],
+    this.estimate,
+    this.policy,
     this.suggestedReplies = const [],
   });
 
@@ -35,6 +38,9 @@ class AiAgentResponse {
   final String? action;
   final Map<String, dynamic>? booking;
   final List<dynamic> bookings;
+  final List<dynamic> workers;
+  final Map<String, dynamic>? estimate;
+  final Map<String, dynamic>? policy;
   final List<String> suggestedReplies;
 }
 
@@ -50,15 +56,23 @@ class AiApiRepository {
     List<double>? coordinates,
     String? addressLine,
   }) async {
+    final payload = <String, dynamic>{
+      'message': message,
+      'conversationState': conversationState ?? <String, dynamic>{},
+    };
+    if (language != null && language.isNotEmpty) {
+      payload['language'] = language;
+    }
+    if (coordinates != null && coordinates.length >= 2) {
+      payload['coordinates'] = coordinates;
+    }
+    if (addressLine != null && addressLine.isNotEmpty) {
+      payload['addressLine'] = addressLine;
+    }
+
     final res = await _api.post(
       ApiEndpoints.aiAgentChat,
-      data: {
-        'message': message,
-        'conversationState': conversationState ?? {},
-        'language': language ?? 'en',
-        'coordinates': ?coordinates,
-        'addressLine': ?addressLine,
-      },
+      data: payload,
     );
 
     if (res['success'] != true) {
@@ -76,6 +90,9 @@ class AiApiRepository {
       action: res['action']?.toString(),
       booking: res['booking'] as Map<String, dynamic>?,
       bookings: res['bookings'] as List<dynamic>? ?? const [],
+      workers: res['workers'] as List<dynamic>? ?? const [],
+      estimate: res['estimate'] as Map<String, dynamic>?,
+      policy: res['policy'] as Map<String, dynamic>?,
       suggestedReplies: suggestions,
     );
   }

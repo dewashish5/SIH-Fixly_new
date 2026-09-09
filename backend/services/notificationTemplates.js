@@ -251,12 +251,30 @@ const templates = {
         action: 'system',
         channel: 'PUSH',
     },
+    COMPLETION_OTP_SENT: {
+        en: { title: 'Job Completion OTP', body: 'Your work is marked done. Please share the completion OTP with the worker if satisfied.' },
+        hi: { title: 'कार्य समापन OTP', body: 'कार्य पूरा चिह्नित किया गया है। संतुष्ट होने पर कार्यकर्ता को समापन OTP दें।' },
+        category: 'BOOKING',
+        priority: 'HIGH',
+        entityType: 'booking',
+        action: 'open_booking',
+        channel: 'PUSH',
+    },
 };
 
 export const resolveTemplate = (eventType, locale = 'en') => {
     const template = templates[eventType];
     if (!template) {
-        throw new Error(`Unknown notification eventType: ${eventType}`);
+        return {
+            eventType,
+            title: 'Fixly Notification',
+            body: 'You have a new notification from Fixly.',
+            category: 'SYSTEM',
+            priority: 'NORMAL',
+            entityType: 'system',
+            action: 'system',
+            channel: 'PUSH',
+        };
     }
     const lang = locale?.startsWith('hi') ? 'hi' : 'en';
     return {

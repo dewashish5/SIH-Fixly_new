@@ -160,16 +160,25 @@ class ActiveJobCubit extends Cubit<ActiveJobState> {
     }
   }
 
-  Future<void> submitWorkerReview({required String bookingId, required String customerId, required int rating, String comment = '', List<String> traits = const []}) async {
+  Future<void> submitWorkerReview({
+    required String bookingId,
+    required String customerId,
+    required int rating,
+    String comment = '',
+    List<String> traits = const [],
+    List<String> photoPaths = const [],
+  }) async {
     // Worker reviews customer — after job completion
     emit(state.copyWith(status: ActiveJobStatus.loading));
     try {
       await ReviewsApiRepository().submit(
         bookingId: bookingId,
-        workerId: customerId, // reviewing the customer
+        workerId: customerId,
         rating: rating,
         comment: comment,
         traits: traits,
+        photoPaths: photoPaths,
+        reviewerRole: 'worker',
       );
       await AppPreferences.instance.setActiveWorkerJobId(null);
       emit(state.copyWith(status: ActiveJobStatus.reviewSubmitted));

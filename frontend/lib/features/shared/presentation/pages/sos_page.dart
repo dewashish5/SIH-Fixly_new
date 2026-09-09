@@ -3,11 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_radius.dart';
-import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/utils/toast_utils.dart';
+import '../../../auth/presentation/cubit/app_session_cubit.dart';
+import '../../../worker/presentation/widgets/worker_sos_sheet.dart';
 import '../cubit/sos_cubit.dart';
 
 class SosPage extends StatelessWidget {
@@ -125,35 +125,48 @@ class _SosPageView extends StatelessWidget {
                   children: [
                     const Icon(Icons.warning_amber_rounded, size: 48, color: Colors.white),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Need Immediate Help?',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Broadcast an emergency booking to all nearby workers. They will be alerted instantly.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () => _showBookingSheet(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.full),
-                        ),
-                      ),
-                      child: const Text(
-                        'Create Emergency Booking',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
+                    Builder(
+                      builder: (ctx) {
+                        final isWorker = ctx.watch<AppSessionCubit>().state.role == 'worker';
+                        return Column(
+                          children: [
+                            Text(
+                              isWorker ? 'Worker Safety Support' : 'Need Immediate Help?',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              isWorker
+                                  ? 'Connect directly with the Federation Safety Response Cell or National Emergency 112.'
+                                  : 'Broadcast an emergency booking to all nearby workers. They will be alerted instantly.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white70, fontSize: 14),
+                            ),
+                            const SizedBox(height: 20),
+                            ElevatedButton(
+                              onPressed: isWorker
+                                  ? () => WorkerSosSheet.show(context)
+                                  : () => _showBookingSheet(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.red,
+                                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                ),
+                              ),
+                              child: Text(
+                                isWorker ? 'Open Worker Safety Helplines' : 'Create Emergency Booking',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),

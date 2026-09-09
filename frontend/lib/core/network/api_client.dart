@@ -327,8 +327,8 @@ class ApiServices {
     // ignore: avoid_print — intentional boot diagnostic for DevTools Network failures
     print('Fixly API_BASE_URL=${ApiConfig.baseUrl}');
 
-    // Fast-probe reachable host in background
-    _autoDiscoverHost();
+    // Fast-probe reachable host
+    await _autoDiscoverHost();
   }
 
   static Future<void> _autoDiscoverHost() async {

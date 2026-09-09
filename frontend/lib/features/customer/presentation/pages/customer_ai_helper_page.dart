@@ -9,8 +9,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/theme_x.dart';
+import '../../../../core/location/app_location.dart';
 import '../../../../services/speech_service.dart';
 import '../../../ai/data/ai_api_repository.dart';
+import '../../../auth/presentation/cubit/app_session_cubit.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 enum LiveVoiceState { listening, thinking, speaking, paused }
 
@@ -23,6 +26,9 @@ class _ChatMessage {
     this.action,
     this.booking,
     this.bookings = const [],
+    this.workers = const [],
+    this.estimate,
+    this.policy,
     this.category,
     this.imagePath,
   });
@@ -34,6 +40,9 @@ class _ChatMessage {
   final String? action;
   final Map<String, dynamic>? booking;
   final List<dynamic> bookings;
+  final List<dynamic> workers;
+  final Map<String, dynamic>? estimate;
+  final Map<String, dynamic>? policy;
   final String? category;
   final String? imagePath;
 }
@@ -180,14 +189,60 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
         });
       } else {
         // Conversational Agent (Flexi AI)
+        List<double>? coords;
+        if (AppLocation.instance.hasFix) {
+          coords = [
+            AppLocation.instance.requireLng,
+            AppLocation.instance.requireLat,
+          ];
+        }
+        final address = AppLocation.instance.addressLabel;
+        final lang = context.read<AppSessionCubit>().state.locale;
+
+        debugPrint('\n================================================================');
+        debugPrint('🗣️ [CUSTOMER TALKING / SENT TO AI]');
+        debugPrint('💬 Text:       "$query"');
+        debugPrint('🌐 Language:   $lang');
+        debugPrint('📍 Coords:     $coords');
+        debugPrint('🏠 Address:    "$address"');
+        debugPrint('🧠 State:      $_conversationState');
+        debugPrint('----------------------------------------------------------------');
+
         final res = await AiApiRepository().chatWithAgent(
           message: query,
           conversationState: _conversationState,
+          language: lang,
+          coordinates: coords,
+          addressLine: address,
         );
 
+        debugPrint('🤖 [AI AGENT REPLY RECEIVED]');
+        debugPrint('⚡ Action:     ${res.action}');
+        debugPrint('🗣️ Reply:      "${res.reply}"');
+        debugPrint('📊 Next State: ${res.state}');
+        if (res.workers.isNotEmpty) {
+          debugPrint('👷 Workers:    ${res.workers.length} online workers received');
+        }
+        if (res.estimate != null) {
+          debugPrint('💰 Estimate:   ₹${res.estimate!['totalAmount']} (Base: ₹${res.estimate!['baseServiceFee']})');
+        }
+        debugPrint('================================================================\n');
+
         if (!mounted) return;
-        setState(() {
+
+        // Session Handling
+        if (res.action == 'SESSION_EXPIRED') {
+          _conversationState = {};
+        } else if (res.action == 'SESSION_ABORTED') {
+          _conversationState = {};
+          if (_isLiveMode) {
+            _closeLiveMode();
+          }
+        } else {
           _conversationState = res.state;
+        }
+
+        setState(() {
           _messages.removeLast();
           _messages.add(
             _ChatMessage(
@@ -197,6 +252,9 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
               action: res.action,
               booking: res.booking,
               bookings: res.bookings,
+              workers: res.workers,
+              estimate: res.estimate,
+              policy: res.policy,
               category: res.state['category']?.toString(),
             ),
           );
@@ -208,7 +266,30 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
 
         // If Live Mode is active, speak the AI reply aloud and cycle back to listening
         if (_isLiveMode) {
-          _speakLiveAiReply(res.reply);
+          _speakLiveAiReply(
+            res.reply,
+            onComplete: () {
+              if (res.action == 'BOOKING_CREATED') {
+                final bookingId = res.booking?['bookingId'] ?? res.booking?['_id'];
+                _closeLiveMode();
+                if (bookingId != null) {
+                  context.push('${RouteNames.customerTracking}?bookingId=$bookingId');
+                } else {
+                  context.push(RouteNames.customerTracking);
+                }
+              }
+            },
+          );
+        } else if (res.action == 'BOOKING_CREATED') {
+          final bookingId = res.booking?['bookingId'] ?? res.booking?['_id'];
+          Future.delayed(const Duration(milliseconds: 1200), () {
+            if (!mounted) return;
+            if (bookingId != null) {
+              context.push('${RouteNames.customerTracking}?bookingId=$bookingId');
+            } else {
+              context.push(RouteNames.customerTracking);
+            }
+          });
         }
       }
     } catch (e) {
@@ -245,6 +326,12 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
 
   List<String> _generateFallbackSuggestions(String? action, String reply) {
     final lower = reply.toLowerCase();
+    if (action == 'SESSION_EXPIRED') {
+      return ['💧 Tap leaking in bathroom', '⚡ Switch sparking', '🧹 Deep cleaning', '📦 Check booking status'];
+    }
+    if (action == 'SESSION_ABORTED') {
+      return ['Need a plumber', 'Need an electrician', 'Deep cleaning', 'Help'];
+    }
     if (action == 'BOOKING_CREATED' || lower.contains('confirmed')) {
       return ['Track worker arrival', 'View my bookings', 'Book another service'];
     }
@@ -326,6 +413,7 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
       onResult: (finalText) {
         if (!mounted || !_isLiveMode) return;
         if (finalText.trim().isNotEmpty) {
+          debugPrint('🎤 [VOICE STT FINAL] Recognized: "$finalText"');
           setState(() {
             _liveSpokenText = finalText;
             _liveVoiceState = LiveVoiceState.thinking;
@@ -336,6 +424,7 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
       onListeningChanged: (listening) {
         if (!listening && mounted && _isLiveMode && _liveVoiceState == LiveVoiceState.listening) {
           if (_liveSpokenText.trim().isNotEmpty) {
+            debugPrint('🎤 [VOICE STT SILENCE END] Recognized: "$_liveSpokenText"');
             setState(() => _liveVoiceState = LiveVoiceState.thinking);
             _sendMessage(_liveSpokenText);
           }
@@ -344,8 +433,11 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
     );
   }
 
-  void _speakLiveAiReply(String replyText) {
+  void _speakLiveAiReply(String replyText, {VoidCallback? onComplete}) {
     if (!_isLiveMode) return;
+
+    final lang = _conversationState['language'] == 'hi' ? 'hi-IN' : 'en-IN';
+    debugPrint('🔊 [VOICE TTS OUT] Speaking: "$replyText" ($lang)');
 
     setState(() {
       _liveVoiceState = LiveVoiceState.speaking;
@@ -354,10 +446,15 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
 
     _speechService.speak(
       replyText,
+      language: lang,
       onComplete: () {
         if (!mounted || !_isLiveMode) return;
-        // Automatically switch back to listening for natural conversational exchange!
-        _listenInLiveMode();
+        if (onComplete != null) {
+          onComplete();
+        } else {
+          // Automatically switch back to listening for natural conversational exchange!
+          _listenInLiveMode();
+        }
       },
     );
   }
@@ -701,6 +798,22 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
                         ),
                 ),
 
+                // Booking Type Selection Quick Action Chips
+                if (msg.action == 'PROMPT_BOOKING_TYPE')
+                  _buildBookingTypeChips(),
+
+                // Worker Carousel Card
+                if (msg.workers.isNotEmpty)
+                  _buildWorkerCarouselCard(msg.workers),
+
+                // Strict Zero Workers Available Warning Card
+                if (msg.action == 'NO_WORKERS_AVAILABLE')
+                  _buildNoWorkersWarningCard(),
+
+                // Estimate & Cooperative Fair Wage Policy Card
+                if (msg.estimate != null && msg.booking == null)
+                  _buildEstimateAndPolicyCard(msg.estimate!, msg.policy),
+
                 // Booking Created Action Card
                 if (msg.booking != null) _buildBookingCreatedCard(msg.booking!),
 
@@ -740,6 +853,350 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
         ],
       ),
     ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.08, end: 0);
+  }
+
+  // --- Booking Type Selection Chips ---
+  Widget _buildBookingTypeChips() {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: [
+          ActionChip(
+            avatar: const Text('⚡', style: TextStyle(fontSize: 14)),
+            label: const Text('Emergency SOS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+            backgroundColor: const Color(0xFFEF4444).withValues(alpha: 0.12),
+            side: const BorderSide(color: Color(0xFFEF4444), width: 1.2),
+            onPressed: () => _sendMessage('⚡ Emergency SOS chahiye turant'),
+          ),
+          ActionChip(
+            avatar: const Text('⏱️', style: TextStyle(fontSize: 14)),
+            label: const Text('Standard Booking', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+            backgroundColor: context.scheme.primary.withValues(alpha: 0.12),
+            side: BorderSide(color: context.scheme.primary, width: 1.2),
+            onPressed: () => _sendMessage('Standard booking kardo'),
+          ),
+          ActionChip(
+            avatar: const Text('📅', style: TextStyle(fontSize: 14)),
+            label: const Text('Schedule Later', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+            backgroundColor: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+            side: const BorderSide(color: Color(0xFF8B5CF6), width: 1.2),
+            onPressed: () => _sendMessage('Schedule for later time'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Worker Selection Carousel Card ---
+  Widget _buildWorkerCarouselCard(List<dynamic> workers) {
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      height: 195,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: workers.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, i) {
+          final w = workers[i] as Map<String, dynamic>;
+          final name = w['name']?.toString() ?? 'Verified Worker';
+          final rate = w['hourlyRate'] ?? 199;
+          final rating = (w['rating'] as num?)?.toDouble() ?? 4.8;
+          final jobs = w['ratingCount'] ?? 10;
+          final society = w['society']?.toString() ?? 'Fixly Cooperative';
+          final avatarUrl = w['avatar']?.toString();
+
+          return Container(
+            width: 220,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: context.isDark ? context.scheme.surfaceContainerHighest : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: context.scheme.primary.withValues(alpha: 0.35), width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: context.scheme.primary.withValues(alpha: 0.15),
+                      backgroundImage: (avatarUrl != null && avatarUrl.startsWith('http')) ? NetworkImage(avatarUrl) : null,
+                      child: (avatarUrl == null || !avatarUrl.startsWith('http'))
+                          ? Icon(Icons.person, color: context.scheme.primary)
+                          : null,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  name,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              const Icon(Icons.verified, size: 14, color: Color(0xFF10B981)),
+                            ],
+                          ),
+                          Text(
+                            society,
+                            style: TextStyle(fontSize: 10.5, color: context.scheme.onSurface.withValues(alpha: 0.6)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+                        const SizedBox(width: 2),
+                        Text(
+                          '$rating ($jobs)',
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '₹$rate/hr',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: context.scheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 34,
+                  child: ElevatedButton(
+                    onPressed: () => _sendMessage('Select worker: $name (ID: ${w['_id']})'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: context.scheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: const Text('Select Worker', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // --- Strict Zero Workers Warning Card ---
+  Widget _buildNoWorkersWarningCard() {
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 18),
+              SizedBox(width: 6),
+              Text(
+                'No Online Workers Available',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF92400E)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'All certified workers in this category are currently offline or busy. To avoid ghost bookings, Fixly requires verified worker availability.',
+            style: TextStyle(fontSize: 11.5, color: Color(0xFF78350F)),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.tonal(
+                  onPressed: () => _sendMessage('Schedule for later'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    backgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                  ),
+                  child: const Text('📅 Schedule for Later', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF92400E))),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => _sendMessage('Try another service'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    backgroundColor: const Color(0xFFD97706),
+                  ),
+                  child: const Text('Other Services', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Estimate & Cooperative Fair Wage Policy Card ---
+  Widget _buildEstimateAndPolicyCard(Map<String, dynamic> estimate, Map<String, dynamic>? policy) {
+    final basePrice = estimate['baseServiceFee'] ?? 150;
+    final urgentFee = estimate['urgentFee'] ?? 0;
+    final platformFee = estimate['platformFee'] ?? 0;
+    final total = estimate['totalAmount'] ?? (basePrice + urgentFee + platformFee);
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.isDark ? context.scheme.surfaceContainerHighest : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.receipt_long_rounded, color: Color(0xFF3B82F6), size: 18),
+              SizedBox(width: 6),
+              Text(
+                'Price Estimate & Fair Wage Breakdown',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E40AF)),
+              ),
+            ],
+          ),
+          const Divider(height: 16),
+          _buildEstimateRow('Base Visiting / Diagnosis Fee', '₹$basePrice'),
+          if (urgentFee > 0)
+            _buildEstimateRow('Emergency SOS Priority Surcharge', '+₹$urgentFee', isHighlight: true),
+          _buildEstimateRow('Fixly Platform Fee (0% Middleman)', '₹$platformFee', isGreen: true),
+          const Divider(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Total Estimated Amount', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+              Text('₹$total', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: Color(0xFF047857))),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: const Color(0xFF10B981).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.shield_rounded, color: Color(0xFF10B981), size: 16),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Fixly Fair Wage & Welfare Guarantee',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5, color: Color(0xFF065F46)),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '100% of service fee paid to worker • 5% Social Security & Medical Welfare fund included.',
+                        style: TextStyle(fontSize: 10.5, color: context.scheme.onSurface.withValues(alpha: 0.75)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _sendMessage('Cancel'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    side: BorderSide(color: Colors.grey.shade400),
+                  ),
+                  child: const Text('Cancel', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: () => _sendMessage('Yes, confirm booking'),
+                  icon: const Icon(Icons.check, size: 16),
+                  label: const Text('Confirm Booking', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    backgroundColor: const Color(0xFF10B981),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEstimateRow(String label, String value, {bool isHighlight = false, bool isGreen = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontSize: 12, color: context.scheme.onSurface.withValues(alpha: 0.7))),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isHighlight
+                  ? const Color(0xFFDC2626)
+                  : (isGreen ? const Color(0xFF059669) : context.scheme.onSurface),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // --- Booking Created Rich Card ---

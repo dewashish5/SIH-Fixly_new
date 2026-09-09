@@ -150,6 +150,20 @@ export const createBooking = async (req, res) => {
             if (worker?.workerProfile?.rate) {
                 baseFee = worker.workerProfile.rate;
             }
+        } else {
+            // Auto-dispatch mode: verify at least 1 verified eligible worker is available in radius
+            const { findEligibleWorkerIds } = await import('../services/eligibleWorkers.js');
+            const eligibleWorkerIds = await findEligibleWorkerIds({
+                serviceAddress: { location: { type: 'Point', coordinates: coords } }
+            }, service?.category);
+
+            if (!eligibleWorkerIds || eligibleWorkerIds.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    code: 'NO_WORKERS_AVAILABLE',
+                    message: 'Aapke kshetra me is samay koi satyaprit worker uplabdh nahi hai. Kripya kch der baad koshish karein ya aage ka samay schedule karein.'
+                });
+            }
         }
         
         const Cooperative = (await import('../models/Cooperative.js')).default;

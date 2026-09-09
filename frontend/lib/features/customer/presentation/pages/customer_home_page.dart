@@ -23,6 +23,7 @@ import '../../../../core/widgets/fixly_map_view.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../../../shared/widgets/category_icon_tile.dart';
+import '../../../ai/presentation/widgets/hey_flexi_voice_sheet.dart';
 import '../cubit/customer_home_cubit.dart';
 
 class CustomerHomePage extends StatelessWidget {
@@ -168,6 +169,8 @@ class _CustomerHomeViewState extends State<_CustomerHomeView>
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFF080F1E),
+        floatingActionButton: _buildHeyFlexiFab(context),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         body: BlocBuilder<CustomerHomeCubit, CustomerHomeState>(
           builder: (context, state) {
             // Filter popular services if a category is selected
@@ -831,6 +834,65 @@ class _CustomerHomeViewState extends State<_CustomerHomeView>
             child: const Text('Show All Services'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeyFlexiFab(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF06B6D4), Color(0xFF6366F1)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF06B6D4).withValues(alpha: 0.45),
+            blurRadius: 16,
+            spreadRadius: 2,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(30),
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            HeyFlexiVoiceSheet.show(context);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.mic_rounded,
+                    color: Color(0xFF0F172A),
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Hey Flexi',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

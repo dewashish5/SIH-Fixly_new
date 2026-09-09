@@ -1,7 +1,40 @@
-# Task List: Comprehensive Backend Integration Guide Rewrite
+# Tasks: Run Backend, Admin Panel, and Flutter App
 
-- [x] Research backend changes in commit `70ceced78dbfa61b7ad8ffaa4e63e2bad09e42c8` <!-- id: 0 -->
-- [x] Create implementation plan for rewritten `backend_changes.md` with full code and integration details <!-- id: 1 -->
-- [x] Obtain user approval <!-- id: 2 -->
-- [x] Rewrite `backend_changes.md` with complete code, rationale, flow, and integration instructions <!-- id: 3 -->
-- [x] Verify completeness against all 11 backend files changed in commit `70ceced` <!-- id: 4 -->
+- [x] 1. Start Backend Server (`npm start` on port 8005) <!-- id: 0 -->
+- [x] 2. Start Admin Panel (`npm run dev` on port 5173 - supports both Admin and Super Admin) <!-- id: 1 -->
+- [x] 3. Run Flutter App (Compiling incremental build for iPhone 17 Simulator) <!-- id: 2 -->
+- [x] 4. Fix compilation error in `api_config.dart` & `api_client.dart` <!-- id: 3 -->
+- [x] 5. Prevent iOS Simulator FCM token unhandled crash in `notification_service.dart` <!-- id: 4 -->
+- [x] 6. Fix Android compileSdk checkDebugAarMetadata failure for flutter_tts <!-- id: 5 -->
+- [x] 7. Implement "Hey Flexi" Conversational AI Voice/Text Agent Flow <!-- id: 6 -->
+  - [x] 7.1 Update `AiApiRepository` to send exact coordinates, addressLine, and language <!-- id: 7 -->
+  - [x] 7.2 Create `HeyFlexiVoiceSheet` modal with STT, TTS, multi-turn state, session handling <!-- id: 8 -->
+  - [x] 7.3 Add Floating Mic / "Hey Flexi" button to `CustomerHomePage` <!-- id: 9 -->
+  - [x] 7.4 Enhance `CustomerAiHelperPage` to support session expiration, session aborted, and booking auto-navigation <!-- id: 10 -->
+  - [x] 7.5 Verify compilation & build <!-- id: 11 -->
+- [x] 8. Android & iOS Speech Permissions & Human-Talking Flow Integration <!-- id: 12 -->
+  - [x] 8.1 Add `<action android:name="android.speech.RecognitionService" />` to AndroidManifest `<queries>` <!-- id: 13 -->
+  - [x] 8.2 Add `NSMicrophoneUsageDescription` & `NSSpeechRecognitionUsageDescription` to iOS Info.plist <!-- id: 14 -->
+  - [x] 8.3 Integrate `permission_handler` mic & speech request in `SpeechService.initialize()` <!-- id: 15 -->
+  - [x] 8.4 Verify human-talking continuous conversation flow in `HeyFlexiVoiceSheet` and `CustomerAiHelperPage` <!-- id: 16 -->
+  - [x] 9. Create Dockerfile and docker-compose.yml for Flutter project <!-- id: 18 -->
+  - [x] 9.1 Create frontend/Dockerfile using Flutter + Android SDK base <!-- id: 19 -->
+  - [x] 9.2 Create frontend/docker-compose.yml with caching and volume mounts <!-- id: 20 -->
+- [x] 10. Fix Cannot GET /api/welfare/resources <!-- id: 22 -->
+  - [x] 10.1 Add GET /resources route to backend/routes/welfare-routes.js with optionalProtect <!-- id: 23 -->
+  - [x] 10.2 Update getWelfareResources in backend/controllers/welfareController.js to handle optional worker user <!-- id: 24 -->
+  - [x] 10.3 Verify endpoint with curl and test with/without auth <!-- id: 25 -->
+- [x] 11. Revamp Worker Dashboard UI & Flow <!-- id: 26 -->
+  - [x] 11.1 Update WorkerDashboardState & Cubit with incoming jobs list, direct accept/decline actions, and welfare info <!-- id: 27 -->
+  - [x] 11.2 Create Worker Emergency SOS modal tailored specifically for workers (Helplines 112/108/Federation/Safety Response) <!-- id: 28 -->
+  - [x] 11.3 Redesign WorkerDashboardPage with high-craft UI, live status hero, direct job accept cards, active job tracker, metrics, and tools <!-- id: 29 -->
+  - [x] 11.4 Verify compilation and test build <!-- id: 30 -->
+- [x] 12. Fix Worker Review Cast Error & Add Optional Photo/Description in Rating Page <!-- id: 31 -->
+  - [x] 12.1 Update backend/controllers/reviewController.js to resolve booking worker/customer IDs and support photos/description <!-- id: 32 -->
+  - [x] 12.2 Update ActiveJobCubit & ReviewsApiRepository to pass reviewerRole and photoPaths <!-- id: 33 -->
+  - [x] 12.3 Update WorkerRatingPage with image picker (camera/gallery, up to 3 optional photos) and description text field <!-- id: 34 -->
+  - [x] 12.4 Verify Dart compilation and test review submission <!-- id: 35 -->
+- [x] 13. Fix Hot Restart Routing to "No Active Job" <!-- id: 36 -->
+  - [x] 13.1 Update AppSessionCubit.postAuthRoute to route verified workers to Worker Dashboard by default <!-- id: 37 -->
+  - [x] 13.2 Update WorkerActiveJobPage to handle null job with auto-redirect, clear preference, and "Go to Dashboard" button <!-- id: 38 -->
+  - [x] 13.3 Verify Dart compilation and test flow <!-- id: 39 -->

@@ -71,11 +71,17 @@ export const acceptBooking = async (req, res) => {
         // Step 4: Real-time Broadcast via Socket.io
         const io = req.app.get('io');
         if (io) {
+            const targetRooms = getTargetBookingRooms(bookingId);
+            const workerUser = await User.findById(workerId).select('name phone avatar workerProfile rating').lean();
+
             // A. Notify specific booking room (customer & accepted worker)
-            io.to(`booking_${bookingId}`).emit('booking_status_update', {
+            io.to(targetRooms).emit('booking_status_update', {
                 bookingId,
                 status: 'APPROVED',
-                workerId
+                workerId,
+                worker: workerUser,
+                arrivalOtp: booking.arrivalOtp,
+                otp: booking.arrivalOtp
             });
 
             // B. Broadcast to ALL workers in real-time so their UI instantly drops/hides this booking card

@@ -94,24 +94,35 @@ import User from '../models/User.js';
 
 export const getWelfareResources = async (req, res) => {
     try {
-        if (req.user.role !== 'worker') return fail(res, 403, 'FORBIDDEN', 'Worker role required');
+        let federationId = null;
+        let eshramUan = null;
+
+        if (req.user?.id) {
+            const worker = await User.findById(req.user.id);
+            if (worker) {
+                federationId = worker.federation || null;
+                eshramUan = worker.workerProfile?.eshramUan;
+            }
+        }
         
-        const worker = await User.findById(req.user.id);
-        if (!worker) return fail(res, 404, 'NOT_FOUND', 'Worker not found');
-        
-        const federationId = worker.federation || null;
-        
-        const resources = await WelfareResource.find({
+        const filter = {
             isActive: true,
-            targetAudience: { $in: ['all', 'worker'] },
-            $or: [
+            targetAudience: { $in: ['all', 'worker'] }
+        };
+
+        if (federationId) {
+            filter.$or = [
                 { federation: null },
                 { federation: federationId }
-            ]
-        }).sort({ priority: -1, createdAt: -1 }).lean();
+            ];
+        } else {
+            filter.federation = null;
+        }
+
+        const resources = await WelfareResource.find(filter).sort({ priority: -1, createdAt: -1 }).lean();
         
         // E-Shram / Insurance logic
-        if (worker.workerProfile?.eshramUan) {
+        if (eshramUan) {
             resources.unshift({
                 _id: 'auto-insurance-link',
                 title: 'View Your Insurance Policy',

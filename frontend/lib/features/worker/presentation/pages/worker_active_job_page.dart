@@ -57,6 +57,8 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
       listener: (context, state) {
         if (state.status == ActiveJobStatus.reviewSubmitted) {
           context.go(RouteNames.workerDashboard);
+        } else if (state.status == ActiveJobStatus.loaded && state.job == null) {
+          context.go(RouteNames.workerDashboard);
         } else if (state.status == ActiveJobStatus.completed) {
           if (state.job != null) {
             context.push(
@@ -77,9 +79,51 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
 
         final job = state.job;
         if (job == null) {
-          return const AppScaffold(
+          return AppScaffold(
             title: 'Active Job',
-            body: Center(child: Text('No active job')),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.work_off_outlined, size: 54, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'No Active Job',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'You do not have any ongoing booking right now.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Theme.of(context).hintColor, fontSize: 13),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => context.go(RouteNames.workerDashboard),
+                      icon: const Icon(Icons.dashboard_rounded),
+                      label: const Text('Back to Dashboard'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
 

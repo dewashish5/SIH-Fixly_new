@@ -10,8 +10,11 @@ class WorkerDashboardState extends Equatable {
     this.completedJobs = 0,
     this.reliabilityScore = 0,
     this.incomingCount = 0,
+    this.incomingJobs = const [],
     this.isAvailable = false,
     this.activeJob,
+    this.acceptingJobId,
+    this.welfareFund = 0,
     this.error,
   });
 
@@ -21,8 +24,11 @@ class WorkerDashboardState extends Equatable {
   final int completedJobs;
   final int reliabilityScore;
   final int incomingCount;
+  final List<WorkerJob> incomingJobs;
   final bool isAvailable;
   final WorkerJob? activeJob;
+  final String? acceptingJobId;
+  final double welfareFund;
   final String? error;
 
   WorkerDashboardState copyWith({
@@ -32,8 +38,12 @@ class WorkerDashboardState extends Equatable {
     int? completedJobs,
     int? reliabilityScore,
     int? incomingCount,
+    List<WorkerJob>? incomingJobs,
     bool? isAvailable,
     WorkerJob? activeJob,
+    String? acceptingJobId,
+    bool clearAcceptingJobId = false,
+    double? welfareFund,
     String? error,
     bool clearError = false,
   }) {
@@ -44,8 +54,11 @@ class WorkerDashboardState extends Equatable {
       completedJobs: completedJobs ?? this.completedJobs,
       reliabilityScore: reliabilityScore ?? this.reliabilityScore,
       incomingCount: incomingCount ?? this.incomingCount,
+      incomingJobs: incomingJobs ?? this.incomingJobs,
       isAvailable: isAvailable ?? this.isAvailable,
       activeJob: activeJob ?? this.activeJob,
+      acceptingJobId: clearAcceptingJobId ? null : (acceptingJobId ?? this.acceptingJobId),
+      welfareFund: welfareFund ?? this.welfareFund,
       error: clearError ? null : (error ?? this.error),
     );
   }
@@ -58,8 +71,11 @@ class WorkerDashboardState extends Equatable {
         completedJobs,
         reliabilityScore,
         incomingCount,
+        incomingJobs,
         isAvailable,
         activeJob,
+        acceptingJobId,
+        welfareFund,
         error,
       ];
 }

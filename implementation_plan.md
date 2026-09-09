@@ -1,12 +1,41 @@
-# Implementation Plan: Comprehensive Backend Integration Guide Rewrite
+# Implementation Plan: "Hey Flexi" Conversational AI Voice/Text Agent
 
-Rewrite `backend_changes.md` to provide a complete, copy-paste ready, file-by-file integration guide for the backend developer managing the production backend repository.
+Implement complete "Hey Flexi" Conversational Voice & Text AI workflow per specification:
+1. Floating Mic / "Hey Flexi" Button on Customer Home.
+2. Full multi-turn state preservation (`conversationState`).
+3. STT (Speech-to-Text) + TTS (Flutter TTS) in Hindi (`'hi'`) and English (`'en'`).
+4. Location & Address payload delivery (`coordinates: [lng, lat]`, `addressLine`).
+5. Session handling (`SESSION_EXPIRED` resets state, `SESSION_ABORTED` dismisses modal/resets).
+6. Auto-navigation to Live Tracking (`RouteNames.customerTracking`) on `BOOKING_CREATED`.
 
 ## Proposed Changes
 
-### Documentation
+### AI Repository
+#### [MODIFY] [ai_api_repository.dart](file:///Users/dewashishhatekar/Developer/Projects/SIH-Fixly/frontend/lib/features/ai/data/ai_api_repository.dart)
+- Pass clean payload with `coordinates`, `addressLine`, and `language`.
+- Gracefully handle `state`, `action`, `booking`, `bookings`.
 
-#### [MODIFY] [backend_changes.md](file:///Users/dewashishhatekar/Developer/Projects/SIH-Fixly/backend_changes.md)
+### Permissions & Speech Integration
+#### [MODIFY] [AndroidManifest.xml](file:///Users/dewashishhatekar/Developer/Projects/SIH-Fixly/frontend/android/app/src/main/AndroidManifest.xml)
+- Add `<action android:name="android.speech.RecognitionService" />` inside `<queries>` for Android 11+ Google Speech Recognition access.
+- Add `<uses-permission android:name="android.permission.BLUETOOTH" />` & `<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />`.
+
+#### [MODIFY] [Info.plist](file:///Users/dewashishhatekar/Developer/Projects/SIH-Fixly/frontend/ios/Runner/Info.plist)
+- Add `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription`.
+
+#### [MODIFY] [speech_service.dart](file:///Users/dewashishhatekar/Developer/Projects/SIH-Fixly/frontend/lib/services/speech_service.dart)
+- Request `Permission.microphone` and `Permission.speech` on `initialize()` using `permission_handler`.
+- Configure natural human conversation mode (dynamic speech rate, auto locale, interrupt handling).
+
+### Customer Home Page
+#### [MODIFY] [customer_home_page.dart](file:///Users/dewashishhatekar/Developer/Projects/SIH-Fixly/frontend/lib/features/customer/presentation/pages/customer_home_page.dart)
+- Add Floating Mic / "Hey Flexi" Action Button with glowing pulse and tooltip.
+- Tapping triggers `HeyFlexiVoiceSheet.show(context)` to talk immediately.
+
+### Customer AI Helper Page
+#### [MODIFY] [customer_ai_helper_page.dart](file:///Users/dewashishhatekar/Developer/Projects/SIH-Fixly/frontend/lib/features/customer/presentation/pages/customer_ai_helper_page.dart)
+- Inject device GPS coordinates (`AppLocation.instance`) and locale language.
+- Implement session handling for `SESSION_EXPIRED`, `SESSION_ABORTED`, and `BOOKING_CREATED` auto-routing to tracking.
 
 Structure the document into:
 1. **Executive Summary & Scope**: Overview of commit `70ceced78dbfa61b7ad8ffaa4e63e2bad09e42c8`, file breakdown (11 backend files), architectural intent.

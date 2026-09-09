@@ -8,10 +8,12 @@ import 'api_config.dart';
 class LiveTrackingSocket {
   io.Socket? _socket;
   final _positions = StreamController<MapCoordinate>.broadcast();
+  final _bookingStatus = StreamController<Map<String, dynamic>>.broadcast();
   final _connectionState = StreamController<bool>.broadcast();
   bool _connected = false;
 
   Stream<MapCoordinate> get positions => _positions.stream;
+  Stream<Map<String, dynamic>> get bookingStatus => _bookingStatus.stream;
   Stream<bool> get connectionState => _connectionState.stream;
   bool get isConnected => _connected;
 
@@ -35,6 +37,12 @@ class LiveTrackingSocket {
       }
     }
 
+    void onStatus(dynamic value) {
+      if (value is Map && !_bookingStatus.isClosed) {
+        _bookingStatus.add(Map<String, dynamic>.from(value));
+      }
+    }
+
     // Register all tracking broadcast events
     for (final event in const [
       'live_tracking',
@@ -47,6 +55,15 @@ class LiveTrackingSocket {
       'locationUpdate',
     ]) {
       socket.on(event, onPosition);
+    }
+
+    for (final event in const [
+      'booking_status_update',
+      'booking:status',
+      'booking:claimed',
+      'status_update',
+    ]) {
+      socket.on(event, onStatus);
     }
 
     socket.onConnect((_) {

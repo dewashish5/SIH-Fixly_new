@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
@@ -18,11 +19,33 @@ class SpeechService {
 
   VoidCallback? _onSpeechComplete;
 
+  /// Request system permissions for microphone & speech recognition
+  Future<bool> requestPermissions() async {
+    try {
+      final micStatus = await Permission.microphone.status;
+      if (!micStatus.isGranted) {
+        await Permission.microphone.request();
+      }
+      final speechStatus = await Permission.speech.status;
+      if (!speechStatus.isGranted) {
+        await Permission.speech.request();
+      }
+      final micGranted = await Permission.microphone.isGranted;
+      final speechGranted = await Permission.speech.isGranted;
+      return micGranted && speechGranted;
+    } catch (e) {
+      debugPrint('Error requesting speech permissions: $e');
+      return false;
+    }
+  }
+
   /// Initialize the speech service
   Future<bool> initialize() async {
     if (_isInitialized) return true;
 
     try {
+      await requestPermissions();
+
       // Initialize speech-to-text
       bool sttAvailable = await _speech.initialize(
         onStatus: (val) => debugPrint('onStatus: $val'),
@@ -83,7 +106,7 @@ class SpeechService {
       _isListening = true;
       onListeningChanged(true);
 
-      bool available = await _speech.listen(
+      await _speech.listen(
         onResult: (val) {
           if (val.recognizedWords.isNotEmpty) {
             _lastWords = val.recognizedWords;
@@ -100,13 +123,9 @@ class SpeechService {
         ),
       );
 
-      if (!available) {
-        _isListening = false;
-        onListeningChanged(false);
-        return false;
-      }
-
-      return true;
+      _isListening = _speech.isListening;
+      onListeningChanged(_isListening);
+      return _isListening;
     } catch (e) {
       debugPrint('Error starting speech recognition: $e');
       _isListening = false;

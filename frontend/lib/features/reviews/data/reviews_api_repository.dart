@@ -24,6 +24,7 @@ class ReviewsApiRepository {
       'workerId': workerId,
       'rating': rating,
       'comment': comment,
+      'description': comment,
       'traits': traits.join(','),
       'reviewerRole': reviewerRole,
     };

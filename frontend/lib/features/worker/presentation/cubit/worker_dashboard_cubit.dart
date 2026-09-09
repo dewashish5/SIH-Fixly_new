@@ -80,8 +80,10 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
           completedJobs: (summary['completedJobs'] as num?)?.toInt() ?? 0,
           reliabilityScore: (reliability['score'] as num?)?.toInt() ?? 0,
           incomingCount: incoming.length,
+          incomingJobs: incoming,
           isAvailable: availability['isOnline'] == true,
           activeJob: active.isEmpty ? null : active.first,
+          welfareFund: (summary['welfareFund'] as num?)?.toDouble() ?? 5000.0,
         ),
       );
     } on ApiException catch (e) {
@@ -108,6 +110,7 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
           todayEarnings: (summary['today'] as num?)?.toDouble() ?? state.todayEarnings,
           completedJobs: (summary['completedJobs'] as num?)?.toInt() ?? state.completedJobs,
           incomingCount: incoming.length,
+          incomingJobs: incoming,
           activeJob: active.isEmpty ? null : active.first,
         ));
       }
@@ -121,6 +124,42 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
       emit(state.copyWith(isAvailable: online));
     } on ApiException catch (e) {
       emit(state.copyWith(error: e.message));
+    }
+  }
+
+  Future<bool> acceptJob(String bookingId) async {
+    emit(state.copyWith(acceptingJobId: bookingId, clearError: true));
+    try {
+      await _bookings.accept(bookingId);
+      final updatedIncoming = state.incomingJobs.where((j) => j.id != bookingId).toList();
+      emit(state.copyWith(
+        incomingJobs: updatedIncoming,
+        incomingCount: updatedIncoming.length,
+        clearAcceptingJobId: true,
+      ));
+      await _silentRefresh();
+      return true;
+    } on ApiException catch (e) {
+      emit(state.copyWith(clearAcceptingJobId: true, error: e.message));
+      return false;
+    } catch (e) {
+      emit(state.copyWith(clearAcceptingJobId: true, error: e.toString()));
+      return false;
+    }
+  }
+
+  Future<bool> declineJob(String bookingId, {String reason = 'OTHER'}) async {
+    try {
+      await _bookings.decline(bookingId, reason: reason);
+      final updatedIncoming = state.incomingJobs.where((j) => j.id != bookingId).toList();
+      emit(state.copyWith(
+        incomingJobs: updatedIncoming,
+        incomingCount: updatedIncoming.length,
+      ));
+      return true;
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+      return false;
     }
   }
 

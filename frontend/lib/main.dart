@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'app/app.dart';
+import 'core/config/feature_flag.dart';
 import 'core/firebase/firebase_bootstrap.dart';
 import 'core/network/api_client.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/preferences/app_preferences.dart';
+import 'core/services/mock_worker_simulator_service.dart';
 
 Future<void> main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -18,5 +20,12 @@ Future<void> main() async {
   }
   await ApiServices.init();
   await NotificationService.instance.initialize();
+
+  // Mock worker (Vaibhav Jain) simulation toggle
+  if (kEnableMockWorkerSimulation) {
+    MockWorkerSimulatorService.instance.init();
+  }
+
   runApp(const App());
 }
+

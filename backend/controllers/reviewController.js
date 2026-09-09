@@ -6,11 +6,35 @@ import { uploadMulterFiles } from '../utils/cloudinary.js';
 // Screen: Rating & Review Submission (supports customer→worker and worker→customer)
 export const submitReview = async (req, res) => {
     try {
-        const { bookingId: bodyBookingId, workerId, rating, comment, traits, reviewerRole: bodyRole } = req.body;
+        const { bookingId: bodyBookingId, workerId: rawWorkerId, rating, comment, description, traits, reviewerRole: bodyRole } = req.body;
         const bookingId = req.params.bookingId || bodyBookingId;
 
-        // Determine reviewer role from body or from user's role
-        const reviewerRole = bodyRole === 'worker' ? 'worker' : 'customer';
+        // Fetch booking to reliably determine worker & customer ObjectIds
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        const isWorker = req.user.role === 'worker' || bodyRole === 'worker' || (booking.worker && String(booking.worker) === String(req.user.id));
+        const reviewerRole = isWorker ? 'worker' : 'customer';
+
+        let customerId;
+        let workerId;
+
+        if (isWorker) {
+            workerId = booking.worker || req.user.id;
+            customerId = booking.customer || req.body.customerId;
+        } else {
+            customerId = booking.customer || req.user.id;
+            workerId = (rawWorkerId && String(rawWorkerId).trim() !== '') ? rawWorkerId : (booking.worker || req.body.workerId);
+        }
+
+        if (!customerId) {
+            return res.status(400).json({ success: false, message: 'Customer ID could not be identified for this booking' });
+        }
+        if (!workerId) {
+            return res.status(400).json({ success: false, message: 'Worker ID could not be identified for this booking' });
+        }
 
         let badgesGiven = traits;
         if (typeof traits === 'string') {
@@ -18,17 +42,28 @@ export const submitReview = async (req, res) => {
         }
 
         let photos = [];
-        if (req.files?.length) {
-            photos = await uploadMulterFiles(req.files, 'gigconnect/reviews');
+        if (Array.isArray(req.body.photos)) {
+            photos = req.body.photos;
+        } else if (Array.isArray(req.body.images)) {
+            photos = req.body.images;
+        } else if (typeof req.body.photo === 'string' && req.body.photo) {
+            photos = [req.body.photo];
         }
 
+        if (req.files?.length) {
+            const uploaded = await uploadMulterFiles(req.files, 'gigconnect/reviews');
+            photos = [...photos, ...uploaded];
+        }
+
+        const feedback = comment || description || req.body.feedback || '';
+
         const review = await Review.create({
-            booking: bookingId,
-            customer: req.user.id,
+            booking: booking._id,
+            customer: customerId,
             worker: workerId,
             reviewerRole,
-            rating,
-            feedback: comment,
+            rating: Number(rating) || 5,
+            feedback,
             badgesGiven: badgesGiven || [],
             photos,
         });
@@ -48,7 +83,7 @@ export const submitReview = async (req, res) => {
             }
         }
 
-        await Booking.findByIdAndUpdate(bookingId, { isReviewed: true });
+        await Booking.findByIdAndUpdate(booking._id, { isReviewed: true });
 
         return res.status(201).json({ success: true, message: 'Review submitted successfully', review });
     } catch (error) {

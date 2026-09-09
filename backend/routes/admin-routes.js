@@ -64,6 +64,9 @@ import {
     createEmergencyContact,
     updateEmergencyContact,
     deleteEmergencyContact,
+} from '../controllers/emergencyController.js';
+
+import {
     adminListTickets,
     getTicket,
     adminPatchTicket,

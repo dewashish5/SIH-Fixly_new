@@ -228,10 +228,14 @@ class NotificationService {
   }
 
   Future<void> _syncToken({required String locale}) async {
-    final token = await _messaging.getToken();
-    if (token == null || token.isEmpty) return;
-    _currentToken = token;
-    await _register(token, locale: locale);
+    try {
+      final token = await _messaging.getToken();
+      if (token == null || token.isEmpty) return;
+      _currentToken = token;
+      await _register(token, locale: locale);
+    } catch (error) {
+      debugPrint('FCM token sync skipped (expected on iOS Simulator): $error');
+    }
   }
 
   Future<void> _register(String token, {String? locale}) async {
