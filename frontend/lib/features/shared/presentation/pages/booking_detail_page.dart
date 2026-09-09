@@ -2530,6 +2530,7 @@ class _StatusActionsState extends State<_StatusActions> {
         );
 
       case BookingStatus.completed:
+      case BookingStatus.rating:
       case BookingStatus.paid:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2633,6 +2634,7 @@ _StatusBadgeConfig _getStatusBadge(BookingStatus status, {required bool isWorker
         icon: Icons.construction_rounded,
       );
     case BookingStatus.completed:
+      case BookingStatus.rating:
       return const _StatusBadgeConfig(
         label: 'Completed',
         color: Color(0xFF059669),

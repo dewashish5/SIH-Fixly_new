@@ -35,14 +35,7 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
     );
     if (!mounted) return;
     if (success) {
-      final bookingId = cubit.state.booking?.id ?? widget.bookingId;
-      if (bookingId != null && bookingId.isNotEmpty) {
-        context.pushReplacement(
-          RouteNames.customerInvoice.replaceFirst(':id', bookingId),
-        );
-      } else {
-        context.pushReplacement(RouteNames.customerRating);
-      }
+      context.pushReplacement(RouteNames.customerRating);
       return;
     }
     final error = cubit.state.errorMessage;
@@ -58,15 +51,8 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
           previous.step != current.step ||
           previous.booking?.paymentStatus != current.booking?.paymentStatus,
       listener: (context, state) {
-        if (state.step == BookingStatus.paid || state.booking?.paymentStatus == 'PAID') {
-          final bookingId = state.booking?.id ?? widget.bookingId;
-          if (bookingId != null && bookingId.isNotEmpty) {
-            context.pushReplacement(
-              RouteNames.customerInvoice.replaceFirst(':id', bookingId),
-            );
-          } else {
-            context.pushReplacement(RouteNames.customerRating);
-          }
+        if (state.step == BookingStatus.rating || state.step == BookingStatus.paid || state.booking?.paymentStatus == 'PAID') {
+          context.pushReplacement(RouteNames.customerRating);
         }
       },
       child: AppScaffold(

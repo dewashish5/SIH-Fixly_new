@@ -11,7 +11,8 @@ import {
     resetPassword,
     logoutUser,
     getMe,
-    updateUserProfile
+    updateUserProfile,
+    registerFederation
 } from '../controllers/authController.js';
 import { updateMyProfile } from '../controllers/userController.js';
 
@@ -22,6 +23,7 @@ router.put('/profile', protect, upload.any(), updateUserProfile);
 router.patch('/me', protect, updateMyProfile);
 router.put('/me', protect, updateMyProfile);
 router.post('/register', registerUser);
+router.post('/register-federation', registerFederation);
 router.post('/verify-otp', verifyOTP);
 router.post('/login', loginUser);
 router.post('/google', googleLogin);

@@ -23,6 +23,9 @@ import AIInsightsPage from './pages/AIInsights/AIInsightsPage';
 import NotificationsPage from './pages/Notifications/NotificationsPage';
 import SupportPage from './pages/Support/SupportPage';
 import SettingsPage from './pages/Settings/SettingsPage';
+import FederationsPage from './pages/Federations/FederationsPage';
+import FederationDetailPage from './pages/Federations/FederationDetailPage';
+import LanguageControlPage from './pages/LanguageControl/LanguageControlPage';
 import NotFoundPage from './pages/NotFound/NotFoundPage';
 import ThemeShowcase from './pages/ThemeShowcase/ThemeShowcase';
 
@@ -71,6 +74,9 @@ export default function App() {
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="support" element={<SupportPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="federations" element={<FederationsPage />} />
+                <Route path="federations/:id" element={<FederationDetailPage />} />
+                <Route path="language-control" element={<LanguageControlPage />} />
                 <Route path="theme" element={<ThemeShowcase />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>

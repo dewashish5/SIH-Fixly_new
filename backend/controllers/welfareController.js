@@ -88,3 +88,52 @@ export const adminWelfareSummary = async (_req, res) => {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);
     }
 };
+
+import WelfareResource from '../models/WelfareResource.js';
+import User from '../models/User.js';
+
+export const getWelfareResources = async (req, res) => {
+    try {
+        if (req.user.role !== 'worker') return fail(res, 403, 'FORBIDDEN', 'Worker role required');
+        
+        const worker = await User.findById(req.user.id);
+        if (!worker) return fail(res, 404, 'NOT_FOUND', 'Worker not found');
+        
+        const federationId = worker.federation || null;
+        
+        const resources = await WelfareResource.find({
+            isActive: true,
+            targetAudience: { $in: ['all', 'worker'] },
+            $or: [
+                { federation: null },
+                { federation: federationId }
+            ]
+        }).sort({ priority: -1, createdAt: -1 }).lean();
+        
+        // E-Shram / Insurance logic
+        if (worker.workerProfile?.eshramUan) {
+            resources.unshift({
+                _id: 'auto-insurance-link',
+                title: 'View Your Insurance Policy',
+                type: 'link',
+                url: '/worker/insurance',
+                category: 'insurance',
+                priority: 100
+            });
+        } else {
+            resources.unshift({
+                _id: 'auto-eshram-link',
+                title: 'Register for e-Shram',
+                description: 'Get your UAN to unlock government benefits.',
+                type: 'link',
+                url: 'https://eshram.gov.in',
+                category: 'eshram',
+                priority: 100
+            });
+        }
+        
+        return ok(res, { data: resources });
+    } catch (error) {
+        return fail(res, 500, 'INTERNAL_ERROR', error.message);
+    }
+};

@@ -145,6 +145,8 @@ export const listPayouts = async (req, res) => {
     }
 };
 
+import { processRazorpayPayout } from '../services/payoutService.js';
+
 export const requestWithdraw = async (req, res) => {
     try {
         if (req.user.role !== 'worker') return fail(res, 403, 'FORBIDDEN', 'Worker role required');
@@ -161,11 +163,43 @@ export const requestWithdraw = async (req, res) => {
         if (amount > summary.availableBalance) {
             return fail(res, 400, 'VALIDATION_ERROR', 'Insufficient available balance');
         }
-        const payout = await PayoutRequest.create({
+        
+        let payout = await PayoutRequest.create({
             worker: req.user.id,
             amount,
             status: 'requested',
         });
+        
+        if (worker.workerProfile?.upi?.upiId && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+            try {
+                await processRazorpayPayout(
+                    payout._id,
+                    amount,
+                    worker.workerProfile.upi.upiId,
+                    worker.name
+                );
+                payout.status = 'paid';
+                payout.note = 'Automated UPI Payout Successful';
+                
+                worker.workerProfile.walletBalance = Math.max(0, (worker.workerProfile.walletBalance || 0) - amount);
+                worker.workerProfile.walletTransactions = worker.workerProfile.walletTransactions || [];
+                worker.workerProfile.walletTransactions.push({
+                    transactionId: `PAYOUT-${payout._id}`,
+                    amount: amount,
+                    type: 'DEBIT',
+                    description: 'Automated UPI Payout',
+                    createdAt: new Date(),
+                });
+                await worker.save();
+                
+            } catch (err) {
+                console.error('Payout failed:', err.message);
+                payout.status = 'processing';
+                payout.note = `Automated payout failed: ${err.message}`;
+            }
+            await payout.save();
+        }
+
         safeNotify(() => notifyUser({
             recipient: req.user.id,
             eventType: 'PAYOUT_REQUESTED',

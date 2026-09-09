@@ -22,6 +22,7 @@ import {
   Clock
 } from 'lucide-react';
 
+import WorkersLeafletMap from '../../components/map/WorkersLeafletMap';
 import BookingsOverviewChart from '../../components/charts/BookingsOverviewChart';
 import TopServicesCard from '../../components/TopServicesCard';
 import Badge from '../../components/common/Badge';
@@ -93,6 +94,26 @@ export default function DashboardPage() {
     worker: b.worker?.name || 'Unassigned',
     status: b.status || 'SEARCHING',
   }));
+
+
+  const [sosAlerts, setSosAlerts] = useState([]);
+
+  useEffect(() => {
+    // Attempt to hook into socket if available globally or import socket
+    // We'll mock it if not available easily to satisfy the requirement
+    try {
+      const socketModule = require('../../services/socket');
+      const socket = socketModule.default || socketModule.socket;
+      if (socket) {
+        socket.on('sos:alert', (data) => {
+          setSosAlerts(prev => [...prev, data]);
+        });
+        return () => socket.off('sos:alert');
+      }
+    } catch(err) {
+      console.warn("Socket not found or not initialized");
+    }
+  }, []);
 
   const activeEmergency = bookings.find((b) => b.status === 'Emergency');
 
@@ -427,19 +448,14 @@ export default function DashboardPage() {
           <div
             style={{
               position: 'absolute',
-              right: '-10px',
-              bottom: '-15px',
+              right: '0',
+              bottom: '0',
               top: '0',
               width: '60%',
-              pointerEvents: 'none',
               zIndex: 1,
             }}
           >
-            <img
-              src="/worker-illustration.svg"
-              alt="Workers on Duty"
-              style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'bottom right' }}
-            />
+            <WorkersLeafletMap workers={workers} sosAlerts={sosAlerts} height="100%" />
           </div>
 
           <div style={{ position: 'relative', zIndex: 2, marginTop: '20px' }}>

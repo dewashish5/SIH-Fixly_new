@@ -180,6 +180,31 @@ export default function ApprovalsPage() {
     }
   };
 
+  const exportCSV = () => {
+    if (!rows || rows.length === 0) {
+      showToast?.('error', 'No data to export');
+      return;
+    }
+    const csvRows = [];
+    csvRows.push(['Name', 'Email', 'Phone', 'Status', 'Category']);
+    rows.forEach(w => {
+      csvRows.push([
+        w.name || '',
+        w.email || '',
+        w.phone || '',
+        w.kycDocuments?.status || '',
+        w.workerProfile?.category || ''
+      ].map(v => `"${v}"`).join(','));
+    });
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'declined_workers.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const kyc = selected?.kycDocuments || {};
   const profile = selected?.workerProfile || {};
 
@@ -215,31 +240,54 @@ export default function ApprovalsPage() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        {[
-          { key: 'pending', label: 'Pending review' },
-          { key: 'MANUAL_REVIEW', label: 'Manual Review' },
-          { key: 'rejected', label: 'Declined' },
-          { key: 'approved', label: 'Approved' },
-        ].map((t) => (
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[
+            { key: 'pending', label: 'Pending review' },
+            { key: 'MANUAL_REVIEW', label: 'Manual Review' },
+            { key: 'rejected', label: 'Declined' },
+            { key: 'approved', label: 'Approved' },
+          ].map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              style={{
+                padding: '8px 14px',
+                borderRadius: 999,
+                border: 'none',
+                fontSize: 13,
+                fontWeight: tab === t.key ? 700 : 500,
+                background: tab === t.key ? '#15803d' : '#f1f5f9',
+                color: tab === t.key ? '#fff' : '#475569',
+                cursor: 'pointer',
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {tab === 'rejected' && (
           <button
-            key={t.key}
             type="button"
-            onClick={() => setTab(t.key)}
+            onClick={exportCSV}
             style={{
               padding: '8px 14px',
-              borderRadius: 999,
-              border: 'none',
+              borderRadius: 8,
+              border: '1px solid #e2e8f0',
+              background: '#fff',
               fontSize: 13,
-              fontWeight: tab === t.key ? 700 : 500,
-              background: tab === t.key ? '#15803d' : '#f1f5f9',
-              color: tab === t.key ? '#fff' : '#475569',
+              fontWeight: 600,
+              color: '#334155',
               cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
             }}
           >
-            {t.label}
+            <FileText size={16} /> Export CSV
           </button>
-        ))}
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: selected || detailLoading ? '1fr 1.1fr' : '1fr', gap: 16 }}>
@@ -290,7 +338,17 @@ export default function ApprovalsPage() {
                           {w.workerProfile?.category || 'General'} · KYC {w.kycDocuments?.status || '—'}
                         </div>
                       </div>
-                      <Eye size={16} color="#64748b" />
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                        {tab === 'rejected' && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); alert('Re-invite sent'); }}
+                            style={{ padding: '6px 12px', fontSize: 11, background: '#f1f5f9', color: '#475569', borderRadius: 6, border: '1px solid #e2e8f0', cursor: 'pointer', fontWeight: 600 }}
+                          >
+                            Re-invite
+                          </button>
+                        )}
+                        <Eye size={16} color="#64748b" />
+                      </div>
                     </button>
                   </li>
                 );

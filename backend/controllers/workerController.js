@@ -458,3 +458,47 @@ export const getWorkerReliability = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
+export const updateWorkerRates = async (req, res) => {
+    try {
+        if (req.user.role !== 'worker') {
+            return res.status(403).json({ success: false, code: 'FORBIDDEN', message: 'Worker role required' });
+        }
+        
+        const { categoryRates } = req.body;
+        if (!categoryRates || typeof categoryRates !== 'object') {
+             return res.status(400).json({ success: false, message: 'categoryRates required' });
+        }
+        
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        
+        if (user.federation) {
+            const Cooperative = (await import('../models/Cooperative.js')).default;
+            const federation = await Cooperative.findById(user.federation);
+            if (federation && federation.minimumWageFloor) {
+                const floor = federation.minimumWageFloor.toObject ? federation.minimumWageFloor.toObject() : federation.minimumWageFloor;
+                for (const [cat, rate] of Object.entries(categoryRates)) {
+                    // normalize category string for matching
+                    const catKey = cat.toLowerCase();
+                    const minRate = floor[catKey] || floor.default || 300;
+                    if (Number(rate) < minRate) {
+                        return res.status(400).json({ 
+                            success: false, 
+                            code: 'BELOW_WAGE_FLOOR', 
+                            message: `Rate for ${cat} cannot be below the minimum wage floor of ₹${minRate}` 
+                        });
+                    }
+                }
+            }
+        }
+        
+        if (!user.workerProfile) user.workerProfile = {};
+        user.workerProfile.categoryRates = { ...user.workerProfile.categoryRates, ...categoryRates };
+        await user.save();
+        
+        return res.status(200).json({ success: true, categoryRates: user.workerProfile.categoryRates });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};

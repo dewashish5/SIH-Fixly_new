@@ -17,6 +17,7 @@ class AppSessionState extends Equatable {
     this.email,
     this.pendingSignupName,
     this.pendingSignupPassword,
+    this.federationId,
     this.status = AppSessionStatus.initial,
     this.authFlow = AuthFlow.login,
     this.errorMessage,
@@ -33,6 +34,7 @@ class AppSessionState extends Equatable {
   final String? email;
   final String? pendingSignupName;
   final String? pendingSignupPassword;
+  final String? federationId;
   final AppSessionStatus status;
   final AuthFlow authFlow;
   final String? errorMessage;
@@ -49,6 +51,7 @@ class AppSessionState extends Equatable {
     String? email,
     String? pendingSignupName,
     String? pendingSignupPassword,
+    String? federationId,
     AppSessionStatus? status,
     AuthFlow? authFlow,
     String? errorMessage,
@@ -70,6 +73,7 @@ class AppSessionState extends Equatable {
       pendingSignupName: pendingSignupName ?? this.pendingSignupName,
       pendingSignupPassword:
           pendingSignupPassword ?? this.pendingSignupPassword,
+      federationId: federationId ?? this.federationId,
       status: status ?? this.status,
       authFlow: authFlow ?? this.authFlow,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
@@ -89,6 +93,7 @@ class AppSessionState extends Equatable {
         email,
         pendingSignupName,
         pendingSignupPassword,
+        federationId,
         status,
         authFlow,
         errorMessage,

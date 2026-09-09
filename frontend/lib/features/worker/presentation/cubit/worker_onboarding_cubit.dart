@@ -324,6 +324,70 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
 
   bool canProceedFromStep(int step) => validateStep(step) == null;
 
+  Future<bool> submitIdentity() async {
+    emit(state.copyWith(status: WorkerOnboardingStatus.loading));
+    try {
+      // Simulate API verification
+      await Future.delayed(const Duration(milliseconds: 300));
+      emit(state.copyWith(
+        status: WorkerOnboardingStatus.loaded,
+        errorMessage: null,
+      ));
+      return true;
+    } on ApiException catch (e) {
+      if (e.message == 'DUPLICATE_DOCUMENT' || e.statusCode == 409) {
+        emit(state.copyWith(
+          status: WorkerOnboardingStatus.failure,
+          errorMessage: 'DUPLICATE_DOCUMENT',
+        ));
+      } else {
+        emit(state.copyWith(
+          status: WorkerOnboardingStatus.failure,
+          errorMessage: e.message,
+        ));
+      }
+      return false;
+    } catch (e) {
+      emit(state.copyWith(
+        status: WorkerOnboardingStatus.failure,
+        errorMessage: ApiException.fromError(e),
+      ));
+      return false;
+    }
+  }
+
+  Future<bool> submitWorkProfile() async {
+    emit(state.copyWith(status: WorkerOnboardingStatus.loading));
+    try {
+      // Simulate API verification
+      await Future.delayed(const Duration(milliseconds: 300));
+      emit(state.copyWith(
+        status: WorkerOnboardingStatus.loaded,
+        errorMessage: null,
+      ));
+      return true;
+    } on ApiException catch (e) {
+      if (e.message == 'NAME_MISMATCH' || e.statusCode == 400) {
+        emit(state.copyWith(
+          status: WorkerOnboardingStatus.failure,
+          errorMessage: 'NAME_MISMATCH',
+        ));
+      } else {
+        emit(state.copyWith(
+          status: WorkerOnboardingStatus.failure,
+          errorMessage: e.message,
+        ));
+      }
+      return false;
+    } catch (e) {
+      emit(state.copyWith(
+        status: WorkerOnboardingStatus.failure,
+        errorMessage: ApiException.fromError(e),
+      ));
+      return false;
+    }
+  }
+
   Future<bool> submitOnboarding() async {
     emit(state.copyWith(status: WorkerOnboardingStatus.loading));
     try {

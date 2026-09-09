@@ -603,6 +603,7 @@ export function AppProvider({ children }) {
       value={{
         token,
         adminUser,
+        adminRole: adminUser?.role || 'super_admin',
         setAdminUser,
         updateAdminProfile,
         isAuthenticated: !!token,

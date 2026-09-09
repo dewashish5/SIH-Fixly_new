@@ -1,21 +1,41 @@
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
+import Settings from '../models/Settings.js';
 dotenv.config();
 
+// Default config
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+async function configureCloudinary() {
+    try {
+        const settings = await Settings.findOne({});
+        let url = settings?.apiKeys?.cloudinaryUrl || process.env.CLOUDINARY_URL;
+        if (url && url.startsWith('cloudinary://')) {
+            const parsed = new URL(url);
+            cloudinary.config({
+                cloud_name: parsed.hostname,
+                api_key: parsed.username,
+                api_secret: parsed.password
+            });
+        }
+    } catch(e) {}
+}
+
 /**
+ * Uploads a file buffer, disk path, or base64 string directly to Cloudinary
+
  * Uploads a file buffer, disk path, or base64 string directly to Cloudinary
  * Uses resource_type: 'auto' to handle images, PDFs, and documents automatically
  * @param {Buffer|string} fileSource - The file memory buffer, local disk path, or base64 string
  * @param {string} folderName - Cloudinary folder name
  * @returns {Promise<object>} - Resolves with Cloudinary upload response object
  */
-export const uploadToCloudinary = (fileSource, folderName = 'gigconnect') => {
+export const uploadToCloudinary = async (fileSource, folderName = 'gigconnect') => {
+        await configureCloudinary();
     return new Promise((resolve, reject) => {
         if (typeof fileSource === 'string') {
             // Upload local disk path or base64 string directly
@@ -57,6 +77,7 @@ export const uploadMulterFiles = async (files, folderName = 'gigconnect') => {
  * @returns {Promise<string|null>}
  */
 export const uploadDataUriOrUrl = async (value, folderName = 'gigconnect') => {
+    await configureCloudinary();
     if (!value || typeof value !== 'string') return null;
     const trimmed = value.trim();
     if (!trimmed) return null;

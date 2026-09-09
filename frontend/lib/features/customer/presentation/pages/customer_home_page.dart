@@ -44,7 +44,8 @@ class _CustomerHomeView extends StatefulWidget {
   State<_CustomerHomeView> createState() => _CustomerHomeViewState();
 }
 
-class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerProviderStateMixin {
+class _CustomerHomeViewState extends State<_CustomerHomeView>
+    with SingleTickerProviderStateMixin {
   bool _locating = false;
   String? _selectedCategoryId; // null = 'All'
   bool _isMapExpanded = false;
@@ -73,7 +74,9 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
 
   void _onScroll() {
     if (_isProgrammaticScroll) return;
-    if (_scrollController.hasClients && _scrollController.offset > 20 && _isMapExpanded) {
+    if (_scrollController.hasClients &&
+        _scrollController.offset > 20 &&
+        _isMapExpanded) {
       setState(() => _isMapExpanded = false);
       _mapExpandController.reverse();
     }
@@ -159,8 +162,9 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
         statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.dark,
         systemNavigationBarColor: scheme.surface,
-        systemNavigationBarIconBrightness:
-            isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarIconBrightness: isDark
+            ? Brightness.light
+            : Brightness.dark,
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFF080F1E),
@@ -170,30 +174,33 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
             final filteredServices = _selectedCategoryId == null
                 ? state.popularServices
                 : state.popularServices
-                    .where(
-                      (s) =>
-                          s.categoryId.toLowerCase() ==
-                          _selectedCategoryId!.toLowerCase(),
-                    )
-                    .toList();
+                      .where(
+                        (s) =>
+                            s.categoryId.toLowerCase() ==
+                            _selectedCategoryId!.toLowerCase(),
+                      )
+                      .toList();
 
             return AppRefreshIndicator(
               onRefresh: _refreshAll,
               child: NotificationListener<ScrollNotification>(
                 onNotification: (scrollInfo) {
-                  if (scrollInfo is ScrollStartNotification && scrollInfo.dragDetails != null) {
+                  if (scrollInfo is ScrollStartNotification &&
+                      scrollInfo.dragDetails != null) {
                     _dragStartY = scrollInfo.dragDetails!.globalPosition.dy;
                   }
-                  
+
                   final screenHeight = MediaQuery.of(context).size.height;
-                  final isTopHalf = _dragStartY != null && _dragStartY! < screenHeight / 2;
-                  
+                  final isTopHalf =
+                      _dragStartY != null && _dragStartY! < screenHeight / 2;
+
                   // If not top half, or map is already open, let normal pull-to-refresh work
                   if (!isTopHalf || _isMapExpanded) return false;
 
                   bool isOverscrollingDown = false;
                   if (scrollInfo is ScrollUpdateNotification) {
-                    if (scrollInfo.metrics.pixels < 0 && (scrollInfo.scrollDelta ?? 0) < 0) {
+                    if (scrollInfo.metrics.pixels < 0 &&
+                        (scrollInfo.scrollDelta ?? 0) < 0) {
                       isOverscrollingDown = true;
                     }
                   } else if (scrollInfo is OverscrollNotification) {
@@ -214,152 +221,161 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
                   if (scrollInfo.metrics.pixels < 0) {
                     return true;
                   }
-                  
+
                   return false;
                 },
                 child: NestedScrollView(
                   controller: _scrollController,
-                headerSliverBuilder: (context, innerBoxIsScrolled) {
-                  return [
-                    AnimatedBuilder(
-                      animation: _mapExpandController,
-                      builder: (context, child) {
-                        final curveValue = Curves.easeInOutCubic.transform(_mapExpandController.value);
-                        final currentHeight = 154.0 + (statusBarH + 390.0 - 154.0) * curveValue;
-                        
-                        return SliverAppBar(
-                          pinned: true,
-                          expandedHeight: currentHeight,
-                          toolbarHeight: 130,
-                          backgroundColor: scheme.surface,
-                          elevation: 0,
-                          flexibleSpace: FlexibleSpaceBar(
-                            collapseMode: CollapseMode.pin,
-                            background: curveValue > 0.0
-                                ? ClipRect(
-                                    child: Align(
-                                      alignment: Alignment.bottomCenter,
-                                      heightFactor: curveValue,
-                                      child: _HomeMapHero(
-                                        statusBarH: statusBarH,
-                                        locating: _locating,
-                                        onCurrentLocationTap: _refreshLocation,
-                                        onMapTap: _onMapLocationTapped,
+                  headerSliverBuilder: (context, innerBoxIsScrolled) {
+                    return [
+                      AnimatedBuilder(
+                        animation: _mapExpandController,
+                        builder: (context, child) {
+                          final curveValue = Curves.easeInOutCubic.transform(
+                            _mapExpandController.value,
+                          );
+                          final currentHeight =
+                              154.0 + (statusBarH + 390.0 - 154.0) * curveValue;
+
+                          return SliverAppBar(
+                            pinned: true,
+                            expandedHeight: currentHeight,
+                            toolbarHeight: 130,
+                            backgroundColor: scheme.surface,
+                            elevation: 0,
+                            flexibleSpace: FlexibleSpaceBar(
+                              collapseMode: CollapseMode.pin,
+                              background: curveValue > 0.0
+                                  ? ClipRect(
+                                      child: Align(
+                                        alignment: Alignment.bottomCenter,
+                                        heightFactor: curveValue,
+                                        child: _HomeMapHero(
+                                          statusBarH: statusBarH,
+                                          locating: _locating,
+                                          onCurrentLocationTap:
+                                              _refreshLocation,
+                                          onMapTap: _onMapLocationTapped,
+                                        ),
                                       ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                            title: AnimatedOpacity(
+                              opacity: _isMapExpanded ? 0.0 : 1.0,
+                              duration: const Duration(milliseconds: 200),
+                              child: IgnorePointer(
+                                ignoring: _isMapExpanded,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 8,
+                                  ),
+                                  child: _AppBarTitleContent(
+                                    userName: userName,
+                                    locationLabel: _locationLabel,
+                                    locating: _locating,
+                                    onLocationTap: _refreshLocation,
+                                    onMapToggleTap: () {
+                                      if (!_isMapExpanded) {
+                                        _isProgrammaticScroll = true;
+                                        setState(() {
+                                          _isMapExpanded = true;
+                                        });
+                                        _mapExpandController.forward();
+                                        // Scroll to top to ensure map is fully visible
+                                        _scrollController
+                                            .animateTo(
+                                              0,
+                                              duration: const Duration(
+                                                milliseconds: 300,
+                                              ),
+                                              curve: Curves.easeOut,
+                                            )
+                                            .then((_) {
+                                              _isProgrammaticScroll = false;
+                                            });
+                                      }
+                                    },
+                                    onNotificationsTap: () => context.push(
+                                      RouteNames.sharedNotifications,
                                     ),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-                          title: AnimatedOpacity(
-                            opacity: _isMapExpanded ? 0.0 : 1.0,
-                            duration: const Duration(milliseconds: 200),
-                            child: IgnorePointer(
-                              ignoring: _isMapExpanded,
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 8,
-                                ),
-                                child: _AppBarTitleContent(
-                                  userName: userName,
-                                  locationLabel: _locationLabel,
-                                  locating: _locating,
-                                  onLocationTap: _refreshLocation,
-                                  onMapToggleTap: () {
-                                    if (!_isMapExpanded) {
-                                      _isProgrammaticScroll = true;
-                                      setState(() {
-                                        _isMapExpanded = true;
-                                      });
-                                      _mapExpandController.forward();
-                                      // Scroll to top to ensure map is fully visible
-                                      _scrollController.animateTo(
-                                        0,
-                                        duration: const Duration(milliseconds: 300),
-                                        curve: Curves.easeOut,
-                                      ).then((_) {
-                                        _isProgrammaticScroll = false;
-                                      });
-                                    }
-                                  },
-                                  onNotificationsTap: () =>
-                                      context.push(RouteNames.sharedNotifications),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          bottom: PreferredSize(
-                            preferredSize: const Size.fromHeight(24),
-                            child: Container(
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: scheme.surface,
-                                borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(24),
+                            bottom: PreferredSize(
+                              preferredSize: const Size.fromHeight(24),
+                              child: Container(
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: scheme.surface,
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(24),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ];
-                },
-                // Continuous, unified single scroll view for the entire body
-                body: Container(
-                  color: scheme.surface,
-                  child: ListView(
-                    padding: const EdgeInsets.only(top: 4, bottom: 36),
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      // 1. Quick Search & AI Discovery Pill
-                      _buildSearchBar(context),
-                      const SizedBox(height: 18),
-
-                      // 2. Categories Section
-                      _buildCategoriesSection(context, state, l10n, locale),
-                      const SizedBox(height: 20),
-
-                      // 3. Emergency / Urgent Assistance Promo Banner
-                      _buildEmergencyBanner(context),
-                      const SizedBox(height: 14),
-
-                      // 3b. Coupon Banner Carousel (from backend / admin)
-                      if (state.banners.isNotEmpty)
-                        _CouponBannerCarousel(banners: state.banners),
-                      const SizedBox(height: 8),
-
-                      // 4. Popular Services Header & Category Filter Chips
-                      _buildPopularServicesHeader(
-                        context,
-                        state,
-                        l10n,
-                        locale,
-                        filteredServices.length,
+                          );
+                        },
                       ),
-                      const SizedBox(height: 14),
+                    ];
+                  },
+                  // Continuous, unified single scroll view for the entire body
+                  body: Container(
+                    color: scheme.surface,
+                    child: ListView(
+                      padding: const EdgeInsets.only(top: 4, bottom: 36),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        // 1. Quick Search & AI Discovery Pill
+                        _buildSearchBar(context),
+                        const SizedBox(height: 18),
 
-                      // 5. Popular Services Cards List
-                      if (state.status == CustomerHomeStatus.loading &&
-                          state.popularServices.isEmpty)
-                        _buildShimmerList()
-                      else if (filteredServices.isEmpty)
-                        _buildEmptyServices(context)
-                      else
-                        for (int i = 0; i < filteredServices.length; i++)
-                          _ServiceTile(
-                            service: filteredServices[i],
-                            locale: locale,
-                            index: i,
-                            onTap: () => context.push(
-                              '/customer/service/${filteredServices[i].id}',
+                        // 2. Categories Section
+                        _buildCategoriesSection(context, state, l10n, locale),
+                        const SizedBox(height: 20),
+
+                        // 3. Emergency / Urgent Assistance Promo Banner
+                        _buildEmergencyBanner(context),
+                        const SizedBox(height: 14),
+
+                        // 3b. Coupon Banner Carousel (from backend / admin)
+                        if (state.banners.isNotEmpty)
+                          _CouponBannerCarousel(banners: state.banners),
+                        const SizedBox(height: 8),
+
+                        // 4. Popular Services Header & Category Filter Chips
+                        _buildPopularServicesHeader(
+                          context,
+                          state,
+                          l10n,
+                          locale,
+                          filteredServices.length,
+                        ),
+                        const SizedBox(height: 14),
+
+                        // 5. Popular Services Cards List
+                        if (state.status == CustomerHomeStatus.loading &&
+                            state.popularServices.isEmpty)
+                          _buildShimmerList()
+                        else if (filteredServices.isEmpty)
+                          _buildEmptyServices(context)
+                        else
+                          for (int i = 0; i < filteredServices.length; i++)
+                            _ServiceTile(
+                              service: filteredServices[i],
+                              locale: locale,
+                              index: i,
+                              onTap: () => context.push(
+                                '/customer/service/${filteredServices[i].id}',
+                              ),
                             ),
-                          ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
               ),
             );
           },
@@ -380,9 +396,7 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -488,7 +502,10 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
                 onTap: () => context.push(RouteNames.customerCategories),
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -537,10 +554,7 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF1E293B),
-            Color(0xFF0F172A),
-          ],
+          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -675,7 +689,10 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
                 onTap: () => context.goCustomerTab(2),
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -767,7 +784,9 @@ class _CustomerHomeViewState extends State<_CustomerHomeView> with SingleTickerP
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
       child: Column(
@@ -919,7 +938,11 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
           padding: const EdgeInsets.only(left: 16, right: 16, bottom: 10),
           child: Row(
             children: [
-              const Icon(Icons.local_offer_rounded, size: 16, color: AppColors.primary),
+              const Icon(
+                Icons.local_offer_rounded,
+                size: 16,
+                color: AppColors.primary,
+              ),
               const SizedBox(width: 6),
               Text(
                 'Exclusive Offers & Coupons',
@@ -960,10 +983,14 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
                   : 0;
               final banner = widget.banners[index];
               final startColor = _parseHex(
-                banner.gradientColors.isNotEmpty ? banner.gradientColors.first : '#1E3A8A',
+                banner.gradientColors.isNotEmpty
+                    ? banner.gradientColors.first
+                    : '#1E3A8A',
               );
               final endColor = _parseHex(
-                banner.gradientColors.length > 1 ? banner.gradientColors.last : '#3B82F6',
+                banner.gradientColors.length > 1
+                    ? banner.gradientColors.last
+                    : '#3B82F6',
               );
               final expiringSoon = _isExpiringSoon(banner.validUntil);
               final expiryLabel = _formatExpiry(banner.validUntil);
@@ -1014,7 +1041,10 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -1026,15 +1056,26 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
                                   Row(
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.2),
-                                          borderRadius: BorderRadius.circular(6),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.2,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: const Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(Icons.confirmation_num_rounded, size: 10, color: Colors.white),
+                                            Icon(
+                                              Icons.confirmation_num_rounded,
+                                              size: 10,
+                                              color: Colors.white,
+                                            ),
                                             SizedBox(width: 3),
                                             Text(
                                               'COUPON',
@@ -1051,15 +1092,26 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
                                       if (expiringSoon) ...[
                                         const SizedBox(width: 6),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFFFEF3C7).withValues(alpha: 0.25),
-                                            borderRadius: BorderRadius.circular(6),
+                                            color: const Color(
+                                              0xFFFEF3C7,
+                                            ).withValues(alpha: 0.25),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                           child: const Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(Icons.timer_rounded, size: 10, color: Color(0xFFFDE68A)),
+                                              Icon(
+                                                Icons.timer_rounded,
+                                                size: 10,
+                                                color: Color(0xFFFDE68A),
+                                              ),
                                               SizedBox(width: 3),
                                               Text(
                                                 'ENDING SOON',
@@ -1093,7 +1145,9 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
                                     Text(
                                       banner.description,
                                       style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.8),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.8,
+                                        ),
                                         fontSize: 11,
                                         fontWeight: FontWeight.w400,
                                       ),
@@ -1106,7 +1160,9 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
                                     Text(
                                       expiryLabel,
                                       style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.65),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.65,
+                                        ),
                                         fontSize: 10,
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -1120,7 +1176,10 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(10),
@@ -1138,19 +1197,28 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
                                 const SizedBox(height: 8),
                                 GestureDetector(
                                   onTap: () {
-                                    Clipboard.setData(ClipboardData(text: banner.code));
+                                    Clipboard.setData(
+                                      ClipboardData(text: banner.code),
+                                    );
                                     ToastUtils.showToast(
                                       context: context,
                                       message: '✅ Code ${banner.code} copied!',
                                     );
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.15),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.15,
+                                      ),
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.35),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.35,
+                                        ),
                                         width: 1,
                                       ),
                                     ),
@@ -1167,7 +1235,11 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
                                           ),
                                         ),
                                         const SizedBox(width: 4),
-                                        const Icon(Icons.copy_rounded, size: 11, color: Colors.white70),
+                                        const Icon(
+                                          Icons.copy_rounded,
+                                          size: 11,
+                                          color: Colors.white70,
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -1211,7 +1283,9 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
 
   void _showCouponDialog(BuildContext context, CouponBanner banner) {
     final startColor = _parseHex(
-      banner.gradientColors.isNotEmpty ? banner.gradientColors.first : '#1E3A8A',
+      banner.gradientColors.isNotEmpty
+          ? banner.gradientColors.first
+          : '#1E3A8A',
     );
     final endColor = _parseHex(
       banner.gradientColors.length > 1 ? banner.gradientColors.last : '#3B82F6',
@@ -1240,7 +1314,11 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.local_offer_rounded, color: Colors.white, size: 28),
+                  const Icon(
+                    Icons.local_offer_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -1272,18 +1350,27 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
             if (banner.description.isNotEmpty) ...[
               Text(
                 banner.description,
-                style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(height: 1.4),
+                style: Theme.of(
+                  ctx,
+                ).textTheme.bodyMedium?.copyWith(height: 1.4),
               ),
               const SizedBox(height: 12),
             ],
             Row(
               children: [
-                Icon(Icons.info_outline_rounded, size: 14, color: Theme.of(ctx).hintColor),
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 14,
+                  color: Theme.of(ctx).hintColor,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     'Min. order ₹${banner.minOrderValue.toInt()}  •  Max discount ₹${banner.maxDiscount.toInt()}',
-                    style: TextStyle(fontSize: 12, color: Theme.of(ctx).hintColor),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(ctx).hintColor,
+                    ),
                   ),
                 ),
               ],
@@ -1323,11 +1410,18 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.copy_rounded, size: 13, color: Theme.of(ctx).hintColor),
+                        Icon(
+                          Icons.copy_rounded,
+                          size: 13,
+                          color: Theme.of(ctx).hintColor,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'Tap to copy code',
-                          style: TextStyle(fontSize: 11, color: Theme.of(ctx).hintColor),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(ctx).hintColor,
+                          ),
                         ),
                       ],
                     ),
@@ -1349,7 +1443,9 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
                 backgroundColor: startColor,
                 foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               child: const Text(
                 'Copy & Use Coupon',
@@ -1392,9 +1488,7 @@ class _FilterChip extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primary
-                : theme.cardColor,
+            color: isSelected ? AppColors.primary : theme.cardColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected
@@ -1427,7 +1521,9 @@ class _FilterChip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  color: isSelected ? Colors.white : theme.textTheme.bodyMedium?.color,
+                  color: isSelected
+                      ? Colors.white
+                      : theme.textTheme.bodyMedium?.color,
                 ),
               ),
             ],
@@ -1578,7 +1674,10 @@ class _AppBarTitleContent extends StatelessWidget {
               onTap: onMapToggleTap,
               borderRadius: BorderRadius.circular(12),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1860,11 +1959,7 @@ class _ServiceTile extends StatelessWidget {
                             service.imageUrl!.trim(),
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => Center(
-                              child: Icon(
-                                catIcon,
-                                color: catColor,
-                                size: 36,
-                              ),
+                              child: Icon(catIcon, color: catColor, size: 36),
                             ),
                             loadingBuilder: (_, child, progress) {
                               if (progress == null) return child;
@@ -1878,11 +1973,7 @@ class _ServiceTile extends StatelessWidget {
                             },
                           )
                         : Center(
-                            child: Icon(
-                              catIcon,
-                              color: catColor,
-                              size: 36,
-                            ),
+                            child: Icon(catIcon, color: catColor, size: 36),
                           ),
                   ),
                 ),
@@ -1975,8 +2066,8 @@ class _ServiceTile extends StatelessWidget {
                         description.isNotEmpty
                             ? description
                             : (service.whatsIncluded.isNotEmpty
-                                ? service.whatsIncluded.first
-                                : 'Verified professional service'),
+                                  ? service.whatsIncluded.first
+                                  : 'Verified professional service'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1990,7 +2081,8 @@ class _ServiceTile extends StatelessWidget {
                       // Bottom Row: Duration + Price + Book Action
                       Row(
                         children: [
-                          if (estimatedTime != null && estimatedTime.isNotEmpty) ...[
+                          if (estimatedTime != null &&
+                              estimatedTime.isNotEmpty) ...[
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 6,
@@ -2102,7 +2194,8 @@ Color _serviceCategoryColor(String? categoryId) {
   final c = categoryId.toLowerCase();
   if (c.contains('elect')) return const Color(0xFFEAB308);
   if (c.contains('plumb')) return const Color(0xFF0284C7);
-  if (c.contains('tech') || c.contains('appliance')) return const Color(0xFF6366F1);
+  if (c.contains('tech') || c.contains('appliance'))
+    return const Color(0xFF6366F1);
   if (c.contains('carpen')) return const Color(0xFFD97706);
   if (c.contains('paint')) return const Color(0xFF8B5CF6);
   if (c.contains('care') || c.contains('nurse')) return const Color(0xFFEC4899);
@@ -2168,7 +2261,9 @@ class _ShimmerServiceTileState extends State<_ShimmerServiceTile>
               color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: 0.4),
               ),
             ),
             child: Row(

@@ -1,14 +1,29 @@
 // backend/utils/groqClient.js
 import { Groq } from 'groq-sdk';
 
-const apiKey = process.env.GROQ_API_KEY || 'dummy_groq_key_placeholder';
-const groqClient = new Groq({ apiKey });
+import Settings from '../models/Settings.js';
+
+let groqClientInstance = null;
+let currentKey = null;
+
+async function getGroqClient() {
+  const settings = await Settings.findOne({});
+  const dbKey = settings?.apiKeys?.groqApiKey;
+  const key = dbKey || process.env.GROQ_API_KEY || 'dummy_groq_key_placeholder';
+  
+  if (!groqClientInstance || key !== currentKey) {
+    groqClientInstance = new Groq({ apiKey: key });
+    currentKey = key;
+  }
+  return { client: groqClientInstance, key };
+}
 
 async function classifyIssueWithGroq(text) {
-  if (!process.env.GROQ_API_KEY) {
+  const { client, key } = await getGroqClient();
+  if (!key || key === 'dummy_groq_key_placeholder') {
     return 'General';
   }
-  const chatCompletion = await groqClient.chat.completions.create({
+  const chatCompletion = await client.chat.completions.create({
     messages: [
       {
         role: "system",
@@ -27,4 +42,4 @@ async function classifyIssueWithGroq(text) {
   return chatCompletion.choices[0].message.content.trim();
 }
 
-export { groqClient, classifyIssueWithGroq };
+export { getGroqClient, classifyIssueWithGroq };

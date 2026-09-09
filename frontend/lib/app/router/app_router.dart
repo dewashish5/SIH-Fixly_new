@@ -7,6 +7,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/otp_page.dart';
 import '../../features/auth/presentation/pages/signup_page.dart';
 import '../../features/cooperative/presentation/pages/cooperative_welcome_page.dart';
+import '../../features/cooperative/presentation/pages/federation_picker_page.dart';
 import '../../screens/call_screen.dart';
 import '../../features/customer/presentation/cubit/booking_flow_cubit.dart';
 import '../../features/customer/presentation/cubit/tracking_cubit.dart';
@@ -16,6 +17,7 @@ import '../../features/customer/presentation/pages/customer_ai_workers_page.dart
 import '../../features/customer/presentation/pages/customer_booking_confirmation_page.dart';
 import '../../features/customer/presentation/pages/customer_booking_page.dart';
 import '../../features/customer/presentation/pages/customer_invoice_page.dart';
+import '../../features/customer/presentation/pages/customer_estimation_review_page.dart';
 import '../../features/customer/presentation/pages/customer_categories_page.dart';
 import '../../features/customer/presentation/pages/customer_finding_worker_page.dart';
 import '../../features/customer/presentation/pages/customer_home_booking_page.dart';
@@ -69,9 +71,12 @@ import '../../features/worker/presentation/pages/worker_job_feed_page.dart';
 import '../../features/worker/presentation/pages/worker_navigation_page.dart';
 import '../../features/worker/presentation/pages/worker_order_detail_page.dart';
 import '../../features/worker/presentation/pages/worker_otp_entry_page.dart';
+import '../../features/worker/presentation/pages/worker_price_estimation_page.dart';
+import '../../features/worker/presentation/pages/worker_rate_settings_page.dart';
 import '../../features/worker/presentation/pages/worker_profile_page.dart';
 import '../../features/worker/presentation/pages/worker_rating_page.dart';
 import '../../features/worker/presentation/pages/worker_reliability_page.dart';
+import '../../features/worker/presentation/pages/worker_welfare_page.dart';
 import '../../features/worker/presentation/pages/worker_wallet_page.dart';
 import '../../core/widgets/customer_main_shell.dart';
 import '../../core/widgets/smooth_branch_switcher.dart';
@@ -102,6 +107,7 @@ GoRouter createAppRouter() {
       _page(RouteNames.splash, (_, s) => const SplashPage()),
       _page(RouteNames.language, (_, s) => const LanguagePage()),
       _page(RouteNames.cooperative, (_, s) => const CooperativeWelcomePage()),
+      _page(RouteNames.federationPicker, (_, s) => const FederationPickerPage()),
       _page(RouteNames.role, (_, s) => const RolePickerPage()),
       _page(RouteNames.login, (_, s) => const LoginPage()),
       _page(RouteNames.signup, (_, s) => const SignupPage()),
@@ -292,6 +298,12 @@ GoRouter createAppRouter() {
             (_, s) => const CustomerPriceEstimatePage(),
           ),
           _page(
+            RouteNames.customerEstimationReview,
+            (_, s) => CustomerEstimationReviewPage(
+              bookingId: s.uri.queryParameters['bookingId'] ?? '',
+            ),
+          ),
+          _page(
             RouteNames.customerFindingWorker,
             (_, s) => const CustomerFindingWorkerPage(),
           ),
@@ -468,6 +480,24 @@ GoRouter createAppRouter() {
         overlay: true,
       ),
       _page(
+        RouteNames.workerPriceEstimation,
+        (_, s) => BlocProvider(
+          create: (_) => ActiveJobCubit()..load(),
+          child: WorkerPriceEstimationPage(
+            bookingId: s.uri.queryParameters['bookingId'] ?? '',
+          ),
+        ),
+        overlay: true,
+      ),
+      _page(
+        RouteNames.workerRateSettings,
+        (_, s) => BlocProvider(
+          create: (_) => ProfileCubit()..load(),
+          child: const WorkerRateSettingsPage(),
+        ),
+        overlay: true,
+      ),
+      _page(
         RouteNames.workerAddParts,
         (_, s) => BlocProvider(
           create: (_) => ActiveJobCubit()..load(),
@@ -507,6 +537,11 @@ GoRouter createAppRouter() {
       _page(
         RouteNames.workerReliability,
         (_, s) => const WorkerReliabilityPage(),
+        overlay: true,
+      ),
+      _page(
+        RouteNames.workerWelfare,
+        (_, s) => const WorkerWelfarePage(),
         overlay: true,
       ),
 

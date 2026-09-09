@@ -1,7 +1,7 @@
 import Service from '../models/Service.js';
 import User from '../models/User.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
-import { groqClient, classifyIssueWithGroq } from '../utils/groqClient.js';
+import { getGroqClient, classifyIssueWithGroq } from '../utils/groqClient.js';
 import { analyzeImageWithGemini, isGeminiVisionConfigured } from '../utils/geminiVisionClient.js';
 
 // Screen 4: AI Issue Analyzer

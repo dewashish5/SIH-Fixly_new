@@ -112,7 +112,7 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
     cubit.captureSelfie(imageUrl: file.path);
   }
 
-  void _continue() {
+  Future<void> _continue() async {
     final cubit = context.read<WorkerOnboardingCubit>();
     cubit
       ..updateFullName(_nameController.text)
@@ -128,9 +128,12 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
       return;
     }
 
+    final success = await cubit.submitIdentity();
+    if (!success) return;
+
     HapticFeedback.lightImpact();
     cubit.setStep(1);
-    context.push(RouteNames.workerOnboardingWork);
+    if (mounted) context.push(RouteNames.workerOnboardingWork);
   }
 
   Widget _stagger(Widget child, int index) {
@@ -175,6 +178,32 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
                   ),
                   0,
                 ),
+                if (state.errorMessage == 'DUPLICATE_DOCUMENT')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.error),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: AppColors.error),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'This Aadhaar or PAN is already linked to another account.',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 _stagger(
                   OnboardingSection(

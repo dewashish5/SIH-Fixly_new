@@ -16,9 +16,12 @@ import {
   Settings,
   ClipboardCheck,
   Headphones,
-  X
+  X,
+  Building2,
+  Globe
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import { useApp } from '../../context/AppContext';
 
 export const navigationSections = [
   {
@@ -61,6 +64,8 @@ export const navigationSections = [
     title: 'System & Settings',
     sectionKey: 'settingsSection',
     items: [
+      { path: '/federations', key: 'federationManagement', icon: Building2, superAdminOnly: true },
+      { path: '/language-control', key: 'languageControl', icon: Globe, superAdminOnly: true },
       { path: '/support', key: 'support', icon: Headphones },
       { path: '/notifications', key: 'notifications', icon: Bell },
       { path: '/settings', key: 'settings', icon: Settings },
@@ -72,6 +77,7 @@ export const navigationItems = navigationSections.flatMap((s) => s.items);
 
 export default function Sidebar({ isOpen, setIsOpen }) {
   const { t } = useLanguage();
+  const { adminRole } = useApp();
 
   return (
     <>
@@ -184,6 +190,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 {/* Section Navigation Items */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                   {section.items.map((item) => {
+                    if (item.superAdminOnly && adminRole !== 'super_admin') return null;
                     const Icon = item.icon;
 
                     return (

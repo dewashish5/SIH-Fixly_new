@@ -425,3 +425,107 @@ export const verifyCompletionOtp = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
+export const startNavigation = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const booking = await Booking.findById(bookingId);
+        
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        
+        if (String(booking.worker) !== String(req.user.id)) {
+            return res.status(403).json({ success: false, message: 'Only assigned worker can start navigation' });
+        }
+        
+        if (booking.status !== 'ACCEPTED') {
+            return res.status(400).json({ success: false, message: 'Cannot start navigation unless booking is ACCEPTED' });
+        }
+        
+        booking.workerNavigationStartedAt = new Date();
+        await booking.save();
+        
+        return res.status(200).json({ success: true, message: 'Navigation started', booking });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const submitPriceEstimation = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { laborCost, partsEstimate, serviceCharge, notes } = req.body;
+        
+        const booking = await Booking.findById(bookingId);
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        
+        if (String(booking.worker) !== String(req.user.id)) {
+            return res.status(403).json({ success: false, message: 'Only assigned worker can submit estimation' });
+        }
+        
+        if (booking.status !== 'ARRIVED') {
+            return res.status(400).json({ success: false, message: 'Cannot submit estimation unless status is ARRIVED' });
+        }
+        
+        const estimatedTotal = (Number(laborCost) || 0) + (Number(partsEstimate) || 0) + (Number(serviceCharge) || 0);
+        
+        booking.workerEstimation = {
+            estimatedTotal,
+            laborCost: Number(laborCost) || 0,
+            partsEstimate: Number(partsEstimate) || 0,
+            serviceCharge: Number(serviceCharge) || 0,
+            notes,
+            submittedAt: new Date()
+        };
+        booking.status = 'ESTIMATION_GIVEN';
+        
+        await booking.save();
+        
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`booking_${booking._id}`).emit('booking_status_update', {
+                bookingId: booking._id,
+                status: 'ESTIMATION_GIVEN',
+                estimation: booking.workerEstimation
+            });
+        }
+        
+        return res.status(200).json({ success: true, message: 'Estimation submitted', estimation: booking.workerEstimation });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const acceptEstimation = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        
+        const booking = await Booking.findById(bookingId);
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        
+        if (String(booking.customer) !== String(req.user.id)) {
+            return res.status(403).json({ success: false, message: 'Only customer can accept estimation' });
+        }
+        
+        if (booking.status !== 'ESTIMATION_GIVEN') {
+            return res.status(400).json({ success: false, message: 'Booking is not awaiting estimation acceptance' });
+        }
+        
+        booking.workerEstimation.customerAccepted = true;
+        booking.workerEstimation.customerAcceptedAt = new Date();
+        booking.status = 'READY_TO_START';
+        
+        await booking.save();
+        
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`booking_${booking._id}`).emit('booking_status_update', {
+                bookingId: booking._id,
+                status: 'READY_TO_START'
+            });
+        }
+        
+        return res.status(200).json({ success: true, message: 'Estimation accepted', booking });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};

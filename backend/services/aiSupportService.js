@@ -1,5 +1,5 @@
 import Booking from '../models/Booking.js';
-import { groqClient } from '../utils/groqClient.js';
+import { getGroqClient } from '../utils/groqClient.js';
 import { llm, isGeminiConfigured } from '../agent/model.js';
 
 // Keywords that indicate customer/worker wants a human agent
@@ -202,7 +202,7 @@ RULES:
                 { role: 'user', content: text }
             ];
 
-            const completion = await groqClient.chat.completions.create({
+            const { client } = await getGroqClient(); const completion = await client.chat.completions.create({
                 messages,
                 model: 'llama-3.1-8b-instant',
                 temperature: 0.3,

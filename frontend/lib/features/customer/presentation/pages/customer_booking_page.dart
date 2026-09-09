@@ -55,6 +55,10 @@ class _CustomerBookingPageState extends State<CustomerBookingPage> {
   bool _isGeocoding = false;
   bool _isLocating = false;
 
+  bool _isScheduled = false;
+  DateTime? _scheduledDate;
+  TimeOfDay? _scheduledTime;
+
   List<String> _availableCategories = [];
   String? _selectedCategory;
   List<ServiceItem> _allServices = [];
@@ -637,6 +641,14 @@ class _CustomerBookingPageState extends State<CustomerBookingPage> {
   Future<void> _continue() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_isScheduled && (_scheduledDate == null || _scheduledTime == null)) {
+      ToastUtils.showToast(
+        context: context,
+        message: 'Please select a valid date and time for scheduling',
+      );
+      return;
+    }
+
     final address = _addressController.text.trim();
     if (address.isEmpty) {
       ToastUtils.showToast(
@@ -646,9 +658,21 @@ class _CustomerBookingPageState extends State<CustomerBookingPage> {
       return;
     }
 
+    DateTime? finalScheduledAt;
+    if (_isScheduled && _scheduledDate != null && _scheduledTime != null) {
+      finalScheduledAt = DateTime(
+        _scheduledDate!.year,
+        _scheduledDate!.month,
+        _scheduledDate!.day,
+        _scheduledTime!.hour,
+        _scheduledTime!.minute,
+      );
+    }
+
     final bookingCubit = context.read<BookingFlowCubit>();
     await bookingCubit.submitBookingDetails(
       address: address,
+      scheduledAt: finalScheduledAt,
       problemDescription: _descriptionController.text.trim(),
       workerId: widget.workerId,
       photoPaths: _photos.map((file) => file.path).toList(),
@@ -1450,6 +1474,117 @@ class _CustomerBookingPageState extends State<CustomerBookingPage> {
                       ],
                     ),
                   ),
+                ],
+              ),
+            ),
+            // Schedule Section
+            _SectionCard(
+              icon: Icons.calendar_today_rounded,
+              iconColor: AppColors.primary,
+              title: 'When do you need the service?',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Schedule for later?',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Switch(
+                        value: _isScheduled,
+                        onChanged: (val) {
+                          setState(() {
+                            _isScheduled = val;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  if (_isScheduled) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: _scheduledDate ?? DateTime.now(),
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime.now().add(const Duration(days: 7)),
+                              );
+                              if (date != null) {
+                                setState(() => _scheduledDate = date);
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: scheme.outline.withValues(alpha: 0.3)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.calendar_month, size: 20, color: scheme.primary),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _scheduledDate != null
+                                        ? '${_scheduledDate!.day}/${_scheduledDate!.month}/${_scheduledDate!.year}'
+                                        : 'Select Date',
+                                    style: TextStyle(
+                                      color: _scheduledDate != null ? scheme.onSurface : theme.hintColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final time = await showTimePicker(
+                                context: context,
+                                initialTime: _scheduledTime ?? TimeOfDay.now(),
+                              );
+                              if (time != null) {
+                                setState(() => _scheduledTime = time);
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: scheme.outline.withValues(alpha: 0.3)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.access_time, size: 20, color: scheme.primary),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _scheduledTime != null
+                                        ? _scheduledTime!.format(context)
+                                        : 'Select Time',
+                                    style: TextStyle(
+                                      color: _scheduledTime != null ? scheme.onSurface : theme.hintColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

@@ -132,6 +132,16 @@ class WorkersApiRepository {
     return isOnline;
   }
 
+  Future<void> updateWorkerRates(List<Map<String, dynamic>> rates) async {
+    final res = await _api.put(
+      '/api/workers/me/rates', // Use the endpoint required
+      data: {'categoryRates': rates},
+    );
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Failed to update rates');
+    }
+  }
+
   static WorkerProfile mapWorker(
     Map<String, dynamic> json, [
     double? userLat,

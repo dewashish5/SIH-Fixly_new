@@ -2,6 +2,8 @@ import WorkerCertificate from '../models/WorkerCertificate.js';
 import User from '../models/User.js';
 import { fail, ok, isObjectId } from '../utils/http.js';
 import { notifyUser, safeNotify } from '../services/notificationService.js';
+import { extractTextFromImageURL } from '../utils/geminiVisionClient.js';
+import { getFuzzyMatchRatio } from '../utils/stringUtils.js';
 
 export const createCertificate = async (req, res) => {
     try {
@@ -10,6 +12,21 @@ export const createCertificate = async (req, res) => {
         if (!certificateType || !fileUrl) {
             return fail(res, 400, 'VALIDATION_ERROR', 'certificateType and fileUrl required');
         }
+
+        // LLM Name Extraction & Fuzzy Match
+        const extractedText = await extractTextFromImageURL(
+            fileUrl,
+            "Extract ONLY the full name of the person this certificate is issued to. Return nothing else."
+        );
+        
+        const extractedName = extractedText.trim();
+        const matchRatio = getFuzzyMatchRatio(extractedName, req.user.name || '');
+        
+        // If match ratio is too low, reject
+        if (extractedName && matchRatio < 0.6) { // arbitrary threshold 0.6
+            return fail(res, 400, 'NAME_MISMATCH', 'The name on the certificate does not match the registered user name.');
+        }
+
         const cert = await WorkerCertificate.create({
             worker: req.user.id,
             serviceCategory: serviceCategory || null,

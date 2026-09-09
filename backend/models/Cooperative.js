@@ -6,6 +6,12 @@ const cooperativeSchema = new mongoose.Schema({
     registrationNumber: { type: String, default: 'FED-COOP-2026-001' },
     state: { type: String, default: null },
     district: { type: String, default: null },
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    email: { type: String },
+    phone: { type: String },
+    logo: { type: String },
+    address: { type: String },
+    status: { type: String, enum: ['pending', 'approved', 'suspended'], default: 'pending' },
     commissionRate: { type: Number, default: 0.05 }, // 5% Cooperative Platform operational fee
     welfareContributionRate: { type: Number, default: 0.05 }, // 5% dedicated to worker welfare fund
     insuranceEnabled: { type: Boolean, default: true },

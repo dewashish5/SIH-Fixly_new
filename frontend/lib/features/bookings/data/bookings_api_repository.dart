@@ -245,6 +245,13 @@ class BookingsApiRepository {
     return getById(bookingId, serviceTitle: serviceTitle);
   }
 
+  Future<void> workerCancel(String bookingId) async {
+    final res = await _api.post(ApiEndpoints.workerCancelBooking(bookingId));
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Cancel failed');
+    }
+  }
+
   Future<Booking> updateBooking({
     required String bookingId,
     String? problemDescription,
@@ -267,6 +274,44 @@ class BookingsApiRepository {
     final res = await _api.patch(ApiEndpoints.bookingById(bookingId), data: data);
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Update failed');
+    }
+    final booking = res['booking'];
+    if (booking is Map) {
+      return mapBooking(Map<String, dynamic>.from(booking));
+    }
+    return getById(bookingId);
+  }
+
+  Future<Booking> submitPriceEstimation(
+    String bookingId, {
+    required double labor,
+    double? parts,
+    double? serviceCharge,
+    String? notes,
+  }) async {
+    final res = await _api.post(
+      '/api/bookings/$bookingId/price-estimation',
+      data: {
+        'estimatedLaborCost': labor,
+        if (parts != null) 'estimatedPartsCost': parts,
+        if (serviceCharge != null) 'serviceCharge': serviceCharge,
+        if (notes != null) 'notes': notes,
+      },
+    );
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Failed to submit estimation');
+    }
+    final booking = res['booking'];
+    if (booking is Map) {
+      return mapBooking(Map<String, dynamic>.from(booking));
+    }
+    return getById(bookingId);
+  }
+
+  Future<Booking> acceptEstimation(String bookingId) async {
+    final res = await _api.post('/api/bookings/$bookingId/accept-estimation');
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Failed to accept estimation');
     }
     final booking = res['booking'];
     if (booking is Map) {
@@ -476,6 +521,8 @@ class BookingsApiRepository {
       jobCompletedAt: parseDate(json['jobCompletedAt']),
       rawStatus: rawStatus,
       invoice: invoice is Map ? BookingInvoice.fromJson(Map<String, dynamic>.from(invoice)) : null,
+      scheduledAt: parseDate(json['scheduledTime'] ?? json['scheduledAt']),
+      bookingType: json['bookingType']?.toString(),
     );
   }
 

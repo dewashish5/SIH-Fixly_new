@@ -12,6 +12,7 @@ import connectDB from './config/db.js';
 import "./worker/emailWorker.js";
 import "./worker/uploadWorker.js";
 import "./worker/notificationWorker.js";
+import "./worker/scheduledBookingWorker.js";
 
 // Middlewares
 import { initSocket } from './config/socket.js';
@@ -38,6 +39,7 @@ import cooperativeRoutes from './routes/cooperative-routes.js';
 import welfareRoutes from './routes/welfare-routes.js';
 import webrtcRoutes from './routes/webrtc-call-routes.js';
 import agentRoutes from './routes/agent-routes.js';
+import emergencyRoutes from './routes/emergency-routes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -103,6 +105,7 @@ app.get('/', (req, res) => {
 // API Routes Mounting
 app.use('/api/auth', authRoutes);
 app.use('/api/bookings', apiLimiter, bookingRoutes);
+app.use('/api/emergency', apiLimiter, emergencyRoutes);
 app.use('/api/workers', workerRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/payments', paymentRoutes);

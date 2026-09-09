@@ -220,6 +220,10 @@ class _WorkerWalletPageState extends State<WorkerWalletPage> {
                                                       ),
                                                 ),
                                               ],
+                                              if (tx.type?.toUpperCase() == 'PAYOUT' && tx.status != null) ...[
+                                                const SizedBox(height: 6),
+                                                _buildStatusBadge(tx.status!),
+                                              ],
                                             ],
                                           ),
                                         ),
@@ -262,6 +266,34 @@ class _WorkerWalletPageState extends State<WorkerWalletPage> {
                 ),
         );
       },
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    final s = status.toUpperCase();
+    if (s == 'REQUESTED') color = Colors.amber.shade700;
+    else if (s == 'PROCESSING') color = Colors.orange;
+    else if (s == 'PAID' || s == 'COMPLETED') color = Colors.green;
+    else if (s == 'REJECTED' || s == 'FAILED') color = Colors.red;
+    else color = Colors.grey;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        s,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+      ),
     );
   }
 }

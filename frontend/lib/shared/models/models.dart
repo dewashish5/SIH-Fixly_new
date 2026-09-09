@@ -270,6 +270,7 @@ enum BookingStatus {
   inProgress,
   completed,
   paid,
+  rating,
 }
 
 class BookingAddOn extends Equatable {
@@ -577,6 +578,8 @@ class WorkerJob extends Equatable {
     this.jobCompletedAt,
     this.rawStatus,
     this.invoice,
+    this.scheduledAt,
+    this.bookingType,
   });
 
   final String id;
@@ -606,42 +609,66 @@ class WorkerJob extends Equatable {
   final String? rawStatus;
   final BookingInvoice? invoice;
 
+  final DateTime? scheduledAt;
+  final String? bookingType;
+
   String get bookingId => id;
 
   WorkerJob copyWith({
+    String? id,
+    String? title,
+    String? customerName,
+    String? address,
+    double? pay,
     JobStatus? status,
-    String? rawStatus,
-    List<BookingAddOn>? addOns,
+    double? distanceKm,
+    double? customerLat,
+    double? customerLng,
+    String? customerPhone,
+    String? customerAvatar,
+    String? problemDescription,
+    List<String>? problemPhotos,
+    String? serviceCategory,
+    String? serviceImage,
+    String? arrivalOtp,
+    double? baseServiceFee,
+    double? platformFee,
     double? extraPartsTotal,
+    List<BookingAddOn>? addOns,
     DateTime? jobStartedAt,
     DateTime? jobCompletedAt,
+    String? rawStatus,
     BookingInvoice? invoice,
+    DateTime? scheduledAt,
+    String? bookingType,
   }) {
     return WorkerJob(
-      id: id,
-      title: title,
-      customerName: customerName,
-      address: address,
-      pay: pay,
+      id: id ?? this.id,
+      title: title ?? this.title,
+      customerName: customerName ?? this.customerName,
+      address: address ?? this.address,
+      pay: pay ?? this.pay,
       status: status ?? this.status,
-      distanceKm: distanceKm,
-      customerLat: customerLat,
-      customerLng: customerLng,
-      customerPhone: customerPhone,
-      customerAvatar: customerAvatar,
-      problemDescription: problemDescription,
-      problemPhotos: problemPhotos,
-      serviceCategory: serviceCategory,
-      serviceImage: serviceImage,
-      arrivalOtp: arrivalOtp,
-      baseServiceFee: baseServiceFee,
-      platformFee: platformFee,
+      distanceKm: distanceKm ?? this.distanceKm,
+      customerLat: customerLat ?? this.customerLat,
+      customerLng: customerLng ?? this.customerLng,
+      customerPhone: customerPhone ?? this.customerPhone,
+      customerAvatar: customerAvatar ?? this.customerAvatar,
+      problemDescription: problemDescription ?? this.problemDescription,
+      problemPhotos: problemPhotos ?? this.problemPhotos,
+      serviceCategory: serviceCategory ?? this.serviceCategory,
+      serviceImage: serviceImage ?? this.serviceImage,
+      arrivalOtp: arrivalOtp ?? this.arrivalOtp,
+      baseServiceFee: baseServiceFee ?? this.baseServiceFee,
+      platformFee: platformFee ?? this.platformFee,
       extraPartsTotal: extraPartsTotal ?? this.extraPartsTotal,
       addOns: addOns ?? this.addOns,
       jobStartedAt: jobStartedAt ?? this.jobStartedAt,
       jobCompletedAt: jobCompletedAt ?? this.jobCompletedAt,
       rawStatus: rawStatus ?? this.rawStatus,
       invoice: invoice ?? this.invoice,
+      scheduledAt: scheduledAt ?? this.scheduledAt,
+      bookingType: bookingType ?? this.bookingType,
     );
   }
 
@@ -649,12 +676,30 @@ class WorkerJob extends Equatable {
   List<Object?> get props => [
     id,
     title,
+    customerName,
+    address,
     pay,
     status,
-    rawStatus,
+    distanceKm,
     customerLat,
     customerLng,
+    customerPhone,
+    customerAvatar,
+    problemDescription,
+    problemPhotos,
+    serviceCategory,
+    serviceImage,
+    arrivalOtp,
+    baseServiceFee,
+    platformFee,
+    extraPartsTotal,
     addOns,
+    jobStartedAt,
+    jobCompletedAt,
+    rawStatus,
+    invoice,
+    scheduledAt,
+    bookingType,
   ];
 }
 
@@ -666,6 +711,8 @@ class WalletTransaction extends Equatable {
     required this.isCredit,
     this.date,
     this.transactionId,
+    this.status,
+    this.type,
   });
 
   final String id;
@@ -674,9 +721,11 @@ class WalletTransaction extends Equatable {
   final bool isCredit;
   final DateTime? date;
   final String? transactionId;
+  final String? status;
+  final String? type;
 
   @override
-  List<Object?> get props => [id, label, amount, isCredit, date, transactionId];
+  List<Object?> get props => [id, label, amount, isCredit, date, transactionId, status, type];
 }
 
 class NotificationItem extends Equatable {

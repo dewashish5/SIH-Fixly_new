@@ -62,17 +62,22 @@ class AuthApiRepository {
     required String password,
     required String role,
     required String phone,
+    String? federationId,
   }) async {
+    final payload = {
+      'name': name,
+      'email': email,
+      'password': password,
+      'role': role,
+      'phone': phone,
+      'location': _locationBody(),
+    };
+    if (federationId != null) {
+      payload['federationId'] = federationId;
+    }
     final res = await _api.post(
       ApiEndpoints.register,
-      data: {
-        'name': name,
-        'email': email,
-        'password': password,
-        'role': role,
-        'phone': phone,
-        'location': _locationBody(),
-      },
+      data: payload,
     );
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Register failed');

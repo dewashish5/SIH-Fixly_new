@@ -83,6 +83,17 @@ class JobFeedCubit extends Cubit<JobFeedState> {
     }
   }
 
+  Future<void> cancelScheduledJob(String id) async {
+    emit(state.copyWith(status: JobFeedStatus.loading));
+    try {
+      await _bookings.workerCancel(id);
+      final jobs = await _loadAllJobs();
+      emit(JobFeedState(status: JobFeedStatus.loaded, jobs: jobs));
+    } on ApiException catch (e) {
+      emit(state.copyWith(status: JobFeedStatus.failure, error: e.message));
+    }
+  }
+
   Future<List<WorkerJob>> _loadAllJobs() async {
     final results = await Future.wait([
       _bookings.workerIncoming(),

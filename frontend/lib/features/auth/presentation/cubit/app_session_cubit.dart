@@ -160,6 +160,10 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     emit(state.copyWith(authFlow: flow));
   }
 
+  void setFederationId(String? federationId) {
+    emit(state.copyWith(federationId: federationId));
+  }
+
   Future<bool> signInWithGoogle() async {
     emit(state.copyWith(status: AppSessionStatus.loading, clearError: true));
     try {
@@ -276,6 +280,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         password: password,
         role: state.role,
         phone: phone,
+        federationId: state.federationId,
       );
       emit(
         state.copyWith(
@@ -333,6 +338,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         password: password,
         role: state.role,
         phone: phone,
+        federationId: state.federationId,
       );
       emit(state.copyWith(status: AppSessionStatus.otpSent, clearError: true));
       return true;

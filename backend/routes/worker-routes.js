@@ -7,6 +7,7 @@ import {
     patchMyAvailability,
     putAvailabilitySchedule,
     getWorkerReliability,
+    updateWorkerRates,
 } from '../controllers/workerController.js';
 import {
     createCertificate,
@@ -29,6 +30,7 @@ import {
     getInsurance,
     getInsuranceClaims,
     createInsuranceClaim,
+    getWelfareResources,
 } from '../controllers/welfareController.js';
 import { getWorkerReviews } from '../controllers/reviewController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
@@ -42,6 +44,7 @@ router.put('/setup-profile', protect, upload.any(), setupWorkerProfile);
 router.get('/me/availability', protect, authorize('worker'), getMyAvailability);
 router.patch('/me/availability', protect, authorize('worker'), patchMyAvailability);
 router.put('/me/availability/schedule', protect, authorize('worker'), putAvailabilitySchedule);
+router.put('/me/rates', protect, authorize('worker'), updateWorkerRates);
 
 router.post('/me/certificates', protect, authorize('worker'), createCertificate);
 router.get('/me/certificates', protect, authorize('worker'), listMyCertificates);
@@ -56,6 +59,7 @@ router.get('/me/payouts', protect, authorize('worker'), listPayouts);
 router.post('/me/withdraw', protect, authorize('worker'), requestWithdraw);
 router.get('/me/membership', protect, authorize('worker'), getMyMembership);
 router.get('/me/welfare', protect, authorize('worker'), getWelfare);
+router.get('/me/welfare/resources', protect, authorize('worker'), getWelfareResources);
 router.get('/me/welfare/transactions', protect, authorize('worker'), getWelfareTransactions);
 router.get('/me/insurance', protect, authorize('worker'), getInsurance);
 router.get('/me/insurance/claims', protect, authorize('worker'), getInsuranceClaims);

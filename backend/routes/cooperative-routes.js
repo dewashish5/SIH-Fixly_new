@@ -5,11 +5,13 @@ import {
     getMyMembership,
     listSocieties,
     getSocietyById,
-    workerJoinSociety
+    workerJoinSociety,
+    getPublicFederations
 } from '../controllers/cooperativeController.js';
 
 const router = express.Router();
 
+router.get('/federations', getPublicFederations);
 router.get('/info', protect, getCooperativeInfo);
 router.get('/societies', protect, listSocieties);
 router.get('/societies/:id', protect, getSocietyById);

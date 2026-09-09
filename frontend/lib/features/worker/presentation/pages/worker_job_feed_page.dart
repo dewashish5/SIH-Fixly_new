@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../core/network/worker_realtime_service.dart';
@@ -88,18 +89,59 @@ class _WorkerJobFeedPageState extends State<WorkerJobFeedPage> {
                           separatorBuilder: (_, _) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final job = state.jobs[index];
+                            final isScheduled = job.bookingType == 'SCHEDULED' || job.scheduledAt != null;
+                            
+                            Widget? bottomSlot;
+                            if (isScheduled && job.scheduledAt != null) {
+                              final dateFormat = DateFormat('MMM d, y • h:mm a');
+                              bottomSlot = Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.calendar_month, size: 14, color: Colors.blue),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          dateFormat.format(job.scheduledAt!),
+                                          style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (job.status == JobStatus.active || job.status == JobStatus.incoming)
+                                    TextButton(
+                                      onPressed: () => context.read<JobFeedCubit>().cancelScheduledJob(job.id),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.red,
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        minimumSize: Size.zero,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      child: const Text('Cancel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    ),
+                                ],
+                              );
+                            }
+
                             return JobListTile(
-                            title: job.title,
-                            subtitle:
-                                '${job.customerName} • ${_jobStatus(job.status)}',
-                            pay: job.pay,
-                            distanceKm: job.distanceKm,
-                            onTap: () => context.push(
-                              RouteNames.workerJobDetail.replaceFirst(
-                                ':id',
-                                job.id,
+                              title: job.title,
+                              subtitle: '${job.customerName} • ${_jobStatus(job.status)}',
+                              pay: job.pay,
+                              distanceKm: job.distanceKm,
+                              bottomSlot: bottomSlot,
+                              onTap: () => context.push(
+                                RouteNames.workerJobDetail.replaceFirst(
+                                  ':id',
+                                  job.id,
+                                ),
                               ),
-                            ),
                           ).appListEnter(context, index: index, id: job.id);
                         },
                       ),

@@ -9,6 +9,7 @@ import { uploadMulterFiles } from '../utils/cloudinary.js';
 import { notifyUser, notifyUsers, safeNotify } from '../services/notificationService.js';
 import { findEligibleWorkerIds } from '../services/eligibleWorkers.js';
 import { getPlatformSettings } from '../services/settingsService.js';
+import { scheduleReminders } from '../queues/scheduledBookingQueue.js';
 
 // Screen 5 & 6: Estimate Price Breakdown
 export const calculateEstimate = async (req, res) => {
@@ -173,10 +174,26 @@ export const createBooking = async (req, res) => {
         const finalBookingType = isSos ? 'EMERGENCY_SOS' : (scheduledTime ? 'SCHEDULED' : (bookingType || 'STANDARD'));
 
         let parsedScheduledTime = Date.now();
+        let finalTimeSlot = timeSlot;
         if (scheduledTime) {
             const parsed = new Date(scheduledTime);
-            if (!isNaN(parsed.getTime())) {
-                parsedScheduledTime = parsed;
+            if (isNaN(parsed.getTime())) {
+                return res.status(400).json({ success: false, message: 'Invalid scheduledTime format' });
+            }
+            const now = new Date();
+            const minTime = new Date(now.getTime() + 30 * 60000);
+            const maxTime = new Date(now.getTime() + 7 * 24 * 60 * 60000);
+            if (parsed < minTime) {
+                return res.status(400).json({ success: false, message: 'Scheduled time must be at least 30 minutes from now' });
+            }
+            if (parsed > maxTime) {
+                return res.status(400).json({ success: false, message: 'Scheduled time cannot be more than 7 days ahead' });
+            }
+            parsedScheduledTime = parsed;
+            
+            if (!finalTimeSlot) {
+                const options = { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric' };
+                finalTimeSlot = parsed.toLocaleString('en-US', options);
             }
         }
 
@@ -196,7 +213,7 @@ export const createBooking = async (req, res) => {
             service: serviceId,
             bookingType: finalBookingType,
             isEmergency: isSos,
-            timeSlot: timeSlot || (isSos ? 'Immediate (SOS Emergency)' : null),
+            timeSlot: finalTimeSlot || (isSos ? 'Immediate (SOS Emergency)' : null),
             problemDescription: problemDescription || null,
             problemPhotos: photoUrls,
             serviceAddress: {
@@ -215,6 +232,10 @@ export const createBooking = async (req, res) => {
                 paymentMethod: 'UPI'
             }
         });
+
+        if (finalBookingType === 'SCHEDULED' && parsedScheduledTime > Date.now()) {
+            await scheduleReminders(booking._id, new Date(parsedScheduledTime));
+        }
 
         // Populate service & worker details for response
         const populatedBooking = await Booking.findById(booking._id)
@@ -264,7 +285,15 @@ export const createBooking = async (req, res) => {
                 });
                 return;
             }
-            const workerIds = await findEligibleWorkerIds(booking, service?.category);
+            const allWorkers = await User.find({ role: 'worker', isVerified: true }).select('location savedAddresses').lean();
+            const workerIds = [];
+            for (const w of allWorkers) {
+                const wCoords = (w.location && w.location.coordinates) || (w.savedAddresses?.[0]?.location?.coordinates);
+                if (wCoords && wCoords.length === 2) {
+                    const dist = calculateHaversineDistanceKm(coords[1], coords[0], wCoords[1], wCoords[0]);
+                    if (dist <= 15) workerIds.push(String(w._id));
+                }
+            }
             await notifyUsers(workerIds, {
                 eventType,
                 entityId: booking._id,
@@ -399,15 +428,80 @@ export const updateBooking = async (req, res) => {
 export const cancelBooking = async (req, res) => {
     try {
         const { bookingId } = req.params;
+        const { reason } = req.body;
 
-        const booking = await Booking.findById(bookingId);
+        const booking = await Booking.findById(bookingId).populate('worker');
         if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
         if (['COMPLETED', 'CANCELLED'].includes(booking.status)) {
             return res.status(400).json({ success: false, message: 'Cannot cancel an already completed/cancelled booking' });
         }
 
+        let cancellationFee = 0;
+        const isCustomer = req.user.role === 'customer' || String(booking.customer) === String(req.user.id);
+
+        if (isCustomer) {
+            if (['PENDING', 'SEARCHING', 'APPROVED', 'ACCEPTED'].includes(booking.status)) {
+                if (!booking.workerNavigationStartedAt) {
+                    // Tier 1/2: Free if worker hasn't started navigation
+                    cancellationFee = 0;
+                } else {
+                    // Worker started navigation
+                    let originalDistance = 0;
+                    let currentDistance = 0;
+
+                    if (booking.worker && booking.serviceAddress?.location?.coordinates) {
+                        const jobLng = booking.serviceAddress.location.coordinates[0];
+                        const jobLat = booking.serviceAddress.location.coordinates[1];
+                        const worker = booking.worker;
+
+                        const workerHomeLng = worker.location?.coordinates?.[0] || worker.savedAddresses?.[0]?.location?.coordinates?.[0] || jobLng;
+                        const workerHomeLat = worker.location?.coordinates?.[1] || worker.savedAddresses?.[0]?.location?.coordinates?.[1] || jobLat;
+                        
+                        originalDistance = calculateHaversineDistanceKm(workerHomeLat, workerHomeLng, jobLat, jobLng);
+
+                        let currentLng = workerHomeLng;
+                        let currentLat = workerHomeLat;
+                        try {
+                            const trackingData = await redis.get(`tracking:booking:${booking._id}`);
+                            if (trackingData) {
+                                const parsed = JSON.parse(trackingData);
+                                if (parsed.lat && parsed.lng) {
+                                    currentLat = parsed.lat;
+                                    currentLng = parsed.lng;
+                                }
+                            }
+                        } catch (err) {}
+
+                        currentDistance = calculateHaversineDistanceKm(currentLat, currentLng, jobLat, jobLng);
+                    }
+
+                    const distanceCovered = originalDistance - currentDistance;
+                    if (distanceCovered < (originalDistance * 0.5)) {
+                        // Tier 3: Free if worker covered < 50% distance
+                        cancellationFee = 0;
+                    } else {
+                        // Tier 4: Charged if worker covered > 50% distance
+                        cancellationFee = Math.max(0, Math.round(distanceCovered * 10)); // Rs. 10/km covered
+                    }
+                }
+            } else if (booking.status === 'ARRIVED') {
+                // Tier 5: If ARRIVED but not started, customer pays base price
+                cancellationFee = booking.invoice?.baseServiceFee || 100;
+            }
+        }
+
         booking.status = 'CANCELLED';
+        booking.cancelledBy = req.user.id;
+        booking.cancelReason = reason || 'Customer cancelled';
+        booking.cancelledAt = new Date();
+        booking.cancellationFee = cancellationFee;
+        
+        if (cancellationFee > 0 && booking.invoice) {
+            booking.invoice.cancellationFee = cancellationFee;
+            booking.invoice.totalAmount = (booking.invoice.totalAmount || 0) + cancellationFee;
+        }
+
         await booking.save();
 
         // Purge temporary live tracking cache from Redis immediately
@@ -831,6 +925,151 @@ export const declineBooking = async (req, res) => {
             });
         }
         return res.status(200).json({ success: true, data: { declined: true, reason } });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+export const workerCancelBooking = async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { reason } = req.body;
+        
+        if (req.user.role !== 'worker') {
+            return res.status(403).json({ success: false, code: 'FORBIDDEN', message: 'Worker role required' });
+        }
+
+        const booking = await Booking.findById(bookingId).populate('service');
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+        if (String(booking.worker) !== String(req.user.id)) {
+            return res.status(403).json({ success: false, message: 'You are not assigned to this booking' });
+        }
+
+        if (!['APPROVED', 'ACCEPTED'].includes(booking.status)) {
+            return res.status(400).json({ success: false, message: 'Only APPROVED or ACCEPTED bookings can be cancelled by worker' });
+        }
+
+        booking.status = 'PENDING';
+        booking.worker = null;
+        booking.declinedBy = req.user.id;
+        booking.declineReason = reason || 'Worker cancelled scheduled booking';
+        await booking.save();
+
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`booking_${bookingId}`).emit('booking_status_update', {
+                bookingId,
+                status: 'PENDING'
+            });
+            
+            io.emit('booking:new_available', {
+                bookingId: booking._id,
+                coordinates: booking.serviceAddress?.location?.coordinates,
+                category: booking.service?.category,
+                isEmergency: booking.isEmergency,
+                bookingType: booking.bookingType
+            });
+        }
+
+        safeNotify(async () => {
+            await notifyUser({
+                recipient: booking.customer,
+                eventType: 'BOOKING_CANCELLED',
+                entityId: booking._id,
+                bookingId: booking._id,
+                dedupeKey: `BOOKING_CANCELLED_BY_WORKER:${booking._id}:${Date.now()}`,
+            });
+
+            const workerIds = await findEligibleWorkerIds(booking, booking.service?.category);
+            await notifyUsers(workerIds, {
+                eventType: 'NEW_BOOKING_AVAILABLE',
+                entityId: booking._id,
+                bookingId: booking._id,
+                dedupeKeyFor: (id) => `NEW_BOOKING_AVAILABLE:${booking._id}:${id}`,
+            });
+        });
+
+        return res.status(200).json({ success: true, message: 'Booking cancelled and re-dispatched' });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const createEmergencyBooking = async (req, res) => {
+    try {
+        const { serviceId, issueDescription, offeredPrice, latitude, longitude } = req.body;
+        
+        if (!serviceId || !latitude || !longitude) {
+            return res.status(400).json({ success: false, message: 'serviceId, latitude, and longitude are required' });
+        }
+
+        const coords = [parseFloat(longitude), parseFloat(latitude)];
+        
+        const service = await Service.findById(serviceId);
+        let baseFee = offeredPrice || (service ? (service.basePrice || 100) : 100);
+
+        const settings = await getPlatformSettings();
+        const platformFee = settings.customerPlatformFee !== undefined && settings.customerPlatformFee !== null
+            ? Number(settings.customerPlatformFee)
+            : 0;
+        
+        const urgentFee = Number(settings.emergencySurchargeFixed) || Math.round(baseFee * (Number(settings.emergencySurchargePercent || 20) / 100)) || 50;
+        const totalAmount = baseFee + platformFee + urgentFee;
+
+        const booking = await Booking.create({
+            customer: req.user.id,
+            service: serviceId,
+            bookingType: 'EMERGENCY_SOS',
+            isEmergency: true,
+            timeSlot: 'Immediate (SOS Emergency)',
+            problemDescription: issueDescription || null,
+            serviceAddress: {
+                addressLine: 'Emergency Location',
+                location: { type: 'Point', coordinates: coords }
+            },
+            status: 'PENDING',
+            invoice: {
+                baseServiceFee: baseFee,
+                extraPartsTotal: 0,
+                platformFee: platformFee,
+                urgentFee: urgentFee,
+                totalAmount: totalAmount,
+                paymentStatus: 'PENDING',
+                paymentMethod: 'UPI'
+            }
+        });
+
+        const populatedBooking = await Booking.findById(booking._id)
+            .populate('service', 'name category icon basePrice')
+            .populate('customer', 'name phone')
+            .lean();
+
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('emergency:booking_requested', {
+                bookingId: booking._id,
+                booking: populatedBooking,
+                coordinates: coords,
+                category: service?.category,
+                urgentFee
+            });
+        }
+
+        safeNotify(async () => {
+            const workerIds = await findEligibleWorkerIds(booking, service?.category);
+            await notifyUsers(workerIds, {
+                eventType: 'EMERGENCY_BOOKING_ALERT',
+                entityId: booking._id,
+                bookingId: booking._id,
+                dedupeKeyFor: (id) => `EMERGENCY_BOOKING_ALERT:${booking._id}:${id}`,
+            });
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: 'SOS Emergency booking dispatched to all nearby verified workers!',
+            booking: populatedBooking
+        });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }

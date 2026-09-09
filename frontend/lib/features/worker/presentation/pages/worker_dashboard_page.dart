@@ -81,6 +81,11 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
               },
             ),
             IconButton(
+              icon: const Icon(Icons.sos, color: Colors.red),
+              tooltip: 'Emergency SOS',
+              onPressed: () => context.push(RouteNames.sharedSos),
+            ),
+            IconButton(
               icon: const Icon(Icons.notifications_outlined),
               tooltip: l10n.notifications,
               onPressed: () => context.push(RouteNames.sharedNotifications),

@@ -170,7 +170,7 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
         );
   }
 
-  void _continue() {
+  Future<void> _continue() async {
     _commitTypedSkills(keepRemainder: false);
     final cubit = context.read<WorkerOnboardingCubit>();
     final years = int.tryParse(_experienceController.text.trim()) ?? 0;
@@ -186,8 +186,12 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
       ToastUtils.showError(context: context, message: ApiException.userFacingMessage(error));
       return;
     }
+    
+    final success = await cubit.submitWorkProfile();
+    if (!success) return;
+
     cubit.setStep(2);
-    context.push(RouteNames.workerOnboardingPayout);
+    if (mounted) context.push(RouteNames.workerOnboardingPayout);
   }
 
   List<String> _customSkills(List<String> skills) =>
@@ -230,6 +234,32 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
                 'Certificate, skills, rates, and your current location.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
+              if (state.errorMessage == 'NAME_MISMATCH')
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.error),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: AppColors.error),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Name mismatch between ID and Certificate.',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.error,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               const SizedBox(height: AppSpacing.xl),
               OnboardingSection(
                 title: l10n.skillCertificate,

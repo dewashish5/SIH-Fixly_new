@@ -9,6 +9,17 @@ const getOrCreateFederation = async () => {
     return doc;
 };
 
+// 0. Get Public Federations (for signup)
+export const getPublicFederations = async (req, res) => {
+    try {
+        const federations = await Cooperative.find({ status: 'approved' })
+            .select('name federationName state district logo');
+        return ok(res, { data: federations });
+    } catch (error) {
+        return fail(res, 500, 'INTERNAL_ERROR', error.message);
+    }
+};
+
 // 1. Get Federation Level Info
 export const getCooperativeInfo = async (_req, res) => {
     try {

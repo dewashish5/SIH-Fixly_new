@@ -496,7 +496,21 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                               ],
                             ),
                           ),
-                          if (isPaid) ...[
+                          if (booking?.rawStatus == 'ESTIMATION_SUBMITTED') ...[
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                minimumSize: const Size(double.infinity, 48),
+                              ),
+                              onPressed: () => context.push(
+                                '${RouteNames.customerEstimationReview}?bookingId=${booking?.id ?? ''}',
+                              ),
+                              child: const Text('Review Price Estimation', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                            ),
+                          ] else if (isPaid) ...[
                             const SizedBox(height: 16),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(

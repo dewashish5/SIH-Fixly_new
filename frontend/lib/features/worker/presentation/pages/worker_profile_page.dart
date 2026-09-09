@@ -178,6 +178,14 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                                 context.push(RouteNames.sharedOrderHistory),
                           ),
                           _WorkerMenuTile(
+                            icon: Icons.currency_rupee_outlined,
+                            iconColor: AppColors.primary,
+                            title: 'Rate Settings',
+                            subtitle: 'Manage your hourly or per-visit rates',
+                            onTap: () =>
+                                context.push(RouteNames.workerRateSettings),
+                          ),
+                          _WorkerMenuTile(
                             icon: Icons.account_balance_wallet_outlined,
                             iconColor: AppColors.primary,
                             title: 'Wallet & Payouts',
@@ -192,6 +200,14 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                             subtitle: 'Affiliation & welfare benefits',
                             onTap: () =>
                                 context.push('/worker/cooperative'), // Or defined RouteName
+                          ),
+                          _WorkerMenuTile(
+                            icon: Icons.health_and_safety_outlined,
+                            iconColor: AppColors.primary,
+                            title: 'Welfare & Insurance',
+                            subtitle: 'View your e-Shram status and resources',
+                            onTap: () =>
+                                context.push(RouteNames.workerWelfare),
                           ),
                           _WorkerMenuTile(
                             icon: Icons.support_agent_rounded,

@@ -373,11 +373,29 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
         onCompleted: () => context.push('${RouteNames.workerNavigation}?bookingId=${job.id}'),
       );
     } else if (rawStatus == 'ARRIVED') {
-      return SwipeActionButton(
-        label: 'Swipe to Enter OTP',
-        onCompleted: () => context.push('${RouteNames.workerOtpEntry}?bookingId=${job.id}'),
+      return Column(
+        children: [
+          SwipeActionButton(
+            label: 'Swipe to Enter OTP',
+            onCompleted: () => context.push('${RouteNames.workerOtpEntry}?bookingId=${job.id}'),
+          ),
+          const SizedBox(height: 12),
+          PrimaryButton(
+            label: 'Give Price Estimation',
+            onPressed: () => context.push('${RouteNames.workerPriceEstimation}?bookingId=${job.id}'),
+          ),
+        ],
       );
-    } else if (rawStatus == 'IN_PROGRESS') {
+    } else if (rawStatus == 'ESTIMATION_SUBMITTED') {
+      return const Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Text(
+          'Waiting for customer to accept estimation...',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+        ),
+      );
+    } else if (rawStatus == 'IN_PROGRESS' || rawStatus == 'ESTIMATION_ACCEPTED') {
       return Column(
         children: [
           Text(

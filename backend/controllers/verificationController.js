@@ -34,6 +34,20 @@ export const submitVerification = async (req, res) => {
             return fail(res, 400, 'VALIDATION_ERROR', 'Required verification fields missing');
         }
 
+        const duplicateUser = await User.findOne({
+            _id: { $ne: req.user.id },
+            $or: [
+                { 'kycDocuments.aadhaarNumber': governmentIdNumber },
+                { 'kycDocuments.panNumber': governmentIdNumber },
+                { 'kycDocuments.govermentIdNumber': governmentIdNumber },
+                { 'workerProfile.identityDocuments.docNumber': governmentIdNumber }
+            ]
+        });
+
+        if (duplicateUser) {
+            return fail(res, 409, 'DUPLICATE_DOCUMENT', `This ${governmentIdType} is already registered with another account`);
+        }
+
         const user = await User.findById(req.user.id);
         if (!user) return fail(res, 404, 'NOT_FOUND', 'User not found');
 
@@ -85,7 +99,7 @@ export const submitVerification = async (req, res) => {
             } else if (faceMatch >= 85) {
                 newStatus = 'APPROVED';
                 reason = 'High AI confidence';
-            } else if (faceMatch >= 50) {
+            } else if (faceMatch >= 40) {
                 newStatus = 'MANUAL_REVIEW';
                 reason = 'Moderate AI confidence';
             } else {

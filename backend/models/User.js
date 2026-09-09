@@ -162,6 +162,8 @@ const userSchema = new mongoose.Schema({
         enum: ['customer', 'worker', 'admin'],
         default: 'customer'
     },
+    federation: { type: mongoose.Schema.Types.ObjectId, ref: 'Cooperative' },
+    adminRole: { type: String, enum: ['super_admin', 'federation_admin'], default: null },
     authProvider: {
         type: String,
         enum: ['local', 'google'],
@@ -229,6 +231,15 @@ const userSchema = new mongoose.Schema({
 
 // Spatial index for 5km radius queries
 userSchema.index({ location: '2dsphere' });
+
+userSchema.index(
+  { 'kycDocuments.aadhaarNumber': 1 },
+  { unique: true, sparse: true, partialFilterExpression: { 'kycDocuments.aadhaarNumber': { $exists: true, $ne: null, $ne: '' } } }
+);
+userSchema.index(
+  { 'kycDocuments.panNumber': 1 },
+  { unique: true, sparse: true, partialFilterExpression: { 'kycDocuments.panNumber': { $exists: true, $ne: null, $ne: '' } } }
+);
 
 // PRE HOOK: Strip worker-only KYC documents if user is a customer
 userSchema.pre('validate', function () {

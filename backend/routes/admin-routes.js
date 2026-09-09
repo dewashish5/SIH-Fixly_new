@@ -2,6 +2,8 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import upload from '../middleware/uploadMiddleware.js';
 import {
+} from "../controllers/emergencyController.js";
+import {
     adminLogin,
     getAdminProfile,
     updateAdminMe,
@@ -38,20 +40,37 @@ import {
     getReportsData,
     getSettings,
     updateSettings,
+    getEnabledLanguages,
+    updateEnabledLanguages,
+    getAllFederations,
+    getFederationDetails,
+    approveFederation,
+    suspendFederation,
+    createWelfareResource,
+    updateWelfareResource,
+    deleteWelfareResource,
+    getWelfareResourcesAdmin
 } from '../controllers/adminController.js';
 import {
     adminGetWorkerVerification,
     adminReviewWorkerVerification,
     adminListCertificates,
+
     adminReviewCertificate,
 } from '../controllers/workerCertificateController.js';
+
 import {
+    getAllEmergencyContacts,
+    createEmergencyContact,
+    updateEmergencyContact,
+    deleteEmergencyContact,
     adminListTickets,
     getTicket,
     adminPatchTicket,
     addTicketMessage,
     adminTakeoverTicket,
 } from '../controllers/supportController.js';
+
 import {
     adminGetCooperative,
     adminUpdateCooperative,
@@ -112,9 +131,15 @@ router.post('/login', adminLogin);
 // ==========================================
 router.use(adminProtect);
 
+import { federationScope } from '../middleware/federationMiddleware.js';
+
 // Profile & Dashboard
 router.get('/me', getAdminProfile);
 router.put('/me', updateAdminMe);
+
+// Mount federationScope for data routes
+router.use(['/dashboard', '/customers', '/workers', '/bookings', '/analytics', '/reports'], federationScope);
+
 router.get('/dashboard', getDashboardStats);
 
 // Customers
@@ -178,6 +203,8 @@ router.get('/reports', getReportsData);
 // Platform Governance Settings
 router.get('/settings', getSettings);
 router.put('/settings', updateSettings);
+router.get('/settings/languages', getEnabledLanguages);
+router.put('/settings/languages', updateEnabledLanguages);
 
 // Worker KYC Verification & Certificates
 router.get('/workers/:id/verification', adminGetWorkerVerification);
@@ -202,6 +229,10 @@ router.get('/cooperative/societies/:id', getSocietyById);
 router.put('/cooperative/societies/:id', adminUpdateSociety);
 router.post('/cooperative/assign-worker', adminAssignWorkerToSociety);
 router.get('/welfare/summary', adminWelfareSummary);
+router.get('/welfare/resources', getWelfareResourcesAdmin);
+router.post('/welfare/resources', createWelfareResource);
+router.put('/welfare/resources/:id', updateWelfareResource);
+router.delete('/welfare/resources/:id', deleteWelfareResource);
 router.get('/worker-payouts', adminListPayouts);
 router.patch('/worker-payouts/:id/status', adminUpdatePayoutStatus);
 
@@ -210,5 +241,19 @@ router.get('/banners', adminGetBanners);
 router.post('/banners', adminCreateBanner);
 router.put('/banners/:id', adminUpdateBanner);
 router.delete('/banners/:id', adminDeleteBanner);
+
+// Federation Management
+router.get('/federations', getAllFederations);
+router.get('/federations/:id', getFederationDetails);
+router.patch('/federations/:id/approve', approveFederation);
+router.patch('/federations/:id/suspend', suspendFederation);
+
+// Emergency Contacts
+
+// Emergency Contacts
+router.get('/emergency/contacts', getAllEmergencyContacts);
+router.post('/emergency/contacts', createEmergencyContact);
+router.put('/emergency/contacts/:id', updateEmergencyContact);
+router.delete('/emergency/contacts/:id', deleteEmergencyContact);
 
 export default router;

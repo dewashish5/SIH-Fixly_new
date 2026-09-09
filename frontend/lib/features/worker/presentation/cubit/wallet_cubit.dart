@@ -39,6 +39,8 @@ class WalletCubit extends Cubit<WalletState> {
               DateTime.now(),
           transactionId:
               transactionId.isNotEmpty ? transactionId : null,
+          status: e['status']?.toString(),
+          type: type,
         );
       }).toList();
       emit(

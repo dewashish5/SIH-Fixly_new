@@ -2,6 +2,7 @@ abstract final class RouteNames {
   static const splash = '/';
   static const language = '/language';
   static const cooperative = '/cooperative';
+  static const federationPicker = '/federation-picker';
   static const role = '/role';
   static const login = '/login';
   static const signup = '/signup';
@@ -42,6 +43,10 @@ abstract final class RouteNames {
   static const customerBookingConfirmation = '/customer/booking-confirmation';
   static const customerInvoice = '/customer/invoice/:id';
 
+  static const workerRateSettings = '/worker/rate-settings';
+  static const workerPriceEstimation = '/worker/price-estimation';
+  static const customerEstimationReview = '/customer/estimation-review';
+
   static const workerOnboardingIdentity = '/worker/onboarding/identity';
   static const workerOnboardingWork = '/worker/onboarding/work';
   static const workerOnboardingPayout = '/worker/onboarding/payout';
@@ -63,6 +68,7 @@ abstract final class RouteNames {
   static const workerWallet = '/worker/wallet';
   static const workerProfile = '/worker/profile';
   static const workerReliability = '/worker/reliability';
+  static const workerWelfare = '/worker/welfare';
   static const workerOtpEntry = '/worker/otp-entry';
   static const workerAddParts = '/worker/add-parts';
   static const workerRating = '/worker/rating';

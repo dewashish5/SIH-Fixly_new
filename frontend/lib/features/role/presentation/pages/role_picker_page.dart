@@ -56,7 +56,13 @@ class RolePickerPage extends StatelessWidget {
               const Spacer(),
               PrimaryButton(
                 label: strings.continueLabel,
-                onPressed: () => context.go(RouteNames.login),
+                onPressed: () {
+                  if (state.role == 'worker') {
+                    context.push(RouteNames.federationPicker);
+                  } else {
+                    context.go(RouteNames.login);
+                  }
+                },
               ),
               const SizedBox(height: 16),
             ],

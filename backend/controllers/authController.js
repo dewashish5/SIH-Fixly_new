@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import Cooperative from '../models/Cooperative.js';
 import redis from '../config/redis.js';
 import { generateOtpEmailHtml } from '../utils/emailTemplate.js';
 import bcrypt from 'bcryptjs';
@@ -105,7 +106,7 @@ export const registerUser = async (req, res) => {
     // #swagger.tags = ['Auth']
     // #swagger.parameters['body'] = { in: 'body', description: 'User registration details', required: true, schema: { $ref: '#/definitions/RegisterInput' } }
     try {
-        const { name, email, password, role, phone, location, workerProfile } = req.body;
+        const { name, email, password, role, phone, location, workerProfile, federationId } = req.body;
         if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
 
         if (role === 'admin') {
@@ -122,6 +123,16 @@ export const registerUser = async (req, res) => {
         if (existingUser && existingUser.isVerified) {
             return res.status(400).json({ success: false, message: 'User already exists' });
         }
+        
+        let validFederationId = null;
+        if (federationId) {
+            const coop = await Cooperative.findById(federationId);
+            if (coop && coop.status === 'approved') {
+                validFederationId = federationId;
+            } else {
+                return res.status(400).json({ success: false, message: 'Invalid or unapproved federation' });
+            }
+        }
 
         const hasFullWorkerProfile = workerProfile && (
             workerProfile.category ||
@@ -137,7 +148,8 @@ export const registerUser = async (req, res) => {
             authProvider: 'local',
             phone: phone || null,
             location: location || null,
-            workerProfile: (registeredRole === 'worker' && hasFullWorkerProfile) ? workerProfile : null
+            workerProfile: (registeredRole === 'worker' && hasFullWorkerProfile) ? workerProfile : null,
+            ...(validFederationId && { federation: validFederationId })
         };
 
         let userDoc = await User.findOne({ email: emailNormalized });
@@ -168,6 +180,60 @@ export const registerUser = async (req, res) => {
         });
     } catch (error) {
         console.error('Register Error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// 1.5 REGISTER FEDERATION
+export const registerFederation = async (req, res) => {
+    try {
+        const { name, federationName, state, district, email, password, phone, registrationNumber } = req.body;
+        
+        if (!email || !password || !name) {
+            return res.status(400).json({ success: false, message: 'Email, password, and name are required' });
+        }
+
+        const emailNormalized = email.toLowerCase().trim();
+        const existingUser = await User.findOne({ email: emailNormalized });
+        
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: 'Email already registered' });
+        }
+
+        // Create cooperative (status pending)
+        const coop = await Cooperative.create({
+            name,
+            federationName,
+            state,
+            district,
+            registrationNumber,
+            email: emailNormalized,
+            phone,
+            status: 'pending'
+        });
+
+        // Create admin user
+        const adminUser = await User.create({
+            name,
+            email: emailNormalized,
+            password,
+            role: 'admin',
+            adminRole: 'federation_admin',
+            federation: coop._id,
+            isVerified: true,
+            isEmailVerified: true
+        });
+
+        coop.owner = adminUser._id;
+        await coop.save();
+
+        return res.status(201).json({
+            success: true,
+            message: 'Federation registered successfully. Awaiting super admin approval.',
+            federationId: coop._id
+        });
+    } catch (error) {
+        console.error('Register Federation Error:', error);
         return res.status(500).json({ success: false, message: error.message });
     }
 };

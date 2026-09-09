@@ -267,7 +267,7 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
       emit(
         state.copyWith(
           isLoading: false,
-          step: BookingStatus.paid,
+          step: BookingStatus.rating,
           booking: updated,
         ),
       );

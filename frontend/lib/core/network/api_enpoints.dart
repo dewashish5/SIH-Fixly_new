@@ -61,6 +61,8 @@ abstract final class ApiEndpoints {
       '/api/bookings/$bookingId/decline';
   static String startJob(String bookingId) =>
       '/api/bookings/$bookingId/start-job';
+  static String workerCancelBooking(String bookingId) =>
+      '/api/bookings/$bookingId/worker-cancel';
 
   // --- Workers ---
   static const String workers = '/api/workers/';

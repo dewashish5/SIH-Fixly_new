@@ -12,6 +12,7 @@ import { getPlatformSettings, clearSettingsCache } from '../services/settingsSer
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import { sendEmail as sendEmailHelper } from '../utils/sendEmail.js';
 import redis from '../config/redis.js';
+import Cooperative from '../models/Cooperative.js';
 
 // Helper function for building pagination object
 const getPaginationMetaData = (total, page, limit) => {
@@ -59,10 +60,34 @@ export const adminLogin = async (req, res) => {
 
         const normalizedEmail = email.toLowerCase().trim();
 
-        // Crosscheck request body email and password against .env values
+        // 1. Crosscheck request body email and password against .env values (Super Admin)
         if (normalizedEmail === envAdminEmail.toLowerCase().trim() && password === envAdminPassword) {
             const token = jwt.sign(
-                { id: 'admin-1', role: 'admin', email: envAdminEmail },
+                { id: 'admin-1', role: 'admin', email: envAdminEmail, adminRole: 'super_admin' },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_ACCESS_EXPIRY || '1d' }
+            );
+
+            return res.status(200).json({
+                success: true,
+                message: 'Super Admin login successful',
+                token,
+                user: {
+                    id: 'admin-1',
+                    _id: 'admin-1',
+                    name: 'System Administrator',
+                    email: envAdminEmail,
+                    role: 'admin',
+                    adminRole: 'super_admin'
+                }
+            });
+        }
+        
+        // 2. DB-based login for federation admins
+        const adminUser = await User.findOne({ email: normalizedEmail, role: 'admin' }).select('+password');
+        if (adminUser && await bcrypt.compare(password, adminUser.password)) {
+            const token = jwt.sign(
+                { id: adminUser._id, role: 'admin', adminRole: adminUser.adminRole, federation: adminUser.federation },
                 process.env.JWT_SECRET,
                 { expiresIn: process.env.JWT_ACCESS_EXPIRY || '1d' }
             );
@@ -72,11 +97,13 @@ export const adminLogin = async (req, res) => {
                 message: 'Admin login successful',
                 token,
                 user: {
-                    id: 'admin-1',
-                    _id: 'admin-1',
-                    name: 'System Administrator',
-                    email: envAdminEmail,
-                    role: 'admin'
+                    id: adminUser._id,
+                    _id: adminUser._id,
+                    name: adminUser.name,
+                    email: adminUser.email,
+                    role: adminUser.role,
+                    adminRole: adminUser.adminRole,
+                    federation: adminUser.federation
                 }
             });
         }
@@ -187,16 +214,27 @@ export const updateAdminMe = async (req, res) => {
  */
 export const getDashboardStats = async (req, res) => {
     try {
-        const totalCustomers = await User.countDocuments({ role: 'customer' });
-        const totalWorkers = await User.countDocuments({ role: 'worker' });
-        const activeWorkers = await User.countDocuments({ role: 'worker', isVerified: true });
-        const totalBookings = await Booking.countDocuments();
-        const completedBookings = await Booking.countDocuments({ status: 'COMPLETED' });
-        const cancelledBookings = await Booking.countDocuments({ status: 'CANCELLED' });
+        const userQueryBase = { ...req.federationFilter };
+        const bookingQueryBase = {};
+        if (req.federationFilter && req.federationFilter.federation) {
+            const fedUsers = await User.find({ federation: req.federationFilter.federation }).select('_id');
+            const fedUserIds = fedUsers.map(u => u._id);
+            bookingQueryBase.$or = [
+                { customer: { $in: fedUserIds } },
+                { worker: { $in: fedUserIds } }
+            ];
+        }
+
+        const totalCustomers = await User.countDocuments({ role: 'customer', ...userQueryBase });
+        const totalWorkers = await User.countDocuments({ role: 'worker', ...userQueryBase });
+        const activeWorkers = await User.countDocuments({ role: 'worker', isVerified: true, ...userQueryBase });
+        const totalBookings = await Booking.countDocuments(bookingQueryBase);
+        const completedBookings = await Booking.countDocuments({ status: 'COMPLETED', ...bookingQueryBase });
+        const cancelledBookings = await Booking.countDocuments({ status: 'CANCELLED', ...bookingQueryBase });
 
         // Total Revenue from completed bookings
         const revenueAggregate = await Booking.aggregate([
-            { $match: { status: 'COMPLETED' } },
+            { $match: { status: 'COMPLETED', ...bookingQueryBase } },
             { $group: { _id: null, total: { $sum: '$invoice.totalAmount' }, platformFees: { $sum: '$invoice.platformFee' } } }
         ]);
 
@@ -204,7 +242,7 @@ export const getDashboardStats = async (req, res) => {
         const platformEarnings = revenueAggregate[0]?.platformFees || 0;
 
         // Recent 5 Bookings
-        const recentBookings = await Booking.find()
+        const recentBookings = await Booking.find(bookingQueryBase)
             .populate('customer', 'name email avatar phone')
             .populate('worker', 'name email avatar phone')
             .populate('service', 'title category basePrice')
@@ -212,9 +250,10 @@ export const getDashboardStats = async (req, res) => {
             .limit(5);
 
         // Real Dynamic MongoDB Aggregation for Top Services by Category
-        const totalBookingsCount = await Booking.countDocuments() || 1;
+        const totalBookingsCount = totalBookings || 1;
 
         const categoryAggregate = await Booking.aggregate([
+            ...(Object.keys(bookingQueryBase).length > 0 ? [{ $match: bookingQueryBase }] : []),
             {
                 $lookup: {
                     from: 'services',
@@ -314,6 +353,9 @@ export const getCustomers = async (req, res) => {
         const isVerified = req.query.isVerified;
 
         const query = { role: 'customer' };
+        if (req.federationFilter) {
+            Object.assign(query, req.federationFilter);
+        }
 
         if (search) {
             query.$or = [
@@ -423,6 +465,9 @@ export const getWorkers = async (req, res) => {
         const isVerified = req.query.isVerified;
 
         const query = { role: 'worker' };
+        if (req.federationFilter) {
+            Object.assign(query, req.federationFilter);
+        }
 
         if (search) {
             query.$or = [
@@ -724,6 +769,15 @@ export const getBookings = async (req, res) => {
         const status = req.query.status || '';
 
         const query = {};
+
+        if (req.federationFilter && req.federationFilter.federation) {
+            const fedUsers = await User.find({ federation: req.federationFilter.federation }).select('_id');
+            const fedUserIds = fedUsers.map(u => u._id);
+            query.$or = [
+                { customer: { $in: fedUserIds } },
+                { worker: { $in: fedUserIds } }
+            ];
+        }
 
         if (status) {
             query.status = status;
@@ -1796,6 +1850,41 @@ export const adminMe = getAdminProfile;
 export const getDashboard = getDashboardStats;
 export const listCustomers = getCustomers;
 export const listWorkers = getWorkers;
+
+export const getEnabledLanguages = async (req, res) => {
+    try {
+        if (req.user.adminRole !== 'super_admin') {
+            return res.status(403).json({ success: false, message: 'Super Admin access required' });
+        }
+        let settings = await Settings.findOne();
+        if (!settings) settings = new Settings();
+        return res.status(200).json({ success: true, data: settings.enabledLanguages });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const updateEnabledLanguages = async (req, res) => {
+    try {
+        if (req.user.adminRole !== 'super_admin') {
+            return res.status(403).json({ success: false, message: 'Super Admin access required' });
+        }
+        const { languages } = req.body;
+        if (!Array.isArray(languages)) {
+            return res.status(400).json({ success: false, message: 'languages must be an array' });
+        }
+        let settings = await Settings.findOne();
+        if (!settings) {
+            settings = new Settings();
+        }
+        settings.enabledLanguages = languages;
+        await settings.save();
+        await clearSettingsCache();
+        return res.status(200).json({ success: true, data: settings.enabledLanguages, message: 'Languages updated' });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
 export const updateWorker = updateWorkerById;
 export const listBookings = getBookings;
 export const listServices = getServices;
@@ -1810,3 +1899,136 @@ export const broadcastNotification = sendAdminNotification;
 export const markNotificationsRead = markAllNotificationsRead;
 export const adminUpload = uploadAdminFile;
 
+// ==========================================
+// FEDERATION MANAGEMENT
+// ==========================================
+
+export const getAllFederations = async (req, res) => {
+    try {
+        if (req.user.adminRole !== 'super_admin') {
+            return res.status(403).json({ success: false, message: 'Super Admin access required' });
+        }
+        const federations = await Cooperative.find().populate('owner', 'name email phone');
+        return res.status(200).json({ success: true, data: federations });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const approveFederation = async (req, res) => {
+    try {
+        if (req.user.adminRole !== 'super_admin') {
+            return res.status(403).json({ success: false, message: 'Super Admin access required' });
+        }
+        const coop = await Cooperative.findByIdAndUpdate(
+            req.params.id,
+            { status: 'approved' },
+            { new: true }
+        );
+        if (!coop) return res.status(404).json({ success: false, message: 'Federation not found' });
+        return res.status(200).json({ success: true, message: 'Federation approved', data: coop });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const suspendFederation = async (req, res) => {
+    try {
+        if (req.user.adminRole !== 'super_admin') {
+            return res.status(403).json({ success: false, message: 'Super Admin access required' });
+        }
+        const coop = await Cooperative.findByIdAndUpdate(
+            req.params.id,
+            { status: 'suspended' },
+            { new: true }
+        );
+        if (!coop) return res.status(404).json({ success: false, message: 'Federation not found' });
+        return res.status(200).json({ success: true, message: 'Federation suspended', data: coop });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const getFederationDetails = async (req, res) => {
+    try {
+        if (req.user.adminRole !== 'super_admin' && req.user.federation?.toString() !== req.params.id) {
+            return res.status(403).json({ success: false, message: 'Access denied' });
+        }
+        
+        const coop = await Cooperative.findById(req.params.id).populate('owner', 'name email phone');
+        if (!coop) return res.status(404).json({ success: false, message: 'Federation not found' });
+
+        const workersCount = await User.countDocuments({ role: 'worker', federation: req.params.id });
+        const customersCount = await User.countDocuments({ role: 'customer', federation: req.params.id });
+        
+        // Find users for bookings
+        const fedUsers = await User.find({ federation: req.params.id }).select('_id');
+        const fedUserIds = fedUsers.map(u => u._id);
+        
+        const bookingsCount = await Booking.countDocuments({
+            $or: [{ customer: { $in: fedUserIds } }, { worker: { $in: fedUserIds } }]
+        });
+        
+        const revenueAggregate = await Booking.aggregate([
+            { $match: { 
+                status: 'COMPLETED',
+                $or: [{ customer: { $in: fedUserIds } }, { worker: { $in: fedUserIds } }]
+            }},
+            { $group: { _id: null, total: { $sum: '$invoice.totalAmount' } } }
+        ]);
+
+        return res.status(200).json({ 
+            success: true, 
+            data: coop,
+            stats: {
+                workersCount,
+                customersCount,
+                bookingsCount,
+                revenue: revenueAggregate[0]?.total || 0
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+import WelfareResource from '../models/WelfareResource.js';
+
+export const createWelfareResource = async (req, res) => {
+    try {
+        const resource = new WelfareResource(req.body);
+        await resource.save();
+        return res.status(201).json({ success: true, data: resource });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const updateWelfareResource = async (req, res) => {
+    try {
+        const resource = await WelfareResource.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        if (!resource) return res.status(404).json({ success: false, message: 'Resource not found' });
+        return res.status(200).json({ success: true, data: resource });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const deleteWelfareResource = async (req, res) => {
+    try {
+        const resource = await WelfareResource.findByIdAndDelete(req.params.id);
+        if (!resource) return res.status(404).json({ success: false, message: 'Resource not found' });
+        return res.status(200).json({ success: true, message: 'Resource deleted' });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const getWelfareResourcesAdmin = async (req, res) => {
+    try {
+        const resources = await WelfareResource.find().sort({ createdAt: -1 });
+        return res.status(200).json({ success: true, data: resources });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};

@@ -46,6 +46,43 @@ export default function SettingsPage() {
 
   const fileInputRef = useRef(null);
 
+
+  // -------------------------------------------------------------
+  // TAB 6: EMERGENCY CONTACTS
+  // -------------------------------------------------------------
+  const [emergencyContacts, setEmergencyContacts] = useState([]);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [newContact, setNewContact] = useState({ name: '', phone: '', category: 'Police' });
+
+  const fetchEmergencyContacts = async () => {
+    try {
+      const res = await api.getEmergencyContacts();
+      if(res && res.data) setEmergencyContacts(res.data);
+      else if(Array.isArray(res)) setEmergencyContacts(res);
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'emergency_contacts') {
+      fetchEmergencyContacts();
+    }
+  }, [activeTab]);
+
+  const handleAddContact = async (e) => {
+    e.preventDefault();
+    try {
+      await api.createEmergencyContact(newContact);
+      setShowContactModal(false);
+      setNewContact({ name: '', phone: '', category: 'Police' });
+      fetchEmergencyContacts();
+      showToast('success', 'Emergency contact added');
+    } catch(err) {
+      showToast('error', 'Failed to add emergency contact');
+    }
+  };
+
   // -------------------------------------------------------------
   // TAB 1: PLATFORM GOVERNANCE STATE
   // -------------------------------------------------------------
@@ -56,7 +93,13 @@ export default function SettingsPage() {
     workerSearchRadiusKm: 15,
     defaultLaborRatePerHour: 350,
     autoDispatchEnabled: true,
-    emergencyHotline: '+91 98765 43210'
+    emergencyHotline: '+91 98765 43210',
+    apiKeys: {
+      groqApiKey: '',
+      geminiApiKey: '',
+      cloudinaryUrl: '',
+      fixlySupportNumber: '1800-123-4567'
+    }
   });
   const [savingPlatform, setSavingPlatform] = useState(false);
 
@@ -169,7 +212,8 @@ export default function SettingsPage() {
         workerSearchRadiusKm: settings.workerSearchRadiusKm ?? 15,
         defaultLaborRatePerHour: settings.defaultLaborRatePerHour ?? 350,
         autoDispatchEnabled: settings.autoDispatchEnabled !== false,
-        emergencyHotline: settings.emergencyHotline || '+91 98765 43210'
+        emergencyHotline: settings.emergencyHotline || '+91 98765 43210',
+        apiKeys: settings.apiKeys || { groqApiKey: '', geminiApiKey: '', cloudinaryUrl: '', fixlySupportNumber: '1800-123-4567' }
       });
     }
   }, [settings]);
@@ -419,6 +463,8 @@ export default function SettingsPage() {
           { key: 'wage_floors', label: 'Wage Floors & Policy', icon: DollarSign },
           { key: 'societies', label: 'Cooperative Societies', icon: Building2 },
           { key: 'banners', label: 'Promotions & Coupons', icon: Tag },
+          { key: 'emergency_contacts', label: 'Emergency Contacts', icon: Phone },
+          { key: 'api_keys', label: 'API Keys', icon: LinkIcon },
           { key: 'profile', label: 'Admin Identity', icon: User },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -1481,7 +1527,82 @@ export default function SettingsPage() {
       )}
 
       {/* ========================================================= */}
-      {/* TAB 6: ADMIN IDENTITY & PROFILE */}
+      
+      {/* ========================================================= */}
+      {/* TAB: API KEYS & INTEGRATIONS */}
+      {/* ========================================================= */}
+      {activeTab === 'api_keys' && (
+        <form onSubmit={handleSavePlatform} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>API Keys & Third-Party Integrations</h3>
+            <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', padding: '12px', borderRadius: '8px', marginBottom: '20px' }}>
+              <p style={{ color: '#b91c1c', fontSize: '13px', margin: 0 }}>
+                <strong>Note:</strong> Changes to API keys may require a server restart to take full effect in backend AI services.
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>Groq API Key (Llama 3)</label>
+                <input
+                  type="password"
+                  value={platformForm.apiKeys?.groqApiKey || ''}
+                  onChange={(e) => setPlatformForm({ ...platformForm, apiKeys: { ...platformForm.apiKeys, groqApiKey: e.target.value } })}
+                  placeholder="gsk_..."
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>Gemini API Key (Vision)</label>
+                <input
+                  type="password"
+                  value={platformForm.apiKeys?.geminiApiKey || ''}
+                  onChange={(e) => setPlatformForm({ ...platformForm, apiKeys: { ...platformForm.apiKeys, geminiApiKey: e.target.value } })}
+                  placeholder="AIza..."
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>Cloudinary URL</label>
+                <input
+                  type="text"
+                  value={platformForm.apiKeys?.cloudinaryUrl || ''}
+                  onChange={(e) => setPlatformForm({ ...platformForm, apiKeys: { ...platformForm.apiKeys, cloudinaryUrl: e.target.value } })}
+                  placeholder="cloudinary://..."
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>Fixly Support Number</label>
+                <input
+                  type="text"
+                  value={platformForm.apiKeys?.fixlySupportNumber || ''}
+                  onChange={(e) => setPlatformForm({ ...platformForm, apiKeys: { ...platformForm.apiKeys, fixlySupportNumber: e.target.value } })}
+                  placeholder="1800-..."
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+            </div>
+            
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="submit"
+                disabled={savingPlatform}
+                style={{
+                  padding: '10px 20px', backgroundColor: '#15803d', color: 'white', borderRadius: '8px', fontWeight: '600', border: 'none', cursor: 'pointer'
+                }}
+              >
+                {savingPlatform ? 'Saving...' : 'Save API Keys'}
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+      
+{/* TAB 6: ADMIN IDENTITY & PROFILE */}
       {/* ========================================================= */}
       {activeTab === 'profile' && (
         <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

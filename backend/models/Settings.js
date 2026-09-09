@@ -18,7 +18,18 @@ const settingsSchema = new mongoose.Schema({
     emailNotifications: { type: Boolean, default: true },
     smsAlerts: { type: Boolean, default: true },
     payoutSchedule: { type: String, default: 'Instant Automated UPI' },
-    twoFactorAuth: { type: Boolean, default: false }
+    twoFactorAuth: { type: Boolean, default: false },
+    enabledLanguages: {
+        type: [String],
+        default: ['en', 'hi', 'ta', 'te', 'kn', 'bn', 'mr', 'gu'],
+        enum: ['en', 'hi', 'ta', 'te', 'kn', 'bn', 'mr', 'gu']
+    },
+    apiKeys: {
+        groqApiKey: { type: String, default: '' },
+        geminiApiKey: { type: String, default: '' },
+        cloudinaryUrl: { type: String, default: '' },
+        fixlySupportNumber: { type: String, default: '1800-123-4567' }
+    }
 }, { timestamps: true });
 
 export default mongoose.model('Settings', settingsSchema);

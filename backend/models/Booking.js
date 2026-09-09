@@ -41,7 +41,7 @@ const bookingSchema = new mongoose.Schema({
 
     status: {
         type: String,
-        enum: ['PENDING', 'APPROVED', 'SEARCHING', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS', 'PAYMENT_PENDING', 'COMPLETED', 'CANCELLED'],
+        enum: ['PENDING', 'APPROVED', 'SEARCHING', 'ACCEPTED', 'ARRIVED', 'ESTIMATION_GIVEN', 'READY_TO_START', 'IN_PROGRESS', 'PAYMENT_PENDING', 'COMPLETED', 'CANCELLED'],
         default: 'PENDING'
     },
 
@@ -90,11 +90,29 @@ const bookingSchema = new mongoose.Schema({
     declineReason: { type: String, default: null },
     declinedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
+    workerNavigationStartedAt: { type: Date, default: null },
+    cancellationFee: { type: Number, default: 0 },
+    cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    cancelReason: { type: String, default: null },
+    cancelledAt: { type: Date, default: null },
+
+    workerEstimation: {
+        estimatedTotal: { type: Number },
+        laborCost: { type: Number },
+        partsEstimate: { type: Number },
+        serviceCharge: { type: Number },
+        notes: { type: String },
+        submittedAt: { type: Date },
+        customerAccepted: { type: Boolean },
+        customerAcceptedAt: { type: Date }
+    },
+
     invoice: {
         baseServiceFee: { type: Number, default: 0 },
         extraPartsTotal: { type: Number, default: 0 },
         platformFee: { type: Number, default: null },
         urgentFee: { type: Number, default: 0 },
+        cancellationFee: { type: Number, default: 0 },
         totalAmount: { type: Number, default: 0 },
         paymentStatus: { type: String, enum: ['PENDING', 'PAID', 'FAILED'], default: 'PENDING' },
         paymentMethod: { type: String, default: 'UPI' },
