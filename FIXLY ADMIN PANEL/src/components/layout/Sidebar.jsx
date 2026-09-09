@@ -15,6 +15,7 @@ import {
   Bell,
   Settings,
   ClipboardCheck,
+  Headphones,
   X
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
@@ -60,6 +61,7 @@ export const navigationSections = [
     title: 'System & Settings',
     sectionKey: 'settingsSection',
     items: [
+      { path: '/support', key: 'support', icon: Headphones },
       { path: '/notifications', key: 'notifications', icon: Bell },
       { path: '/settings', key: 'settings', icon: Settings },
     ]

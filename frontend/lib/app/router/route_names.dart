@@ -34,6 +34,7 @@ abstract final class RouteNames {
   static const customerRating = '/customer/rating';
   static const customerHomeBooking = '/customer/home-booking';
   static const customerAiHelper = '/customer/ai-helper';
+  static const customerAiChat = '/customer/ai-chat';
   static const customerAiDiscovery = '/customer/ai-discovery';
   static const customerAiWorkers = '/customer/ai-workers';
   static const customerWorkers = '/customer/workers';

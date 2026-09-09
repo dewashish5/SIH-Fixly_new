@@ -11,6 +11,8 @@ abstract final class ApiEndpoints {
   static const String logout = '/api/auth/logout';
   static const String me = '/api/auth/me';
   static const String usersMe = '/api/users/me';
+  static const String notificationPreferences =
+      '/api/users/me/notification-preferences';
 
   // --- Notifications ---
   static const String notifications = '/api/notifications';
@@ -100,9 +102,19 @@ abstract final class ApiEndpoints {
 
   // --- AI ---
   static const String aiAnalyzeIssue = '/api/ai/analyze-issue';
+  static const String aiAgentChat = '/api/ai/agent/chat';
+  static const String aiServiceDiscovery = '/api/ai/service-discovery';
+  static const String aiMatchWorkers = '/api/ai/match-workers';
 
   // --- Upload ---
   static const String upload = '/api/upload';
+
+  // --- Support & AI Helpdesk ---
+  static const String supportActiveTicket = '/api/support/active-ticket';
+  static const String supportSendMessage = '/api/support/message';
+  static const String supportEscalate = '/api/support/escalate';
+  static const String supportReset = '/api/support/reset';
+  static String supportCloseTicket(String id) => '/api/support/tickets/$id/close';
 
   /// Check if a request path is an unauthenticated auth route.
   static bool isAuthPath(String path) {

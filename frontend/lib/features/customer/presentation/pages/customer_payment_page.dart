@@ -27,9 +27,12 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
     });
   }
 
-  Future<void> _handlePay() async {
+  Future<void> _handlePay(double payableAmount) async {
     final cubit = context.read<BookingFlowCubit>();
-    final success = await cubit.payWithRazorpay(bookingId: widget.bookingId);
+    final success = await cubit.payWithRazorpay(
+      bookingId: widget.bookingId,
+      amountOverride: payableAmount,
+    );
     if (!mounted) return;
     if (success) {
       final bookingId = cubit.state.booking?.id ?? widget.bookingId;
@@ -68,10 +71,48 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
       },
       child: AppScaffold(
         title: 'Payment & Invoice',
+        showBack: true,
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            final bId = widget.bookingId ?? context.read<BookingFlowCubit>().state.booking?.id;
+            if (bId != null && bId.isNotEmpty) {
+              context.go(RouteNames.bookingDetailPath(bId));
+            } else {
+              context.go(RouteNames.customerHome);
+            }
+          }
+        },
         body: BlocBuilder<BookingFlowCubit, BookingFlowState>(
         builder: (context, state) {
           final booking = state.booking;
-          final amount = state.displayPrice;
+          final extraPartsTotal = booking?.extraPartsTotal;
+          final double extraParts = (extraPartsTotal != null && extraPartsTotal > 0)
+              ? extraPartsTotal
+              : (booking?.addOns.isNotEmpty ?? false
+                  ? booking!.addOns.fold<double>(0.0, (s, a) => s + (a.price * a.quantity))
+                  : 0.0);
+          final double platform = booking?.platformFee ?? 0.0;
+          final double urgent = booking?.urgentFee ?? 0.0;
+
+          final bookingTotal = booking?.totalAmount;
+          final invoiceTotal = booking?.invoice?.totalAmount;
+          // Authoritative total amount from backend (which ALREADY includes baseFee + extraParts + platform + urgent):
+          final double amount = (bookingTotal != null && bookingTotal > 0)
+              ? bookingTotal
+              : ((invoiceTotal != null && invoiceTotal > 0)
+                  ? invoiceTotal
+                  : state.displayPrice);
+
+          // Base service fee: if explicitly provided and > 0, use it.
+          // Otherwise derive base = total - extraParts - platform - urgent
+          final baseFee = booking?.baseServiceFee;
+          final double? baseServiceFee = (baseFee != null && baseFee > 0)
+              ? baseFee
+              : (amount > 0 && amount >= (extraParts + platform + urgent)
+                  ? (amount - extraParts - platform - urgent)
+                  : booking?.estimatedPrice);
           
           return Stack(
             children: [
@@ -150,14 +191,35 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          if (booking?.baseServiceFee != null)
-                            _InvoiceRow('Base service fee', booking!.baseServiceFee!),
-                          if ((booking?.extraPartsTotal ?? 0) > 0)
-                            _InvoiceRow('Extra parts/services', booking!.extraPartsTotal!),
-                          if (booking?.platformFee != null)
-                            _InvoiceRow('Platform fee', booking!.platformFee!),
-                          if (booking != null && booking.addOns.isNotEmpty)
-                            ...booking.addOns.map((part) => _InvoiceRow(part.title, part.price)),
+                          if (baseServiceFee != null && baseServiceFee > 0)
+                            _InvoiceRow('Base service fee', baseServiceFee),
+                          if (platform > 0)
+                            _InvoiceRow('Platform fee', platform),
+                          if ((booking?.urgentFee ?? 0) > 0)
+                            _InvoiceRow('Urgent / SOS fee', booking!.urgentFee!),
+                          if (extraParts > 0 || (booking?.addOns.isNotEmpty ?? false)) ...[
+                            _InvoiceRow(
+                              'Extra parts & materials',
+                              extraParts,
+                            ),
+                            if (booking != null && booking.addOns.isNotEmpty)
+                              ...booking.addOns.map((part) => Padding(
+                                padding: const EdgeInsets.only(left: 12, top: 2, bottom: 4),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      '• ${part.title} (x${part.quantity})',
+                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    ),
+                                    Text(
+                                      '₹${(part.price * part.quantity).toStringAsFixed(0)}',
+                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                          ],
                           const Divider(height: 24, thickness: 1),
                           _InvoiceRow('Total', amount, isTotal: true),
                         ],
@@ -201,7 +263,7 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
                   child: PrimaryButton(
                     label: 'Pay ₹${amount.toInt()} Now',
                     loading: state.isLoading,
-                    onPressed: state.isLoading ? null : _handlePay,
+                    onPressed: state.isLoading ? null : () => _handlePay(amount),
                   ),
                 ),
               ),

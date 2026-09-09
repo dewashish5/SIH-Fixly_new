@@ -6,9 +6,10 @@ import '../../core/widgets/app_motion.dart';
 Page<T> transitPage<T>({
   required GoRouterState state,
   required Widget child,
+  LocalKey? key,
 }) {
   return CustomTransitionPage<T>(
-    key: state.pageKey,
+    key: key ?? state.pageKey,
     transitionDuration: AppMotion.route,
     reverseTransitionDuration: AppMotion.routeReverse,
     child: child,

@@ -54,6 +54,13 @@ export const updateMyProfile = async (req, res) => {
         if (avatar !== undefined) user.avatar = avatar;
         if (preferredLanguage !== undefined) user.preferredLanguage = preferredLanguage;
 
+        if (req.body.notificationPreferences !== undefined && typeof req.body.notificationPreferences === 'object') {
+            user.notificationPreferences = {
+                ...(user.notificationPreferences?.toObject ? user.notificationPreferences.toObject() : user.notificationPreferences),
+                ...req.body.notificationPreferences,
+            };
+        }
+
         if (emergencyContact !== undefined && typeof emergencyContact === 'object') {
             user.emergencyContact = {
                 name: emergencyContact.name !== undefined ? String(emergencyContact.name).trim() : (user.emergencyContact?.name || null),
@@ -254,6 +261,27 @@ export const deleteAddress = async (req, res) => {
         addr.deleteOne();
         await user.save();
         return ok(res, { data: user.savedAddresses });
+    } catch (error) {
+        return fail(res, 500, 'INTERNAL_ERROR', error.message);
+    }
+};
+
+export const updateNotificationPreferences = async (req, res) => {
+    try {
+        const { marketing, system, push } = req.body;
+        const updates = {};
+        if (marketing !== undefined) updates['notificationPreferences.marketing'] = Boolean(marketing);
+        if (system !== undefined) updates['notificationPreferences.system'] = Boolean(system);
+        if (push !== undefined) updates['notificationPreferences.push'] = Boolean(push);
+
+        const user = await User.findByIdAndUpdate(
+            req.user.id,
+            { $set: updates },
+            { returnDocument: 'after' }
+        ).select('notificationPreferences');
+
+        if (!user) return fail(res, 404, 'NOT_FOUND', 'User not found');
+        return ok(res, { data: user.notificationPreferences });
     } catch (error) {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);
     }

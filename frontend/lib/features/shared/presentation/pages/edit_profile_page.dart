@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -8,10 +9,14 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/constants/map_constants.dart';
+import '../../../../core/location/app_location.dart';
+import '../../../../core/location/location_service.dart';
+import '../../../../core/utils/toast_utils.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/core_widgets.dart';
+import '../../../../core/widgets/fixly_map_view.dart';
 import '../cubit/profile_cubit.dart';
-import '../../../../core/utils/toast_utils.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -29,7 +34,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late final TextEditingController _emergencyPhoneController;
   late final TextEditingController _emergencyRelationController;
 
-  // Worker specific controllers
+  // Address & Worker controllers
   late final TextEditingController _workAddressController;
   late final TextEditingController _rateController;
   late final TextEditingController _experienceController;
@@ -42,6 +47,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
   String? _gender;
   late Set<String> _skills;
   bool _initializedFromState = false;
+
+  // Map pinpoint state
+  bool _showMap = false;
+  bool _isGeocoding = false;
+  MapCoordinate? _pinnedCoordinate;
+  String? _lastPinpointAddress;
 
   @override
   void initState() {
@@ -73,6 +84,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
       ...state.skills,
       if (state.category.isNotEmpty) state.category,
     };
+
+    if (AppLocation.instance.hasFix) {
+      _pinnedCoordinate = AppLocation.instance.asCoordinate;
+    }
 
     if (state.name.isEmpty) {
       context.read<ProfileCubit>().load();
@@ -126,6 +141,109 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
+  Future<void> _onMapPinpoint(MapCoordinate coord) async {
+    setState(() {
+      _pinnedCoordinate = coord;
+      _isGeocoding = true;
+    });
+
+    try {
+      final placemarks =
+          await Geocoding().placemarkFromCoordinates(coord.lat, coord.lng);
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+
+        final streetParts = [p.name, p.street, p.subLocality]
+            .whereType<String>()
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty && s != p.locality && s != p.postalCode)
+            .toSet()
+            .toList();
+        final street = streetParts.join(', ');
+
+        final city = (p.locality ?? p.subAdministrativeArea ?? '').trim();
+        final pincode = (p.postalCode ?? '').trim();
+        final fullAddress = [
+          if (street.isNotEmpty) street,
+          if (city.isNotEmpty) city,
+          if (p.administrativeArea != null &&
+              p.administrativeArea!.trim().isNotEmpty)
+            p.administrativeArea!.trim(),
+          if (pincode.isNotEmpty) pincode,
+        ].join(', ');
+
+        if (!mounted) return;
+        setState(() {
+          _isGeocoding = false;
+          _lastPinpointAddress = fullAddress.isNotEmpty ? fullAddress : street;
+          if (fullAddress.isNotEmpty) {
+            _workAddressController.text = fullAddress;
+          } else if (street.isNotEmpty) {
+            _workAddressController.text = street;
+          }
+          if (city.isNotEmpty) {
+            _cityController.text = city;
+          }
+          if (pincode.isNotEmpty) {
+            _pincodeController.text = pincode;
+          }
+        });
+        ToastUtils.showToast(
+          context: context,
+          message: 'Address updated from map pinpoint',
+        );
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback to LocationService reverse geocoding
+    try {
+      final fallback =
+          await LocationService.instance.reverseGeocode(coord.lat, coord.lng);
+      if (!mounted) return;
+      setState(() {
+        _isGeocoding = false;
+        if (fallback != null && fallback.isNotEmpty) {
+          _lastPinpointAddress = fallback;
+          _workAddressController.text = fallback;
+        }
+      });
+      if (fallback != null && fallback.isNotEmpty) {
+        ToastUtils.showToast(
+          context: context,
+          message: 'Address updated from map pinpoint',
+        );
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isGeocoding = false);
+    }
+  }
+
+  Future<void> _useCurrentGps() async {
+    setState(() => _isGeocoding = true);
+    final ok = await LocationService.instance.refreshCurrentPosition();
+    if (!ok || !AppLocation.instance.hasFix) {
+      if (mounted) {
+        setState(() => _isGeocoding = false);
+        ToastUtils.showToast(
+          context: context,
+          message: 'Could not fetch current GPS coordinates',
+        );
+      }
+      return;
+    }
+    final lat = AppLocation.instance.lat!;
+    final lng = AppLocation.instance.lng!;
+    final coord = MapCoordinate(lat: lat, lng: lng, label: 'My Location');
+    await _onMapPinpoint(coord);
+    if (mounted) {
+      setState(() {
+        _pinnedCoordinate = coord;
+        _showMap = true;
+      });
+    }
+  }
+
   Future<void> _save(ProfileState state) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -155,13 +273,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
             homePincode: _pincodeController.text.trim(),
           );
       if (mounted) {
-        ToastUtils.showToast(context: context, message: context.l10n.profileSaved);
+        ToastUtils.showToast(
+          context: context,
+          message: context.l10n.profileSaved,
+        );
         context.pop();
       }
     } catch (_) {
       if (!mounted) return;
       final message = context.read<ProfileCubit>().state.errorMessage;
-      ToastUtils.showError(context: context, message: message ?? 'Could not save profile');
+      ToastUtils.showError(
+        context: context,
+        message: message ?? 'Could not save profile',
+      );
     }
   }
 
@@ -184,7 +308,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 16),
               children: [
-                // Avatar & Role Card
+                // Header: Profile Avatar & Identity Card
                 _ProfileAvatarHeader(
                   name: _nameController.text.isNotEmpty
                       ? _nameController.text
@@ -195,9 +319,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 const SizedBox(height: AppSpacing.xl),
 
                 // Section 1: Personal Details
-                _SectionTitle(
+                const _SectionHeader(
                   icon: Icons.person_outline_rounded,
-                  title: 'Personal Details',
+                  title: 'Personal Information',
+                  subtitle: 'Your name, contact phone, and identity',
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 _FormCard(
@@ -221,94 +346,220 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                     if (state.email.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Email Address',
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: scheme.surfaceContainerHighest
-                                  .withValues(alpha: 0.4),
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              border: Border.all(
-                                color: scheme.outline.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.alternate_email_rounded,
-                                  size: 20,
-                                  color: context.muted,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    state.email,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: context.muted,
-                                        ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.success
-                                        .withValues(alpha: 0.12),
-                                    borderRadius:
-                                        BorderRadius.circular(AppRadius.full),
-                                  ),
-                                  child: Text(
-                                    'Verified',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelSmall
-                                        ?.copyWith(
-                                          color: AppColors.success,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                      _VerifiedEmailRow(email: state.email),
                     ],
+                    const SizedBox(height: 16),
+                    Text(
+                      'Gender',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    _GenderSelector(
+                      selectedGender: _gender,
+                      onChanged: (val) => setState(() => _gender = val),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.xl),
 
-                // Section 2: Worker Specific Trade & Rates
+                // Section 2: Address with Pinpoint on Map Option
+                _SectionHeader(
+                  icon: Icons.location_on_outlined,
+                  title: isWorker
+                      ? 'Work Location & Base Area'
+                      : 'Default Service Address',
+                  subtitle: isWorker
+                      ? 'Base area where you accept customer job requests'
+                      : 'Where service professionals will arrive for home jobs',
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _FormCard(
+                  children: [
+                    // Address Line with Map Action Toggle
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            isWorker ? 'Operating Base Address' : 'Address Line',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => setState(() => _showMap = !_showMap),
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _showMap
+                                  ? scheme.primary.withValues(alpha: 0.12)
+                                  : scheme.surfaceContainerHighest
+                                      .withValues(alpha: 0.5),
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.full),
+                              border: Border.all(
+                                color: _showMap
+                                    ? scheme.primary.withValues(alpha: 0.35)
+                                    : scheme.outline.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _showMap
+                                      ? Icons.map_rounded
+                                      : Icons.pin_drop_outlined,
+                                  size: 15,
+                                  color: _showMap
+                                      ? scheme.primary
+                                      : context.muted,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  _showMap ? 'Hide Map' : 'Choose on Map',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelSmall
+                                      ?.copyWith(
+                                        color: _showMap
+                                            ? scheme.primary
+                                            : context.muted,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    AppTextField(
+                      controller: _workAddressController,
+                      label: '',
+                      hint: isWorker
+                          ? 'e.g. Connaught Place, New Delhi'
+                          : 'Flat / House No, Building, Street, Landmark',
+                      prefixIcon: const Icon(Icons.pin_drop_outlined),
+                      validator: (v) => Validators.requiredField(
+                        v,
+                        label: 'Address',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Quick Map Toolbar
+                    Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: _useCurrentGps,
+                          icon: const Icon(Icons.my_location_rounded, size: 16),
+                          label: const Text(
+                            'Use Current GPS',
+                            style: TextStyle(fontSize: 12.5),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (!_showMap)
+                          TextButton.icon(
+                            onPressed: () => setState(() => _showMap = true),
+                            icon: const Icon(Icons.map_outlined, size: 16),
+                            label: const Text(
+                              'Pinpoint on Map',
+                              style: TextStyle(fontSize: 12.5),
+                            ),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                      ],
+                    ),
+
+                    // Interactive Map Drawer (opens below address field)
+                    if (_showMap) ...[
+                      const SizedBox(height: 8),
+                      _MapPinpointCard(
+                        pinnedCoordinate: _pinnedCoordinate,
+                        isGeocoding: _isGeocoding,
+                        lastAddress: _lastPinpointAddress,
+                        onMapTap: _onMapPinpoint,
+                        onClose: () => setState(() => _showMap = false),
+                        onUseGps: _useCurrentGps,
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+                    // City & Pincode 2-Column Row
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: AppTextField(
+                            controller: _cityController,
+                            label: 'City',
+                            hint: 'e.g. Noida',
+                            prefixIcon:
+                                const Icon(Icons.location_city_outlined),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: AppTextField(
+                            controller: _pincodeController,
+                            label: 'Pincode',
+                            hint: '201301',
+                            keyboardType: TextInputType.number,
+                            prefixIcon: const Icon(Icons.pin_outlined),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xl),
+
+                // Section 3: Worker Specific Trade & Rates
                 if (isWorker) ...[
-                  _SectionTitle(
+                  const _SectionHeader(
                     icon: Icons.handyman_outlined,
-                    title: 'Work & Trade Details',
+                    title: 'Trade & Service Details',
+                    subtitle: 'Your primary service category, skills, and rates',
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   _FormCard(
                     children: [
                       Text(
                         'Primary Trade Category',
-                        style: Theme.of(context).textTheme.labelLarge,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        value: ServiceCategories.all
+                        initialValue: ServiceCategories.all
                                 .any((c) => c.id == _selectedCategory)
                             ? _selectedCategory
                             : null,
@@ -319,14 +570,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
                         ),
-                        hint: const Text('Select your trade'),
+                        hint: const Text('Select your trade category'),
                         items: [
                           for (final cat in ServiceCategories.all)
                             DropdownMenuItem(
                               value: cat.id,
                               child: Row(
                                 children: [
-                                  Icon(cat.icon, size: 18, color: AppColors.primary),
+                                  Icon(
+                                    cat.icon,
+                                    size: 18,
+                                    color: scheme.primary,
+                                  ),
                                   const SizedBox(width: 10),
                                   Text('${cat.nameEn} (${cat.nameHi})'),
                                 ],
@@ -342,8 +597,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Skills',
-                        style: Theme.of(context).textTheme.labelLarge,
+                        'Skills & Specialties',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
@@ -365,44 +622,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               },
                             ),
                         ],
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        value: const {
-                          'male',
-                          'female',
-                          'other',
-                          'unspecified',
-                        }.contains(_gender)
-                            ? _gender
-                            : null,
-                        isExpanded: true,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.wc_outlined),
-                          labelText: 'Gender',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                          ),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'male',
-                            child: Text('Male'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'female',
-                            child: Text('Female'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'other',
-                            child: Text('Other'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'unspecified',
-                            child: Text('Prefer not to say'),
-                          ),
-                        ],
-                        onChanged: (val) => setState(() => _gender = val),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -432,78 +651,31 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                       const SizedBox(height: 16),
                       AppTextField(
-                        controller: _workAddressController,
-                        label: 'Operating City / Area',
-                        hint: 'e.g. Bandra West, Mumbai',
-                        prefixIcon: const Icon(Icons.location_on_outlined),
-                      ),
-                      const SizedBox(height: 16),
-                      AppTextField(
                         controller: _bioController,
                         label: 'Professional Bio / About',
                         hint:
-                            'Brief description of your skills and work experience',
+                            'Brief description of your expertise, tools, and background',
                         maxLines: 3,
                         prefixIcon: const Icon(Icons.description_outlined),
                       ),
                       const SizedBox(height: 16),
                       AppTextField(
                         controller: _upiController,
-                        label: 'UPI ID for Payouts',
+                        label: 'UPI ID for Instant Payouts',
                         hint: 'e.g. name@okhdfcbank',
-                        prefixIcon: const Icon(
-                            Icons.account_balance_wallet_outlined),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                ] else ...[
-                  // Customer Specific Address
-                  _SectionTitle(
-                    icon: Icons.home_outlined,
-                    title: 'Default Service Address',
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _FormCard(
-                    children: [
-                      AppTextField(
-                        controller: _workAddressController,
-                        label: 'Home / Work Address',
-                        hint: 'Flat, Street, Landmark',
-                        prefixIcon: const Icon(Icons.pin_drop_outlined),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: AppTextField(
-                              controller: _cityController,
-                              label: 'City',
-                              hint: 'e.g. Noida',
-                              prefixIcon: const Icon(Icons.location_city_outlined),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: AppTextField(
-                              controller: _pincodeController,
-                              label: 'Pincode',
-                              hint: '201301',
-                              keyboardType: TextInputType.number,
-                              prefixIcon: const Icon(Icons.pin_outlined),
-                            ),
-                          ),
-                        ],
+                        prefixIcon:
+                            const Icon(Icons.account_balance_wallet_outlined),
                       ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xl),
                 ],
 
-                // Section 3: Emergency Contact
-                _SectionTitle(
+                // Section 4: Emergency Contact
+                const _SectionHeader(
                   icon: Icons.emergency_outlined,
                   title: 'Emergency Contact',
+                  subtitle: 'Contact reached in case of safety alerts or SOS',
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 _FormCard(
@@ -529,13 +701,38 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       hint: 'e.g. Spouse, Parent, Sibling, Friend',
                       prefixIcon: const Icon(Icons.people_outline_rounded),
                     ),
+                    const SizedBox(height: 10),
+                    // Quick relationship chips
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: ['Parent', 'Spouse', 'Sibling', 'Friend']
+                          .map(
+                            (rel) => ActionChip(
+                              label: Text(
+                                rel,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              avatar: const Icon(
+                                Icons.person_add_alt_1_rounded,
+                                size: 14,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _emergencyRelationController.text = rel;
+                                });
+                              },
+                            ),
+                          )
+                          .toList(),
+                    ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.xxl),
 
                 // Save Action Button
                 PrimaryButton(
-                  label: 'Save Changes',
+                  label: 'Save Profile Changes',
                   loading: state.status == ProfileStatus.loading,
                   onPressed: () => _save(state),
                 ),
@@ -545,6 +742,211 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Interactive map pinpoint card that expands directly beneath the address field
+class _MapPinpointCard extends StatelessWidget {
+  const _MapPinpointCard({
+    required this.pinnedCoordinate,
+    required this.isGeocoding,
+    required this.lastAddress,
+    required this.onMapTap,
+    required this.onClose,
+    required this.onUseGps,
+  });
+
+  final MapCoordinate? pinnedCoordinate;
+  final bool isGeocoding;
+  final String? lastAddress;
+  final ValueChanged<MapCoordinate> onMapTap;
+  final VoidCallback onClose;
+  final VoidCallback onUseGps;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    final initialCenter = pinnedCoordinate ??
+        MapConstants.current ??
+        const MapCoordinate(lat: 28.6139, lng: 77.2090, label: 'New Delhi');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: scheme.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: scheme.shadow.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Map Header Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.touch_app_rounded,
+                  size: 16,
+                  color: scheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Tap anywhere on map to pinpoint address',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: context.muted,
+                        ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  tooltip: 'Close map',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onClose,
+                ),
+              ],
+            ),
+          ),
+
+          // Map View Area
+          SizedBox(
+            height: 230,
+            child: Stack(
+              children: [
+                FixlyMapView(
+                  height: 230,
+                  center: initialCenter,
+                  zoom: 14.5,
+                  routeEnd: pinnedCoordinate,
+                  showDestinationPin: pinnedCoordinate != null,
+                  claimGestures: true,
+                  showZoomControls: true,
+                  show3DControl: false,
+                  showRecenterButton: true,
+                  onMapTap: onMapTap,
+                ),
+
+                // Loading geocoding indicator
+                if (isGeocoding)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.surface.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: scheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Fetching address from coordinates...',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Map Footer Status / Details
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              border: Border(
+                top: BorderSide(
+                  color: scheme.outline.withValues(alpha: 0.15),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  pinnedCoordinate != null
+                      ? Icons.check_circle_rounded
+                      : Icons.info_outline_rounded,
+                  size: 16,
+                  color: pinnedCoordinate != null
+                      ? AppColors.success
+                      : context.muted,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    pinnedCoordinate != null
+                        ? (lastAddress != null && lastAddress!.isNotEmpty
+                            ? lastAddress!
+                            : 'Pin set at: ${pinnedCoordinate!.lat.toStringAsFixed(4)}, ${pinnedCoordinate!.lng.toStringAsFixed(4)}')
+                        : 'Tap map to mark location',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: pinnedCoordinate != null
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: pinnedCoordinate != null
+                              ? Theme.of(context).textTheme.bodySmall?.color
+                              : context.muted,
+                        ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: onClose,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  child: const Text('Apply'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -569,21 +971,30 @@ class _ProfileAvatarHeader extends StatelessWidget {
         children: [
           Stack(
             children: [
-              CircleAvatar(
-                radius: 46,
-                backgroundColor: scheme.primary.withValues(alpha: 0.12),
-                child: Text(
-                  name.isNotEmpty ? name[0].toUpperCase() : '?',
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.primary,
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: scheme.primary.withValues(alpha: 0.25),
+                    width: 3,
+                  ),
+                ),
+                child: CircleAvatar(
+                  radius: 46,
+                  backgroundColor: scheme.primary.withValues(alpha: 0.12),
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.primary,
+                    ),
                   ),
                 ),
               ),
               Positioned(
-                bottom: 0,
-                right: 0,
+                bottom: 2,
+                right: 2,
                 child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
@@ -603,7 +1014,7 @@ class _ProfileAvatarHeader extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
             name.isNotEmpty ? name : 'Fixly User',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -631,11 +1042,139 @@ class _ProfileAvatarHeader extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.icon, required this.title});
+class _VerifiedEmailRow extends StatelessWidget {
+  const _VerifiedEmailRow({required this.email});
+
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Email Address',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
+          ),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: scheme.outline.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.alternate_email_rounded,
+                size: 20,
+                color: context.muted,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  email,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: context.muted,
+                      ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.verified_rounded,
+                      size: 13,
+                      color: AppColors.success,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Verified',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: AppColors.success,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GenderSelector extends StatelessWidget {
+  const _GenderSelector({
+    required this.selectedGender,
+    required this.onChanged,
+  });
+
+  final String? selectedGender;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = [
+      ('male', 'Male', Icons.male_rounded),
+      ('female', 'Female', Icons.female_rounded),
+      ('other', 'Other', Icons.transgender_rounded),
+      ('unspecified', 'Prefer not to say', Icons.person_outline_rounded),
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: options.map((opt) {
+        final isSelected = selectedGender == opt.$1;
+        return ChoiceChip(
+          label: Text(opt.$2),
+          avatar: Icon(
+            opt.$3,
+            size: 16,
+            color: isSelected ? Colors.white : Theme.of(context).colorScheme.primary,
+          ),
+          selected: isSelected,
+          onSelected: (selected) {
+            onChanged(selected ? opt.$1 : null);
+          },
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+  });
 
   final IconData icon;
   final String title;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -643,17 +1182,35 @@ class _SectionTitle extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: scheme.primary),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: context.muted,
-                ),
+          Row(
+            children: [
+              Icon(icon, size: 18, color: scheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).textTheme.titleSmall?.color,
+                    ),
+              ),
+            ],
           ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 2),
+            Padding(
+              padding: const EdgeInsets.only(left: 26),
+              child: Text(
+                subtitle!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: context.muted,
+                      fontSize: 11.5,
+                    ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -673,8 +1230,11 @@ class _FormCard extends StatelessWidget {
       color: Theme.of(context).cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        side: BorderSide(color: scheme.outline.withValues(alpha: 0.2)),
+        side: BorderSide(
+          color: scheme.outline.withValues(alpha: 0.18),
+        ),
       ),
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(

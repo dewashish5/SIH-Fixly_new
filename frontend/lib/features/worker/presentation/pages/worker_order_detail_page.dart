@@ -70,6 +70,7 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
     if (_loading) {
       return AppScaffold(
         title: context.l10n.orderDetails,
+        showBack: true,
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -78,6 +79,7 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
     if (booking == null && fallback == null) {
       return AppScaffold(
         title: context.l10n.orderDetails,
+        showBack: true,
         body: Center(child: Text(_error ?? 'Booking not found')),
       );
     }
@@ -86,13 +88,15 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
     final customerName =
         booking?.customerName ?? fallback?.customerName ?? 'Customer';
     final address = booking?.address ?? fallback?.address ?? '';
-    final amount = booking?.estimatedPrice ?? fallback?.pay ?? 0;
+    final amount =
+        booking?.totalAmount ?? booking?.totalPrice ?? booking?.estimatedPrice ?? fallback?.pay ?? 0;
     final isPending =
         booking?.status == BookingStatus.searching ||
         fallback?.status == JobStatus.incoming;
 
     return AppScaffold(
       title: context.l10n.orderDetails,
+      showBack: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

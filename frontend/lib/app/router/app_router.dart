@@ -79,7 +79,20 @@ import '../../core/widgets/worker_main_shell.dart';
 import 'router_helpers.dart';
 import 'route_names.dart';
 
-final rootNavigatorKey = GlobalKey<NavigatorState>();
+final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'rootNav');
+
+final _customerHomeNavKey = GlobalKey<NavigatorState>(debugLabel: 'customerHomeNav');
+final _customerSearchNavKey = GlobalKey<NavigatorState>(debugLabel: 'customerSearchNav');
+final _customerAiNavKey = GlobalKey<NavigatorState>(debugLabel: 'customerAiNav');
+final _customerOrdersNavKey = GlobalKey<NavigatorState>(debugLabel: 'customerOrdersNav');
+final _customerProfileNavKey = GlobalKey<NavigatorState>(debugLabel: 'customerProfileNav');
+
+final _workerDashboardNavKey = GlobalKey<NavigatorState>(debugLabel: 'workerDashboardNav');
+final _workerJobsNavKey = GlobalKey<NavigatorState>(debugLabel: 'workerJobsNav');
+final _workerWalletNavKey = GlobalKey<NavigatorState>(debugLabel: 'workerWalletNav');
+final _workerProfileNavKey = GlobalKey<NavigatorState>(debugLabel: 'workerProfileNav');
+
+final _bookingShellNavKey = GlobalKey<NavigatorState>(debugLabel: 'bookingShellNav');
 
 GoRouter createAppRouter() {
   return GoRouter(
@@ -118,6 +131,7 @@ GoRouter createAppRouter() {
         },
         branches: [
           StatefulShellBranch(
+            navigatorKey: _customerHomeNavKey,
             routes: [
               GoRoute(
                 path: RouteNames.customerHome,
@@ -148,6 +162,7 @@ GoRouter createAppRouter() {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _customerSearchNavKey,
             routes: [
               _page(
                 RouteNames.customerSearch,
@@ -156,6 +171,7 @@ GoRouter createAppRouter() {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _customerAiNavKey,
             routes: [
               _page(
                 RouteNames.customerAiHelper,
@@ -164,6 +180,7 @@ GoRouter createAppRouter() {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _customerOrdersNavKey,
             routes: [
               _page(
                 RouteNames.customerOrders,
@@ -172,6 +189,7 @@ GoRouter createAppRouter() {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _customerProfileNavKey,
             routes: [
               _page(
                 RouteNames.customerProfileTab,
@@ -197,6 +215,7 @@ GoRouter createAppRouter() {
         },
         branches: [
           StatefulShellBranch(
+            navigatorKey: _workerDashboardNavKey,
             routes: [
               _page(
                 RouteNames.workerDashboard,
@@ -208,6 +227,7 @@ GoRouter createAppRouter() {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _workerJobsNavKey,
             routes: [
               _page(
                 RouteNames.workerJobs,
@@ -219,6 +239,7 @@ GoRouter createAppRouter() {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _workerWalletNavKey,
             routes: [
               _page(
                 RouteNames.workerWallet,
@@ -230,6 +251,7 @@ GoRouter createAppRouter() {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _workerProfileNavKey,
             routes: [
               _page(
                 RouteNames.workerProfileTab,
@@ -245,6 +267,7 @@ GoRouter createAppRouter() {
 
       // Customer booking shell — shared BookingFlowCubit + TrackingCubit
       ShellRoute(
+        navigatorKey: _bookingShellNavKey,
         builder: (context, state, child) {
           return MultiBlocProvider(
             providers: [
@@ -356,6 +379,11 @@ GoRouter createAppRouter() {
       _page(
         RouteNames.customerWorkers,
         (_, s) => const CustomerWorkersPage(),
+        overlay: true,
+      ),
+      _page(
+        RouteNames.customerAiChat,
+        (_, s) => const CustomerAiHelperPage(),
         overlay: true,
       ),
       GoRoute(

@@ -103,6 +103,32 @@ const workerProfileSchema = new mongoose.Schema({
     walletTransactions: { type: [walletTransactionSchema], default: [] }
 }, { _id: false });
 
+// KYC Document Schema for Worker Verification
+const kycDocumentSchema = new mongoose.Schema({
+    aadhaarNumber: { type: String, default: null },
+    aadhaarFrontPhoto: { type: String, default: null },
+    aadhaarBackPhoto: { type: String, default: null },
+    panNumber: { type: String, default: null },
+    panFrontPhoto: { type: String, default: null },
+    panBackPhoto: { type: String, default: null },
+    selfieImageUrl: { type: String, default: null },
+    certificateUrl: { type: String, default: null },
+    govermentIdType: { type: String, default: null },
+    govermentIdNumber: { type: String, default: null },
+    status: {
+        type: String,
+        default: 'NOT_STARTED'
+    },
+    livenessScore: { type: Number, default: null },
+    faceMatchScore: { type: Number, default: null },
+    documentFaceDetected: { type: Boolean, default: null },
+    selfieFaceDetected: { type: Boolean, default: null },
+    aiDecision: { type: String, default: null },
+    // Admin message shown on Flutter verification screen when rejected or manual review requested
+    declineReason: { type: String, default: null },
+    manualReviewReason: { type: String, default: null },
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -170,31 +196,10 @@ const userSchema = new mongoose.Schema({
         default: null // Frontend check: if (user.role === 'worker' && !user.workerProfile) -> Redirect to Worker Setup Screen
     },
 
-    // KYC docs — Cloudinary URLs after Flutter /api/upload
+    // KYC docs — Only for workers
     kycDocuments: {
-        aadhaarNumber: { type: String, default: null },
-        aadhaarFrontPhoto: { type: String, default: null },
-        aadhaarBackPhoto: { type: String, default: null },
-        panNumber: { type: String, default: null },
-        panFrontPhoto: { type: String, default: null },
-        panBackPhoto: { type: String, default: null },
-        selfieImageUrl: { type: String, default: null },
-        certificateUrl: { type: String, default: null },
-        govermentIdType: { type: String, default: null },
-        govermentIdNumber: { type: String, default: null },
-        status: {
-            type: String,
-            enum: ['NOT_STARTED', 'DOCUMENT_UPLOADED', 'SELFIE_UPLOADED', 'PROCESSING', 'APPROVED', 'MANUAL_REVIEW', 'REJECTED'],
-            default: 'NOT_STARTED'
-        },
-        livenessScore: { type: Number, default: null },
-        faceMatchScore: { type: Number, default: null },
-        documentFaceDetected: { type: Boolean, default: null },
-        selfieFaceDetected: { type: Boolean, default: null },
-        aiDecision: { type: String, default: null },
-        // Admin message shown on Flutter verification screen when rejected or manual review requested
-        declineReason: { type: String, default: null },
-        manualReviewReason: { type: String, default: null },
+        type: kycDocumentSchema,
+        default: null
     },
 
     payoutDetails: { type: mongoose.Schema.Types.Mixed, default: null },
@@ -210,6 +215,13 @@ const userSchema = new mongoose.Schema({
     activeDeviceId: {
         type: String,
         default: null
+    },
+
+    // User notification preferences (promotions, system, push)
+    notificationPreferences: {
+        marketing: { type: Boolean, default: true },
+        system: { type: Boolean, default: true },
+        push: { type: Boolean, default: true }
     }
 }, {
     timestamps: true
@@ -218,8 +230,18 @@ const userSchema = new mongoose.Schema({
 // Spatial index for 5km radius queries
 userSchema.index({ location: '2dsphere' });
 
+// PRE HOOK: Strip worker-only KYC documents if user is a customer
+userSchema.pre('validate', function () {
+    if (this.role === 'customer') {
+        this.kycDocuments = undefined;
+    }
+});
+
 // PRE HOOK: Hash Password before saving
 userSchema.pre('save', async function () {
+    if (this.role === 'customer') {
+        this.kycDocuments = undefined;
+    }
     if (!this.isModified('password') || !this.password) {
         return;
     }

@@ -1,6 +1,8 @@
 import Service from '../models/Service.js';
 import User from '../models/User.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
+import { groqClient, classifyIssueWithGroq } from '../utils/groqClient.js';
+import { analyzeImageWithGemini, isGeminiVisionConfigured } from '../utils/geminiVisionClient.js';
 
 // Screen 4: AI Issue Analyzer
 export const analyzeIssue = async (req, res) => {
@@ -16,19 +18,43 @@ export const analyzeIssue = async (req, res) => {
             issueImageUrl = uploaded.secure_url;
         }
 
-        const text = problemDescription.toLowerCase();
-        let detectedCategory = 'Plumbing';
-        let estimatedHours = 1;
+        // Use Gemini Vision for image analysis if image is provided, otherwise use Groq for text
+        let detectedCategory;
+        let geminiAnalysis = null;
 
-        if (text.includes('wire') || text.includes('spark') || text.includes('switch') || text.includes('light')) {
-            detectedCategory = 'Electrical';
-            estimatedHours = 1.5;
-        } else if (text.includes('pipe') || text.includes('leak') || text.includes('tap') || text.includes('water')) {
-            detectedCategory = 'Plumbing';
-            estimatedHours = 2;
-        } else if (text.includes('clean') || text.includes('dust') || text.includes('sofa')) {
-            detectedCategory = 'Cleaning';
-            estimatedHours = 3;
+        if (req.file && isGeminiVisionConfigured()) {
+            // Use Gemini Vision to analyze the image
+            geminiAnalysis = await analyzeImageWithGemini(req.file.buffer);
+            detectedCategory = geminiAnalysis.category;
+        } else {
+            // Fall back to Groq for text-based classification
+            detectedCategory = await classifyIssueWithGroq(problemDescription.toLowerCase());
+        }
+
+        let estimatedHours = 1; // default
+
+        // Adjust estimated hours based on category
+        switch(detectedCategory) {
+            case 'Electrical':
+                estimatedHours = 1.5;
+                break;
+            case 'Plumbing':
+                estimatedHours = 2;
+                break;
+            case 'Cleaning':
+                estimatedHours = 3;
+                break;
+            case 'HVAC':
+                estimatedHours = 2.5;
+                break;
+            case 'Carpentry':
+                estimatedHours = 4;
+                break;
+            case 'Painting':
+                estimatedHours = 3.5;
+                break;
+            default:
+                estimatedHours = 1;
         }
 
         const suggestedService = await Service.findOne({ category: detectedCategory, isActive: true }).lean();
@@ -40,7 +66,10 @@ export const analyzeIssue = async (req, res) => {
                 estimatedHours,
                 suggestedService: suggestedService || null,
                 issueImageUrl,
-                aiNote: `Based on your query "${problemDescription}", we recommend a ${detectedCategory} specialist.`
+                geminiAnalysis: geminiAnalysis || null,
+                aiNote: geminiAnalysis
+                    ? `Based on the image analysis: ${geminiAnalysis.description}. We recommend a ${detectedCategory} specialist.`
+                    : `Based on your query "${problemDescription}", we recommend a ${detectedCategory} specialist.`
             }
         });
     } catch (error) {

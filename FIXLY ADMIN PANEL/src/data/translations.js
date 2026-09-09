@@ -13,6 +13,7 @@ export const translations = {
     analytics: 'Analytics',
     aiInsights: 'AI Insights',
     notifications: 'Notifications',
+    support: 'Support & AI Desk',
     settings: 'Settings',
 
     // Section Titles
@@ -72,6 +73,7 @@ export const translations = {
     analytics: 'एनालिटिक्स',
     aiInsights: 'एआई पूर्वानुमान',
     notifications: 'सूचनाएं',
+    support: 'सहायता एवं AI डेस्क',
     settings: 'सेटिंग्स',
 
     // Section Titles

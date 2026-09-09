@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../app/router/route_names.dart';
+import '../../features/auth/presentation/cubit/app_session_cubit.dart';
+import '../../shared/models/models.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/theme_x.dart';
 import '../constants/app_strings.dart';
@@ -20,6 +25,8 @@ class AppScaffold extends StatelessWidget {
     this.bottomNavigationBar,
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
     this.showBack,
+    this.onBack,
+    this.fallbackPath,
   });
 
   final String? title;
@@ -34,35 +41,71 @@ class AppScaffold extends StatelessWidget {
 
   /// When null, back shows only if *this* route can pop (not the root stack).
   final bool? showBack;
+  final VoidCallback? onBack;
+  final String? fallbackPath;
 
   bool _canPopThisRoute(BuildContext context) {
     if (showBack != null) return showBack!;
     return ModalRoute.of(context)?.canPop ?? false;
   }
 
+  void _handleBack(BuildContext context) {
+    if (onBack != null) {
+      onBack!();
+      return;
+    }
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    if (fallbackPath != null && fallbackPath!.isNotEmpty) {
+      context.go(fallbackPath!);
+      return;
+    }
+    try {
+      final from = GoRouterState.of(context).uri.queryParameters['from'];
+      if (from == 'notifications') {
+        context.go(RouteNames.sharedNotifications);
+        return;
+      }
+    } catch (_) {}
+
+    try {
+      final isWorker =
+          context.read<AppSessionCubit?>()?.currentUser?.role == UserRole.worker;
+      context.go(
+          isWorker ? RouteNames.workerDashboard : RouteNames.customerHome);
+    } catch (_) {
+      context.go(RouteNames.customerHome);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final canPop = _canPopThisRoute(context);
+    bool hasQueryFromNotif = false;
+    try {
+      hasQueryFromNotif =
+          GoRouterState.of(context).uri.queryParameters['from'] != null;
+    } catch (_) {}
 
-    return Scaffold(
+    final canGoBack = canPop ||
+        context.canPop() ||
+        fallbackPath != null ||
+        hasQueryFromNotif;
+
+    final scaffold = Scaffold(
       appBar: title == null && titleWidget == null
           ? null
           : AppBar(
               title: titleWidget ?? (title != null ? Text(title!) : null),
               centerTitle: false,
-              leading:
-                  leading ??
-                  (canPop
+              leading: leading ??
+                  ((showBack ?? canGoBack)
                       ? IconButton(
                           icon: const Icon(Icons.arrow_back_rounded),
                           tooltip: context.l10n.goBack,
-                          onPressed: () {
-                            if (context.canPop()) {
-                              context.pop();
-                            } else {
-                              Navigator.of(context).maybePop();
-                            }
-                          },
+                          onPressed: () => _handleBack(context),
                         )
                       : null),
               automaticallyImplyLeading: false,
@@ -74,6 +117,20 @@ class AppScaffold extends StatelessWidget {
       body: SafeArea(
         child: Padding(padding: padding, child: body),
       ),
+    );
+
+    if (!canGoBack) {
+      return scaffold;
+    }
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _handleBack(context);
+        }
+      },
+      child: scaffold,
     );
   }
 }

@@ -28,7 +28,8 @@ class NotificationPayload {
       notificationId: value('notificationId'),
       entityType: value('entityType'),
       entityId: value('entityId'),
-      bookingId: value('bookingId'),
+      bookingId: value('bookingId') ??
+          (value('entityType') == 'booking' ? value('entityId') : null),
       action: value('action'),
       version: value('version') ?? '1',
     );

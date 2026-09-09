@@ -196,7 +196,7 @@ class CustomerWorkerArrivedPage extends StatelessWidget {
                     ),
                   ] else if (isAwaitingPayment) ...[
                     PrimaryButton(
-                      label: 'Pay Now (₹${booking?.estimatedPrice.toStringAsFixed(0) ?? '0'})',
+                      label: 'Pay Now (₹${(booking?.totalPrice ?? booking?.estimatedPrice ?? 0).toStringAsFixed(0)})',
                       onPressed: () => context.push(RouteNames.customerPayment),
                     ),
                   ] else ...[

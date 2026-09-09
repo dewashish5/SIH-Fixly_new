@@ -840,24 +840,38 @@ class _CouponBannerCarousel extends StatefulWidget {
 }
 
 class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
-  final PageController _pageController = PageController(viewportFraction: 0.91);
+  static const int _kLoopMultiplier = 10000;
+  late PageController _pageController;
   int _currentPage = 0;
   Timer? _autoScrollTimer;
 
   @override
   void initState() {
     super.initState();
+    final initialPage = widget.banners.length > 1
+        ? widget.banners.length * (_kLoopMultiplier ~/ 2)
+        : 0;
+    _pageController = PageController(
+      viewportFraction: 0.91,
+      initialPage: initialPage,
+    );
     _startAutoScroll();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CouponBannerCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.banners.length != widget.banners.length) {
+      _startAutoScroll();
+    }
   }
 
   void _startAutoScroll() {
     _autoScrollTimer?.cancel();
     if (widget.banners.length <= 1) return;
     _autoScrollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted) return;
-      final next = (_currentPage + 1) % widget.banners.length;
-      _pageController.animateToPage(
-        next,
+      if (!mounted || !_pageController.hasClients) return;
+      _pageController.nextPage(
         duration: const Duration(milliseconds: 600),
         curve: Curves.easeInOutCubic,
       );
@@ -932,9 +946,18 @@ class _CouponBannerCarouselState extends State<_CouponBannerCarousel> {
           height: 130,
           child: PageView.builder(
             controller: _pageController,
-            onPageChanged: (i) => setState(() => _currentPage = i),
-            itemCount: widget.banners.length,
-            itemBuilder: (context, index) {
+            onPageChanged: (rawIndex) {
+              if (widget.banners.isEmpty) return;
+              final index = rawIndex % widget.banners.length;
+              if (_currentPage != index) {
+                setState(() => _currentPage = index);
+              }
+            },
+            itemCount: widget.banners.length > 1 ? null : widget.banners.length,
+            itemBuilder: (context, rawIndex) {
+              final index = widget.banners.isNotEmpty
+                  ? rawIndex % widget.banners.length
+                  : 0;
               final banner = widget.banners[index];
               final startColor = _parseHex(
                 banner.gradientColors.isNotEmpty ? banner.gradientColors.first : '#1E3A8A',

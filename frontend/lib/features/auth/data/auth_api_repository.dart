@@ -375,8 +375,9 @@ class AuthApiRepository {
   }) async {
     final payload = <String, dynamic>{'name': name, 'phone': phone};
     if (avatar != null) payload['avatar'] = avatar;
-    if (preferredLanguage != null)
+    if (preferredLanguage != null) {
       payload['preferredLanguage'] = preferredLanguage;
+    }
 
     if (emergencyContactName != null ||
         emergencyContactPhone != null ||
@@ -427,6 +428,26 @@ class AuthApiRepository {
     final user = mapUser(Map<String, dynamic>.from(userJson as Map));
     await _tokens.saveProfile(name: user.name, phone: user.phone);
     return user;
+  }
+
+  Future<void> updateNotificationPreferences({
+    bool? marketing,
+    bool? system,
+    bool? push,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (marketing != null) payload['marketing'] = marketing;
+    if (system != null) payload['system'] = system;
+    if (push != null) payload['push'] = push;
+    if (payload.isEmpty) return;
+
+    try {
+      await _api.patch(ApiEndpoints.notificationPreferences, data: payload);
+    } catch (_) {
+      try {
+        await _api.put(ApiEndpoints.notificationPreferences, data: payload);
+      } catch (_) {}
+    }
   }
 
   Future<AuthSession> _persistSession(
@@ -490,6 +511,10 @@ class AuthApiRepository {
     final rateNum = profile['hourlyRate'] ?? profile['rate'] ?? 0;
     final expNum = profile['experienceYears'] ?? 0;
 
+    final notifPrefs = json['notificationPreferences'] is Map
+        ? Map<String, dynamic>.from(json['notificationPreferences'] as Map)
+        : null;
+
     return AppUser(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       name: (json['name'] as String?) ?? 'Fixly User',
@@ -515,6 +540,9 @@ class AuthApiRepository {
       emergencyRelation: em['relation'] as String?,
       homeCity: homeAddr?['city'] as String?,
       homePincode: homeAddr?['pincode'] as String?,
+      marketingNotifications: notifPrefs?['marketing'] as bool?,
+      systemNotifications: notifPrefs?['system'] as bool?,
+      pushNotifications: notifPrefs?['push'] as bool?,
     );
   }
 }

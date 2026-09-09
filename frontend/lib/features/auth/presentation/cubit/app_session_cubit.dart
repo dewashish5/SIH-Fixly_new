@@ -82,12 +82,19 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         // Location sync must not prevent a worker from opening the app.
       }
     }
+    _syncNotificationPreferencesFromUser(session.user);
+    final marketingEnabled = session.user.marketingNotifications ?? state.marketingNotificationsEnabled;
+    final systemEnabled = session.user.systemNotifications ?? state.systemNotificationsEnabled;
+    final pushEnabled = session.user.pushNotifications ?? state.notificationsEnabled;
     emit(
       state.copyWith(
         role: session.user.role == UserRole.worker ? 'worker' : 'customer',
         email: session.user.email,
         phone: session.user.phone,
         status: AppSessionStatus.authenticated,
+        marketingNotificationsEnabled: marketingEnabled,
+        systemNotificationsEnabled: systemEnabled,
+        notificationsEnabled: pushEnabled,
         clearError: true,
       ),
     );
@@ -95,7 +102,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       NotificationService.instance.onAuthenticated(
         role: session.user.role == UserRole.worker ? 'worker' : 'customer',
         locale: state.locale,
-        marketingEnabled: state.marketingNotificationsEnabled,
+        marketingEnabled: marketingEnabled,
       ),
     );
   }
@@ -117,17 +124,25 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     if (enabled) {
       unawaited(NotificationService.instance.enablePushFromSettings());
     }
+    unawaited(_auth.updateNotificationPreferences(push: enabled));
   }
 
   Future<void> setSystemNotificationsEnabled(bool enabled) async {
     await _prefs.setSystemNotificationsEnabled(enabled);
     emit(state.copyWith(systemNotificationsEnabled: enabled));
+    unawaited(_auth.updateNotificationPreferences(system: enabled));
   }
 
   Future<void> setMarketingNotificationsEnabled(bool enabled) async {
     await _prefs.setMarketingNotificationsEnabled(enabled);
     emit(state.copyWith(marketingNotificationsEnabled: enabled));
-    unawaited(NotificationService.instance.setMarketingEnabled(enabled));
+    unawaited(
+      NotificationService.instance.setMarketingEnabled(
+        enabled,
+        role: state.role,
+      ),
+    );
+    unawaited(_auth.updateNotificationPreferences(marketing: enabled));
   }
 
   Future<void> completeLanguageSelection() async {
@@ -406,9 +421,28 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     );
   }
 
+  void _syncNotificationPreferencesFromUser(AppUser user) {
+    final marketing = user.marketingNotifications;
+    final system = user.systemNotifications;
+    final push = user.pushNotifications;
+    if (marketing != null) {
+      unawaited(_prefs.setMarketingNotificationsEnabled(marketing));
+    }
+    if (system != null) {
+      unawaited(_prefs.setSystemNotificationsEnabled(system));
+    }
+    if (push != null) {
+      unawaited(_prefs.setTransactionalNotificationsEnabled(push));
+    }
+  }
+
   void _applySession(AuthSession session) {
     _repo.currentUser = session.user;
     _repo.selectedRole = session.user.role;
+    _syncNotificationPreferencesFromUser(session.user);
+    final marketingEnabled = session.user.marketingNotifications ?? state.marketingNotificationsEnabled;
+    final systemEnabled = session.user.systemNotifications ?? state.systemNotificationsEnabled;
+    final pushEnabled = session.user.pushNotifications ?? state.notificationsEnabled;
     emit(
       state.copyWith(
         email: session.user.email,
@@ -417,6 +451,9 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         pendingSignupPassword: '',
         role: session.user.role == UserRole.worker ? 'worker' : 'customer',
         status: AppSessionStatus.authenticated,
+        marketingNotificationsEnabled: marketingEnabled,
+        systemNotificationsEnabled: systemEnabled,
+        notificationsEnabled: pushEnabled,
         clearError: true,
       ),
     );
@@ -424,7 +461,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       NotificationService.instance.onAuthenticated(
         role: session.user.role == UserRole.worker ? 'worker' : 'customer',
         locale: state.locale,
-        marketingEnabled: state.marketingNotificationsEnabled,
+        marketingEnabled: marketingEnabled,
       ),
     );
   }

@@ -4,6 +4,7 @@ import User from "../models/User.js";
 import redis from "../config/redis.js";
 import { llm, isGeminiConfigured } from "./model.js";
 import { FLEXI_SYSTEM_PROMPT } from "./prompt.js";
+import { generateResponse, getFallbackResponse } from "./responseGenerator.js";
 
 // Session timeout: 60 seconds (1 minute idle expiration)
 const SESSION_TTL_SECONDS = 60;
@@ -38,6 +39,43 @@ export const isBookingQuery = (text = "") => {
     return ["booking", "status", "कहाँ है", "स्टेटस", "मेरी बुकिंग"].some(w => lower.includes(w));
 };
 
+export const getSuggestedReplies = (action, state = {}, lang = 'en') => {
+    const isHi = lang === 'hi';
+    switch (action) {
+        case 'PROMPT_CATEGORY':
+        case 'SESSION_EXPIRED':
+        case 'SESSION_ABORTED':
+            return isHi
+                ? ['नल का रिसाव (Plumber)', 'बिजली / स्विच खराब (Electrician)', 'घर की गहरी सफाई (Cleaning)', 'एसी सर्विस (AC Repair)', 'मेरी बुकिंग स्थिति']
+                : ['Plumbing leak / repair', 'Electrician / Wiring issue', 'Deep home cleaning', 'AC service & repair', 'Track my bookings'];
+        case 'CONFIRM_EMERGENCY_BOOKING':
+            return isHi
+                ? ['हाँ, तुरंत कार्यकर्ता भेजें', 'नहीं, बाद में बुक करेंगे', 'सेवा का विवरण बदलें', 'रद्द करें']
+                : ['Yes, send worker immediately', 'No, not right now', 'Change details', 'Cancel'];
+        case 'PROMPT_CONFIRMATION':
+            return isHi
+                ? ['हाँ, बुकिंग कन्फर्म करें', 'खर्च कितना होगा?', 'पते की पुष्टि करें', 'रद्द करें']
+                : ['Yes, confirm booking', 'What is the estimated cost?', 'Confirm my address', 'Cancel'];
+        case 'BOOKING_CREATED':
+            return isHi
+                ? ['कार्यकर्ता को ट्रैक करें', 'मेरी बुकिंग्स देखें', 'नई सेवा बुक करें']
+                : ['Track worker live', 'View my bookings', 'Book another service'];
+        case 'BOOKING_STATUS':
+            return isHi
+                ? ['कार्यकर्ता को कॉल करें', 'सक्रिय ऑर्डर ट्रैक करें', 'नई सेवा चाहिए']
+                : ['Call worker', 'Track active booking', 'Need another service'];
+        case 'MISSING_DETAILS':
+            return isHi
+                ? ['नल ठीक करना है', 'इलेक्ट्रीशियन चाहिए', 'पता अपडेट करें']
+                : ['Need a plumber', 'Need an electrician', 'Update my address'];
+        case 'OFF_TOPIC_GUARD':
+        default:
+            return isHi
+                ? ['प्लंबर चाहिए', 'इलेक्ट्रीशियन चाहिए', 'घर की सफाई', 'बुकिंग स्टेटस']
+                : ['Need a plumber', 'Need an electrician', 'Need home cleaning', 'Booking status'];
+    }
+};
+
 /**
  * Main AI Agent Conversation Handler with 1-Minute Session TTL & Strict Anti-Fake Verification
  */
@@ -61,14 +99,17 @@ export const processFlexiAgentMessage = async ({
             const cachedSession = await redis.get(sessionKey);
             if (!cachedSession && Object.keys(conversationState).length > 0 && conversationState.step) {
                 // Session expired (> 60s inactivity) - abort fake/abandoned attempt
-                const reply = lang === "hi"
-                    ? "समय समाप्त हो गया (सत्र समाप्त)। आपका पिछला सत्र 1 मिनट से अधिक निष्क्रिय रहने के कारण रीसेट कर दिया गया है। कृपया दोबारा बताएं कि आपको क्या सेवा चाहिए।"
-                    : "Session timed out due to 1 minute of inactivity. The previous attempt was reset. Please tell me which service you need to start fresh.";
+                const reply = await generateResponse('SESSION_EXPIRED', state, lang) ??
+                    (lang === "hi"
+                        ? "समय समाप्त हो गया (सत्र समाप्त)। आपका पिछला सत्र 1 मिनट से अधिक निष्क्रिय रहने के कारण रीसेट कर दिया गया है। कृपया दोबारा बताएं कि आपको क्या सेवा चाहिए।"
+                        : "Session timed out due to 1 minute of inactivity. The previous attempt was reset. Please tell me which service you need to start fresh.");
 
+                const action = "SESSION_EXPIRED";
                 return {
                     reply,
                     state: { language: lang, step: "AWAITING_CATEGORY" },
-                    action: "SESSION_EXPIRED"
+                    action,
+                    suggestedReplies: getSuggestedReplies(action, state, lang)
                 };
             } else if (cachedSession) {
                 const parsed = JSON.parse(cachedSession);
@@ -91,10 +132,12 @@ export const processFlexiAgentMessage = async ({
             ? "बुकिंग सत्र रद्द कर दिया गया है और कोई बुकिंग दर्ज नहीं की गई। जब भी आपको किसी सेवा की आवश्यकता हो, बेझिझक Flexi से कहें!"
             : "Booking session has been cancelled. No booking was created. Feel free to reach out anytime!";
 
+        const action = "SESSION_ABORTED";
         return {
             reply,
             state: { language: lang, step: null },
-            action: "SESSION_ABORTED"
+            action,
+            suggestedReplies: getSuggestedReplies(action, state, lang)
         };
     }
 
@@ -105,7 +148,8 @@ export const processFlexiAgentMessage = async ({
             ? "माफ़ कीजिए, मैं केवल Fixly Cooperative Gig Services (प्लंबिंग, इलेक्ट्रीशियन, कारपेंटर, सफाई आदि) और आपकी सेवा बुकिंग्स में सहायता के लिए बना हूँ। आप अपनी घरेलू सेवा संबंधी आवश्यकता बताइए।"
             : "I apologize, I am exclusively trained to assist with Fixly Cooperative Gig Services (such as Plumbing, Electrical, Cleaning, Carpentry) and bookings. Please let me know what home service you need.";
 
-        return { reply, state, action: "OFF_TOPIC_GUARD" };
+        const action = "OFF_TOPIC_GUARD";
+        return { reply, state, action, suggestedReplies: getSuggestedReplies(action, state, lang) };
     }
 
     // --- 4. Booking Status Query ---
@@ -121,7 +165,8 @@ export const processFlexiAgentMessage = async ({
             const reply = lang === "hi"
                 ? "आपकी अभी कोई सक्रिय बुकिंग नहीं है। क्या आप कोई नई सेवा बुक करना चाहते हैं?"
                 : "You have no active bookings right now. Would you like to book a service?";
-            return { reply, state, action: "NO_BOOKINGS", bookings: [] };
+            const action = "NO_BOOKINGS";
+            return { reply, state, action, bookings: [], suggestedReplies: getSuggestedReplies(action, state, lang) };
         }
 
         const latest = userBookings[0];
@@ -140,7 +185,8 @@ export const processFlexiAgentMessage = async ({
             ? `आपकी हालिया बुकिंग #${latest.bookingId} (${latest.service?.title || "Service"}) की स्थिति "${statusDisplay}" है। आवंटित कार्यकर्ता: ${workerInfo}।`
             : `Your recent booking #${latest.bookingId} for ${latest.service?.title || "Service"} is currently "${statusDisplay}". Assigned worker: ${workerInfo}.`;
 
-        return { reply, state, action: "BOOKING_STATUS", bookings: userBookings };
+        const action = "BOOKING_STATUS";
+        return { reply, state, action, bookings: userBookings, suggestedReplies: getSuggestedReplies(action, state, lang) };
     }
 
     // --- 5. Extract Details via Gemini LLM or Fast Pattern ---
@@ -200,7 +246,8 @@ Analyze the user's message and return the single JSON output.`;
             const reply = lang === "hi"
                 ? "कुछ आवश्यक जानकारी अधूरी है। कृपया अपनी सेवा और पता दोबारा बताएं।"
                 : "Required booking details are incomplete. Please provide service and address.";
-            return { reply, state, action: "MISSING_DETAILS" };
+            const action = "MISSING_DETAILS";
+            return { reply, state, action, suggestedReplies: getSuggestedReplies(action, state, lang) };
         }
 
         let service = await Service.findOne({ category: state.category.toLowerCase() }).lean();
@@ -246,11 +293,13 @@ Analyze the user's message and return the single JSON output.`;
             ? `🎉 बधाई हो! आपकी ${state.category} सेवा की बुकिंग #${newBooking.bookingId} सफलतापूर्वक दर्ज कर ली गई है। निकटतम प्रमाणित कार्यकर्ताओं को सूचित किया जा रहा है।`
             : `🎉 Congratulations! Your ${state.category} booking #${newBooking.bookingId} has been confirmed. Notifying verified cooperative workers.`;
 
+        const action = "BOOKING_CREATED";
         return {
             reply,
             state,
-            action: "BOOKING_CREATED",
-            booking: newBooking
+            action,
+            booking: newBooking,
+            suggestedReplies: getSuggestedReplies(action, state, lang)
         };
     }
 
@@ -261,10 +310,11 @@ Analyze the user's message and return the single JSON output.`;
             ? "नमस्ते! मैं Flexi AI हूँ। आपको किस सेवा की आवश्यकता है? जैसे: प्लंबर (नल), इलेक्ट्रीशियन (बिजली), सफाई, कारपेंटर, या उपकरण रिपेयर?"
             : "Hello! I am Flexi AI. Which home service do you need? (e.g. Plumbing, Electrical, Cleaning, Carpentry, Appliance repair)";
 
+        const action = "PROMPT_CATEGORY";
         if (sessionKey) {
             try { await redis.set(sessionKey, JSON.stringify(state), "EX", SESSION_TTL_SECONDS); } catch (e) {}
         }
-        return { reply, state, action: "PROMPT_CATEGORY" };
+        return { reply, state, action, suggestedReplies: getSuggestedReplies(action, state, lang) };
     }
 
     if (state.isEmergency) {
@@ -273,10 +323,11 @@ Analyze the user's message and return the single JSON output.`;
             ? `🚨 आपातकालीन SOS ${state.category} सेवा चुनी गई है: "${text}"। यह बुकिंग तत्काल प्राथमिकता पर भेजी जाएगी। क्या आप बुकिंग कन्फर्म करना चाहते हैं? (हाँ / नहीं बोलें)`
             : `🚨 Emergency SOS ${state.category} requested: "${text}". This will be dispatched immediately with high priority. Shall I confirm and place this booking? (Reply Yes / No)`;
 
+        const action = "CONFIRM_EMERGENCY_BOOKING";
         if (sessionKey) {
             try { await redis.set(sessionKey, JSON.stringify(state), "EX", SESSION_TTL_SECONDS); } catch (e) {}
         }
-        return { reply, state, action: "CONFIRM_EMERGENCY_BOOKING" };
+        return { reply, state, action, suggestedReplies: getSuggestedReplies(action, state, lang) };
     }
 
     state.step = "AWAITING_CONFIRMATION";
@@ -284,12 +335,13 @@ Analyze the user's message and return the single JSON output.`;
         ? `मैंने आपकी ${state.category} सेवा की आवश्यकता नोट कर ली है: "${text}"। क्या मैं आपकी यह बुकिंग कन्फर्म कर दूँ? (हाँ / नहीं बोलें)`
         : `I noted your ${state.category} service request: "${text}". Shall I confirm and place this booking for you? (Reply Yes / No)`;
 
+    const action = "PROMPT_CONFIRMATION";
     // Save session in Redis with 1-Minute Expiration Window
     if (sessionKey) {
         try { await redis.set(sessionKey, JSON.stringify(state), "EX", SESSION_TTL_SECONDS); } catch (e) {}
     }
 
-    return { reply, state, action: "PROMPT_CONFIRMATION" };
+    return { reply, state, action, suggestedReplies: getSuggestedReplies(action, state, lang) };
 };
 
 export const routeAgentMessage = processFlexiAgentMessage;

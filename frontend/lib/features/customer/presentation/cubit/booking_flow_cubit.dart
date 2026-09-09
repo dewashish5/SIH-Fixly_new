@@ -193,6 +193,12 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
 
   double _payableAmount([Booking? targetBooking]) {
     final booking = targetBooking ?? state.booking;
+    if (booking?.totalAmount != null && booking!.totalAmount! > 0) {
+      return booking.totalAmount!;
+    }
+    if (booking?.invoice?.totalAmount != null && booking!.invoice!.totalAmount > 0) {
+      return booking.invoice!.totalAmount;
+    }
     final totalPrice = booking?.totalPrice;
     if (totalPrice != null && totalPrice > 0) {
       return totalPrice;

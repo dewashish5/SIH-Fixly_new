@@ -30,6 +30,7 @@ export const chatWithFlexiAgent = async (req, res) => {
             action: result.action,
             booking: result.booking || null,
             bookings: result.bookings || null,
+            suggestedReplies: result.suggestedReplies || [],
         });
     } catch (error) {
         console.error('Flexi Agent Error:', error);

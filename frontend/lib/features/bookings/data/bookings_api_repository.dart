@@ -531,19 +531,42 @@ class BookingsApiRepository {
     }
 
     final invoice = json['invoice'];
-    double price = 0;
-    double? baseServiceFee;
-    double? platformFee;
-    double? extraPartsTotal;
+    Map<String, dynamic>? invoiceMap;
     if (invoice is Map) {
-      baseServiceFee = (invoice['baseServiceFee'] as num?)?.toDouble();
-      platformFee = (invoice['platformFee'] as num?)?.toDouble();
-      extraPartsTotal = (invoice['extraPartsTotal'] as num?)?.toDouble();
-      price =
-          (invoice['totalAmount'] as num?)?.toDouble() ??
-          (invoice['baseServiceFee'] as num?)?.toDouble() ??
-          0;
+      invoiceMap = Map<String, dynamic>.from(invoice);
     }
+
+    final double? totalAmount = (invoiceMap?['totalAmount'] as num?)?.toDouble() ??
+        (json['totalAmount'] as num?)?.toDouble() ??
+        (json['totalPrice'] as num?)?.toDouble() ??
+        (json['total'] as num?)?.toDouble() ??
+        (json['amount'] as num?)?.toDouble();
+
+    final double? extraPartsTotal = (invoiceMap?['extraPartsTotal'] as num?)?.toDouble() ??
+        (json['extraPartsTotal'] as num?)?.toDouble();
+
+    final double? platformFee = (invoiceMap?['platformFee'] as num?)?.toDouble() ??
+        (json['platformFee'] as num?)?.toDouble();
+
+    final double? urgentFee = (invoiceMap?['urgentFee'] as num?)?.toDouble() ??
+        (json['urgentFee'] as num?)?.toDouble();
+
+    final double? baseServiceFee = (invoiceMap?['baseServiceFee'] as num?)?.toDouble() ??
+        (json['baseServiceFee'] as num?)?.toDouble();
+
+    final BookingInvoice? parsedInvoice = invoiceMap != null
+        ? BookingInvoice.fromJson(invoiceMap)
+        : (totalAmount != null && totalAmount > 0
+            ? BookingInvoice(
+                bookingId: (json['bookingId'] ?? json['_id'] ?? json['id'] ?? '').toString(),
+                serviceName: serviceTitle,
+                status: json['status']?.toString() ?? 'PENDING',
+                baseServiceFee: baseServiceFee ?? 0,
+                extraPartsTotal: extraPartsTotal ?? 0,
+                platformFee: platformFee ?? 0,
+                totalAmount: totalAmount,
+              )
+            : null);
 
     final addOns = _mapAddOns(json['addOns']);
 
@@ -561,6 +584,12 @@ class BookingsApiRepository {
         : const [];
 
     final serviceMap = service is Map ? service : const <String, dynamic>{};
+    final serviceBasePrice = (serviceMap['basePrice'] as num?)?.toDouble() ?? 0.0;
+    final double estimatedPrice = (json['estimatedPrice'] as num?)?.toDouble() ??
+        (baseServiceFee != null && baseServiceFee > 0
+            ? baseServiceFee
+            : (serviceBasePrice > 0 ? serviceBasePrice : (totalAmount ?? 0.0)));
+
     final bookingId = json['bookingId']?.toString();
     final displayId = bookingId != null && bookingId.isNotEmpty
         ? bookingId
@@ -571,7 +600,7 @@ class BookingsApiRepository {
       serviceId: serviceId,
       serviceTitle: serviceTitle,
       status: mapStatus(json['status']?.toString()),
-      estimatedPrice: price,
+      estimatedPrice: estimatedPrice,
       workerId: workerId,
       workerName: workerName,
       address: addressLine,
@@ -610,9 +639,12 @@ class BookingsApiRepository {
       rawStatus: json['status']?.toString(),
       bookingType: json['bookingType']?.toString(),
       isEmergency: json['isEmergency'] == true || (json['bookingType']?.toString() == 'EMERGENCY_SOS'),
-      urgentFee: (invoice is Map ? (invoice['urgentFee'] as num?)?.toDouble() : null) ??
+      urgentFee: urgentFee ??
+          (invoice is Map ? (invoice['urgentFee'] as num?)?.toDouble() : null) ??
           (json['urgentFee'] as num?)?.toDouble(),
       timeSlot: json['timeSlot']?.toString(),
+      totalAmount: totalAmount,
+      invoice: parsedInvoice,
     );
   }
 

@@ -9,6 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
 
 import '../firebase/firebase_bootstrap.dart';
+import '../network/api_client.dart';
 import '../preferences/app_preferences.dart';
 import '../../services/webrtc_call_service.dart';
 import '../../app/router/app_router.dart';
@@ -91,7 +92,7 @@ class NotificationService {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     await _localNotifications.initialize(
       const InitializationSettings(
-        android: AndroidInitializationSettings('@drawable/fixly_notification'),
+        android: AndroidInitializationSettings('@drawable/app_icon'),
         iOS: DarwinInitializationSettings(),
       ),
       onDidReceiveNotificationResponse: (response) {
@@ -134,7 +135,7 @@ class NotificationService {
             serviceTitleParam: extra?['serviceTitle']?.toString(),
           );
           final context = rootNavigatorKey.currentContext;
-          if (context != null) {
+          if (context != null && context.mounted) {
             context.push('/call');
           }
         }
@@ -194,11 +195,14 @@ class NotificationService {
     return status;
   }
 
-  Future<void> setMarketingEnabled(bool enabled) async {
-    final role = _role;
-    if (role == null || !_initialized) return;
+  Future<void> setMarketingEnabled(bool enabled, {String? role}) async {
+    final activeRole =
+        role ?? _role ?? await ApiServices.tokens.role ?? 'customer';
+    if (!_initialized) {
+      await initialize();
+    }
     try {
-      await _topicService.setMarketing(role, enabled);
+      await _topicService.setMarketing(activeRole, enabled);
     } catch (error) {
       debugPrint('FCM marketing topic skipped: $error');
     }
@@ -321,7 +325,8 @@ class NotificationService {
           priority: channelId == NotificationChannels.safety
               ? Priority.max
               : Priority.high,
-          icon: '@drawable/fixly_notification',
+          icon: '@drawable/app_icon',
+          largeIcon: const DrawableResourceAndroidBitmap('@drawable/app_icon'),
         ),
         iOS: const DarwinNotificationDetails(),
       ),

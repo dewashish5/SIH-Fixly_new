@@ -21,6 +21,7 @@ import ReportsPage from './pages/Reports/ReportsPage';
 import AnalyticsPage from './pages/Analytics/AnalyticsPage';
 import AIInsightsPage from './pages/AIInsights/AIInsightsPage';
 import NotificationsPage from './pages/Notifications/NotificationsPage';
+import SupportPage from './pages/Support/SupportPage';
 import SettingsPage from './pages/Settings/SettingsPage';
 import NotFoundPage from './pages/NotFound/NotFoundPage';
 import ThemeShowcase from './pages/ThemeShowcase/ThemeShowcase';
@@ -68,6 +69,7 @@ export default function App() {
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="ai-insights" element={<AIInsightsPage />} />
                 <Route path="notifications" element={<NotificationsPage />} />
+                <Route path="support" element={<SupportPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="theme" element={<ThemeShowcase />} />
                 <Route path="*" element={<NotFoundPage />} />

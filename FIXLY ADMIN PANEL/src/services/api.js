@@ -250,15 +250,25 @@ export const api = {
     return res.data;
   },
 
-  // Image Upload (Cloudinary / File)
-  uploadImage: async (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await adminApi.post('/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+  // Support Desk & AI Chatbot
+  getSupportTickets: async (params) => {
+    const res = await adminApi.get('/support/tickets', { params });
+    return res.data;
+  },
+  getSupportTicketById: async (id) => {
+    const res = await adminApi.get(`/support/tickets/${id}`);
+    return res.data;
+  },
+  sendSupportMessage: async (id, message) => {
+    const res = await adminApi.post(`/support/tickets/${id}/messages`, { body: message });
+    return res.data;
+  },
+  takeoverSupportTicket: async (id) => {
+    const res = await adminApi.post(`/support/tickets/${id}/takeover`);
+    return res.data;
+  },
+  updateSupportTicketStatus: async (id, statusData) => {
+    const res = await adminApi.patch(`/support/tickets/${id}`, statusData);
     return res.data;
   }
 };

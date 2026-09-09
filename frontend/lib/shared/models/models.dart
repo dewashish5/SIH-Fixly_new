@@ -30,6 +30,9 @@ class AppUser extends Equatable {
     this.emergencyRelation,
     this.homeCity,
     this.homePincode,
+    this.marketingNotifications,
+    this.systemNotifications,
+    this.pushNotifications,
   });
 
   final String id;
@@ -58,6 +61,9 @@ class AppUser extends Equatable {
   final String? emergencyRelation;
   final String? homeCity;
   final String? homePincode;
+  final bool? marketingNotifications;
+  final bool? systemNotifications;
+  final bool? pushNotifications;
 
   @override
   List<Object?> get props => [
@@ -85,6 +91,9 @@ class AppUser extends Equatable {
     emergencyRelation,
     homeCity,
     homePincode,
+    marketingNotifications,
+    systemNotifications,
+    pushNotifications,
   ];
 }
 
@@ -391,6 +400,8 @@ class Booking extends Equatable {
     this.isEmergency = false,
     this.urgentFee,
     this.timeSlot,
+    this.totalAmount,
+    this.invoice,
   });
 
   final String id;
@@ -432,14 +443,32 @@ class Booking extends Equatable {
   final bool isEmergency;
   final double? urgentFee;
   final String? timeSlot;
+  final double? totalAmount;
+  final BookingInvoice? invoice;
 
   double get totalPrice {
-    final base = baseServiceFee ?? estimatedPrice;
-    final extra = extraPartsTotal ?? 0.0;
+    // 1. Authoritative backend values: DO NOT recalculate or add extra parts on top!
+    if (totalAmount != null && totalAmount! > 0) {
+      return totalAmount!;
+    }
+    if (invoice != null && invoice!.totalAmount > 0) {
+      return invoice!.totalAmount;
+    }
+
+    // 2. Pre-invoice initial estimate calculation:
+    final extra = (extraPartsTotal != null && extraPartsTotal! > 0)
+        ? extraPartsTotal!
+        : addOns.fold<double>(0.0, (sum, a) => sum + (a.price * a.quantity));
     final platform = platformFee ?? 0.0;
-    final addOnsTotal = addOns.fold<double>(0.0, (sum, a) => sum + (a.price * a.quantity));
-    final calculated = base + extra + platform + addOnsTotal;
-    return calculated > 0 ? calculated : estimatedPrice;
+    final urgent = urgentFee ?? 0.0;
+
+    // Only add extra parts if baseServiceFee is explicitly specified.
+    // If baseServiceFee is null, estimatedPrice already reflects the full total — NEVER add extra on top!
+    if (baseServiceFee != null && baseServiceFee! > 0) {
+      return baseServiceFee! + extra + platform + urgent;
+    }
+
+    return estimatedPrice > 0 ? estimatedPrice : extra;
   }
 
   Booking copyWith({
@@ -453,6 +482,8 @@ class Booking extends Equatable {
     double? extraPartsTotal,
     String? rawStatus,
     String? paymentStatus,
+    double? totalAmount,
+    BookingInvoice? invoice,
   }) {
     return Booking(
       id: id,
@@ -490,6 +521,12 @@ class Booking extends Equatable {
       customerLat: customerLat,
       customerLng: customerLng,
       rawStatus: rawStatus ?? this.rawStatus,
+      bookingType: bookingType,
+      isEmergency: isEmergency,
+      urgentFee: urgentFee,
+      timeSlot: timeSlot,
+      totalAmount: totalAmount ?? this.totalAmount,
+      invoice: invoice ?? this.invoice,
     );
   }
 
@@ -507,6 +544,8 @@ class Booking extends Equatable {
     paymentStatus,
     createdAt,
     customerName,
+    totalAmount,
+    invoice,
   ];
 }
 
@@ -668,7 +707,9 @@ class NotificationItem extends Equatable {
       eventType: json['eventType']?.toString(),
       entityType: json['entityType']?.toString(),
       entityId: json['entityId']?.toString(),
-      bookingId: json['bookingId']?.toString(),
+      bookingId: json['bookingId']?.toString() ??
+          (json['data'] is Map ? json['data']['bookingId']?.toString() : null) ??
+          (json['entityType'] == 'booking' ? json['entityId']?.toString() : null),
       action:
           (json['action'] ??
                   (json['data'] is Map ? json['data']['action'] : null))

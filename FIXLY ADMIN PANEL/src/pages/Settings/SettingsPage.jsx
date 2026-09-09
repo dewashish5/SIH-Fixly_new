@@ -134,7 +134,8 @@ export default function SettingsPage() {
     gradientStart: '#1E3A8A',
     gradientEnd: '#3B82F6',
     priority: 5,
-    isActive: true
+    isActive: true,
+    notifyUsers: true
   });
 
   // -------------------------------------------------------------
@@ -339,7 +340,8 @@ export default function SettingsPage() {
         minOrderValue: Number(newBanner.minOrderValue) || 0,
         maxDiscount: Number(newBanner.maxDiscount) || 500,
         priority: Number(newBanner.priority) || 0,
-        isActive: Boolean(newBanner.isActive)
+        isActive: Boolean(newBanner.isActive),
+        notifyUsers: Boolean(newBanner.notifyUsers)
       };
 
       const res = await api.createBanner(payload);
@@ -1370,6 +1372,18 @@ export default function SettingsPage() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div>
+                      <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Target Audience</label>
+                      <select
+                        value={newBanner.targetUserRole}
+                        onChange={(e) => setNewBanner({ ...newBanner, targetUserRole: e.target.value })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' }}
+                      >
+                        <option value="all">All Users (Customers & Workers)</option>
+                        <option value="customer">Customers Only</option>
+                        <option value="worker">Workers Only</option>
+                      </select>
+                    </div>
+                    <div>
                       <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Target Category</label>
                       <select
                         value={newBanner.category}
@@ -1384,6 +1398,9 @@ export default function SettingsPage() {
                         <option value="carpenter">Carpentry</option>
                       </select>
                     </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Min Order Value (₹)</label>
                       <input
@@ -1394,6 +1411,30 @@ export default function SettingsPage() {
                         style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
                       />
                     </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Max Discount (₹)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newBanner.maxDiscount}
+                        onChange={(e) => setNewBanner({ ...newBanner, maxDiscount: Number(e.target.value) || 500 })}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '12px 14px', borderRadius: '8px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <input
+                      type="checkbox"
+                      id="notifyUsersCheckbox"
+                      checked={newBanner.notifyUsers}
+                      onChange={(e) => setNewBanner({ ...newBanner, notifyUsers: e.target.checked })}
+                      style={{ marginTop: '3px', cursor: 'pointer', accentColor: '#15803d' }}
+                    />
+                    <label htmlFor="notifyUsersCheckbox" style={{ fontSize: '12.5px', color: '#166534', cursor: 'pointer', lineHeight: '1.4' }}>
+                      <strong>Dispatch Push & In-App Notification</strong><br />
+                      Send promotion to users who have <em>"Discounts & Updates"</em> notification enabled. Users who turned OFF this toggle will NOT receive it.
+                    </label>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

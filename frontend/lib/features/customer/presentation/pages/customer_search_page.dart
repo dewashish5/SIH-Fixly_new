@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/navigation/customer_navigation.dart';
 import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
@@ -46,8 +49,26 @@ class _CustomerSearchView extends StatefulWidget {
 }
 
 class _CustomerSearchViewState extends State<_CustomerSearchView> {
+  late final TextEditingController _searchController;
+  Timer? _debounceTimer;
+  String? _activeCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeCategory = widget.categoryId;
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
   ServiceCategory? get _matchedCategory {
-    final id = widget.categoryId?.toLowerCase().trim();
+    final id = _activeCategory?.toLowerCase().trim();
     if (id == null || id.isEmpty) return null;
     for (final cat in ServiceCategories.all) {
       if (cat.id == id ||
@@ -62,9 +83,53 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
   String get _categoryTitle {
     final cat = _matchedCategory;
     if (cat != null) return cat.nameFor(context.l10n.locale);
-    final id = widget.categoryId;
+    final id = _activeCategory ?? widget.categoryId;
     if (id == null || id.isEmpty) return context.l10n.search;
     return id[0].toUpperCase() + id.substring(1);
+  }
+
+  void _onCategorySelected(String? categoryId) {
+    setState(() {
+      _activeCategory = categoryId;
+    });
+    _searchController.clear();
+    _debounceTimer?.cancel();
+    if (categoryId != null && categoryId.isNotEmpty) {
+      context.read<SearchCubit>().filterByCategory(categoryId);
+    } else {
+      context.read<SearchCubit>().search('');
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() {});
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      if (value.trim().isNotEmpty && _activeCategory != null) {
+        setState(() => _activeCategory = null);
+      }
+      context.read<SearchCubit>().search(value);
+    });
+  }
+
+  void _onSearchSubmitted(String value) {
+    _debounceTimer?.cancel();
+    if (value.trim().isNotEmpty && _activeCategory != null) {
+      setState(() => _activeCategory = null);
+    }
+    context.read<SearchCubit>().search(value);
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {});
+    _debounceTimer?.cancel();
+    if (_activeCategory != null && _activeCategory!.isNotEmpty) {
+      context.read<SearchCubit>().filterByCategory(_activeCategory!);
+    } else {
+      context.read<SearchCubit>().search('');
+    }
   }
 
   Future<void> _onRefresh() async {
@@ -75,6 +140,8 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final locale = l10n.locale;
+    final theme = Theme.of(context);
+
     return AppScaffold(
       title: _categoryTitle,
       showBack: widget.showBack,
@@ -83,37 +150,28 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
         child: CustomScrollView(
           physics: appRefreshScrollPhysics,
           slivers: [
-            // 1. Category intro
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.verified_rounded,
-                          size: 16,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Verified Specialists & Fixed Pricing',
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // Top breathing room between AppBar and body
+            const SliverToBoxAdapter(child: SizedBox(height: 14)),
 
-            // 2. Top-Matching & Nearest Workers Section
+            // 1. Search Bar Header
+            SliverToBoxAdapter(
+              child: _buildSearchBar(context, theme),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // 2. Quick Category Filter Pills
+            SliverToBoxAdapter(
+              child: _buildCategoryFilterBar(context, locale),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // 3. Trust & Quality Assurance Banner
+            SliverToBoxAdapter(
+              child: _buildTrustBanner(context, theme),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 18)),
+
+            // 4. Top-Matching & Nearest Specialists Section
             SliverToBoxAdapter(
               child: BlocBuilder<SearchCubit, SearchState>(
                 builder: (context, state) {
@@ -124,24 +182,45 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(
                           children: [
-                            const Icon(
-                              Icons.stars_rounded,
-                              size: 20,
-                              color: AppColors.accent,
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.stars_rounded,
+                                size: 18,
+                                color: AppColors.accentDark,
+                              ),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 10),
                             Expanded(
-                              child: Text(
-                                'Top Matching Specialists',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Top Matching Specialists',
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Ranked by rating, skill relevance & proximity',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: context.muted,
+                                      fontSize: 11.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             if (state.nearbyWorkers.isNotEmpty)
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
-                                  vertical: 2,
+                                  vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
                                   color: AppColors.success.withValues(
@@ -159,16 +238,6 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                                 ),
                               ),
                           ],
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'Ranked by highest rating, skill relevance & proximity',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodySmall?.copyWith(color: context.muted),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -197,9 +266,7 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                               horizontal: 16,
                             ),
                             decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest
+                              color: theme.colorScheme.surfaceContainerHighest
                                   .withValues(alpha: 0.4),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: context.hairline),
@@ -228,19 +295,15 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                                     children: [
                                       Text(
                                         'Auto-Matching Active',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
+                                        style: theme.textTheme.bodyMedium
                                             ?.copyWith(
                                               fontWeight: FontWeight.w700,
                                             ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        'Select any service package below and our smart system will auto-assign the best specialist to your doorstep.',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
+                                        'Select any service below and Fixly will auto-dispatch the best specialist to your doorstep.',
+                                        style: theme.textTheme.bodySmall
                                             ?.copyWith(color: context.muted),
                                       ),
                                     ],
@@ -252,7 +315,7 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                         )
                       else
                         SizedBox(
-                          height: 195,
+                          height: 200,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -286,52 +349,88 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                                 child: _WorkerCard(
                                   worker: worker,
                                   targetCategory:
+                                      _activeCategory ??
                                       widget.categoryId ??
                                       state.categoryId ??
                                       '',
                                   onTap: () => context.push(
                                     '/customer/worker/${worker.id}'
                                     '?serviceId=${Uri.encodeComponent(serviceId)}'
-                                    '&category=${Uri.encodeComponent(widget.categoryId ?? state.categoryId ?? '')}',
+                                    '&category=${Uri.encodeComponent(_activeCategory ?? widget.categoryId ?? state.categoryId ?? '')}',
                                   ),
                                 ),
                               );
                             },
                           ),
                         ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                     ],
                   );
                 },
               ),
             ),
 
-            // 3. Category Services Section Header
+            // 5. Category Services Section Header
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.home_repair_service_rounded,
-                      size: 20,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Services in this Category',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ],
+                child: BlocBuilder<SearchCubit, SearchState>(
+                  builder: (context, state) {
+                    final title = _activeCategory != null
+                        ? '$_categoryTitle Packages'
+                        : 'Available Services';
+                    return Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.home_repair_service_rounded,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        if (state.results.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${state.results.length} Services',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: theme.hintColor,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 10)),
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
-            // 4. Services List
+            // 6. Services List / Empty state
             BlocBuilder<SearchCubit, SearchState>(
               builder: (context, state) {
                 if (state.isSearching) {
@@ -343,20 +442,60 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                 if (state.results.isEmpty) {
                   return SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.all(24.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 36,
+                      ),
                       child: Center(
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.search_off_rounded,
-                              size: 42,
-                              color: context.muted,
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: theme
+                                    .colorScheme
+                                    .surfaceContainerHighest
+                                    .withValues(alpha: 0.5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.search_off_rounded,
+                                size: 40,
+                                color: context.muted,
+                              ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 14),
                             Text(
-                              l10n.noServicesFound,
-                              style: Theme.of(context).textTheme.bodyLarge
-                                  ?.copyWith(color: context.muted),
+                              _searchController.text.isNotEmpty
+                                  ? 'No services matching "${_searchController.text}"'
+                                  : l10n.noServicesFound,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Try searching with another keyword or pick a different category.',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: context.muted,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                _clearSearch();
+                                _onCategorySelected(null);
+                              },
+                              icon: const Icon(Icons.refresh_rounded, size: 16),
+                              label: const Text('Reset All Filters'),
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -381,6 +520,256 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(BuildContext context, ThemeData theme) {
+    final hasQuery = _searchController.text.isNotEmpty;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 14),
+          const Icon(
+            Icons.search_rounded,
+            color: AppColors.primary,
+            size: 22,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              onSubmitted: _onSearchSubmitted,
+              textInputAction: TextInputAction.search,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              decoration: InputDecoration(
+                hintText: _activeCategory != null
+                    ? 'Search in $_categoryTitle...'
+                    : 'Search electrician, plumber, repairs...',
+                hintStyle: TextStyle(
+                  fontSize: 13.5,
+                  color: theme.hintColor,
+                  fontWeight: FontWeight.w400,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+          if (hasQuery)
+            IconButton(
+              icon: const Icon(Icons.close_rounded, size: 18),
+              color: theme.hintColor,
+              splashRadius: 18,
+              onPressed: _clearSearch,
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => context.goCustomerTab(2),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.mic_rounded,
+                          size: 14,
+                          color: AppColors.accentDark,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Fixly AI',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.accentDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilterBar(BuildContext context, String locale) {
+    final isAllSelected = _activeCategory == null || _activeCategory!.isEmpty;
+
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          _CategoryPill(
+            label: 'All Services',
+            icon: Icons.grid_view_rounded,
+            isSelected: isAllSelected,
+            onTap: () => _onCategorySelected(null),
+          ),
+          const SizedBox(width: 8),
+          ...ServiceCategories.all.map((cat) {
+            final isSelected =
+                _activeCategory?.toLowerCase().trim() == cat.id;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _CategoryPill(
+                label: cat.nameFor(locale),
+                icon: cat.icon,
+                isSelected: isSelected,
+                onTap: () => _onCategorySelected(isSelected ? null : cat.id),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustBanner(BuildContext context, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.14),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.verified_rounded,
+                size: 14,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Background-verified specialists • Fixed transparent pricing',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppColors.primaryDark,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// -------------------------------------------------------------
+// CATEGORY FILTER PILL
+// -------------------------------------------------------------
+class _CategoryPill extends StatelessWidget {
+  const _CategoryPill({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Material(
+      color: isSelected ? AppColors.primary : theme.cardColor,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.primary
+                  : scheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.25),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 15,
+                color: isSelected ? Colors.white : AppColors.primary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected
+                      ? Colors.white
+                      : theme.textTheme.bodyMedium?.color,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

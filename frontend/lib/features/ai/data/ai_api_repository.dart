@@ -20,10 +20,65 @@ class AiAnalysis {
   final String? issueImageUrl;
 }
 
+class AiAgentResponse {
+  const AiAgentResponse({
+    required this.reply,
+    this.state = const {},
+    this.action,
+    this.booking,
+    this.bookings = const [],
+    this.suggestedReplies = const [],
+  });
+
+  final String reply;
+  final Map<String, dynamic> state;
+  final String? action;
+  final Map<String, dynamic>? booking;
+  final List<dynamic> bookings;
+  final List<String> suggestedReplies;
+}
+
 class AiApiRepository {
   AiApiRepository({ApiClient? client}) : _api = client ?? ApiServices.client;
 
   final ApiClient _api;
+
+  Future<AiAgentResponse> chatWithAgent({
+    required String message,
+    Map<String, dynamic>? conversationState,
+    String? language,
+    List<double>? coordinates,
+    String? addressLine,
+  }) async {
+    final res = await _api.post(
+      ApiEndpoints.aiAgentChat,
+      data: {
+        'message': message,
+        'conversationState': conversationState ?? {},
+        'language': language ?? 'en',
+        'coordinates': ?coordinates,
+        'addressLine': ?addressLine,
+      },
+    );
+
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'AI agent failed');
+    }
+
+    final rawSuggestions = res['suggestedReplies'];
+    final suggestions = rawSuggestions is List
+        ? rawSuggestions.map((e) => e.toString()).toList()
+        : <String>[];
+
+    return AiAgentResponse(
+      reply: res['reply']?.toString() ?? '',
+      state: (res['state'] as Map<String, dynamic>?) ?? {},
+      action: res['action']?.toString(),
+      booking: res['booking'] as Map<String, dynamic>?,
+      bookings: res['bookings'] as List<dynamic>? ?? const [],
+      suggestedReplies: suggestions,
+    );
+  }
 
   Future<AiAnalysis> analyzeIssue(
     String problemDescription, {

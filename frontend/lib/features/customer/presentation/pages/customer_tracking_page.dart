@@ -169,7 +169,18 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                           shadowColor: Colors.black26,
                           child: IconButton(
                             icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
-                            onPressed: () => context.pop(),
+                            onPressed: () {
+                              if (context.canPop()) {
+                                context.pop();
+                              } else {
+                                final from = GoRouterState.of(context).uri.queryParameters['from'];
+                                if (from == 'notifications') {
+                                  context.go(RouteNames.sharedNotifications);
+                                } else {
+                                  context.go(RouteNames.customerHome);
+                                }
+                              }
+                            },
                           ),
                         ),
                         const SizedBox(width: 12),

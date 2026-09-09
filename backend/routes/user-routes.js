@@ -6,6 +6,7 @@ import {
     updateLanguage,
     updateLocation,
     updateEmergencyContact,
+    updateNotificationPreferences,
     listAddresses,
     addAddress,
     updateAddress,
@@ -17,6 +18,8 @@ router.use(protect);
 router.get('/me', getMyProfile);
 router.put('/me', updateMyProfile);
 router.patch('/me', updateMyProfile);
+router.patch('/me/notification-preferences', updateNotificationPreferences);
+router.put('/me/notification-preferences', updateNotificationPreferences);
 router.patch('/me/language', updateLanguage);
 router.patch('/me/location', updateLocation);
 router.patch('/me/emergency-contact', updateEmergencyContact);

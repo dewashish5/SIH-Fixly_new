@@ -234,7 +234,10 @@ export const loginUser = async (req, res) => {
 
         const emailNormalized = email.toLowerCase().trim();
         const user = await User.findOne({ email: emailNormalized }).select('+password');
-        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        if (!user) {
+            console.log(`[AUTH LOGIN] User not found: "${emailNormalized}"`);
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
 
         if (user.authProvider === 'google') {
             return res.status(400).json({ success: false, message: 'Please login using Google' });
@@ -242,6 +245,7 @@ export const loginUser = async (req, res) => {
 
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
+            console.log(`[AUTH LOGIN] Password mismatch for user: "${emailNormalized}"`);
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
@@ -250,6 +254,10 @@ export const loginUser = async (req, res) => {
         }
 
         let isModified = false;
+        if (user.role === 'customer' && user.kycDocuments) {
+            user.kycDocuments = undefined;
+            isModified = true;
+        }
         if (location) {
             user.location = location;
             isModified = true;

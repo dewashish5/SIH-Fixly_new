@@ -51,6 +51,7 @@ class _BookingDetailPageState extends State<BookingDetailPage> {
     return AppScaffold(
       title: 'Booking Details',
       padding: EdgeInsets.zero,
+      showBack: true,
       body: FutureBuilder<Booking>(
         future: _bookingFuture,
         builder: (context, snapshot) {
@@ -2155,14 +2156,39 @@ class _PaymentSummaryCard extends StatelessWidget {
             label: 'Base Service Fee',
             amount: booking.baseServiceFee ?? booking.estimatedPrice,
           ),
-          _ChargeRow(
-            label: 'Platform & Safety Fee',
-            amount: booking.platformFee ?? 29,
-          ),
-          if ((booking.extraPartsTotal ?? 0) > 0)
+          if ((booking.platformFee ?? 0) > 0)
+            _ChargeRow(
+              label: 'Platform & Safety Fee',
+              amount: booking.platformFee,
+            ),
+          if ((booking.extraPartsTotal ?? 0) > 0 || booking.addOns.isNotEmpty) ...[
             _ChargeRow(
               label: 'Extra Parts & Materials',
-              amount: booking.extraPartsTotal,
+              amount: booking.extraPartsTotal ??
+                  booking.addOns.fold<double>(0.0, (sum, a) => sum + (a.price * a.quantity)),
+            ),
+            for (final part in booking.addOns)
+              Padding(
+                padding: const EdgeInsets.only(left: 12, top: 2, bottom: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '• ${part.title} (x${part.quantity})',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                    ),
+                    Text(
+                      '₹${(part.price * part.quantity).toStringAsFixed(0)}',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          if ((booking.urgentFee ?? 0) > 0)
+            _ChargeRow(
+              label: 'Emergency / Urgent Fee',
+              amount: booking.urgentFee,
             ),
 
           const SizedBox(height: 10),
@@ -2171,7 +2197,7 @@ class _PaymentSummaryCard extends StatelessWidget {
 
           _ChargeRow(
             label: 'Total Amount',
-            amount: booking.totalPrice,
+            amount: booking.totalAmount ?? booking.invoice?.totalAmount ?? booking.totalPrice,
             emphasize: true,
           ),
 
@@ -2265,7 +2291,7 @@ class _StatusActionsState extends State<_StatusActions> {
   Future<void> _handlePayment() async {
     final booking = widget.booking;
     final currentUser = context.read<AppSessionCubit>().currentUser;
-    final amount = booking.totalPrice;
+    final amount = booking.totalAmount ?? booking.invoice?.totalAmount ?? booking.totalPrice;
 
     if (amount <= 0) {
       ToastUtils.showToast(context: context, message: 'Invalid payment amount');
@@ -2376,7 +2402,7 @@ class _StatusActionsState extends State<_StatusActions> {
     final isPaid = booking.status == BookingStatus.paid ||
         (booking.paymentStatus != null &&
             booking.paymentStatus!.toUpperCase() == 'PAID');
-    final amount = booking.totalPrice;
+    final amount = booking.totalAmount ?? booking.invoice?.totalAmount ?? booking.totalPrice;
 
     switch (booking.status) {
       case BookingStatus.searching:

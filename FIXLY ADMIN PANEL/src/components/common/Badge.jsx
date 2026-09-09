@@ -61,6 +61,38 @@ export default function Badge({ status }) {
           text: '#7e22ce',
           dot: '#a855f7',
         };
+      case 'BOT_ACTIVE':
+      case 'Bot Active':
+      case 'AI Bot':
+        return {
+          bg: '#f3e8ff',
+          text: '#6b21a8',
+          dot: '#a855f7',
+        };
+      case 'ESCALATED':
+      case 'Escalated':
+      case 'Needs Attention':
+        return {
+          bg: '#fff7ed',
+          text: '#c2410c',
+          dot: '#f97316',
+          pulse: true,
+        };
+      case 'AGENT_ACTIVE':
+      case 'Agent Active':
+      case 'In Chat':
+        return {
+          bg: '#ecfdf5',
+          text: '#047857',
+          dot: '#10b981',
+        };
+      case 'RESOLVED':
+      case 'Resolved':
+        return {
+          bg: '#f1f5f9',
+          text: '#334155',
+          dot: '#64748b',
+        };
       default:
         return {
           bg: '#f1f5f9',

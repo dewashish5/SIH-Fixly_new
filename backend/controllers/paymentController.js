@@ -332,6 +332,21 @@ export const verifyPayment = async (req, res) => {
             booking.invoice.paymentStatus = 'PAID';
             booking.invoice.paymentMethod = 'Razorpay';
             booking.invoice.transactionId = finalPaymentId;
+            booking.status = 'COMPLETED';
+            booking.jobCompletedAt = booking.jobCompletedAt || new Date();
+
+            const calculatedTotal =
+                (Number(booking.invoice.baseServiceFee) || 0) +
+                (Number(booking.invoice.extraPartsTotal) || 0) +
+                (Number(booking.invoice.platformFee) || 0) +
+                (Number(booking.invoice.urgentFee) || 0);
+
+            if (calculatedTotal > 0) {
+                booking.invoice.totalAmount = calculatedTotal;
+                transaction.amount = calculatedTotal;
+                await transaction.save();
+            }
+
             await booking.save();
 
             await creditWorkerWallet({
@@ -388,15 +403,40 @@ export const getCustomerWalletAndHistory = async (req, res) => {
         const customerId = req.user.id;
         const transactions = await Transaction.find({ customerId })
             .populate('workerId', 'name phone')
-            .populate('bookingId', 'bookingId status invoice')
+            .populate('bookingId', 'bookingId status invoice addOns')
             .sort({ createdAt: -1 });
 
-        const successfulTxs = transactions.filter((t) => t.status === 'success');
-        const totalSpent = successfulTxs.reduce((acc, curr) => acc + curr.amount, 0);
         const history = transactions.map((t) => {
             const json = t.toObject();
+            const booking = json.bookingId;
+
+            let effectiveAmount = Number(json.amount) || 0;
+            if (booking && booking.invoice) {
+                const inv = booking.invoice;
+                const calculatedTotal =
+                    (Number(inv.baseServiceFee) || 0) +
+                    (Number(inv.extraPartsTotal) || 0) +
+                    (Number(inv.platformFee) || 0) +
+                    (Number(inv.urgentFee) || 0);
+
+                if (calculatedTotal > 0) {
+                    inv.totalAmount = calculatedTotal;
+                }
+
+                // If invoice is marked PAID, booking status should show COMPLETED
+                if (inv.paymentStatus === 'PAID' && (booking.status === 'PAYMENT_PENDING' || booking.status === 'IN_PROGRESS')) {
+                    booking.status = 'COMPLETED';
+                }
+
+                // Authoritative transaction amount matches the invoice breakdown
+                if (inv.totalAmount > 0) {
+                    effectiveAmount = inv.totalAmount;
+                }
+            }
+
             return {
                 ...json,
+                amount: effectiveAmount,
                 transactionId: json.paymentId || json.orderId || String(json._id),
                 description:
                     json.description ||
@@ -404,6 +444,9 @@ export const getCustomerWalletAndHistory = async (req, res) => {
                 type: 'DEBIT',
             };
         });
+
+        const successfulTxs = history.filter((t) => t.status === 'success');
+        const totalSpent = successfulTxs.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
         return res.status(200).json({
             success: true,

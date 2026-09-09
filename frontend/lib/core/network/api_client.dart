@@ -40,6 +40,46 @@ class ApiClient {
           handler.next(options);
         },
         onError: (error, handler) async {
+          // 1. Connection error / host unreachable -> Auto failover to candidate URLs
+          final isConnErr = error.type == DioExceptionType.connectionError ||
+              error.type == DioExceptionType.connectionTimeout ||
+              error.type == DioExceptionType.sendTimeout ||
+              error.message?.toLowerCase().contains('connection refused') == true ||
+              error.message?.toLowerCase().contains('socketexception') == true ||
+              error.error?.toString().toLowerCase().contains('connection refused') == true ||
+              error.error?.toString().toLowerCase().contains('socketexception') == true;
+
+          if (isConnErr && error.requestOptions.extra['fallback_host_tried'] != true) {
+            for (final candidate in ApiConfig.candidateUrls) {
+              if (candidate != _dio.options.baseUrl) {
+                try {
+                  final probe = Dio(
+                    BaseOptions(
+                      baseUrl: candidate,
+                      connectTimeout: const Duration(milliseconds: 1500),
+                      receiveTimeout: const Duration(milliseconds: 1500),
+                    ),
+                  );
+                  final ping = await probe.get<Map<String, dynamic>>('/');
+                  if (ping.statusCode == 200) {
+                    _dio.options.baseUrl = candidate;
+                    ApiConfig.setBaseUrl(candidate);
+                    final req = error.requestOptions;
+                    req.baseUrl = candidate;
+                    req.extra['fallback_host_tried'] = true;
+                    try {
+                      final retryRes = await _dio.fetch(req);
+                      return handler.resolve(retryRes);
+                    } catch (_) {}
+                  }
+                } catch (_) {
+                  // candidate unreachable, probe next
+                }
+              }
+            }
+          }
+
+          // 2. 401 Unauthorized -> Refresh token
           if (error.response?.statusCode == 401 &&
               !_isAuthPath(error.requestOptions.path) &&
               error.requestOptions.extra['retried'] != true) {
@@ -286,5 +326,30 @@ class ApiServices {
     client = ApiClient(tokenStorage: tokens, deviceId: deviceId);
     // ignore: avoid_print — intentional boot diagnostic for DevTools Network failures
     print('Fixly API_BASE_URL=${ApiConfig.baseUrl}');
+
+    // Fast-probe reachable host in background
+    _autoDiscoverHost();
+  }
+
+  static Future<void> _autoDiscoverHost() async {
+    for (final url in ApiConfig.candidateUrls) {
+      try {
+        final probe = Dio(
+          BaseOptions(
+            baseUrl: url,
+            connectTimeout: const Duration(milliseconds: 1500),
+            receiveTimeout: const Duration(milliseconds: 1500),
+          ),
+        );
+        final res = await probe.get<Map<String, dynamic>>('/');
+        if (res.statusCode == 200) {
+          ApiConfig.setBaseUrl(url);
+          client.dio.options.baseUrl = url;
+          // ignore: avoid_print
+          print('Fixly API host auto-selected: $url');
+          return;
+        }
+      } catch (_) {}
+    }
   }
 }

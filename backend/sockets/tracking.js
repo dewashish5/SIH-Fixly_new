@@ -67,6 +67,23 @@ export const registerSocketHandlers = (io) => {
             socket.join('workers_all');
         });
 
+        // 1c. Support Chat Rooms
+        socket.on('join_support_ticket', (ticketId) => {
+            if (!ticketId) return;
+            const clean = String(ticketId).trim();
+            socket.join(`support_${clean}`);
+        });
+
+        socket.on('join_admin_support', () => {
+            socket.join('admin_support');
+        });
+
+        socket.on('join_user_support', (userId) => {
+            if (!userId) return;
+            const clean = String(userId).trim();
+            socket.join(`support_user_${clean}`);
+        });
+
         // 2. Real-time Worker Location Update (Broadcast via Socket.io & Cache in Redis with 60s TTL)
         socket.on('worker_location_update', async (data) => {
             const { bookingId, lat, lng, heading } = data || {};

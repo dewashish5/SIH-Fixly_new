@@ -50,6 +50,7 @@ import {
     getTicket,
     adminPatchTicket,
     addTicketMessage,
+    adminTakeoverTicket,
 } from '../controllers/supportController.js';
 import {
     adminGetCooperative,
@@ -189,6 +190,7 @@ router.get('/support/tickets', adminListTickets);
 router.get('/support/tickets/:id', getTicket);
 router.patch('/support/tickets/:id', adminPatchTicket);
 router.post('/support/tickets/:id/messages', addTicketMessage);
+router.post('/support/tickets/:id/takeover', adminTakeoverTicket);
 
 // Cooperative & Welfare Governance
 router.get('/cooperative', adminGetCooperative);

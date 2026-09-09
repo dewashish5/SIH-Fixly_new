@@ -1,4 +1,6 @@
 import Banner from '../models/Banner.js';
+import User from '../models/User.js';
+import { notifyUsers, notifyTopic, safeNotify } from '../services/notificationService.js';
 
 // Default starter banners to seed if none exist
 const DEFAULT_BANNERS = [
@@ -160,9 +162,85 @@ export const adminCreateBanner = async (req, res) => {
             priority: Number(priority) || 0
         });
 
+        // Broadcast notification to eligible targeted users whose marketing/discount toggle is ON
+        const shouldNotify = req.body.notifyUsers !== undefined ? Boolean(req.body.notifyUsers) : true;
+        if (shouldNotify) {
+            safeNotify(async () => {
+                const roleFilter = {};
+                if (targetUserRole === 'customer') {
+                    roleFilter.role = 'customer';
+                } else if (targetUserRole === 'worker') {
+                    roleFilter.role = 'worker';
+                } else if (targetUserRole === 'new_user') {
+                    roleFilter.role = 'customer';
+                    roleFilter.createdAt = { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) };
+                } else {
+                    roleFilter.role = { $in: ['customer', 'worker'] };
+                }
+
+                // FILTER: Only users with marketing notifications ENABLED
+                // (if user turned toggle off, notificationPreferences.marketing is false -> excluded!)
+                const eligibleUsers = await User.find({
+                    ...roleFilter,
+                    'notificationPreferences.marketing': { $ne: false }
+                }).select('_id email preferredLanguage pushTokens').lean();
+
+                const promoTitle = `New Offer: ${banner.discount}!`;
+                const promoBody = `Use coupon code ${banner.code} to get ${banner.discount}. ${banner.description || ''}`.trim();
+
+                if (eligibleUsers.length > 0) {
+                    await notifyUsers(
+                        eligibleUsers.map((u) => u._id),
+                        {
+                            title: promoTitle,
+                            body: promoBody,
+                            category: 'PROMOTION',
+                            eventType: 'PROMOTION_COUPON',
+                            action: 'discount',
+                            priority: 'NORMAL',
+                            data: {
+                                couponCode: banner.code,
+                                discount: banner.discount,
+                                category: banner.category || 'all',
+                                bannerId: String(banner._id)
+                            }
+                        }
+                    );
+                }
+
+                // Also publish to role's marketing FCM topic for subscribers
+                try {
+                    const topics = targetUserRole === 'worker'
+                        ? ['fixly_workers_marketing']
+                        : targetUserRole === 'customer'
+                            ? ['fixly_customers_marketing']
+                            : ['fixly_customers_marketing', 'fixly_workers_marketing'];
+
+                    for (const topic of topics) {
+                        await notifyTopic({
+                            topic,
+                            eventType: 'PROMOTION_COUPON',
+                            title: promoTitle,
+                            body: promoBody,
+                            category: 'PROMOTION',
+                            data: {
+                                couponCode: banner.code,
+                                discount: banner.discount,
+                                category: banner.category || 'all',
+                                bannerId: String(banner._id),
+                                action: 'discount'
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.warn('[notifications] topic broadcast skipped:', err.message);
+                }
+            });
+        }
+
         return res.status(201).json({
             success: true,
-            message: 'Coupon banner created successfully',
+            message: 'Coupon banner created successfully and notifications dispatched to eligible users',
             banner
         });
     } catch (error) {
