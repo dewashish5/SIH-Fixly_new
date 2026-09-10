@@ -13,6 +13,7 @@ import '../../../../core/navigation/customer_navigation.dart';
 import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
+import '../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../cubit/search_cubit.dart';
 
 class CustomerSearchPage extends StatelessWidget {
@@ -33,7 +34,13 @@ class CustomerSearchPage extends StatelessWidget {
         }
         return cubit;
       },
-      child: _CustomerSearchView(categoryId: categoryId, showBack: showBack),
+      child: BlocListener<AppSessionCubit, AppSessionState>(
+        listenWhen: (prev, curr) => prev.locale != curr.locale,
+        listener: (context, session) {
+          context.read<SearchCubit>().refresh();
+        },
+        child: _CustomerSearchView(categoryId: categoryId, showBack: showBack),
+      ),
     );
   }
 }

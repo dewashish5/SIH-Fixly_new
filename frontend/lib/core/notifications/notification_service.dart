@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Color;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -329,10 +330,17 @@ class NotificationService {
           priority: channelId == NotificationChannels.safety
               ? Priority.max
               : Priority.high,
+          // Small icon = left of banner (status + heads-up). Do NOT set largeIcon —
+          // Android draws largeIcon on the RIGHT, which looked unprofessional.
           icon: '@drawable/app_icon',
-          largeIcon: const DrawableResourceAndroidBitmap('@drawable/app_icon'),
+          channelShowBadge: true,
+          color: const Color(0xFF2563EB),
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       ),
       payload: _encodePayload(message.data),
     );

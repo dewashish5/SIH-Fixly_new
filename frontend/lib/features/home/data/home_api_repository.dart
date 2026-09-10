@@ -151,16 +151,19 @@ class HomeApiRepository {
   }
 
   static ServiceItem mapService(Map<String, dynamic> json) {
-    final included = json['whatsIncluded'];
+    final included = json['displayWhatsIncluded'] ?? json['whatsIncluded'];
     final desc = included is List && included.isNotEmpty
         ? included.map((e) => e.toString()).join(', ')
-        : (json['estimatedTime']?.toString() ?? '');
+        : ((json['displayDescription'] ?? json['description'] ?? json['estimatedTime'])?.toString() ?? '');
     final price = (json['basePrice'] as num?)?.toDouble() ?? 0;
+    final title = (json['displayTitle'] ?? json['title'] as String?) ?? 'Service';
     return ServiceItem(
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       categoryId: (json['category'] ?? '').toString(),
-      title: (json['title'] as String?) ?? 'Service',
+      title: title,
+      titleHi: (json['titleHi'] as String?) ?? title,
       description: desc,
+      descriptionHi: (json['descriptionHi'] as String?) ?? desc,
       priceFrom: price,
       rating: 4.5,
       imageUrl: (json['image'] ?? json['imageUrl'])?.toString(),
@@ -189,7 +192,8 @@ class HomeApiRepository {
         if (e is Map) {
           final id = (e['category'] ?? e['id'] ?? e['_id'] ?? e['name'] ?? '').toString();
           final img = (e['image'] ?? e['imageUrl'])?.toString();
-          return _categoryFromKey(id.isEmpty ? 'other' : id, imageUrl: img);
+          final displayName = (e['displayCategory'] ?? e['displayName'] ?? e['name'])?.toString();
+          return _categoryFromKey(id.isEmpty ? 'other' : id, imageUrl: img, displayName: displayName);
         }
         final key = e.toString();
         String? imageUrl;
@@ -210,7 +214,11 @@ class HomeApiRepository {
     return const [];
   }
 
-  static ServiceCategory _categoryFromKey(String key, {String? imageUrl}) {
+  static ServiceCategory _categoryFromKey(
+    String key, {
+    String? imageUrl,
+    String? displayName,
+  }) {
     final normalized = key.toLowerCase().trim();
     for (final c in ServiceCategories.all) {
       if (c.id == normalized ||
@@ -223,6 +231,7 @@ class HomeApiRepository {
           id: c.id,
           nameEn: c.nameEn,
           nameHi: c.nameHi,
+          translations: c.translations,
           gradient: c.gradient,
           icon: c.icon,
           imageUrl: imageUrl ?? c.imageUrl,
@@ -231,8 +240,20 @@ class HomeApiRepository {
     }
     return ServiceCategory(
       id: key,
-      nameEn: _titleCase(key),
-      nameHi: _titleCase(key),
+      nameEn: displayName ?? _titleCase(key),
+      nameHi: displayName ?? _titleCase(key),
+      translations: displayName != null
+          ? {
+              'en': displayName,
+              'hi': displayName,
+              'mr': displayName,
+              'ta': displayName,
+              'te': displayName,
+              'kn': displayName,
+              'bn': displayName,
+              'gu': displayName,
+            }
+          : null,
       gradient: AppColors.primaryGradient,
       icon: Icons.handyman_rounded,
       imageUrl: imageUrl,

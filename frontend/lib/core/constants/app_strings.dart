@@ -8,348 +8,1901 @@ class AppStrings {
   final String locale;
   bool get isHi => locale == 'hi';
 
-  String t(String en, String hi) => isHi ? hi : en;
+  String t(String en, String hi) {
+    if (locale == 'en') return en;
+    return hi;
+  }
+
+  String _t(String key, String fallbackHi, String fallbackEn) {
+    if (locale == 'en') return fallbackEn;
+    if (locale == 'hi') return fallbackHi;
+    final map = _translations[locale];
+    if (map != null && map.containsKey(key)) {
+      final val = map[key];
+      if (val != null && val.isNotEmpty) return val;
+    }
+    return fallbackHi;
+  }
 
   String timeGreeting(int hour) {
     if (hour >= 5 && hour < 12) {
-      return isHi ? 'सुप्रभात' : 'Good morning';
+      return _t('morningGreeting', 'सुप्रभात', 'Good morning');
     }
     if (hour >= 12 && hour < 17) {
-      return isHi ? 'शुभ दोपहर' : 'Good afternoon';
+      return _t('afternoonGreeting', 'शुभ दोपहर', 'Good afternoon');
     }
-    return isHi ? 'शुभ संध्या' : 'Good evening';
+    return _t('eveningGreeting', 'शुभ संध्या', 'Good evening');
   }
 
-  String get guestUser => isHi ? 'अतिथि' : 'Guest';
+  String get guestUser => _t('guestUser', 'अतिथि', 'Guest');
 
   // Brand & auth
-  String get appName => isHi ? 'फिक्सली' : 'Fixly';
-  String get tagline => isHi ? 'सहकारी गिग सेवाएं' : 'Cooperative Gig Services';
-  String get continueLabel => isHi ? 'जारी रखें' : 'Continue';
-  String get login => isHi ? 'लॉगिन' : 'Login';
-  String get signIn => isHi ? 'साइन इन' : 'Sign In';
-  String get username => isHi ? 'उपयोगकर्ता नाम' : 'Username';
-  String get usernameHint =>
-      isHi ? 'यूज़र ID या ईमेल दर्ज करें' : 'Enter User ID or Email';
-  String get forgotPassword => isHi ? 'पासवर्ड भूल गए' : 'Forgot Password';
-  String get rememberMe => isHi ? 'मुझे याद रखें' : 'Remember Me';
-  String get orShort => isHi ? 'या' : 'or';
-  String get appleSignInUnavailable => isHi
-      ? 'Apple साइन इन अभी उपलब्ध नहीं'
-      : 'Apple Sign In is not available yet';
-  String get forgotPasswordHint => isHi
-      ? 'रीसेट के लिए ईमेल दर्ज करें'
-      : 'Enter your email to reset password';
-  String get forgotPasswordSent => isHi
-      ? 'यदि खाता मौजूद है तो रीसेट लिंक भेज दिया गया'
-      : 'If an account exists, a reset link has been sent';
-  String get signUp => isHi ? 'साइन अप' : 'Sign up';
-  String get createAccount => isHi ? 'खाता बनाएं' : 'Create account';
-  String get sendOtp => isHi ? 'OTP भेजें' : 'Send OTP';
-  String get verifyOtp => isHi ? 'OTP सत्यापित करें' : 'Verify OTP';
-  String get otpSentTo => isHi ? 'OTP भेजा गया' : 'OTP sent to';
-  String get resendOtp => isHi ? 'OTP दोबारा भेजें' : 'Resend OTP';
+  String get appName => _t('appName', 'फिक्सली', 'Fixly');
+  String get tagline => _t('tagline', 'सहकारी गिग सेवाएं', 'Cooperative Gig Services');
+  String get continueLabel => _t('continueLabel', 'जारी रखें', 'Continue');
+  String get login => _t('login', 'लॉगिन', 'Login');
+  String get signIn => _t('signIn', 'साइन इन', 'Sign In');
+  String get username => _t('username', 'उपयोगकर्ता नाम', 'Username');
+  String get usernameHint => _t('usernameHint', 'यूज़र ID या ईमेल दर्ज करें', 'Enter User ID or Email');
+  String get forgotPassword => _t('forgotPassword', 'पासवर्ड भूल गए', 'Forgot Password');
+  String get rememberMe => _t('rememberMe', 'मुझे याद रखें', 'Remember Me');
+  String get orShort => _t('orShort', 'या', 'or');
+  String get appleSignInUnavailable => _t('appleSignInUnavailable', 'Apple साइन इन अभी उपलब्ध नहीं', 'Apple Sign In is not available yet');
+  String get forgotPasswordHint => _t('forgotPasswordHint', 'रीसेट के लिए ईमेल दर्ज करें', 'Enter your email to reset password');
+  String get forgotPasswordSent => _t('forgotPasswordSent', 'यदि खाता मौजूद है तो रीसेट लिंक भेज दिया गया', 'If an account exists, a reset link has been sent');
+  String get signUp => _t('signUp', 'साइन अप', 'Sign up');
+  String get createAccount => _t('createAccount', 'खाता बनाएं', 'Create account');
+  String get sendOtp => _t('sendOtp', 'OTP भेजें', 'Send OTP');
+  String get verifyOtp => _t('verifyOtp', 'OTP सत्यापित करें', 'Verify OTP');
+  String get otpSentTo => _t('otpSentTo', 'OTP भेजा गया', 'OTP sent to');
+  String get resendOtp => _t('resendOtp', 'OTP दोबारा भेजें', 'Resend OTP');
   String resendOtpIn(int seconds) =>
       isHi ? '$seconds सेकंड में दोबारा भेजें' : 'Resend in ${seconds}s';
-  String get otpResent => isHi ? 'नया OTP भेज दिया गया' : 'A new OTP has been sent';
-  String get fullName => isHi ? 'पूरा नाम' : 'Full name';
-  String get fullNameHint => isHi ? 'अपना नाम दर्ज करें' : 'Enter your name';
-  String get email => isHi ? 'ईमेल' : 'Email';
-  String get password => isHi ? 'पासवर्ड' : 'Password';
-  String get passwordHint => isHi ? 'अपना पासवर्ड दर्ज करें' : 'Enter your password';
-  String get phoneNumber => isHi ? 'फ़ोन नंबर' : 'Phone number';
-  String get phoneHint => isHi ? '10 अंकों का मोबाइल नंबर' : '10-digit mobile number';
-  String get continueWithGoogle => isHi ? 'Google' : 'Google';
-  String get continueWithFacebook => isHi ? 'Facebook' : 'Facebook';
-  String get orContinueWith => isHi ? 'या ईमेल से' : 'Or continue with email';
-  String get locationRequiredForSignup => isHi
-      ? 'साइन अप के लिए GPS चालू करें और स्थान की अनुमति दें'
-      : 'Enable GPS and allow location access to sign up';
-  String get locationServicesOffTitle =>
-      isHi ? 'स्थान बंद है' : 'Location is off';
-  String get locationServicesOffBody => isHi
-      ? 'साइन अप के लिए फ़ोन की सेटिंग में GPS चालू करें, फिर वापस आकर दोबारा कोशिश करें।'
-      : 'Turn on location in your phone settings so we can send your area with sign-up, then try again.';
-  String get turnOnLocation => isHi ? 'स्थान चालू करें' : 'Turn on location';
-  String get locationPermissionBlockedTitle =>
-      isHi ? 'स्थान अनुमति बंद' : 'Location blocked';
-  String get locationPermissionBlockedBody => isHi
-      ? 'Fixly को स्थान की अनुमति चाहिए। सेटिंग्स में जाकर चालू करें।'
-      : 'Fixly needs location access. Open Settings to enable it.';
-  String get openSettings => isHi ? 'सेटिंग्स खोलें' : 'Open Settings';
-  String get locationEnableTitle =>
-      isHi ? 'स्थान चालू करें' : 'Enable location';
-  String get locationEnableBody => isHi
-      ? 'Fixly को पास के कार्यकर्ता और बुकिंग पता दिखाने के लिए आपका स्थान चाहिए।'
-      : 'Fixly needs your location to find nearby workers and set booking addresses.';
-  String get notNow => isHi ? 'अभी नहीं' : 'Not now';
-  String get allow => isHi ? 'अनुमति दें' : 'Allow';
-  String get dontHaveAccount =>
-      isHi ? 'खाता नहीं है?' : "Don't have an account?";
-  String get alreadyHaveAccount =>
-      isHi ? 'पहले से खाता है?' : 'Already have an account?';
-  String get signInAsWorker =>
-      isHi ? 'कार्यकर्ता के रूप में साइन इन करें' : 'Sign in as worker';
-  String get signInAsWorkerHint => isHi
-      ? 'कार्यकर्ता के रूप में लॉगिन — कोई भी विकल्प चुनें'
-      : 'Signing in as worker — use any option below';
-  String get loginSubtitle => isHi
-      ? 'जारी रखने के लिए लॉगिन करें'
-      : 'Log in to continue';
-  String get signUpSubtitle => isHi
-      ? 'शुरू करने के लिए खाता बनाएं'
-      : 'Create an account to get started';
-  String get authEmailTab => isHi ? 'ईमेल' : 'Email';
-  String get authPhoneTab => isHi ? 'फ़ोन' : 'Phone';
-  String get customer => isHi ? 'ग्राहक' : 'Customer';
-  String get worker => isHi ? 'कार्यकर्ता' : 'Worker';
-  String get selectLanguage => isHi ? 'भाषा चुनें' : 'Select Language';
-  String get choosePreferredLanguage =>
-      isHi ? 'अपनी पसंदीदा भाषा चुनें' : 'Choose your preferred language';
-  String get cooperativeWelcomeTitle =>
-      isHi ? 'सहकारी में आपका स्वागत है' : 'Welcome to the Cooperative';
-  String get cooperativeWelcomeBody => isHi
-      ? 'सदस्य-स्वामित्व, 10–15% कमीशन, और निष्पक्ष मजदूरी।'
-      : 'Member-owned platform with 10–15% commission and fair wages.';
-  String get chooseRole => isHi ? 'अपनी भूमिका चुनें' : 'Choose your role';
-  String get customerRoleSubtitle => isHi
-      ? 'घरेलू सेवाओं के लिए विश्वसनीय कार्यकर्ता बुक करें'
-      : 'Book trusted workers for home services';
-  String get workerRoleSubtitle => isHi
-      ? 'कौशल दें और निष्पक्ष मजदूरी कमाएं'
-      : 'Offer skills and earn fair wages';
-  String get fairWages => isHi ? 'निष्पक्ष मजदूरी' : 'Fair wages';
-  String get fairWagesDesc => isHi
-      ? 'सहकारी सदस्यों को बाजार से बेहतर दर'
-      : 'Cooperative members earn above market rates';
-  String get memberOwned => isHi ? 'सदस्य-स्वामित्व' : 'Member-owned';
-  String get memberOwnedDesc => isHi
-      ? 'मुनाफा सदस्यों के बीच बंटता है'
-      : 'Profits shared among members';
-  String get welfareCoverage => isHi ? 'कल्याण कवरेज' : 'Welfare coverage';
-  String get welfareCoverageDesc => isHi
-      ? 'e-Shram और बीमा सहायता'
-      : 'e-Shram and insurance support';
+  String get otpResent => _t('otpResent', 'नया OTP भेज दिया गया', 'A new OTP has been sent');
+  String get fullName => _t('fullName', 'पूरा नाम', 'Full name');
+  String get fullNameHint => _t('fullNameHint', 'अपना नाम दर्ज करें', 'Enter your name');
+  String get email => _t('email', 'ईमेल', 'Email');
+  String get password => _t('password', 'पासवर्ड', 'Password');
+  String get passwordHint => _t('passwordHint', 'अपना पासवर्ड दर्ज करें', 'Enter your password');
+  String get phoneNumber => _t('phoneNumber', 'फ़ोन नंबर', 'Phone number');
+  String get phoneHint => _t('phoneHint', '10 अंकों का मोबाइल नंबर', '10-digit mobile number');
+  String get continueWithGoogle => _t('continueWithGoogle', 'Google', 'Google');
+  String get continueWithFacebook => _t('continueWithFacebook', 'Facebook', 'Facebook');
+  String get orContinueWith => _t('orContinueWith', 'या ईमेल से', 'Or continue with email');
+  String get locationRequiredForSignup => _t('locationRequiredForSignup', 'साइन अप के लिए GPS चालू करें और स्थान की अनुमति दें', 'Enable GPS and allow location access to sign up');
+  String get locationServicesOffTitle => _t('locationServicesOffTitle', 'स्थान बंद है', 'Location is off');
+  String get locationServicesOffBody => _t('locationServicesOffBody', 'साइन अप के लिए फ़ोन की सेटिंग में GPS चालू करें, फिर वापस आकर दोबारा कोशिश करें।', 'Turn on location in your phone settings so we can send your area with sign-up, then try again.');
+  String get turnOnLocation => _t('turnOnLocation', 'स्थान चालू करें', 'Turn on location');
+  String get locationPermissionBlockedTitle => _t('locationPermissionBlockedTitle', 'स्थान अनुमति बंद', 'Location blocked');
+  String get locationPermissionBlockedBody => _t('locationPermissionBlockedBody', 'Fixly को स्थान की अनुमति चाहिए। सेटिंग्स में जाकर चालू करें।', 'Fixly needs location access. Open Settings to enable it.');
+  String get openSettings => _t('openSettings', 'सेटिंग्स खोलें', 'Open Settings');
+  String get locationEnableTitle => _t('locationEnableTitle', 'स्थान चालू करें', 'Enable location');
+  String get locationEnableBody => _t('locationEnableBody', 'Fixly को पास के कार्यकर्ता और बुकिंग पता दिखाने के लिए आपका स्थान चाहिए।', 'Fixly needs your location to find nearby workers and set booking addresses.');
+  String get notNow => _t('notNow', 'अभी नहीं', 'Not now');
+  String get allow => _t('allow', 'अनुमति दें', 'Allow');
+  String get dontHaveAccount => _t('dontHaveAccount', 'खाता नहीं है?', 'Don\'t have an account?');
+  String get alreadyHaveAccount => _t('alreadyHaveAccount', 'पहले से खाता है?', 'Already have an account?');
+  String get signInAsWorker => _t('signInAsWorker', 'कार्यकर्ता के रूप में साइन इन करें', 'Sign in as worker');
+  String get signInAsWorkerHint => _t('signInAsWorkerHint', 'कार्यकर्ता के रूप में लॉगिन — कोई भी विकल्प चुनें', 'Signing in as worker — use any option below');
+  String get loginSubtitle => _t('loginSubtitle', 'जारी रखने के लिए लॉगिन करें', 'Log in to continue');
+  String get signUpSubtitle => _t('signUpSubtitle', 'शुरू करने के लिए खाता बनाएं', 'Create an account to get started');
+  String get authEmailTab => _t('authEmailTab', 'ईमेल', 'Email');
+  String get authPhoneTab => _t('authPhoneTab', 'फ़ोन', 'Phone');
+  String get customer => _t('customer', 'ग्राहक', 'Customer');
+  String get worker => _t('worker', 'कार्यकर्ता', 'Worker');
+  String get selectLanguage => _t('selectLanguage', 'भाषा चुनें', 'Select Language');
+  String get choosePreferredLanguage => _t('choosePreferredLanguage', 'अपनी पसंदीदा भाषा चुनें', 'Choose your preferred language');
+  String get cooperativeWelcomeTitle => _t('cooperativeWelcomeTitle', 'सहकारी में आपका स्वागत है', 'Welcome to the Cooperative');
+  String get cooperativeWelcomeBody => _t('cooperativeWelcomeBody', 'सदस्य-स्वामित्व, 10–15% कमीशन, और निष्पक्ष मजदूरी।', 'Member-owned platform with 10–15% commission and fair wages.');
+  String get chooseRole => _t('chooseRole', 'अपनी भूमिका चुनें', 'Choose your role');
+  String get customerRoleSubtitle => _t('customerRoleSubtitle', 'घरेलू सेवाओं के लिए विश्वसनीय कार्यकर्ता बुक करें', 'Book trusted workers for home services');
+  String get workerRoleSubtitle => _t('workerRoleSubtitle', 'कौशल दें और निष्पक्ष मजदूरी कमाएं', 'Offer skills and earn fair wages');
+  String get fairWages => _t('fairWages', 'निष्पक्ष मजदूरी', 'Fair wages');
+  String get fairWagesDesc => _t('fairWagesDesc', 'सहकारी सदस्यों को बाजार से बेहतर दर', 'Cooperative members earn above market rates');
+  String get memberOwned => _t('memberOwned', 'सदस्य-स्वामित्व', 'Member-owned');
+  String get memberOwnedDesc => _t('memberOwnedDesc', 'मुनाफा सदस्यों के बीच बंटता है', 'Profits shared among members');
+  String get welfareCoverage => _t('welfareCoverage', 'कल्याण कवरेज', 'Welfare coverage');
+  String get welfareCoverageDesc => _t('welfareCoverageDesc', 'e-Shram और बीमा सहायता', 'e-Shram and insurance support');
 
   // Bottom nav
-  String get navHome => isHi ? 'होम' : 'Home';
-  String get navSearch => isHi ? 'खोज' : 'Search';
-  String get navBookings => isHi ? 'बुकिंग' : 'Bookings';
-  String get navAi => isHi ? 'AI' : 'AI';
-  String get navProfile => isHi ? 'प्रोफ़ाइल' : 'Profile';
-  String get navJobs => isHi ? 'नौकरियां' : 'Jobs';
-  String get navWallet => isHi ? 'वॉलेट' : 'Wallet';
+  String get navHome => _t('navHome', 'होम', 'Home');
+  String get navSearch => _t('navSearch', 'खोज', 'Search');
+  String get navBookings => _t('navBookings', 'बुकिंग', 'Bookings');
+  String get navAi => _t('navAi', 'AI', 'AI');
+  String get navProfile => _t('navProfile', 'प्रोफ़ाइल', 'Profile');
+  String get navJobs => _t('navJobs', 'नौकरियां', 'Jobs');
+  String get navWallet => _t('navWallet', 'वॉलेट', 'Wallet');
 
   // Customer home
-  String get categories => isHi ? 'श्रेणियाँ' : 'Categories';
-  String get allCategories => isHi ? 'सभी श्रेणियाँ' : 'All Categories';
-  String get viewAll => isHi ? 'सभी देखें' : 'View all';
-  String get popularServices => isHi ? 'लोकप्रिय सेवाएं' : 'Popular Services';
-  String get aiHelper => isHi ? 'AI सहायक' : 'AI Helper';
-  String get homeBooking => isHi ? 'घरेलू बुकिंग' : 'Home Booking';
-  String get searchHint => isHi ? 'सेवाएं खोजें...' : 'Search services...';
-  String get servicesInCategory =>
-      isHi ? 'इस श्रेणी में उपलब्ध सेवाएं' : 'Services in this category';
-  String get noServicesFound => isHi ? 'कोई सेवा नहीं मिली' : 'No services found';
+  String get categories => _t('categories', 'श्रेणियाँ', 'Categories');
+  String get allCategories => _t('allCategories', 'सभी श्रेणियाँ', 'All Categories');
+  String get viewAll => _t('viewAll', 'सभी देखें', 'View all');
+  String get popularServices => _t('popularServices', 'लोकप्रिय सेवाएं', 'Popular Services');
+  String get aiHelper => _t('aiHelper', 'AI सहायक', 'AI Helper');
+  String get homeBooking => _t('homeBooking', 'घरेलू बुकिंग', 'Home Booking');
+  String get searchHint => _t('searchHint', 'सेवाएं खोजें...', 'Search services...');
+  String get servicesInCategory => _t('servicesInCategory', 'इस श्रेणी में उपलब्ध सेवाएं', 'Services in this category');
+  String get noServicesFound => _t('noServicesFound', 'कोई सेवा नहीं मिली', 'No services found');
 
   // Shared / profile
-  String get settings => isHi ? 'सेटिंग्स' : 'Settings';
-  String get hindiLanguage => isHi ? 'हिन्दी भाषा' : 'Hindi language';
-  String get appearance => isHi ? 'दिखावट' : 'Appearance';
-  String get theme => isHi ? 'थीम' : 'Theme';
-  String get themeSystem => isHi ? 'सिस्टम' : 'System';
-  String get themeLight => isHi ? 'लाइट' : 'Light';
-  String get themeDark => isHi ? 'डार्क' : 'Dark';
-  String get pushNotifications => isHi ? 'पुश सूचनाएं' : 'Push notifications';
-  String get pushNotificationsHint => isHi
-      ? 'बुकिंग अपडेट और ऑफ़र के लिए सूचनाएं'
-      : 'Booking updates and offers';
-  String get updateYourDetails =>
-      isHi ? 'नाम और फ़ोन अपडेट करें' : 'Update your name and phone';
-  String get notificationsOn => isHi ? 'सूचनाएं चालू' : 'Notifications on';
-  String get notificationsOff => isHi ? 'सूचनाएं बंद' : 'Notifications off';
-  String get notificationPreferences =>
-      isHi ? 'सूचना प्राथमिकताएं' : 'Notification preferences';
-  String get privacySecurity => isHi ? 'गोपनीयता और सुरक्षा' : 'Privacy & security';
-  String get aboutCooperative => isHi ? 'सहकारी के बारे में' : 'About cooperative';
-  String get screenGallery => isHi ? 'स्क्रीन गैलरी' : 'Screen gallery';
-  String get emergencySos => isHi ? 'आपात SOS' : 'Emergency SOS';
-  String get languageHindi => isHi ? 'भाषा: हिन्दी' : 'Language: Hindi';
-  String get languageEnglish => isHi ? 'भाषा: English' : 'Language: English';
-  String get profile => isHi ? 'प्रोफ़ाइल' : 'Profile';
-  String get editProfile => isHi ? 'प्रोफ़ाइल संपादित करें' : 'Edit profile';
-  String get signOut => isHi ? 'साइन आउट' : 'Sign out';
-  String get signOutConfirm => isHi
-      ? 'क्या आप साइन आउट करना चाहते हैं?'
-      : 'Sign out of this account?';
-  String get cancel => isHi ? 'रद्द करें' : 'Cancel';
-  String get preferences => isHi ? 'प्राथमिकताएं' : 'Preferences';
-  String get account => isHi ? 'खाता' : 'Account';
-  String get language => isHi ? 'भाषा' : 'Language';
-  String get english => isHi ? 'English' : 'English';
-  String get hindi => isHi ? 'हिन्दी' : 'Hindi';
-  String get appVersion => isHi ? 'संस्करण' : 'Version';
-  String get profileSaved => isHi ? 'प्रोफ़ाइल सहेजी गई' : 'Profile saved';
-  String get insuredMember => isHi ? 'बीमा सदस्य' : 'Insured member';
-  String get customerMember => isHi ? 'ग्राहक सदस्य' : 'Customer member';
-  String get workerMember => isHi ? 'कार्यकर्ता सदस्य' : 'Worker member';
-  String get helpSafety => isHi ? 'सहायता और सुरक्षा' : 'Help & safety';
-  String get whyFixly => isHi ? 'फिक्सली क्यों?' : 'Why Fixly?';
-  String get fairWagesBenefit => isHi
-      ? 'कार्यकर्ता 85–90% कमाई रखते हैं — कोई शोषण नहीं।'
-      : 'Workers keep 85–90% of earnings — no exploitative cuts.';
-  String get memberOwnedBenefit => isHi
-      ? 'सहकारी शासन कार्यकर्ता और ग्राहक को प्राथमिकता देता है।'
-      : 'Cooperative governance puts workers and customers first.';
-  String get welfareBenefit => isHi
-      ? 'गिग कार्यकर्ताओं के लिए PMSBY बीमा और e-Shram सहायता।'
-      : 'PMSBY insurance and e-Shram support for gig workers.';
-  String get howUseFixly =>
-      isHi ? 'आप फिक्सली कैसे उपयोग करेंगे?' : 'How will you use Fixly?';
-  String get support => isHi ? 'सहायता' : 'Support';
-  String get fromPrice => isHi ? '₹%s से' : 'From ₹%s';
-  String get orderHistory => isHi ? 'ऑर्डर इतिहास' : 'Order history';
-  String get notifications => isHi ? 'सूचनाएं' : 'Notifications';
-  String get supportChat => isHi ? 'सहायता चैट' : 'Support chat';
-  String get supportTicket => isHi ? 'सहायता टिकट' : 'Support ticket';
-  String get sos => isHi ? 'SOS और आपातकाल' : 'SOS & Emergency';
+  String get settings => _t('settings', 'सेटिंग्स', 'Settings');
+  String get hindiLanguage => _t('hindiLanguage', 'हिन्दी भाषा', 'Hindi language');
+  String get appearance => _t('appearance', 'दिखावट', 'Appearance');
+  String get theme => _t('theme', 'थीम', 'Theme');
+  String get themeSystem => _t('themeSystem', 'सिस्टम', 'System');
+  String get themeLight => _t('themeLight', 'लाइट', 'Light');
+  String get themeDark => _t('themeDark', 'डार्क', 'Dark');
+  String get pushNotifications => _t('pushNotifications', 'पुश सूचनाएं', 'Push notifications');
+  String get pushNotificationsHint => _t('pushNotificationsHint', 'बुकिंग अपडेट और ऑफ़र के लिए सूचनाएं', 'Booking updates and offers');
+  String get updateYourDetails => _t('updateYourDetails', 'नाम और फ़ोन अपडेट करें', 'Update your name and phone');
+  String get notificationsOn => _t('notificationsOn', 'सूचनाएं चालू', 'Notifications on');
+  String get notificationsOff => _t('notificationsOff', 'सूचनाएं बंद', 'Notifications off');
+  String get notificationPreferences => _t('notificationPreferences', 'सूचना प्राथमिकताएं', 'Notification preferences');
+  String get privacySecurity => _t('privacySecurity', 'गोपनीयता और सुरक्षा', 'Privacy & security');
+  String get aboutCooperative => _t('aboutCooperative', 'सहकारी के बारे में', 'About cooperative');
+  String get screenGallery => _t('screenGallery', 'स्क्रीन गैलरी', 'Screen gallery');
+  String get emergencySos => _t('emergencySos', 'आपात SOS', 'Emergency SOS');
+  String get languageHindi => _t('languageHindi', 'भाषा: हिन्दी', 'Language: Hindi');
+  String get languageEnglish => _t('languageEnglish', 'भाषा: English', 'Language: English');
+  String get profile => _t('profile', 'प्रोफ़ाइल', 'Profile');
+  String get editProfile => _t('editProfile', 'प्रोफ़ाइल संपादित करें', 'Edit profile');
+  String get signOut => _t('signOut', 'साइन आउट', 'Sign out');
+  String get signOutConfirm => _t('signOutConfirm', 'क्या आप साइन आउट करना चाहते हैं?', 'Sign out of this account?');
+  String get cancel => _t('cancel', 'रद्द करें', 'Cancel');
+  String get preferences => _t('preferences', 'प्राथमिकताएं', 'Preferences');
+  String get account => _t('account', 'खाता', 'Account');
+  String get language => _t('language', 'भाषा', 'Language');
+  String get english => _t('english', 'English', 'English');
+  String get hindi => _t('hindi', 'हिन्दी', 'Hindi');
+  String get appVersion => _t('appVersion', 'संस्करण', 'Version');
+  String get profileSaved => _t('profileSaved', 'प्रोफ़ाइल सहेजी गई', 'Profile saved');
+  String get insuredMember => _t('insuredMember', 'बीमा सदस्य', 'Insured member');
+  String get customerMember => _t('customerMember', 'ग्राहक सदस्य', 'Customer member');
+  String get workerMember => _t('workerMember', 'कार्यकर्ता सदस्य', 'Worker member');
+  String get helpSafety => _t('helpSafety', 'सहायता और सुरक्षा', 'Help & safety');
+  String get whyFixly => _t('whyFixly', 'फिक्सली क्यों?', 'Why Fixly?');
+  String get fairWagesBenefit => _t('fairWagesBenefit', 'कार्यकर्ता 85–90% कमाई रखते हैं — कोई शोषण नहीं।', 'Workers keep 85–90% of earnings — no exploitative cuts.');
+  String get memberOwnedBenefit => _t('memberOwnedBenefit', 'सहकारी शासन कार्यकर्ता और ग्राहक को प्राथमिकता देता है।', 'Cooperative governance puts workers and customers first.');
+  String get welfareBenefit => _t('welfareBenefit', 'गिग कार्यकर्ताओं के लिए PMSBY बीमा और e-Shram सहायता।', 'PMSBY insurance and e-Shram support for gig workers.');
+  String get howUseFixly => _t('howUseFixly', 'आप फिक्सली कैसे उपयोग करेंगे?', 'How will you use Fixly?');
+  String get support => _t('support', 'सहायता', 'Support');
+  String get fromPrice => _t('fromPrice', '₹%s से', 'From ₹%s');
+  String get orderHistory => _t('orderHistory', 'ऑर्डर इतिहास', 'Order history');
+  String get notifications => _t('notifications', 'सूचनाएं', 'Notifications');
+  String get supportChat => _t('supportChat', 'सहायता चैट', 'Support chat');
+  String get supportTicket => _t('supportTicket', 'सहायता टिकट', 'Support ticket');
+  String get sos => _t('sos', 'SOS और आपातकाल', 'SOS & Emergency');
 
   // Customer flow
-  String get search => isHi ? 'खोज' : 'Search';
-  String get homeBookingTitle => isHi ? 'घरेलू बुकिंग' : 'Home Booking';
-  String get bookService => isHi ? 'सेवा बुक करें' : 'Book Service';
-  String get service => isHi ? 'सेवा' : 'Service';
-  String get priceEstimate => isHi ? 'मूल्य अनुमान' : 'Price Estimate';
-  String get reviewEstimate => isHi ? 'अनुमान देखें' : 'Review estimate';
-  String get findingWorker => isHi ? 'कार्यकर्ता खोज रहे हैं' : 'Finding Worker';
-  String get workerAssigned => isHi ? 'कार्यकर्ता नियुक्त' : 'Worker Assigned';
-  String get workerAccepted => isHi ? 'कार्यकर्ता स्वीकृत' : 'Worker accepted';
-  String get liveTracking => isHi ? 'लाइव ट्रैकिंग' : 'Live Tracking';
-  String get workInProgress => isHi ? 'कार्य जारी' : 'Work in Progress';
-  String get workStarted => isHi ? 'कार्य शुरू' : 'Work started';
-  String get payment => isHi ? 'भुगतान' : 'Payment';
-  String get completePayment => isHi ? 'भुगतान पूरा करें' : 'Complete payment';
-  String get rateService => isHi ? 'सेवा रेट करें' : 'Rate Service';
-  String get bookingConfirmed => isHi ? 'बुकिंग पुष्टि' : 'Booking Confirmed';
-  String get addParts => isHi ? 'पुर्जे जोड़ें' : 'Add Parts';
-  String get availableWorkers => isHi ? 'उपलब्ध कार्यकर्ता' : 'Available Workers';
-  String get workerProfile => isHi ? 'कार्यकर्ता प्रोफ़ाइल' : 'Worker Profile';
-  String get aiDiscovery => isHi ? 'AI खोज' : 'AI Discovery';
-  String get aiMatchedWorkers => isHi ? 'AI मेल कार्यकर्ता' : 'AI Matched Workers';
-  String get destination => isHi ? 'कार्यकर्ता गंतव्य' : "Worker's Destination";
-  String get workersDestination => isHi ? 'कार्यकर्ता गंतव्य' : "Worker's Destination";
-  String get skipToWorkStarted =>
-      isHi ? 'कार्य शुरू पर जाएं' : 'Skip to Work Started';
+  String get search => _t('search', 'खोज', 'Search');
+  String get homeBookingTitle => _t('homeBookingTitle', 'घरेलू बुकिंग', 'Home Booking');
+  String get bookService => _t('bookService', 'सेवा बुक करें', 'Book Service');
+  String get service => _t('service', 'सेवा', 'Service');
+  String get priceEstimate => _t('priceEstimate', 'मूल्य अनुमान', 'Price Estimate');
+  String get reviewEstimate => _t('reviewEstimate', 'अनुमान देखें', 'Review estimate');
+  String get findingWorker => _t('findingWorker', 'कार्यकर्ता खोज रहे हैं', 'Finding Worker');
+  String get workerAssigned => _t('workerAssigned', 'कार्यकर्ता नियुक्त', 'Worker Assigned');
+  String get workerAccepted => _t('workerAccepted', 'कार्यकर्ता स्वीकृत', 'Worker accepted');
+  String get liveTracking => _t('liveTracking', 'लाइव ट्रैकिंग', 'Live Tracking');
+  String get workInProgress => _t('workInProgress', 'कार्य जारी', 'Work in Progress');
+  String get workStarted => _t('workStarted', 'कार्य शुरू', 'Work started');
+  String get payment => _t('payment', 'भुगतान', 'Payment');
+  String get completePayment => _t('completePayment', 'भुगतान पूरा करें', 'Complete payment');
+  String get rateService => _t('rateService', 'सेवा रेट करें', 'Rate Service');
+  String get bookingConfirmed => _t('bookingConfirmed', 'बुकिंग पुष्टि', 'Booking Confirmed');
+  String get addParts => _t('addParts', 'पुर्जे जोड़ें', 'Add Parts');
+  String get availableWorkers => _t('availableWorkers', 'उपलब्ध कार्यकर्ता', 'Available Workers');
+  String get workerProfile => _t('workerProfile', 'कार्यकर्ता प्रोफ़ाइल', 'Worker Profile');
+  String get aiDiscovery => _t('aiDiscovery', 'AI खोज', 'AI Discovery');
+  String get aiMatchedWorkers => _t('aiMatchedWorkers', 'AI मेल कार्यकर्ता', 'AI Matched Workers');
+  String get destination => _t('destination', 'कार्यकर्ता गंतव्य', 'Worker\'s Destination');
+  String get workersDestination => _t('workersDestination', 'कार्यकर्ता गंतव्य', 'Worker\'s Destination');
+  String get skipToWorkStarted => _t('skipToWorkStarted', 'कार्य शुरू पर जाएं', 'Skip to Work Started');
 
   // Worker flow
-  String get dashboard => isHi ? 'डैशबोर्ड' : 'Dashboard';
-  String get jobFeed => isHi ? 'नौकरी फ़ीड' : 'Job feed';
-  String get incomingOrders => isHi ? 'आने वाले ऑर्डर' : 'Incoming orders';
-  String get orderDetails => isHi ? 'ऑर्डर विवरण' : 'Order details';
-  String get activeJob => isHi ? 'सक्रिय नौकरी' : 'Active job';
-  String get navigation => isHi ? 'नेविगेशन' : 'Navigation';
-  String get startNavigation => isHi ? 'नेविगेशन शुरू करें' : 'Start navigation';
-  String get navigationStarted => isHi
-      ? 'टर्न-बाय-टर्न नेविगेशन शुरू'
-      : 'Turn-by-turn navigation started';
-  String get availability => isHi ? 'उपलब्धता' : 'Availability';
-  String get availabilityStatus =>
-      isHi ? 'उपलब्धता स्थिति' : 'Availability status';
-  String get earnings => isHi ? 'कमाई' : 'Earnings';
-  String get wallet => isHi ? 'वॉलेट' : 'Wallet';
-  String get myProfile => isHi ? 'मेरी प्रोफ़ाइल' : 'My profile';
-  String get reliabilityScore => isHi ? 'विश्वसनीयता स्कोर' : 'Reliability score';
+  String get dashboard => _t('dashboard', 'डैशबोर्ड', 'Dashboard');
+  String get jobFeed => _t('jobFeed', 'नौकरी फ़ीड', 'Job feed');
+  String get incomingOrders => _t('incomingOrders', 'आने वाले ऑर्डर', 'Incoming orders');
+  String get orderDetails => _t('orderDetails', 'ऑर्डर विवरण', 'Order details');
+  String get activeJob => _t('activeJob', 'सक्रिय नौकरी', 'Active job');
+  String get navigation => _t('navigation', 'नेविगेशन', 'Navigation');
+  String get startNavigation => _t('startNavigation', 'नेविगेशन शुरू करें', 'Start navigation');
+  String get navigationStarted => _t('navigationStarted', 'टर्न-बाय-टर्न नेविगेशन शुरू', 'Turn-by-turn navigation started');
+  String get availability => _t('availability', 'उपलब्धता', 'Availability');
+  String get availabilityStatus => _t('availabilityStatus', 'उपलब्धता स्थिति', 'Availability status');
+  String get earnings => _t('earnings', 'कमाई', 'Earnings');
+  String get wallet => _t('wallet', 'वॉलेट', 'Wallet');
+  String get myProfile => _t('myProfile', 'मेरी प्रोफ़ाइल', 'My profile');
+  String get reliabilityScore => _t('reliabilityScore', 'विश्वसनीयता स्कोर', 'Reliability score');
 
   // Worker onboarding
-  String get identityKyc => isHi ? 'पहचान और सत्यापन' : 'Identity & verification';
-  String get workProfile => isHi ? 'कौशल और क्षेत्र' : 'Skills & area';
-  String get payoutWelfare => isHi ? 'भुगतान और कल्याण' : 'Payout & welfare';
-  String get personalDetails => isHi ? 'व्यक्तिगत विवरण' : 'Personal details';
-  String get aadhaarVerification =>
-      isHi ? 'आधार सत्यापन' : 'Aadhaar verification';
-  String get panVerification => isHi ? 'PAN सत्यापन' : 'PAN verification';
-  String get selfieVerification =>
-      isHi ? 'सेल्फी सत्यापन' : 'Selfie verification';
-  String get skillCertificate => isHi ? 'कौशल प्रमाणपत्र' : 'Skill certificate';
-  String get selectSkills => isHi ? 'कौशल चुनें' : 'Select skills';
-  String get otherSkills => isHi ? 'अन्य' : 'Others';
-  String get otherSkillsHint => isHi
-      ? 'कौशल लिखें, कॉमा से अलग करें'
-      : 'Type a skill, then comma to add more';
-  String get serviceArea => isHi ? 'आपका स्थान' : 'Your location';
-  String get serviceAreaHint => isHi
-      ? 'मानचित्र पर अपना वर्तमान स्थान देखें। पैन करके आसपास देखें।'
-      : 'See your current location on the map. Pan around to explore nearby.';
-  String get yourRates => isHi ? 'आपकी दरें' : 'Your rates';
-  String get yourRatesHint => isHi
-      ? 'प्रत्येक चुने कौशल के लिए प्रति घंटा दर (₹) सेट करें।'
-      : 'Set an hourly rate (₹) for each skill you selected.';
-  String get experienceYears =>
-      isHi ? 'अनुभव (वर्ष)' : 'Years of experience';
-  String get workerBio => isHi ? 'संक्षिप्त परिचय' : 'Short bio';
-  String get workerBioHint => isHi
-      ? 'ग्राहकों को अपने अनुभव के बारे में बताएं'
-      : 'Tell customers about your experience';
-  String get hourlyRateLabel => isHi ? 'प्रति घंटा दर (₹)' : 'Hourly rate (₹)';
-  String get selectSkillsFirstForRates => isHi
-      ? 'पहले कौशल चुनें, फिर दरें जोड़ें।'
-      : 'Select skills above to set rates.';
-  String get largerRadiusHint => isHi
-      ? 'बड़ा क्षेत्र = अधिक नज़दीकी नौकरियां'
-      : 'Larger radius = more nearby jobs';
-  String get locationOnMap => isHi ? 'मानचित्र पर स्थान' : 'Location on map';
-  String get youAreHere => isHi ? 'आप यहाँ हैं' : 'You are here';
-  String get waitingForLocation =>
-      isHi ? 'स्थान की प्रतीक्षा…' : 'Waiting for location…';
-  String get refreshLocation => isHi ? 'स्थान रीफ़्रेश करें' : 'Refresh location';
-  String get welfareInsurance => isHi ? 'कल्याण और बीमा' : 'Welfare & insurance';
-  String get bankUpi => isHi ? 'बैंक और UPI' : 'Bank & UPI';
-  String get kycStatus =>
-      isHi ? 'आवेदन सत्यापन' : 'Application verification';
+  String get identityKyc => _t('identityKyc', 'पहचान और सत्यापन', 'Identity & verification');
+  String get workProfile => _t('workProfile', 'कौशल और क्षेत्र', 'Skills & area');
+  String get payoutWelfare => _t('payoutWelfare', 'भुगतान और कल्याण', 'Payout & welfare');
+  String get personalDetails => _t('personalDetails', 'व्यक्तिगत विवरण', 'Personal details');
+  String get aadhaarVerification => _t('aadhaarVerification', 'आधार सत्यापन', 'Aadhaar verification');
+  String get panVerification => _t('panVerification', 'PAN सत्यापन', 'PAN verification');
+  String get selfieVerification => _t('selfieVerification', 'सेल्फी सत्यापन', 'Selfie verification');
+  String get skillCertificate => _t('skillCertificate', 'कौशल प्रमाणपत्र', 'Skill certificate');
+  String get selectSkills => _t('selectSkills', 'कौशल चुनें', 'Select skills');
+  String get otherSkills => _t('otherSkills', 'अन्य', 'Others');
+  String get otherSkillsHint => _t('otherSkillsHint', 'कौशल लिखें, कॉमा से अलग करें', 'Type a skill, then comma to add more');
+  String get serviceArea => _t('serviceArea', 'आपका स्थान', 'Your location');
+  String get serviceAreaHint => _t('serviceAreaHint', 'मानचित्र पर अपना वर्तमान स्थान देखें। पैन करके आसपास देखें।', 'See your current location on the map. Pan around to explore nearby.');
+  String get yourRates => _t('yourRates', 'आपकी दरें', 'Your rates');
+  String get yourRatesHint => _t('yourRatesHint', 'प्रत्येक चुने कौशल के लिए प्रति घंटा दर (₹) सेट करें।', 'Set an hourly rate (₹) for each skill you selected.');
+  String get experienceYears => _t('experienceYears', 'अनुभव (वर्ष)', 'Years of experience');
+  String get workerBio => _t('workerBio', 'संक्षिप्त परिचय', 'Short bio');
+  String get workerBioHint => _t('workerBioHint', 'ग्राहकों को अपने अनुभव के बारे में बताएं', 'Tell customers about your experience');
+  String get hourlyRateLabel => _t('hourlyRateLabel', 'प्रति घंटा दर (₹)', 'Hourly rate (₹)');
+  String get selectSkillsFirstForRates => _t('selectSkillsFirstForRates', 'पहले कौशल चुनें, फिर दरें जोड़ें।', 'Select skills above to set rates.');
+  String get largerRadiusHint => _t('largerRadiusHint', 'बड़ा क्षेत्र = अधिक नज़दीकी नौकरियां', 'Larger radius = more nearby jobs');
+  String get locationOnMap => _t('locationOnMap', 'मानचित्र पर स्थान', 'Location on map');
+  String get youAreHere => _t('youAreHere', 'आप यहाँ हैं', 'You are here');
+  String get waitingForLocation => _t('waitingForLocation', 'स्थान की प्रतीक्षा…', 'Waiting for location…');
+  String get refreshLocation => _t('refreshLocation', 'स्थान रीफ़्रेश करें', 'Refresh location');
+  String get welfareInsurance => _t('welfareInsurance', 'कल्याण और बीमा', 'Welfare & insurance');
+  String get bankUpi => _t('bankUpi', 'बैंक और UPI', 'Bank & UPI');
+  String get kycStatus => _t('kycStatus', 'आवेदन सत्यापन', 'Application verification');
 
   // Payment methods
   String get upi => 'UPI';
-  String get upiSubtitle => isHi
-      ? 'Google Pay, PhonePe, Paytm'
-      : 'Google Pay, PhonePe, Paytm';
-  String get card => isHi ? 'कार्ड' : 'Card';
-  String get cardSubtitle => isHi ? 'Visa, Mastercard, RuPay' : 'Visa, Mastercard, RuPay';
-  String get cash => isHi ? 'नकद' : 'Cash';
-  String get cashSubtitle => isHi ? 'सेवा के बाद भुगतान' : 'Pay after service';
+  String get upiSubtitle => _t('upiSubtitle', 'Google Pay, PhonePe, Paytm', 'Google Pay, PhonePe, Paytm');
+  String get card => _t('card', 'कार्ड', 'Card');
+  String get cardSubtitle => _t('cardSubtitle', 'Visa, Mastercard, RuPay', 'Visa, Mastercard, RuPay');
+  String get cash => _t('cash', 'नकद', 'Cash');
+  String get cashSubtitle => _t('cashSubtitle', 'सेवा के बाद भुगतान', 'Pay after service');
 
   // Common
-  String get goBack => isHi ? 'वापस जाएं' : 'Go back';
-  String get showPassword => isHi ? 'पासवर्ड दिखाएं' : 'Show password';
-  String get hidePassword => isHi ? 'पासवर्ड छिपाएं' : 'Hide password';
-  String get sendMessage => isHi ? 'भेजें' : 'Send';
-  String get unknownState => isHi ? 'अज्ञात स्थिति' : 'Unknown state';
-  String get etaFormat => isHi ? 'ETA: %s मिनट' : 'ETA: %s min';
-  String get arrived => isHi ? 'पहुंच गए' : 'Arrived';
-  String get percentComplete => isHi ? '%s%% पूर्ण' : '%s%% complete';
+  String get goBack => _t('goBack', 'वापस जाएं', 'Go back');
+  String get showPassword => _t('showPassword', 'पासवर्ड दिखाएं', 'Show password');
+  String get hidePassword => _t('hidePassword', 'पासवर्ड छिपाएं', 'Hide password');
+  String get sendMessage => _t('sendMessage', 'भेजें', 'Send');
+  String get unknownState => _t('unknownState', 'अज्ञात स्थिति', 'Unknown state');
+  String get etaFormat => _t('etaFormat', 'ETA: %s मिनट', 'ETA: %s min');
+  String get arrived => _t('arrived', 'पहुंच गए', 'Arrived');
+  String get percentComplete => _t('percentComplete', '%s%% पूर्ण', '%s%% complete');
 
   // System states
-  String get noOrdersYet => isHi ? 'अभी कोई ऑर्डर नहीं' : 'No orders yet';
-  String get noWorkersNearby => isHi ? 'पास में कोई कार्यकर्ता नहीं' : 'No workers nearby';
-  String get noEarningsYet => isHi ? 'अभी कोई कमाई नहीं' : 'No earnings yet';
-  String get noNotificationsTitle =>
-      isHi ? 'कोई सूचना नहीं' : 'No notifications';
-  String get noResultsFound => isHi ? 'कोई परिणाम नहीं' : 'No results found';
-  String get noInternet => isHi ? 'इंटरनेट नहीं' : 'No internet connection';
-  String get locationDenied => isHi ? 'स्थान अनुमति नहीं' : 'Location access denied';
-  String get cameraDenied => isHi ? 'कैमरा अनुमति नहीं' : 'Camera access denied';
-  String get otpFailed => isHi ? 'OTP विफल' : 'OTP verification failed';
-  String get paymentFailed => isHi ? 'भुगतान विफल' : 'Payment failed';
-  String get bookingFailed => isHi ? 'बुकिंग विफल' : 'Booking failed';
-  String get kycFailed =>
-      isHi ? 'सत्यापन विफल' : 'Verification failed';
-  String get serverError => isHi ? 'कुछ गलत हुआ' : 'Something went wrong';
-  String get sessionExpired => isHi ? 'सत्र समाप्त' : 'Session expired';
-  String get paymentSuccessful => isHi ? 'भुगतान सफल' : 'Payment successful';
-  String get kycSubmitted =>
-      isHi ? 'आवेदन जमा' : 'Application submitted';
-  String get profileUpdated => isHi ? 'प्रोफ़ाइल अपडेट' : 'Profile updated';
-  String get ratingSubmitted => isHi ? 'रेटिंग जमा' : 'Rating submitted';
-  String get complaintSubmitted => isHi ? 'शिकायत जमा' : 'Complaint submitted';
+  String get noOrdersYet => _t('noOrdersYet', 'अभी कोई ऑर्डर नहीं', 'No orders yet');
+  String get noWorkersNearby => _t('noWorkersNearby', 'पास में कोई कार्यकर्ता नहीं', 'No workers nearby');
+  String get noEarningsYet => _t('noEarningsYet', 'अभी कोई कमाई नहीं', 'No earnings yet');
+  String get noNotificationsTitle => _t('noNotificationsTitle', 'कोई सूचना नहीं', 'No notifications');
+  String get noResultsFound => _t('noResultsFound', 'कोई परिणाम नहीं', 'No results found');
+  String get noInternet => _t('noInternet', 'इंटरनेट नहीं', 'No internet connection');
+  String get locationDenied => _t('locationDenied', 'स्थान अनुमति नहीं', 'Location access denied');
+  String get cameraDenied => _t('cameraDenied', 'कैमरा अनुमति नहीं', 'Camera access denied');
+  String get otpFailed => _t('otpFailed', 'OTP विफल', 'OTP verification failed');
+  String get paymentFailed => _t('paymentFailed', 'भुगतान विफल', 'Payment failed');
+  String get bookingFailed => _t('bookingFailed', 'बुकिंग विफल', 'Booking failed');
+  String get kycFailed => _t('kycFailed', 'सत्यापन विफल', 'Verification failed');
+  String get serverError => _t('serverError', 'कुछ गलत हुआ', 'Something went wrong');
+  String get sessionExpired => _t('sessionExpired', 'सत्र समाप्त', 'Session expired');
+  String get paymentSuccessful => _t('paymentSuccessful', 'भुगतान सफल', 'Payment successful');
+  String get kycSubmitted => _t('kycSubmitted', 'आवेदन जमा', 'Application submitted');
+  String get profileUpdated => _t('profileUpdated', 'प्रोफ़ाइल अपडेट', 'Profile updated');
+  String get ratingSubmitted => _t('ratingSubmitted', 'रेटिंग जमा', 'Rating submitted');
+  String get complaintSubmitted => _t('complaintSubmitted', 'शिकायत जमा', 'Complaint submitted');
+
+  static const Map<String, Map<String, String>> _translations = {
+    'mr': {
+      'morningGreeting': 'शुभ प्रभात',
+      'afternoonGreeting': 'शुभ दुपार',
+      'eveningGreeting': 'शुभ संध्याकाळ',
+      'guestUser': 'पाहुणे',
+      'appName': 'फिक्सली',
+      'tagline': 'सहकारीक गिग सेवा',
+      'continueLabel': 'पुढे जा',
+      'login': 'लॉगिन',
+      'signIn': 'साइन इन करा',
+      'username': 'वापरकर्तानाव',
+      'usernameHint': 'वापरकर्ता ID किंवा ईमेल टाका',
+      'forgotPassword': 'पासवर्ड विसरलात?',
+      'rememberMe': 'मला लक्षात ठेवा',
+      'orShort': 'किंवा',
+      'appleSignInUnavailable': 'अॅपल साइन इन अजून उपलब्ध नाही',
+      'forgotPasswordHint': 'पासवर्ड रीसेट करण्यासाठी तुमचा ईमेल टाका',
+      'forgotPasswordSent': 'खाते अस्तित्वात असल्यास, रीसेट लिंक पाठवली आहे',
+      'signUp': 'साइन अप करा',
+      'createAccount': 'खाते तयार करा',
+      'sendOtp': 'OTP पाठवा',
+      'verifyOtp': 'OTP पडताळणी करा',
+      'otpSentTo': 'OTP पाठवला गेला',
+      'resendOtp': 'OTP पुन्हा पाठवा',
+      'otpResent': 'नवीन OTP पाठवला आहे',
+      'fullName': 'पूर्ण नाव',
+      'fullNameHint': 'तुमचे नाव टाका',
+      'email': 'ईमेल',
+      'password': 'पासवर्ड',
+      'passwordHint': 'तुमचा पासवर्ड टाका',
+      'phoneNumber': 'फोन नंबर',
+      'phoneHint': '१० अंकी मोबाईल नंबर',
+      'continueWithGoogle': 'गुगल',
+      'continueWithFacebook': 'फेसबुक',
+      'orContinueWith': 'किंवा ईमेलद्वारे पुढे जा',
+      'locationRequiredForSignup': 'साइन अप करण्यासाठी GPS सुरू करा आणि स्थानाची परवानगी द्या',
+      'locationServicesOffTitle': 'स्थान बंद आहे',
+      'locationServicesOffBody': 'साइन-अपसह तुमचे क्षेत्र पाठवण्यासाठी तुमच्या फोन सेटिंग्जमध्ये स्थान सुरू करा, मग पुन्हा प्रयत्न करा.',
+      'turnOnLocation': 'स्थान सुरू करा',
+      'locationPermissionBlockedTitle': 'स्थान बंद केले आहे',
+      'locationPermissionBlockedBody': 'फिक्सलीला स्थानाची परवानगी आवश्यक आहे. ती सुरू करण्यासाठी सेटिंग्ज उघडा.',
+      'openSettings': 'सेटिंग्ज उघडा',
+      'locationEnableTitle': 'स्थान सुरू करा',
+      'locationEnableBody': 'जवळच्या कामगारांना शोधण्यासाठी आणि बुकिंग पत्ते सेट करण्यासाठी फिक्सलीला तुमचे स्थान आवश्यक आहे.',
+      'notNow': 'आता नाही',
+      'allow': 'परवानगी द्या',
+      'dontHaveAccount': 'खाते नाही?',
+      'alreadyHaveAccount': 'आधीच खाते आहे?',
+      'signInAsWorker': 'कामगार म्हणून साइन इन करा',
+      'signInAsWorkerHint': 'कामगार म्हणून साइन इन करत आहोत — खालील कोणताही पर्याय वापरा',
+      'loginSubtitle': 'सुरू ठेवण्यासाठी लॉग इन करा',
+      'signUpSubtitle': 'सुरू करण्यासाठी खाते तयार करा',
+      'authEmailTab': 'ईमेल',
+      'authPhoneTab': 'फोन',
+      'customer': 'ग्राहक',
+      'worker': 'कामगार',
+      'selectLanguage': 'भाषा निवडा',
+      'choosePreferredLanguage': 'तुमची पसंतीची भाषा निवडा',
+      'cooperativeWelcomeTitle': 'सहकारीतमध्ये स्वागत आहे',
+      'cooperativeWelcomeBody': 'सदस्य-मालकीची प्लॅटफॉर्म ज्यामध्ये 10–15% कमिशन आणि न्याय्य वेतन आहे.',
+      'chooseRole': 'तुमची भूमिका निवडा',
+      'customerRoleSubtitle': 'घरगुती सेवांसाठी विश्वासार्ह कामगारांची बुकिंग करा',
+      'workerRoleSubtitle': 'कौशल्ये प्रदान करा आणि न्याय्य वेतन कमवा',
+      'fairWages': 'न्याय्य वेतन',
+      'fairWagesDesc': 'सहकारीत सदस्य बाजार दरपेक्षा जास्त कमवतात',
+      'memberOwned': 'सदस्य-मालकीची',
+      'memberOwnedDesc': 'लाभ सदस्यांमध्ये वाटप केला जातो',
+      'welfareCoverage': 'कल्याण कव्हरेज',
+      'welfareCoverageDesc': 'ई-श्रम आणि विमा मदत',
+      'navHome': 'मुख्यपृष्ठ',
+      'navSearch': 'शोध',
+      'navBookings': 'बुकिंग',
+      'navAi': 'AI',
+      'navProfile': 'प्रोफाइल',
+      'navJobs': 'नोकऱ्या',
+      'navWallet': 'वॉलेट',
+      'categories': 'श्रेणी',
+      'allCategories': 'सर्व श्रेणी',
+      'viewAll': 'सर्व पहा',
+      'popularServices': 'लोकप्रिय सेवा',
+      'aiHelper': 'AI सहाय्यक',
+      'homeBooking': 'घरगुती बुकिंग',
+      'searchHint': 'सेवा शोधा...',
+      'servicesInCategory': 'या श्रेणीतील सेवा',
+      'noServicesFound': 'कोणत्याही सेवा आढळल्या नाहीत',
+      'settings': 'सेटिंग्ज',
+      'hindiLanguage': 'हिंदी भाषा',
+      'appearance': 'दिसणं',
+      'theme': 'थीम',
+      'themeSystem': 'सिस्टम',
+      'themeLight': 'हलका',
+      'themeDark': 'गडद',
+      'pushNotifications': 'पुश सूचना',
+      'pushNotificationsHint': 'बुकिंग अपडेट आणि ऑफर',
+      'updateYourDetails': 'आपले नाव व फोन अद्यतनित करा',
+      'notificationsOn': 'सूचना चालू',
+      'notificationsOff': 'सूचना बंद',
+      'notificationPreferences': 'सूचना प्राधान्ये',
+      'privacySecurity': 'गोपनीयता आणि सुरक्षा',
+      'aboutCooperative': 'सहकारी विषयी',
+      'screenGallery': 'स्क्रीन गॅलरी',
+      'emergencySos': 'आपत्कालीन SOS',
+      'languageHindi': 'भाषा: हिंदी',
+      'languageEnglish': 'भाषा: इंग्रजी',
+      'profile': 'प्रोफाइल',
+      'editProfile': 'प्रोफाइल संपादित करा',
+      'signOut': 'साइन आउट',
+      'signOutConfirm': 'या खात्यापासून साइन आउट करायचे आहे का?',
+      'cancel': 'रद्द करा',
+      'preferences': 'प्राधान्ये',
+      'account': 'खाते',
+      'language': 'भाषा',
+      'english': 'इंग्रजी',
+      'hindi': 'हिंदी',
+      'appVersion': 'आवृत्ती',
+      'profileSaved': 'प्रोफाइल जतन केले',
+      'insuredMember': 'विमा असलेला सदस्य',
+      'customerMember': 'ग्राहक सदस्य',
+      'workerMember': 'कामगार सदस्य',
+      'helpSafety': 'मदत व सुरक्षा',
+      'whyFixly': 'फिक्सली का?',
+      'fairWagesBenefit': 'कामगारांना कमाईचे ८५–९०% मिळते — कोणतेही शोषणात्मक कपात नाही.',
+      'memberOwnedBenefit': 'सहकारी शासन कामगार आणि ग्राहकांना प्रथम स्थान देते.',
+      'welfareBenefit': 'गिग कामगारांसाठी PMSBY विमा आणि ई-श्रम समर्थन.',
+      'howUseFixly': 'आपण फिक्सली कसे वापराल?',
+      'support': 'समर्थन',
+      'fromPrice': '₹%s पासून',
+      'orderHistory': 'ऑर्डर इतिहास',
+      'notifications': 'सूचना',
+      'supportChat': 'समर्थन चॅट',
+      'supportTicket': 'समर्थन तिकिट',
+      'sos': 'SOS व आपत्कालीन',
+      'search': 'शोधा',
+      'homeBookingTitle': 'घर बुकिंग',
+      'bookService': 'सेवा बुक करा',
+      'service': 'सेवा',
+      'priceEstimate': 'किंमत अंदाज',
+      'reviewEstimate': 'अंदाज पुनरावलोकन',
+      'findingWorker': 'कामगार शोधत आहे',
+      'workerAssigned': 'कामगार नेमलेला',
+      'workerAccepted': 'कामगाराने स्वीकारले',
+      'liveTracking': 'रिअल-टाइम ट्रॅकिंग',
+      'workInProgress': 'काम चालू आहे',
+      'workStarted': 'काम सुरू झाले',
+      'payment': 'पेमेंट',
+      'completePayment': 'पेमेंट पूर्ण करा',
+      'rateService': 'सेवेचे रेटिंग द्या',
+      'bookingConfirmed': 'बुकिंग पुष्टी झाली',
+      'addParts': 'भाग जोडा',
+      'availableWorkers': 'उपलब्ध कामगार',
+      'workerProfile': 'कामगार प्रोफाइल',
+      'aiDiscovery': 'एआय शोध',
+      'aiMatchedWorkers': 'एआय जुळवलेले कामगार',
+      'destination': 'कामगाराचे गंतव्य',
+      'workersDestination': 'कामगाराचे गंतव्य',
+      'skipToWorkStarted': 'काम सुरू झाल्यावर वगळा',
+      'dashboard': 'डॅशबोर्ड',
+      'jobFeed': 'नोकरी फीड',
+      'incomingOrders': 'आगामी ऑर्डर',
+      'orderDetails': 'ऑर्डर तपशील',
+      'activeJob': 'सक्रिय काम',
+      'navigation': 'नेव्हिगेशन',
+      'startNavigation': 'नेव्हिगेशन सुरू करा',
+      'navigationStarted': 'टर्न-बाय-टर्न नेव्हिगेशन सुरू झाले',
+      'availability': 'उपलब्धता',
+      'availabilityStatus': 'उपलब्धता स्थिती',
+      'earnings': 'उत्पन्न',
+      'wallet': 'वॉलेट',
+      'myProfile': 'माझा प्रोफाइल',
+      'reliabilityScore': 'विश्वसनीयता स्कोअर',
+      'identityKyc': 'ओळख व सत्यापन',
+      'workProfile': 'कौशल्ये व क्षेत्र',
+      'payoutWelfare': 'पगार व कल्याण',
+      'personalDetails': 'वैयक्तिक तपशील',
+      'aadhaarVerification': 'आधार सत्यापन',
+      'panVerification': 'पॅन सत्यापन',
+      'selfieVerification': 'सेल्फी सत्यापन',
+      'skillCertificate': 'कौशल्य प्रमाणपत्र',
+      'selectSkills': 'कौशल्ये निवडा',
+      'otherSkills': 'इतर',
+      'otherSkillsHint': 'कौशल्य टाइप करा, नंतर अधिक जोडण्यासाठी कॉमा वापरा',
+      'serviceArea': 'तुमचे स्थान',
+      'serviceAreaHint': 'नकाशावर तुमचे सध्याचे स्थान पहा. आजूबाजूला फिरून जवळचे स्थान शोधा.',
+      'yourRates': 'तुमचे दर',
+      'yourRatesHint': 'तुम्ही निवडलेल्या प्रत्येक कौशल्यासाठी तासिक दर (₹) सेट करा.',
+      'experienceYears': 'अनुभवाचे वर्षे',
+      'workerBio': 'संक्षिप्त बायो',
+      'workerBioHint': 'ग्राहकांना तुमचा अनुभव सांगा',
+      'hourlyRateLabel': 'तासिक दर (₹)',
+      'selectSkillsFirstForRates': 'दर सेट करण्यासाठी वर कौशल्ये निवडा.',
+      'largerRadiusHint': 'मोठा त्रिज्या = अधिक जवळची नोकरी',
+      'locationOnMap': 'नकाशावर स्थान',
+      'youAreHere': 'तुम्ही येथे आहात',
+      'waitingForLocation': 'स्थानाची प्रतीक्षा करत आहे…',
+      'refreshLocation': 'स्थान रीफ्रेश करा',
+      'welfareInsurance': 'कल्याण व विमा',
+      'bankUpi': 'बँक व UPI',
+      'kycStatus': 'अर्ज सत्यापन',
+      'upiSubtitle': 'गूगल पे, फोनपे, पेटीएम',
+      'card': 'कार्ड',
+      'cardSubtitle': 'व्हिसा, मास्टरकार्ड, रुपे',
+      'cash': 'रोख',
+      'cashSubtitle': 'सेवा नंतर पैसे द्या',
+      'goBack': 'परत जा',
+      'showPassword': 'पासवर्ड दाखवा',
+      'hidePassword': 'पासवर्ड लपवा',
+      'sendMessage': 'पाठवा',
+      'unknownState': 'अज्ञात स्थिती',
+      'etaFormat': 'ETA: %s मिनिटे',
+      'arrived': 'पोहोचले',
+      'percentComplete': '%s%% पूर्ण',
+      'noOrdersYet': 'अजून कोणतेही ऑर्डर नाहीत',
+      'noWorkersNearby': 'जवळचे कामगार नाहीत',
+      'noEarningsYet': 'अजून कमाई नाही',
+      'noNotificationsTitle': 'सूचना नाहीत',
+      'noResultsFound': 'परिणाम सापडले नाहीत',
+      'noInternet': 'इंटरनेट कनेक्शन नाही',
+      'locationDenied': 'स्थान प्रवेश नाकारला गेला',
+      'cameraDenied': 'कॅमेरा प्रवेश नाकारला गेला',
+      'otpFailed': 'OTP सत्यापन अयशस्वी',
+      'paymentFailed': 'पेमेंट अयशस्वी',
+      'bookingFailed': 'बुकिंग अयशस्वी',
+      'kycFailed': 'पुष्टीकरण अयशस्वी',
+      'serverError': 'काहीतरी चूक झाली',
+      'sessionExpired': 'सत्र समाप्त झाले',
+      'paymentSuccessful': 'पेमेंट यशस्वी',
+      'kycSubmitted': 'अर्ज सादर केला',
+      'profileUpdated': 'प्रोफाइल अद्ययावत केला',
+      'ratingSubmitted': 'रेटिंग सादर केली',
+      'complaintSubmitted': 'तक्रार सादर केली',
+    },
+    'ta': {
+      'morningGreeting': 'காலை வணக்கம்',
+      'afternoonGreeting': 'மதிய வணக்கம்',
+      'eveningGreeting': 'மாலை வணக்கம்',
+      'guestUser': 'விருந்தினர்',
+      'appName': 'Fixly',
+      'tagline': 'ஒத்துழைப்பு கிக் சேவைகள்',
+      'continueLabel': 'தொடரவும்',
+      'login': 'உள்நுழை',
+      'signIn': 'உள்நுழை',
+      'username': 'பயனர் பெயர்',
+      'usernameHint': 'பயனர் ஐடி அல்லது மின்னஞ்சலை உள்ளிடவும்',
+      'forgotPassword': 'கடவுச்சொல் மறந்துவிட்டது',
+      'rememberMe': 'என்னை நினைவில் கொள்',
+      'orShort': 'அல்லது',
+      'appleSignInUnavailable': 'ஆப்பிள் உள்நுழைவு இன்னும் கிடைக்கவில்லை',
+      'forgotPasswordHint': 'கடவுச்சொல்லை மீட்டமைக்க உங்கள் மின்னஞ்சலை உள்ளிடவும்',
+      'forgotPasswordSent': 'ஒரு கணக்கு இருந்தால், மீட்டமைப்பு இணைப்பு அனுப்பப்பட்டுள்ளது',
+      'signUp': 'பதிவு செய்யவும்',
+      'createAccount': 'கணக்கை உருவாக்கவும்',
+      'sendOtp': 'OTP அனுப்பு',
+      'verifyOtp': 'OTP சரிபார்',
+      'otpSentTo': 'OTP அனுப்பப்பட்டது',
+      'resendOtp': 'OTP மீண்டும் அனுப்பு',
+      'otpResent': 'புதிய OTP அனுப்பப்பட்டுள்ளது',
+      'fullName': 'முழு பெயர்',
+      'fullNameHint': 'உங்கள் பெயரை உள்ளிடவும்',
+      'email': 'மின்னஞ்சல்',
+      'password': 'கடவுச்சொல்',
+      'passwordHint': 'உங்கள் கடவுச்சொல்லை உள்ளிடவும்',
+      'phoneNumber': 'தொலைபேசி எண்',
+      'phoneHint': '10 இலக்க மொபைல் எண்',
+      'continueWithGoogle': 'Google',
+      'continueWithFacebook': 'Facebook',
+      'orContinueWith': 'அல்லது மின்னஞ்சலுடன் தொடரவும்',
+      'locationRequiredForSignup': 'பதிவு செய்ய GPS ஐ இயக்கி, இடம் அணுகலை அனுமதிக்கவும்',
+      'locationServicesOffTitle': 'இடம் முடக்கப்பட்டுள்ளது',
+      'locationServicesOffBody': 'உங்கள் தொலைபேசி அமைப்புகளில் இடத்தை இயக்கவும், பின்னர் மீண்டும் முயற்சிக்கவும்',
+      'turnOnLocation': 'இடத்தை இயக்கவும்',
+      'locationPermissionBlockedTitle': 'இடம் தடைக்கப்பட்டுள்ளது',
+      'locationPermissionBlockedBody': 'Fixlyக்கு இடம் அணுகல் தேவை. அமைப்புகளை திறந்து இயக்கவும்.',
+      'openSettings': 'அமைப்புகளை திறக்க',
+      'locationEnableTitle': 'இடத்தை இயக்கவும்',
+      'locationEnableBody': 'அருகிலுள்ள தொழிலாளர்களை கண்டறிய மற்றும் முன்பதிவு முகவரிகளை அமைக்க Fixly உங்கள் இடத்தை தேவைப்படுத்துகிறது.',
+      'notNow': 'இப்போது இல்லை',
+      'allow': 'அனுமதி',
+      'dontHaveAccount': 'கணக்கு இல்லையா?',
+      'alreadyHaveAccount': 'ஏற்கனவே கணக்கு உள்ளதா?',
+      'signInAsWorker': 'தொழிலாளராக உள்நுழை',
+      'signInAsWorkerHint': 'தொழிலாளராக உள்நுழை — கீழே உள்ள எந்த விருப்பத்தையும் பயன்படுத்தவும்',
+      'loginSubtitle': 'தொடர உள்நுழை',
+      'signUpSubtitle': 'தொடங்க கணக்கை உருவாக்கவும்',
+      'authEmailTab': 'மின்னஞ்சல்',
+      'authPhoneTab': 'தொலைபேசி',
+      'customer': 'வாடிக்கையாளர்',
+      'worker': 'பணியாளர்',
+      'selectLanguage': 'மொழியை தேர்ந்தெடுக்கவும்',
+      'choosePreferredLanguage': 'உங்கள் விருப்பமான மொழியை தேர்வு செய்யவும்',
+      'cooperativeWelcomeTitle': 'கூட்டு நிறுவனத்திற்கு வரவேற்பு',
+      'cooperativeWelcomeBody': 'உறுப்பினர்-உரிமை கொண்ட தளம், 10–15% கமிஷன் மற்றும் நியாயமான ஊதியம்.',
+      'chooseRole': 'உங்கள் பங்கை தேர்வு செய்யவும்',
+      'customerRoleSubtitle': 'வீட்டு சேவைகளுக்கு நம்பகமான பணியாளர்களை முன்பதிவு செய்யவும்',
+      'workerRoleSubtitle': 'திறமைகளை வழங்கி நியாயமான ஊதியம் பெறுங்கள்',
+      'fairWages': 'நியாயமான ஊதியம்',
+      'fairWagesDesc': 'கூட்டு உறுப்பினர்கள் சந்தை விகிதங்களை விட அதிகம் சம்பாதிக்கிறார்கள்',
+      'memberOwned': 'உறுப்பினர்-உரிமை',
+      'memberOwnedDesc': 'லாபம் உறுப்பினர்களுக்கு பகிரப்படும்',
+      'welfareCoverage': 'நலவாழ்வு கவரேஜ்',
+      'welfareCoverageDesc': 'e-ஷ்ராம் மற்றும் காப்பீட்டு ஆதரவு',
+      'navHome': 'முகப்பு',
+      'navSearch': 'தேடல்',
+      'navBookings': 'முன்பதிவுகள்',
+      'navAi': 'AI',
+      'navProfile': 'சுயவிவரம்',
+      'navJobs': 'வேலைகள்',
+      'navWallet': 'வாலெட்',
+      'categories': 'வகைகள்',
+      'allCategories': 'அனைத்து வகைகள்',
+      'viewAll': 'அனைத்தையும் பார்க்க',
+      'popularServices': 'பிரபலமான சேவைகள்',
+      'aiHelper': 'AI உதவியாளர்',
+      'homeBooking': 'வீட்டு முன்பதிவு',
+      'searchHint': 'சேவைகளை தேடவும்...',
+      'servicesInCategory': 'இந்த வகையில் உள்ள சேவைகள்',
+      'noServicesFound': 'சேவைகள் கிடைக்கவில்லை',
+      'settings': 'அமைப்புகள்',
+      'hindiLanguage': 'ஹிந்தி மொழி',
+      'appearance': 'தோற்றம்',
+      'theme': 'தீம்',
+      'themeSystem': 'சிஸ்டம்',
+      'themeLight': 'ஒளி',
+      'themeDark': 'இருள்',
+      'pushNotifications': 'புஷ் அறிவிப்புகள்',
+      'pushNotificationsHint': 'முன்பதிவு புதுப்பிப்புகள் மற்றும் சலுகைகள்',
+      'updateYourDetails': 'உங்கள் பெயர் மற்றும் தொலைபேசியை புதுப்பிக்கவும்',
+      'notificationsOn': 'அறிவிப்புகள் இயக்கம்',
+      'notificationsOff': 'அறிவிப்புகள் நிறுத்தம்',
+      'notificationPreferences': 'அறிவிப்பு விருப்பங்கள்',
+      'privacySecurity': 'தனியுரிமை & பாதுகாப்பு',
+      'aboutCooperative': 'கூட்டு நிறுவனத்தை பற்றி',
+      'screenGallery': 'திரை கேலரி',
+      'emergencySos': 'அவசர SOS',
+      'languageHindi': 'மொழி: ஹிந்தி',
+      'languageEnglish': 'மொழி: ஆங்கிலம்',
+      'profile': 'சுயவிவரம்',
+      'editProfile': 'சுயவிவரத்தை திருத்தவும்',
+      'signOut': 'வெளியேறு',
+      'signOutConfirm': 'இந்த கணக்கில் இருந்து வெளியேறவா?',
+      'cancel': 'ரத்து',
+      'preferences': 'விருப்பங்கள்',
+      'account': 'கணக்கு',
+      'language': 'மொழி',
+      'english': 'ஆங்கிலம்',
+      'hindi': 'இந்தி',
+      'appVersion': 'பதிப்பு',
+      'profileSaved': 'சுயவிவரம் சேமிக்கப்பட்டது',
+      'insuredMember': 'காப்பீடு செய்யப்பட்ட உறுப்பினர்',
+      'customerMember': 'வாடிக்கையாளர் உறுப்பினர்',
+      'workerMember': 'பணியாளர் உறுப்பினர்',
+      'helpSafety': 'உதவி & பாதுகாப்பு',
+      'whyFixly': 'ஃபிக்ஸ்லி ஏன்?',
+      'fairWagesBenefit': 'பணியாளர்கள் 85–90% வருமானத்தை வைத்துக்கொள்கிறார்கள் — எந்தத் துஷ்பிரயோகம் இல்லாமல்.',
+      'memberOwnedBenefit': 'கூட்டு நிர்வாகம் பணியாளர்களையும் வாடிக்கையாளர்களையும் முதலில் வைக்கிறது.',
+      'welfareBenefit': 'PMSBY காப்பீடு மற்றும் ஈ-ஷ்ராம் ஆதரவு கிக் பணியாளர்களுக்கு.',
+      'howUseFixly': 'ஃபிக்ஸ்லியை நீங்கள் எப்படி பயன்படுத்துவீர்கள்?',
+      'support': 'ஆதரவு',
+      'fromPrice': '₹%s முதல்',
+      'orderHistory': 'ஆர்டர் வரலாறு',
+      'notifications': 'அறிவிப்புகள்',
+      'supportChat': 'ஆதரவு அரட்டை',
+      'supportTicket': 'ஆதரவு டிக்கெட்',
+      'sos': 'SOS & அவசரம்',
+      'search': 'தேடல்',
+      'homeBookingTitle': 'வீட்டு முன்பதிவு',
+      'bookService': 'சேவையை முன்பதிவு செய்யவும்',
+      'service': 'சேவை',
+      'priceEstimate': 'விலை மதிப்பீடு',
+      'reviewEstimate': 'மதிப்பீட்டை மதிப்பாய்வு செய்யவும்',
+      'findingWorker': 'பணியாளரை கண்டறிதல்',
+      'workerAssigned': 'பணியாளர் ஒதுக்கப்பட்டார்',
+      'workerAccepted': 'பணியாளர் ஏற்றுக்கொண்டார்',
+      'liveTracking': 'நேரடி கண்காணிப்பு',
+      'workInProgress': 'வேலை நடந்து கொண்டிருக்கிறது',
+      'workStarted': 'வேலை தொடங்கப்பட்டது',
+      'payment': 'கட்டணம்',
+      'completePayment': 'கட்டணத்தை முடிக்கவும்',
+      'rateService': 'சேவையை மதிப்பிடவும்',
+      'bookingConfirmed': 'முன்பதிவு உறுதிப்படுத்தப்பட்டது',
+      'addParts': 'பாகங்களை சேர்க்கவும்',
+      'availableWorkers': 'கிடைக்கும் பணியாளர்கள்',
+      'workerProfile': 'பணியாளர் சுயவிவரம்',
+      'aiDiscovery': 'AI கண்டறிதல்',
+      'aiMatchedWorkers': 'AI பொருந்திய பணியாளர்கள்',
+      'destination': 'பணியாளரின் இலக்கு',
+      'workersDestination': 'பணியாளரின் இலக்கு',
+      'skipToWorkStarted': 'வேலை தொடங்கியதற்கு தாவு',
+      'dashboard': 'டாஷ்போர்டு',
+      'jobFeed': 'வேலை ஊட்டம்',
+      'incomingOrders': 'வரவிருக்கும் ஆர்டர்கள்',
+      'orderDetails': 'ஆர்டர் விவரங்கள்',
+      'activeJob': 'செயலில் உள்ள வேலை',
+      'navigation': 'வழிசெலுத்தல்',
+      'startNavigation': 'வழிசெலுத்தலை தொடங்கு',
+      'navigationStarted': 'மாற்று-மாற்று வழிசெலுத்தல் தொடங்கியது',
+      'availability': 'லಭ್ಯம்',
+      'availabilityStatus': 'லಭ್ಯ நிலை',
+      'earnings': 'வருமானம்',
+      'wallet': 'வாலெட்',
+      'myProfile': 'என் சுயவிவரம்',
+      'reliabilityScore': 'நம்பகத்தன்மை மதிப்பெண்',
+      'identityKyc': 'அடையாளம் & சரிபார்ப்பு',
+      'workProfile': 'திறன்கள் & பகுதி',
+      'payoutWelfare': 'கட்டணம் & நலன்',
+      'personalDetails': 'தனிப்பட்ட விவரங்கள்',
+      'aadhaarVerification': 'ஆதார் சரிபார்ப்பு',
+      'panVerification': 'PAN சரிபார்ப்பு',
+      'selfieVerification': 'சுயபடம் சரிபார்ப்பு',
+      'skillCertificate': 'திறன் சான்றிதழ்',
+      'selectSkills': 'திறன்களை தேர்வு செய்யவும்',
+      'otherSkills': 'மற்றவை',
+      'otherSkillsHint': 'ஒரு திறனை தட்டச்சு செய்து, பின்னர் கமா வைத்து மேலும் சேர்க்கவும்',
+      'serviceArea': 'உங்கள் இடம்',
+      'serviceAreaHint': 'வரைபடத்தில் உங்கள் தற்போதைய இடத்தைப் பார்க்கவும். அருகிலுள்ள இடங்களை ஆராய பான் செய்யவும்.',
+      'yourRates': 'உங்கள் விகிதங்கள்',
+      'yourRatesHint': 'நீங்கள் தேர்ந்தெடுத்த ஒவ்வொரு திறனுக்கும் ஒரு மணிநேர விகிதம் (₹) அமைக்கவும்.',
+      'experienceYears': 'அனுபவ ஆண்டுகள்',
+      'workerBio': 'சுருக்கமான வாழ்க்கை வரலாறு',
+      'workerBioHint': 'உங்கள் அனுபவத்தை வாடிக்கையாளர்களுக்கு சொல்லுங்கள்',
+      'hourlyRateLabel': 'மணிநேர விகிதம் (₹)',
+      'selectSkillsFirstForRates': 'விகிதங்களை அமைக்க மேலே திறன்களை தேர்வு செய்யவும்.',
+      'largerRadiusHint': 'பெரிய ஆரை = அருகிலுள்ள அதிக வேலைகள்',
+      'locationOnMap': 'வரைபடத்தில் இடம்',
+      'youAreHere': 'நீங்கள் இங்கே',
+      'waitingForLocation': 'இடத்தை காத்திருக்கிறது…',
+      'refreshLocation': 'இடத்தை புதுப்பிக்க',
+      'welfareInsurance': 'நலன் & காப்பீடு',
+      'bankUpi': 'வங்கி & UPI',
+      'kycStatus': 'விண்ணப்ப சரிபார்ப்பு',
+      'upiSubtitle': 'Google Pay, PhonePe, Paytm',
+      'card': 'அட்டை',
+      'cardSubtitle': 'விசா, மாஸ்டர் கார்டு, ரூபே',
+      'cash': 'பணம்',
+      'cashSubtitle': 'சேவைக்கு பின் பணம் செலுத்தவும்',
+      'goBack': 'மீண்டும் செல்லவும்',
+      'showPassword': 'கடவுச்சொல்லை காட்டவும்',
+      'hidePassword': 'கடவுச்சொல்லை மறைக்கவும்',
+      'sendMessage': 'அனுப்பு',
+      'unknownState': 'அறியப்படாத நிலை',
+      'etaFormat': 'ETA: %s நிமி',
+      'arrived': 'வந்தது',
+      'percentComplete': '%s%% முடிந்தது',
+      'noOrdersYet': 'இன்னும் ஆர்டர்கள் இல்லை',
+      'noWorkersNearby': 'அருகில் பணியாளர்கள் இல்லை',
+      'noEarningsYet': 'இன்னும் வருமானம் இல்லை',
+      'noNotificationsTitle': 'அறிவிப்புகள் இல்லை',
+      'noResultsFound': 'முடிவுகள் எதுவும் கிடைக்கவில்லை',
+      'noInternet': 'இணைய இணைப்பு இல்லை',
+      'locationDenied': 'இடம் அணுகல் மறுக்கப்பட்டது',
+      'cameraDenied': 'கேமரா அணுகல் மறுக்கப்பட்டது',
+      'otpFailed': 'OTP சரிபார்ப்பு தோல்வியுற்றது',
+      'paymentFailed': 'கட்டணம் தோல்வியுற்றது',
+      'bookingFailed': 'முன்பதிவு தோல்வியுற்றது',
+      'kycFailed': 'சரிபார்ப்பு தோல்வியுற்றது',
+      'serverError': 'ஏதோ தவறு ஏற்பட்டது',
+      'sessionExpired': 'அமர்வு காலாவதியானது',
+      'paymentSuccessful': 'கட்டணம் வெற்றிகரமாக முடிந்தது',
+      'kycSubmitted': 'விண்ணப்பம் சமர்ப்பிக்கப்பட்டது',
+      'profileUpdated': 'சுயவிவரம் புதுப்பிக்கப்பட்டது',
+      'ratingSubmitted': 'மதிப்பீடு சமர்ப்பிக்கப்பட்டது',
+      'complaintSubmitted': 'புகார் சமர்ப்பிக்கப்பட்டது',
+    },
+    'te': {
+      'morningGreeting': 'శుభోదయం',
+      'afternoonGreeting': 'శుభ మధ్యాహ్నం',
+      'eveningGreeting': 'శుభ సాయంత్రం',
+      'guestUser': 'అతిథి',
+      'appName': 'Fixly',
+      'tagline': 'సహకార గిగ సేవలు',
+      'continueLabel': 'కొనసాగించండి',
+      'login': 'లాగిన్',
+      'signIn': 'సైన్ ఇన్',
+      'username': 'వినియోగదారు పేరు',
+      'usernameHint': 'వినియోగదారు ID లేదా ఇమెయిల్ నమోదు చేయండి',
+      'forgotPassword': 'పాస్వర్డ్ మర్చిపోయారా',
+      'rememberMe': 'నన్ను గుర్తుంచుకో',
+      'orShort': 'లేదా',
+      'appleSignInUnavailable': 'Apple సైన్ ఇన్ ఇంకా అందుబాటులో లేదు',
+      'forgotPasswordHint': 'పాస్వర్డ్ రీసెట్ చేయడానికి మీ ఇమెయిల్ నమోదు చేయండి',
+      'forgotPasswordSent': 'ఖాతా ఉంటే, రీసెట్ లింక్ పంపబడింది',
+      'signUp': 'సైన్ అప్',
+      'createAccount': 'ఖాతా సృష్టించండి',
+      'sendOtp': 'OTP పంపండి',
+      'verifyOtp': 'OTP నిర్ధారించండి',
+      'otpSentTo': 'OTP పంపబడింది',
+      'resendOtp': 'OTP మళ్లీ పంపండి',
+      'otpResent': 'కొత్త OTP పంపబడింది',
+      'fullName': 'పూర్తి పేరు',
+      'fullNameHint': 'మీ పేరు నమోదు చేయండి',
+      'email': 'ఇమెయిల్',
+      'password': 'పాస్వర్డ్',
+      'passwordHint': 'మీ పాస్వర్డ్ నమోదు చేయండి',
+      'phoneNumber': 'ఫోన్ నంబర్',
+      'phoneHint': '10-అంకెల మొబైల్ నంబర్',
+      'continueWithGoogle': 'Google',
+      'continueWithFacebook': 'Facebook',
+      'orContinueWith': 'లేదా ఇమెయిల్‌తో కొనసాగించండి',
+      'locationRequiredForSignup': 'సైన్ అప్ చేయడానికి GPS ను ప్రారంభించి, స్థానం అనుమతిని ఇవ్వండి',
+      'locationServicesOffTitle': 'స్థానం ఆఫ్ ఉంది',
+      'locationServicesOffBody': 'సైన్ అప్ సమయంలో మీ ప్రాంతాన్ని పంపడానికి, మీ ఫోన్ సెట్టింగ్స్‌లో స్థానం ఆన్ చేయండి, తరువాత మళ్లీ ప్రయత్నించండి.',
+      'turnOnLocation': 'స్థానం ఆన్ చేయండి',
+      'locationPermissionBlockedTitle': 'స్థానం బ్లాక్ అయింది',
+      'locationPermissionBlockedBody': 'Fixly కు స్థానం అనుమతి అవసరం. సెట్టింగ్స్‌ను తెరిచి దాన్ని ఎనేబుల్ చేయండి.',
+      'openSettings': 'సెట్టింగ్స్ తెరవండి',
+      'locationEnableTitle': 'స్థానం ఎనేబుల్ చేయండి',
+      'locationEnableBody': 'సమీప కార్మికులను కనుగొనడానికి మరియు బుకింగ్ చిరునామాలను సెట్ చేయడానికి Fixly మీ స్థానం అవసరం.',
+      'notNow': 'ఇప్పుడే కాదు',
+      'allow': 'అనుమతించండి',
+      'dontHaveAccount': 'ఖాతా లేదు?',
+      'alreadyHaveAccount': 'ఇప్పటికే ఖాతా ఉందా?',
+      'signInAsWorker': 'వర్కర్‌గా సైన్ ఇన్ చేయండి',
+      'signInAsWorkerHint': 'వర్కర్‌గా సైన్ ఇన్ చేయండి — క్రింది ఏదైనా ఎంపికను ఉపయోగించండి',
+      'loginSubtitle': 'కొనసాగడానికి లాగిన్ చేయండి',
+      'signUpSubtitle': 'ప్రారంభించడానికి ఖాతా సృష్టించండి',
+      'authEmailTab': 'ఇమెయిల్',
+      'authPhoneTab': 'ఫోన్',
+      'customer': 'కస్టమర్',
+      'worker': 'కార్మిక',
+      'selectLanguage': 'భాషను ఎంచుకోండి',
+      'choosePreferredLanguage': 'మీకు ఇష్టమైన భాషను ఎంచుకోండి',
+      'cooperativeWelcomeTitle': 'సహకారానికి స్వాగతం',
+      'cooperativeWelcomeBody': 'సభ్య-యాజమాన్య వేదిక, 10–15% కమిషన్ మరియు న్యాయవేతనంతో.',
+      'chooseRole': 'మీ పాత్రను ఎంచుకోండి',
+      'customerRoleSubtitle': 'ఇంటి సేవల కోసం నమ్మకమైన కార్మికులను బుక్ చేయండి',
+      'workerRoleSubtitle': 'నైపుణ్యాలను అందించి న్యాయవేతనాన్ని సంపాదించండి',
+      'fairWages': 'న్యాయవేతనం',
+      'fairWagesDesc': 'సహకార సభ్యులు మార్కెట్ రేట్లకంటే ఎక్కువ సంపాదిస్తారు',
+      'memberOwned': 'సభ్య-యాజమాన్య',
+      'memberOwnedDesc': 'లాభాలు సభ్యుల మధ్య పంచబడతాయి',
+      'welfareCoverage': 'సామాజిక సంక్షేమ కవరేజ్',
+      'welfareCoverageDesc': 'ఈ-శ్రమ మరియు బీమా మద్దతు',
+      'navHome': 'హోమ్',
+      'navSearch': 'శోధన',
+      'navBookings': 'బుకింగ్స్',
+      'navAi': 'ఏఐ',
+      'navProfile': 'ప్రొఫైల్',
+      'navJobs': 'ఉద్యోగాలు',
+      'navWallet': 'వాలెట్',
+      'categories': 'వర్గాలు',
+      'allCategories': 'అన్ని వర్గాలు',
+      'viewAll': 'అన్నింటిని చూడండి',
+      'popularServices': 'ప్రాచుర్యం పొందిన సేవలు',
+      'aiHelper': 'ఏఐ సహాయకుడు',
+      'homeBooking': 'హోమ్ బుకింగ్',
+      'searchHint': 'సేవలను శోధించండి...',
+      'servicesInCategory': 'ఈ వర్గంలోని సేవలు',
+      'noServicesFound': 'సేవలు కనుగొనబడలేదు',
+      'settings': 'సెట్టింగ్స్',
+      'hindiLanguage': 'హిందీ భాష',
+      'appearance': 'రూపం',
+      'theme': 'థీమ్',
+      'themeSystem': 'సిస్టమ్',
+      'themeLight': 'లైట్',
+      'themeDark': 'డార్క్',
+      'pushNotifications': 'పుష్ నోటిఫికేషన్లు',
+      'pushNotificationsHint': 'బుకింగ్ నవీకరణలు మరియు ఆఫర్లు',
+      'updateYourDetails': 'మీ పేరు మరియు ఫోన్‌ను నవీకరించండి',
+      'notificationsOn': 'నోటిఫికేషన్లు ఆన్',
+      'notificationsOff': 'నోటిఫికేషన్లు ఆఫ్',
+      'notificationPreferences': 'నోటిఫికేషన్ అభిరుచులు',
+      'privacySecurity': 'గోప్యత & భద్రత',
+      'aboutCooperative': 'సహకారం గురించి',
+      'screenGallery': 'స్క్రీన్ గ్యాలరీ',
+      'emergencySos': 'అత్యవసర SOS',
+      'languageHindi': 'భాష: హిందీ',
+      'languageEnglish': 'భాష: ఇంగ్లీష్',
+      'profile': 'ప్రొఫైల్',
+      'editProfile': 'ప్రొఫైల్ సవరించు',
+      'signOut': 'సైన్ అవుట్',
+      'signOutConfirm': 'ఈ ఖాతా నుండి సైన్ అవుట్ చేయాలా?',
+      'cancel': 'రద్దు',
+      'preferences': 'ప్రాధాన్యతలు',
+      'account': 'ఖాతా',
+      'language': 'భాష',
+      'english': 'ఇంగ్లీష్',
+      'hindi': 'హిందీ',
+      'appVersion': 'వర్షన్',
+      'profileSaved': 'ప్రొఫైల్ సేవ్ చేయబడింది',
+      'insuredMember': 'బీమా సభ్యుడు',
+      'customerMember': 'కస్టమర్ సభ్యుడు',
+      'workerMember': 'వర్కర్ సభ్యుడు',
+      'helpSafety': 'సహాయం & భద్రత',
+      'whyFixly': 'ఫిక్స్లీ ఎందుకు?',
+      'fairWagesBenefit': 'వర్కర్లు 85–90% ఆదాయాన్ని ఉంచుకుంటారు — ఎటువంటి దోపిడీ తగ్గింపులు లేవు.',
+      'memberOwnedBenefit': 'సహకార పరిపాలన వర్కర్లు మరియు కస్టమర్లను ముందుగా ఉంచుతుంది.',
+      'welfareBenefit': 'PMSBY బీమా మరియు e-శ్రామిక మద్దతు గిగ్ వర్కర్లకు.',
+      'howUseFixly': 'ఫిక్స్లీని మీరు ఎలా ఉపయోగిస్తారు?',
+      'support': 'మద్దతు',
+      'fromPrice': '₹%s నుండి',
+      'orderHistory': 'ఆర్డర్ చరిత్ర',
+      'notifications': 'సూచనలు',
+      'supportChat': 'మద్దతు చాట్',
+      'supportTicket': 'మద్దతు టికెట్',
+      'sos': 'SOS & అత్యవసర',
+      'search': 'శోధించు',
+      'homeBookingTitle': 'హోమ్ బుకింగ్',
+      'bookService': 'సేవ బుక్ చేయండి',
+      'service': 'సేవ',
+      'priceEstimate': 'ధర అంచనా',
+      'reviewEstimate': 'అంచనాను సమీక్షించండి',
+      'findingWorker': 'వర్కర్‌ను కనుగొనడం',
+      'workerAssigned': 'వర్కర్ నియమించబడింది',
+      'workerAccepted': 'వర్కర్ అంగీకరించారు',
+      'liveTracking': 'లైవ్ ట్రాకింగ్',
+      'workInProgress': 'పని కొనసాగుతోంది',
+      'workStarted': 'పని ప్రారంభమైంది',
+      'payment': 'చెల్లింపు',
+      'completePayment': 'చెల్లింపును పూర్తి చేయండి',
+      'rateService': 'సేవను రేట్ చేయండి',
+      'bookingConfirmed': 'బుకింగ్ నిర్ధారించబడింది',
+      'addParts': 'భాగాలను జోడించండి',
+      'availableWorkers': 'లభ్యమైన వర్కర్లు',
+      'workerProfile': 'వర్కర్ ప్రొఫైల్',
+      'aiDiscovery': 'AI అన్వేషణ',
+      'aiMatchedWorkers': 'AI సరిపోలిన వర్కర్లు',
+      'destination': 'వర్కర్ గమ్యం',
+      'workersDestination': 'కార్మికుడి గమ్యం',
+      'skipToWorkStarted': 'పని ప్రారంభానికి దాటండి',
+      'dashboard': 'డాష్‌బోర్డ్',
+      'jobFeed': 'ఉద్యోగ ఫీడ్',
+      'incomingOrders': 'వచ్చే ఆర్డర్లు',
+      'orderDetails': 'ఆర్డర్ వివరాలు',
+      'activeJob': 'సక్రియ పని',
+      'navigation': 'నావిగేషన్',
+      'startNavigation': 'నావిగేషన్ ప్రారంభించండి',
+      'navigationStarted': 'టర్న్-బై-టర్న్ నావిగేషన్ ప్రారంభమైంది',
+      'availability': 'లభ్యత',
+      'availabilityStatus': 'లభ్యత స్థితి',
+      'earnings': 'ఆర్జన',
+      'wallet': 'వాలెట్',
+      'myProfile': 'నా ప్రొఫైల్',
+      'reliabilityScore': 'నమ్మకత స్కోరు',
+      'identityKyc': 'గుర్తింపు & ధృవీకరణ',
+      'workProfile': 'నైపుణ్యాలు & ప్రాంతం',
+      'payoutWelfare': 'చెల్లింపు & సంక్షేమం',
+      'personalDetails': 'వ్యక్తిగత వివరాలు',
+      'aadhaarVerification': 'ఆధార్ ధృవీకరణ',
+      'panVerification': 'పాన్ ధృవీకరణ',
+      'selfieVerification': 'సెల్ఫీ ధృవీకరణ',
+      'skillCertificate': 'నైపుణ్య సర్టిఫికేట్',
+      'selectSkills': 'నైపుణ్యాలు ఎంపిక చేయండి',
+      'otherSkills': 'ఇతర నైపుణ్యాలు',
+      'otherSkillsHint': 'ఒక నైపుణ్యాన్ని టైప్ చేసి, మరిన్ని జోడించడానికి కామా వాడండి',
+      'serviceArea': 'మీ స్థానం',
+      'serviceAreaHint': 'మీ ప్రస్తుత స్థానం మ్యాపులో చూడండి. సమీపాన్ని అన్వేషించడానికి పాన్ చేయండి.',
+      'yourRates': 'మీ రేట్లు',
+      'yourRatesHint': 'మీరు ఎంపిక చేసిన ప్రతి నైపుణ్యానికి గంటకు రేటు (₹) సెట్ చేయండి.',
+      'experienceYears': 'అనుభవ సంవత్సరాలు',
+      'workerBio': 'సంక్షిప్త జీవన చరిత్ర',
+      'workerBioHint': 'కస్టమర్లకు మీ అనుభవం గురించి చెప్పండి',
+      'hourlyRateLabel': 'గంటకు రేటు (₹)',
+      'selectSkillsFirstForRates': 'రేట్లు సెట్ చేయడానికి పైగా నైపుణ్యాలు ఎంపిక చేయండి.',
+      'largerRadiusHint': 'పెద్ద వ్యాసార్థం = సమీపంలో ఎక్కువ ఉద్యోగాలు',
+      'locationOnMap': 'మ్యాపులో స్థానం',
+      'youAreHere': 'మీరు ఇక్కడ ఉన్నారు',
+      'waitingForLocation': 'స్థానం కోసం వేచివున్నాం…',
+      'refreshLocation': 'స్థానం నవీకరించండి',
+      'welfareInsurance': 'సంక్షేమం & బీమా',
+      'bankUpi': 'బ్యాంక్ & యుపిఐ',
+      'kycStatus': 'అప్లికేషన్ ధృవీకరణ',
+      'upiSubtitle': 'గూగుల్ పే, ఫోన్‌పే, పేటిఎమ్',
+      'card': 'కార్డ్',
+      'cardSubtitle': 'వీసా, మాస్టర్‌కార్డ్, రూపే',
+      'cash': 'నగదు',
+      'cashSubtitle': 'సేవ తర్వాత చెల్లించండి',
+      'goBack': 'వెనక్కి వెళ్లండి',
+      'showPassword': 'పాస్వర్డ్ చూపించు',
+      'hidePassword': 'పాస్వర్డ్ దాచు',
+      'sendMessage': 'పంపు',
+      'unknownState': 'తెలియని స్థితి',
+      'etaFormat': 'అంచనా సమయం: %s నిమి',
+      'arrived': 'వచ్చింది',
+      'percentComplete': '%s%% పూర్తయింది',
+      'noOrdersYet': 'ఇంకా ఆర్డర్లు లేవు',
+      'noWorkersNearby': 'సమీపంలో కార్మికులు లేరు',
+      'noEarningsYet': 'ఇంకా ఆదాయం లేదు',
+      'noNotificationsTitle': 'నోటిఫికేషన్లు లేవు',
+      'noResultsFound': 'ఫలితాలు కనుగొనబడలేదు',
+      'noInternet': 'ఇంటర్నెట్ కనెక్షన్ లేదు',
+      'locationDenied': 'స్థానం యాక్సెస్ నిరాకరించబడింది',
+      'cameraDenied': 'కెమెరా యాక్సెస్ నిరాకరించబడింది',
+      'otpFailed': 'OTP ధృవీకరణ విఫలమైంది',
+      'paymentFailed': 'చెల్లింపు విఫలమైంది',
+      'bookingFailed': 'బుకింగ్ విఫలమైంది',
+      'kycFailed': 'ధృవీకరణ విఫలమైంది',
+      'serverError': 'ఏదో తప్పు జరిగింది',
+      'sessionExpired': 'సెషన్ గడువు ముగిసింది',
+      'paymentSuccessful': 'చెల్లింపు విజయవంతమైంది',
+      'kycSubmitted': 'అప్లికేషన్ సమర్పించబడింది',
+      'profileUpdated': 'ప్రొఫైల్ నవీకరించబడింది',
+      'ratingSubmitted': 'రేటింగ్ సమర్పించబడింది',
+      'complaintSubmitted': 'ఫిర్యాదు సమర్పించబడింది',
+    },
+    'kn': {
+      'morningGreeting': 'ಶುಭೋದಯ',
+      'afternoonGreeting': 'ಶುಭ ಅಪರಾಹ್ನ',
+      'eveningGreeting': 'ಶುಭ ಸಂಜೆ',
+      'guestUser': 'ಅತಿಥಿ',
+      'appName': 'Fixly',
+      'tagline': 'ಸಹಕಾರಿ ಗಿಗ್ ಸೇವೆಗಳು',
+      'continueLabel': 'ಮುಂದುವರಿಸಿ',
+      'login': 'ಲಾಗಿನ್',
+      'signIn': 'ಸೈನ್ ಇನ್',
+      'username': 'ಬಳಕೆದಾರ ಹೆಸರು',
+      'usernameHint': 'ಬಳಕೆದಾರ ಐಡಿ ಅಥವಾ ಇಮೇಲ್ ನಮೂದಿಸಿ',
+      'forgotPassword': 'ಪಾಸ್ವರ್ಡ್ ಮರೆತಿದ್ದೀರಾ',
+      'rememberMe': 'ನನ್ನನ್ನು ನೆನಪಿಡಿ',
+      'orShort': 'ಅಥವಾ',
+      'appleSignInUnavailable': 'ಆಪಲ್ ಸೈನ್ ಇನ್ ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ',
+      'forgotPasswordHint': 'ಪಾಸ್ವರ್ಡ್ ಮರುಹೊಂದಿಸಲು ನಿಮ್ಮ ಇಮೇಲ್ ನಮೂದಿಸಿ',
+      'forgotPasswordSent': 'ಖಾತೆ ಇದ್ದರೆ, ಮರುಹೊಂದಿಸುವ ಲಿಂಕ್ ಕಳುಹಿಸಲಾಗಿದೆ',
+      'signUp': 'ಸೈನ್ ಅಪ್',
+      'createAccount': 'ಖಾತೆ ರಚಿಸಿ',
+      'sendOtp': 'OTP ಕಳುಹಿಸಿ',
+      'verifyOtp': 'OTP ಪರಿಶೀಲಿಸಿ',
+      'otpSentTo': 'OTP ಕಳುಹಿಸಲಾಗಿದೆ',
+      'resendOtp': 'OTP ಮರುಕಳುಹಿಸಿ',
+      'otpResent': 'ಹೊಸ OTP ಕಳುಹಿಸಲಾಗಿದೆ',
+      'fullName': 'ಪೂರ್ಣ ಹೆಸರು',
+      'fullNameHint': 'ನಿಮ್ಮ ಹೆಸರನ್ನು ನಮೂದಿಸಿ',
+      'email': 'ಇಮೇಲ್',
+      'password': 'ಪಾಸ್ವರ್ಡ್',
+      'passwordHint': 'ನಿಮ್ಮ ಪಾಸ್ವರ್ಡ್ ನಮೂದಿಸಿ',
+      'phoneNumber': 'ಫೋನ್ ಸಂಖ್ಯೆ',
+      'phoneHint': '10-ಅಂಕಿಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ',
+      'continueWithGoogle': 'Google',
+      'continueWithFacebook': 'Facebook',
+      'orContinueWith': 'ಅಥವಾ ಇಮೇಲ್ ಮೂಲಕ ಮುಂದುವರಿಸಿ',
+      'locationRequiredForSignup': 'ಸೈನ್ ಅಪ್ ಮಾಡಲು GPS ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ ಮತ್ತು ಸ್ಥಳ ಪ್ರವೇಶವನ್ನು ಅನುಮತಿಸಿ',
+      'locationServicesOffTitle': 'ಸ್ಥಳ ಆಫ್ ಆಗಿದೆ',
+      'locationServicesOffBody': 'ನಿಮ್ಮ ಫೋನ್ ಸೆಟ್ಟಿಂಗ್ಸ್‌ನಲ್ಲಿ ಸ್ಥಳವನ್ನು ಆನ್ ಮಾಡಿ, ನಂತರ ಸೈನ್-ಅಪ್‌ನಲ್ಲಿ ನಿಮ್ಮ ಪ್ರದೇಶವನ್ನು ಕಳುಹಿಸಲು, ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
+      'turnOnLocation': 'ಸ್ಥಳವನ್ನು ಆನ್ ಮಾಡಿ',
+      'locationPermissionBlockedTitle': 'ಸ್ಥಳ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ',
+      'locationPermissionBlockedBody': 'ಫಿಕ್ಸ್‌ಲಿ ಸ್ಥಳ ಪ್ರವೇಶವನ್ನು ಅಗತ್ಯವಿದೆ. ಸೆಟ್ಟಿಂಗ್ಸ್ ತೆರೆಯಿರಿ ಮತ್ತು ಇದನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ.',
+      'openSettings': 'ಸೆಟ್ಟಿಂಗ್ಸ್ ತೆರೆಯಿರಿ',
+      'locationEnableTitle': 'ಸ್ಥಳವನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ',
+      'locationEnableBody': 'ಫಿಕ್ಸ್‌ಲಿ ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ಬಳಸಿ ಸಮೀಪದ ಕಾರ್ಮಿಕರನ್ನು ಕಂಡುಹಿಡಿಯಲು ಮತ್ತು ಬುಕ್ಕಿಂಗ್ ವಿಳಾಸಗಳನ್ನು ನಿಗದಿಪಡಿಸಲು.',
+      'notNow': 'ಈಗ ಬೇಡ',
+      'allow': 'ಅನುಮತಿಸಿ',
+      'dontHaveAccount': 'ಖಾತೆ ಇಲ್ಲವೇ?',
+      'alreadyHaveAccount': 'ಇದೀಗ ಖಾತೆ ಇದೆಯೇ?',
+      'signInAsWorker': 'ಕಾರ್ಮಿಕರಾಗಿ ಸೈನ್ ಇನ್ ಮಾಡಿ',
+      'signInAsWorkerHint': 'ಕಾರ್ಮಿಕರಾಗಿ ಸೈನ್ ಇನ್ — ಕೆಳಗಿನ ಯಾವುದೇ ಆಯ್ಕೆಯನ್ನು ಬಳಸಿ',
+      'loginSubtitle': 'ಮುಂದುವರಿಸಲು ಲಾಗಿನ್ ಮಾಡಿ',
+      'signUpSubtitle': 'ಆರಂಭಿಸಲು ಖಾತೆ ರಚಿಸಿ',
+      'authEmailTab': 'ಇಮೇಲ್',
+      'authPhoneTab': 'ಫೋನ್',
+      'customer': 'ಗ್ರಾಹಕ',
+      'worker': 'ಕೆಲಸದವರು',
+      'selectLanguage': 'ಭಾಷೆ ಆಯ್ಕೆಮಾಡಿ',
+      'choosePreferredLanguage': 'ನಿಮ್ಮ ಇಷ್ಟದ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ',
+      'cooperativeWelcomeTitle': 'ಸಹಕಾರಕ್ಕೆ ಸ್ವಾಗತ',
+      'cooperativeWelcomeBody': 'ಸದಸ್ಯ-ಸ್ವಾಮ್ಯದ ವೇದಿಕೆ, 10–15% ಕಮಿಷನ್ ಮತ್ತು ನ್ಯಾಯಯುತ ವೇತನಗಳೊಂದಿಗೆ.',
+      'chooseRole': 'ನಿಮ್ಮ ಪಾತ್ರವನ್ನು ಆಯ್ಕೆಮಾಡಿ',
+      'customerRoleSubtitle': 'ಮನೆ ಸೇವೆಗಳಿಗೆ ವಿಶ್ವಾಸಾರ್ಹ ಕೆಲಸಗಾರರನ್ನು ಬುಕ್ ಮಾಡಿ',
+      'workerRoleSubtitle': 'ನಿಮ್ಮ ಕೌಶಲ್ಯಗಳನ್ನು ನೀಡಿಸಿ ಮತ್ತು ನ್ಯಾಯಯುತ ವೇತನ ಗಳಿಸಿ',
+      'fairWages': 'ನ್ಯಾಯಯುತ ವೇತನ',
+      'fairWagesDesc': 'ಸಹಕಾರ ಸದಸ್ಯರು ಮಾರುಕಟ್ಟೆ ದರಕ್ಕಿಂತ ಹೆಚ್ಚು ಗಳಿಸುತ್ತಾರೆ',
+      'memberOwned': 'ಸದಸ್ಯ-ಸ್ವಾಮ್ಯ',
+      'memberOwnedDesc': 'ಲಾಭಗಳು ಸದಸ್ಯರ ನಡುವೆ ಹಂಚಿಕೊಳ್ಳಲಾಗುತ್ತದೆ',
+      'welfareCoverage': 'ಕಲ್ಯಾಣ ಕವಚ',
+      'welfareCoverageDesc': 'ಇ-ಶ್ರಮ ಮತ್ತು ವಿಮಾ ಬೆಂಬಲ',
+      'navHome': 'ಮುಖಪುಟ',
+      'navSearch': 'ಹುಡುಕು',
+      'navBookings': 'ಬುಕ್ಕಿಂಗ್‌ಗಳು',
+      'navAi': 'ಕೃತಕ ಬುದ್ಧಿಮತ್ತೆ',
+      'navProfile': 'ಪ್ರೊಫೈಲ್',
+      'navJobs': 'ಉದ್ಯೋಗಗಳು',
+      'navWallet': 'ವಾಲೆಟ್',
+      'categories': 'ವರ್ಗಗಳು',
+      'allCategories': 'ಎಲ್ಲಾ ವರ್ಗಗಳು',
+      'viewAll': 'ಎಲ್ಲಾ ವೀಕ್ಷಿಸಿ',
+      'popularServices': 'ಜನಪ್ರಿಯ ಸೇವೆಗಳು',
+      'aiHelper': 'ಕೃತಕ ಬುದ್ಧಿಮತ್ತೆ ಸಹಾಯಕ',
+      'homeBooking': 'ಮನೆ ಬುಕ್ಕಿಂಗ್',
+      'searchHint': 'ಸೇವೆಗಳನ್ನು ಹುಡುಕಿ...',
+      'servicesInCategory': 'ಈ ವರ್ಗದ ಸೇವೆಗಳು',
+      'noServicesFound': 'ಯಾವುದೇ ಸೇವೆ ಕಂಡುಬಂದಿಲ್ಲ',
+      'settings': 'ಸೆಟ್ಟಿಂಗ್ಸ್',
+      'hindiLanguage': 'ಹಿಂದಿ ಭಾಷೆ',
+      'appearance': 'ರೂಪ',
+      'theme': 'ಥೀಮ್',
+      'themeSystem': 'ಸಿಸ್ಟಮ್',
+      'themeLight': 'ಬೆಳಕು',
+      'themeDark': 'ಕತ್ತಲೆ',
+      'pushNotifications': 'ಪುಶ್ ಸೂಚನೆಗಳು',
+      'pushNotificationsHint': 'ಬುಕ್ಕಿಂಗ್ ನವೀಕರಣಗಳು ಮತ್ತು ಆಫರ್‌ಗಳು',
+      'updateYourDetails': 'ನಿಮ್ಮ ಹೆಸರು ಮತ್ತು ಫೋನ್ ನವೀಕರಿಸಿ',
+      'notificationsOn': 'ಸೂಚನೆಗಳು ಆನ್',
+      'notificationsOff': 'ಸೂಚನೆಗಳು ಆಫ್',
+      'notificationPreferences': 'ಸೂಚನಾ ಆದ್ಯತೆಗಳು',
+      'privacySecurity': 'ಗೌಪ್ಯತೆ ಮತ್ತು ಭದ್ರತೆ',
+      'aboutCooperative': 'ಸಹಕಾರದ ಬಗ್ಗೆ',
+      'screenGallery': 'ಸ್ಕ್ರೀನ್ ಗ್ಯಾಲರಿ',
+      'emergencySos': 'ಅಪತ್ಕಾಲಿಕ SOS',
+      'languageHindi': 'ಭಾಷೆ: ಹಿಂದಿ',
+      'languageEnglish': 'ಭಾಷೆ: ಇಂಗ್ಲಿಷ್',
+      'profile': 'ಪ್ರೊಫೈಲ್',
+      'editProfile': 'ಪ್ರೊಫೈಲ್ ಸಂಪಾದಿಸಿ',
+      'signOut': 'ಲಾಗ್ ಔಟ್',
+      'signOutConfirm': 'ಈ ಖಾತೆಯಿಂದ ಲಾಗ್ ಔಟ್ ಆಗಬೇಕೇ?',
+      'cancel': 'ರದ್ದುಮಾಡು',
+      'preferences': 'ಆದ್ಯತೆಗಳು',
+      'account': 'ಖಾತೆ',
+      'language': 'ಭಾಷೆ',
+      'english': 'ಇಂಗ್ಲಿಷ್',
+      'hindi': 'ಹಿಂದಿ',
+      'appVersion': 'ಆವೃತ್ತಿ',
+      'profileSaved': 'ಪ್ರೊಫೈಲ್ ಉಳಿಸಲಾಗಿದೆ',
+      'insuredMember': 'ಬೀಮಿತ ಸದಸ್ಯ',
+      'customerMember': 'ಗ್ರಾಹಕ ಸದಸ್ಯ',
+      'workerMember': 'ಕೆಲಸದ ಸದಸ್ಯ',
+      'helpSafety': 'ಸಹಾಯ & ಸುರಕ್ಷತೆ',
+      'whyFixly': 'ಫಿಕ್ಸ್‌ಲಿ ಏಕೆ?',
+      'fairWagesBenefit': 'ಕೆಲಸದವರು ತಮ್ಮ ಆದಾಯದ 85–90% ಪಡೆಯುತ್ತಾರೆ — ಯಾವುದೇ ಶೋಷಣಾತ್ಮಕ ಕಡಿತಗಳಿಲ್ಲ.',
+      'memberOwnedBenefit': 'ಸಹಕಾರಿಯ ಆಡಳಿತವು ಕೆಲಸಗಾರರು ಮತ್ತು ಗ್ರಾಹಕರನ್ನು ಮೊದಲಿಗೆ ಇಡುತ್ತದೆ.',
+      'welfareBenefit': 'ಗಿಗ್ ಕೆಲಸಗಾರರಿಗೆ PMSBY ವಿಮೆ ಮತ್ತು ಇ-ಶ್ರಮ್ ಬೆಂಬಲ.',
+      'howUseFixly': 'ಫಿಕ್ಸ್‌ಲಿಯನ್ನು ನೀವು ಹೇಗೆ ಬಳಸುವಿರಿ?',
+      'support': 'ಬೆಂಬಲ',
+      'fromPrice': '₹%s ರಿಂದ',
+      'orderHistory': 'ಆರ್ಡರ್ ಇತಿಹಾಸ',
+      'notifications': 'ಅಧಿಸೂಚನೆಗಳು',
+      'supportChat': 'ಬೆಂಬಲ ಚಾಟ್',
+      'supportTicket': 'ಬೆಂಬಲ ಟಿಕೆಟ್',
+      'sos': 'SOS & ತುರ್ತು',
+      'search': 'ಹುಡುಕು',
+      'homeBookingTitle': 'ಮನೆ ಬುಕ್ಕಿಂಗ್',
+      'bookService': 'ಸೇವೆಯನ್ನು ಬುಕ್ ಮಾಡಿ',
+      'service': 'ಸೇವೆ',
+      'priceEstimate': 'ಬೆಲೆ ಅಂದಾಜು',
+      'reviewEstimate': 'ಅಂದಾಜು ಪರಿಶೀಲಿಸಿ',
+      'findingWorker': 'ಕೆಲಸದವರನ್ನು ಹುಡುಕಲಾಗುತ್ತಿದೆ',
+      'workerAssigned': 'ಕೆಲಸದವರು ನಿಯೋಜಿಸಲ್ಪಟ್ಟಿದ್ದಾರೆ',
+      'workerAccepted': 'ಕೆಲಸದವರು ಸ್ವೀಕರಿಸಿದ್ದಾರೆ',
+      'liveTracking': 'ಲೈವ್ ಟ್ರ್ಯಾಕಿಂಗ್',
+      'workInProgress': 'ಕೆಲಸ ಪ್ರಗತಿಯಲ್ಲಿದೆ',
+      'workStarted': 'ಕೆಲಸ ಪ್ರಾರಂಭವಾಗಿದೆ',
+      'payment': 'ಪಾವತಿ',
+      'completePayment': 'ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ',
+      'rateService': 'ಸೇವೆಗೆ ರೇಟಿಂಗ್ ನೀಡಿ',
+      'bookingConfirmed': 'ಬುಕ್ಕಿಂಗ್ ದೃಢೀಕರಿಸಲಾಗಿದೆ',
+      'addParts': 'ಭಾಗಗಳನ್ನು ಸೇರಿಸಿ',
+      'availableWorkers': 'ಲಭ್ಯವಿರುವ ಕೆಲಸಗಾರರು',
+      'workerProfile': 'ಕೆಲಸದವರ ಪ್ರೊಫೈಲ್',
+      'aiDiscovery': 'AI ಅನ್ವೇಷಣೆ',
+      'aiMatchedWorkers': 'AI ಹೊಂದಾಣಿಕೆಯ ಕೆಲಸಗಾರರು',
+      'destination': 'ಕೆಲಸದವರ ಗಮ್ಯಸ್ಥಾನ',
+      'workersDestination': 'ಕೆಲಸದ ಗಮ್ಯಸ್ಥಾನ',
+      'skipToWorkStarted': 'ಕೆಲಸ ಪ್ರಾರಂಭಕ್ಕೆ ಹೋಗಿ',
+      'dashboard': 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',
+      'jobFeed': 'ಕೆಲಸದ ಫೀಡ್',
+      'incomingOrders': 'ಬರುವ ಆದೇಶಗಳು',
+      'orderDetails': 'ಆದೇಶ ವಿವರಗಳು',
+      'activeJob': 'ಸಕ್ರಿಯ ಕೆಲಸ',
+      'navigation': 'ನಾವಿಗೇಶನ್',
+      'startNavigation': 'ನಾವಿಗೇಶನ್ ಪ್ರಾರಂಭಿಸಿ',
+      'navigationStarted': 'ತಿರುಗು-ತಿರುಗು ನಾವಿಗೇಶನ್ ಪ್ರಾರಂಭವಾಗಿದೆ',
+      'availability': 'ಲಭ್ಯತೆ',
+      'availabilityStatus': 'ಲಭ್ಯತೆ ಸ್ಥಿತಿ',
+      'earnings': 'ಆದಾಯ',
+      'wallet': 'ವಾಲೆಟ್',
+      'myProfile': 'ನನ್ನ ಪ್ರೊಫೈಲ್',
+      'reliabilityScore': 'ವಿಶ್ವಾಸಾರ್ಹತೆ ಅಂಕ',
+      'identityKyc': 'ಗುರುತಿನ ಪರಿಶೀಲನೆ',
+      'workProfile': 'ಕೌಶಲ್ಯಗಳು ಮತ್ತು ಪ್ರದೇಶ',
+      'payoutWelfare': 'ಪಾವತಿ ಮತ್ತು ಕಲ್ಯಾಣ',
+      'personalDetails': 'ವೈಯಕ್ತಿಕ ವಿವರಗಳು',
+      'aadhaarVerification': 'ಆಧಾರ್ ಪರಿಶೀಲನೆ',
+      'panVerification': 'ಪ್ಯಾನ್ ಪರಿಶೀಲನೆ',
+      'selfieVerification': 'ಸೆಲ್ಫಿ ಪರಿಶೀಲನೆ',
+      'skillCertificate': 'ಕೌಶಲ್ಯ ಪ್ರಮಾಣಪತ್ರ',
+      'selectSkills': 'ಕೌಶಲ್ಯಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ',
+      'otherSkills': 'ಇತರ ಕೌಶಲ್ಯಗಳು',
+      'otherSkillsHint': 'ಕೌಶಲ್ಯವನ್ನು ಟೈಪ್ ಮಾಡಿ, ನಂತರ ಇನ್ನಷ್ಟು ಸೇರಿಸಲು ಕಾಮಾ ಹಾಕಿ',
+      'serviceArea': 'ನಿಮ್ಮ ಸ್ಥಳ',
+      'serviceAreaHint': 'ನಿಮ್ಮ ಪ್ರಸ್ತುತ ಸ್ಥಳವನ್ನು ನಕ್ಷೆಯಲ್ಲಿ ನೋಡಿ. ಸಮೀಪದ ಪ್ರದೇಶಗಳನ್ನು ಅನ್ವೇಷಿಸಲು ಪ್ಯಾನ್ ಮಾಡಿ.',
+      'yourRates': 'ನಿಮ್ಮ ದರಗಳು',
+      'yourRatesHint': 'ನೀವು ಆಯ್ಕೆಮಾಡಿದ ಪ್ರತಿ ಕೌಶಲ್ಯಕ್ಕೆ ಪ್ರತಿ ಗಂಟೆಯ ದರ (₹) ನಿಗದಿಪಡಿಸಿ.',
+      'experienceYears': 'ಅನುಭವದ ವರ್ಷಗಳು',
+      'workerBio': 'ಸಂಕ್ಷಿಪ್ತ ಜೀವನಚರಿತ್ರೆ',
+      'workerBioHint': 'ಗ್ರಾಹಕರಿಗೆ ನಿಮ್ಮ ಅನುಭವದ ಬಗ್ಗೆ ತಿಳಿಸಿ',
+      'hourlyRateLabel': 'ಪ್ರತಿ ಗಂಟೆಯ ದರ (₹)',
+      'selectSkillsFirstForRates': 'ದರಗಳನ್ನು ನಿಗದಿಪಡಿಸಲು ಮೇಲಿನ ಕೌಶಲ್ಯಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ.',
+      'largerRadiusHint': 'ವಿಸ್ತಾರವಾದ ವ್ಯಾಸ = ಸಮೀಪದ ಹೆಚ್ಚು ಕೆಲಸಗಳು',
+      'locationOnMap': 'ನಕ್ಷೆಯಲ್ಲಿ ಸ್ಥಳ',
+      'youAreHere': 'ನೀವು ಇಲ್ಲಿ',
+      'waitingForLocation': 'ಸ್ಥಳಕ್ಕಾಗಿ ಕಾಯಲಾಗುತ್ತಿದೆ…',
+      'refreshLocation': 'ಸ್ಥಳವನ್ನು ನವೀಕರಿಸಿ',
+      'welfareInsurance': 'ಕಲ್ಯಾಣ ಮತ್ತು ವಿಮೆ',
+      'bankUpi': 'ಬ್ಯಾಂಕ್ ಮತ್ತು ಯುಪಿಐ',
+      'kycStatus': 'ಅರ್ಜಿಯ ಪರಿಶೀಲನೆ',
+      'upiSubtitle': 'ಗೂಗಲ್ ಪೇ, ಫೋನ್‌ಪಿ, ಪೇಟಿಎಂ',
+      'card': 'ಕಾರ್ಡ್',
+      'cardSubtitle': 'ವೀಸಾ, ಮಾಸ್ಟರ್‌ಕಾರ್ಡ್, ರೂಪೇ',
+      'cash': 'ನಗದು',
+      'cashSubtitle': 'ಸೇವೆಯ ನಂತರ ಪಾವತಿಸಿ',
+      'goBack': 'ಹಿಂದಕ್ಕೆ ಹೋಗಿ',
+      'showPassword': 'ಪಾಸ್ವರ್ಡ್ ತೋರಿಸಿ',
+      'hidePassword': 'ಪಾಸ್ವರ್ಡ್ ಮರೆಮಾಡಿ',
+      'sendMessage': 'ಕಳುಹಿಸಿ',
+      'unknownState': 'ಅಜ್ಞಾತ ಸ್ಥಿತಿ',
+      'etaFormat': 'ETA: %s ನಿಮಿಷ',
+      'arrived': 'ಬಂದಿದೆ',
+      'percentComplete': '%s%% ಪೂರ್ಣ',
+      'noOrdersYet': 'ಇನ್ನೂ ಯಾವುದೇ ಆದೇಶಗಳಿಲ್ಲ',
+      'noWorkersNearby': 'ಸಮೀಪದಲ್ಲಿ ಯಾವುದೇ ಕೆಲಸಗಾರರಿಲ್ಲ',
+      'noEarningsYet': 'ಇನ್ನೂ ಯಾವುದೇ ಆದಾಯ ಇಲ್ಲ',
+      'noNotificationsTitle': 'ಯಾವುದೇ ಸೂಚನೆಗಳಿಲ್ಲ',
+      'noResultsFound': 'ಫಲಿತಾಂಶಗಳು ಕಂಡುಬಂದಿಲ್ಲ',
+      'noInternet': 'ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕ ಇಲ್ಲ',
+      'locationDenied': 'ಸ್ಥಳ ಪ್ರವೇಶ ನಿರಾಕರಿಸಲಾಗಿದೆ',
+      'cameraDenied': 'ಕ್ಯಾಮೆರಾ ಪ್ರವೇಶ ನಿರಾಕರಿಸಲಾಗಿದೆ',
+      'otpFailed': 'OTP ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ',
+      'paymentFailed': 'ಪಾವತಿ ವಿಫಲವಾಗಿದೆ',
+      'bookingFailed': 'ಬುಕ್ಕಿಂಗ್ ವಿಫಲವಾಗಿದೆ',
+      'kycFailed': 'ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ',
+      'serverError': 'ಏನೋ ತಪ್ಪಾಗಿದೆ',
+      'sessionExpired': 'ಸೆಷನ್ ಅವಧಿ ಮುಗಿದಿದೆ',
+      'paymentSuccessful': 'ಪಾವತಿ ಯಶಸ್ವಿಯಾಗಿದೆ',
+      'kycSubmitted': 'ಅರ್ಜಿಯನ್ನು ಸಲ್ಲಿಸಲಾಗಿದೆ',
+      'profileUpdated': 'ಪ್ರೊಫೈಲ್ ನವೀಕರಿಸಲಾಗಿದೆ',
+      'ratingSubmitted': 'ರೇಟಿಂಗ್ ಸಲ್ಲಿಸಲಾಗಿದೆ',
+      'complaintSubmitted': 'ದೂರು ಸಲ್ಲಿಸಲಾಗಿದೆ',
+    },
+    'bn': {
+      'morningGreeting': 'সুপ্রভাত',
+      'afternoonGreeting': 'শুভ দুপুর',
+      'eveningGreeting': 'শুভ সন্ধ্যা',
+      'guestUser': 'অতিথি',
+      'appName': 'Fixly',
+      'tagline': 'সহযোগী গিগ সেবা',
+      'continueLabel': 'অগ্রসর হন',
+      'login': 'লগইন',
+      'signIn': 'সাইন ইন',
+      'username': 'ব্যবহারকারীর নাম',
+      'usernameHint': 'ব্যবহারকারী আইডি বা ইমেইল লিখুন',
+      'forgotPassword': 'পাসওয়ার্ড ভুলে গেছেন',
+      'rememberMe': 'আমাকে মনে রাখুন',
+      'orShort': 'অথবা',
+      'appleSignInUnavailable': 'অ্যাপল সাইন ইন এখনো উপলব্ধ নয়',
+      'forgotPasswordHint': 'পাসওয়ার্ড রিসেট করতে আপনার ইমেইল লিখুন',
+      'forgotPasswordSent': 'যদি অ্যাকাউন্ট থাকে, রিসেট লিঙ্ক পাঠানো হয়েছে',
+      'signUp': 'সাইন আপ',
+      'createAccount': 'অ্যাকাউন্ট তৈরি করুন',
+      'sendOtp': 'ওটিপি পাঠান',
+      'verifyOtp': 'ওটিপি যাচাই করুন',
+      'otpSentTo': 'ওটিপি পাঠানো হয়েছে',
+      'resendOtp': 'ওটিপি পুনরায় পাঠান',
+      'otpResent': 'একটি নতুন ওটিপি পাঠানো হয়েছে',
+      'fullName': 'পূর্ণ নাম',
+      'fullNameHint': 'আপনার নাম লিখুন',
+      'email': 'ইমেইল',
+      'password': 'পাসওয়ার্ড',
+      'passwordHint': 'আপনার পাসওয়ার্ড লিখুন',
+      'phoneNumber': 'ফোন নম্বর',
+      'phoneHint': '১০-সংখ্যার মোবাইল নম্বর',
+      'continueWithGoogle': 'গুগল',
+      'continueWithFacebook': 'ফেসবুক',
+      'orContinueWith': 'অথবা ইমেইল দিয়ে চালিয়ে যান',
+      'locationRequiredForSignup': 'সাইন আপ করতে GPS চালু করুন এবং অবস্থান অনুমতি দিন',
+      'locationServicesOffTitle': 'অবস্থান বন্ধ আছে',
+      'locationServicesOffBody': 'আপনার ফোনের সেটিংসে অবস্থান চালু করুন যাতে আমরা সাইন‑আপের সময় আপনার এলাকা পাঠাতে পারি, তারপর আবার চেষ্টা করুন।',
+      'turnOnLocation': 'অবস্থান চালু করুন',
+      'locationPermissionBlockedTitle': 'অবস্থান ব্লক হয়েছে',
+      'locationPermissionBlockedBody': 'ফিক্সলি-কে অবস্থান অনুমতি দরকার। সেটিংস খুলে এটি সক্রিয় করুন।',
+      'openSettings': 'সেটিংস খুলুন',
+      'locationEnableTitle': 'অবস্থান সক্রিয় করুন',
+      'locationEnableBody': 'ফিক্সলি আপনার অবস্থান প্রয়োজন নিকটস্থ কর্মী খুঁজতে এবং বুকিং ঠিকানা নির্ধারণের জন্য।',
+      'notNow': 'এখন নয়',
+      'allow': 'অনুমতি দিন',
+      'dontHaveAccount': 'অ্যাকাউন্ট নেই?',
+      'alreadyHaveAccount': 'ইতিমধ্যে অ্যাকাউন্ট আছে?',
+      'signInAsWorker': 'কর্মী হিসেবে সাইন ইন করুন',
+      'signInAsWorkerHint': 'কর্মী হিসেবে সাইন ইন — নিচের যেকোনো বিকল্প ব্যবহার করুন',
+      'loginSubtitle': 'অগ্রসর হতে লগইন করুন',
+      'signUpSubtitle': 'শুরু করতে একটি অ্যাকাউন্ট তৈরি করুন',
+      'authEmailTab': 'ইমেইল',
+      'authPhoneTab': 'ফোন',
+      'customer': 'গ্রাহক',
+      'worker': 'কর্মী',
+      'selectLanguage': 'ভাষা নির্বাচন করুন',
+      'choosePreferredLanguage': 'আপনার পছন্দের ভাষা নির্বাচন করুন',
+      'cooperativeWelcomeTitle': 'কোঅপারেটিভে স্বাগতম',
+      'cooperativeWelcomeBody': 'সদস্য-স্বত্বাধীন প্ল্যাটফর্ম, ১০–১৫% কমিশন এবং ন্যায্য মজুরি সহ।',
+      'chooseRole': 'আপনার ভূমিকা নির্বাচন করুন',
+      'customerRoleSubtitle': 'বাড়ির সেবার জন্য বিশ্বস্ত কর্মী বুক করুন',
+      'workerRoleSubtitle': 'দক্ষতা প্রদান করুন এবং ন্যায্য মজুরি অর্জন করুন',
+      'fairWages': 'ন্যায্য মজুরি',
+      'fairWagesDesc': 'কোঅপারেটিভের সদস্যরা বাজারের চেয়ে বেশি উপার্জন করেন',
+      'memberOwned': 'সদস্য-স্বত্বাধীন',
+      'memberOwnedDesc': 'লাভ সদস্যদের মধ্যে ভাগ করা হয়',
+      'welfareCoverage': 'সামাজিক কল্যাণ কভারেজ',
+      'welfareCoverageDesc': 'ই-শ্রম এবং বীমা সহায়তা',
+      'navHome': 'হোম',
+      'navSearch': 'অনুসন্ধান',
+      'navBookings': 'বুকিংস',
+      'navAi': 'এআই',
+      'navProfile': 'প্রোফাইল',
+      'navJobs': 'চাকরি',
+      'navWallet': 'ওয়ালেট',
+      'categories': 'শ্রেণীসমূহ',
+      'allCategories': 'সকল শ্রেণী',
+      'viewAll': 'সব দেখুন',
+      'popularServices': 'জনপ্রিয় সেবা',
+      'aiHelper': 'এআই সহায়ক',
+      'homeBooking': 'হোম বুকিং',
+      'searchHint': 'সেবা অনুসন্ধান করুন...',
+      'servicesInCategory': 'এই শ্রেণীর সেবা',
+      'noServicesFound': 'কোনো সেবা পাওয়া যায়নি',
+      'settings': 'সেটিংস',
+      'hindiLanguage': 'হিন্দি ভাষা',
+      'appearance': 'দেখা',
+      'theme': 'থিম',
+      'themeSystem': 'সিস্টেম',
+      'themeLight': 'হালকা',
+      'themeDark': 'অন্ধকার',
+      'pushNotifications': 'পুশ নোটিফিকেশন',
+      'pushNotificationsHint': 'বুকিং আপডেট এবং অফার',
+      'updateYourDetails': 'আপনার নাম এবং ফোন আপডেট করুন',
+      'notificationsOn': 'নোটিফিকেশন চালু',
+      'notificationsOff': 'নোটিফিকেশন বন্ধ',
+      'notificationPreferences': 'নোটিফিকেশন পছন্দসমূহ',
+      'privacySecurity': 'গোপনীয়তা ও নিরাপত্তা',
+      'aboutCooperative': 'কোঅপারেটিভ সম্পর্কে',
+      'screenGallery': 'স্ক্রিন গ্যালারি',
+      'emergencySos': 'ইমার্জেন্সি এসওএস',
+      'languageHindi': 'ভাষা: হিন্দি',
+      'languageEnglish': 'ভাষা: ইংরেজি',
+      'profile': 'প্রোফাইল',
+      'editProfile': 'প্রোফাইল সম্পাদনা',
+      'signOut': 'সাইন আউট',
+      'signOutConfirm': 'এই অ্যাকাউন্ট থেকে সাইন আউট করবেন?',
+      'cancel': 'বাতিল',
+      'preferences': 'পছন্দসমূহ',
+      'account': 'অ্যাকাউন্ট',
+      'language': 'ভাষা',
+      'english': 'ইংরেজি',
+      'hindi': 'হিন্দি',
+      'appVersion': 'সংস্করণ',
+      'profileSaved': 'প্রোফাইল সংরক্ষিত',
+      'insuredMember': 'বীমাকৃত সদস্য',
+      'customerMember': 'গ্রাহক সদস্য',
+      'workerMember': 'কর্মী সদস্য',
+      'helpSafety': 'সহায়তা ও নিরাপত্তা',
+      'whyFixly': 'ফিক্সলি কেন?',
+      'fairWagesBenefit': 'কর্মীরা উপার্জনের ৮৫–৯০% রাখে — কোনো শোষণমূলক কাট নেই।',
+      'memberOwnedBenefit': 'সহযোগী শাসন কর্মী ও গ্রাহকদের প্রথমে রাখে।',
+      'welfareBenefit': 'গিগ কর্মীদের জন্য PMSBY বীমা এবং ই-শ্রম সমর্থন।',
+      'howUseFixly': 'আপনি কীভাবে ফিক্সলি ব্যবহার করবেন?',
+      'support': 'সহায়তা',
+      'fromPrice': '₹%s থেকে',
+      'orderHistory': 'অর্ডার ইতিহাস',
+      'notifications': 'বিজ্ঞপ্তি',
+      'supportChat': 'সহায়তা চ্যাট',
+      'supportTicket': 'সহায়তা টিকিট',
+      'sos': 'SOS ও জরুরি',
+      'search': 'অনুসন্ধান',
+      'homeBookingTitle': 'হোম বুকিং',
+      'bookService': 'সেবা বুক করুন',
+      'service': 'সেবা',
+      'priceEstimate': 'মূল্য অনুমান',
+      'reviewEstimate': 'অনুমান পর্যালোচনা',
+      'findingWorker': 'কর্মী খুঁজছে',
+      'workerAssigned': 'কর্মী নির্ধারিত',
+      'workerAccepted': 'কর্মী গ্রহণ করেছে',
+      'liveTracking': 'লাইভ ট্র্যাকিং',
+      'workInProgress': 'কাজ চলমান',
+      'workStarted': 'কাজ শুরু হয়েছে',
+      'payment': 'পেমেন্ট',
+      'completePayment': 'পেমেন্ট সম্পন্ন করুন',
+      'rateService': 'সেবা রেট করুন',
+      'bookingConfirmed': 'বুকিং নিশ্চিত হয়েছে',
+      'addParts': 'পার্টস যোগ করুন',
+      'availableWorkers': 'উপলব্ধ কর্মী',
+      'workerProfile': 'কর্মীর প্রোফাইল',
+      'aiDiscovery': 'এআই আবিষ্কার',
+      'aiMatchedWorkers': 'এআই মেলানো কর্মী',
+      'destination': 'কর্মীর গন্তব্য',
+      'workersDestination': 'কর্মীর গন্তব্য',
+      'skipToWorkStarted': 'কাজ শুরুতে স্কিপ করুন',
+      'dashboard': 'ড্যাশবোর্ড',
+      'jobFeed': 'চাকরির ফিড',
+      'incomingOrders': 'আসন্ন অর্ডার',
+      'orderDetails': 'অর্ডার বিবরণ',
+      'activeJob': 'সক্রিয় কাজ',
+      'navigation': 'নেভিগেশন',
+      'startNavigation': 'নেভিগেশন শুরু করুন',
+      'navigationStarted': 'ধাপে ধাপে নেভিগেশন শুরু হয়েছে',
+      'availability': 'উপলভ্যতা',
+      'availabilityStatus': 'উপলভ্যতার অবস্থা',
+      'earnings': 'উপার্জন',
+      'wallet': 'ওয়ালেট',
+      'myProfile': 'আমার প্রোফাইল',
+      'reliabilityScore': 'বিশ্বাসযোগ্যতার স্কোর',
+      'identityKyc': 'পরিচয় ও যাচাই',
+      'workProfile': 'দক্ষতা ও এলাকা',
+      'payoutWelfare': 'পেমেন্ট ও কল্যাণ',
+      'personalDetails': 'ব্যক্তিগত বিবরণ',
+      'aadhaarVerification': 'আধার যাচাই',
+      'panVerification': 'প্যান যাচাই',
+      'selfieVerification': 'সেলফি যাচাই',
+      'skillCertificate': 'দক্ষতা সার্টিফিকেট',
+      'selectSkills': 'দক্ষতা নির্বাচন করুন',
+      'otherSkills': 'অন্যান্য',
+      'otherSkillsHint': 'একটি দক্ষতা টাইপ করুন, তারপর কমা দিয়ে আরও যোগ করুন',
+      'serviceArea': 'আপনার অবস্থান',
+      'serviceAreaHint': 'মানচিত্রে আপনার বর্তমান অবস্থান দেখুন। কাছাকাছি স্থান অন্বেষণ করতে প্যান করুন।',
+      'yourRates': 'আপনার হার',
+      'yourRatesHint': 'আপনি নির্বাচিত প্রতিটি দক্ষতার জন্য ঘণ্টা ভিত্তিক হার (₹) সেট করুন।',
+      'experienceYears': 'অভিজ্ঞতার বছর',
+      'workerBio': 'সংক্ষিপ্ত বায়ো',
+      'workerBioHint': 'গ্রাহকদের আপনার অভিজ্ঞতা সম্পর্কে জানান',
+      'hourlyRateLabel': 'ঘণ্টা হার (₹)',
+      'selectSkillsFirstForRates': 'হার সেট করতে উপরের দক্ষতা নির্বাচন করুন।',
+      'largerRadiusHint': 'বড় ব্যাসার্ধ = আরও কাছাকাছি কাজ',
+      'locationOnMap': 'মানচিত্রে অবস্থান',
+      'youAreHere': 'আপনি এখানে',
+      'waitingForLocation': 'অবস্থান অপেক্ষা করা হচ্ছে…',
+      'refreshLocation': 'অবস্থান রিফ্রেশ করুন',
+      'welfareInsurance': 'কল্যাণ ও বীমা',
+      'bankUpi': 'ব্যাংক ও ইউপিআই',
+      'kycStatus': 'আবেদন যাচাই',
+      'upiSubtitle': 'গুগল পে, ফোনপি, পেটিএম',
+      'card': 'কার্ড',
+      'cardSubtitle': 'ভিসা, মাস্টারকার্ড, রু পে',
+      'cash': 'নগদ',
+      'cashSubtitle': 'সেবার পরে পরিশোধ',
+      'goBack': 'ফিরে যান',
+      'showPassword': 'পাসওয়ার্ড দেখান',
+      'hidePassword': 'পাসওয়ার্ড লুকান',
+      'sendMessage': 'পাঠান',
+      'unknownState': 'অজানা অবস্থা',
+      'etaFormat': 'ইটিএ: %s মিনিট',
+      'arrived': 'পৌঁছেছে',
+      'percentComplete': '%s%% সম্পন্ন',
+      'noOrdersYet': 'এখনো কোনো অর্ডার নেই',
+      'noWorkersNearby': 'কোনো কর্মী নিকটে নেই',
+      'noEarningsYet': 'এখনো কোনো আয় নেই',
+      'noNotificationsTitle': 'কোনো বিজ্ঞপ্তি নেই',
+      'noResultsFound': 'কোনো ফলাফল পাওয়া যায়নি',
+      'noInternet': 'ইন্টারনেট সংযোগ নেই',
+      'locationDenied': 'অবস্থান অ্যাক্সেস অস্বীকৃত',
+      'cameraDenied': 'ক্যামেরা অ্যাক্সেস অস্বীকৃত',
+      'otpFailed': 'ওটিপি যাচাই ব্যর্থ হয়েছে',
+      'paymentFailed': 'পেমেন্ট ব্যর্থ হয়েছে',
+      'bookingFailed': 'বুকিং ব্যর্থ হয়েছে',
+      'kycFailed': 'যাচাই ব্যর্থ হয়েছে',
+      'serverError': 'কিছু ভুল হয়েছে',
+      'sessionExpired': 'সেশন শেষ হয়েছে',
+      'paymentSuccessful': 'পেমেন্ট সফল হয়েছে',
+      'kycSubmitted': 'আবেদন জমা হয়েছে',
+      'profileUpdated': 'প্রোফাইল আপডেট হয়েছে',
+      'ratingSubmitted': 'রেটিং জমা হয়েছে',
+      'complaintSubmitted': 'অভিযোগ জমা হয়েছে',
+    },
+    'gu': {
+      'morningGreeting': 'સુપ્રભાત',
+      'afternoonGreeting': 'શુભ બપોર',
+      'eveningGreeting': 'શુભ સાંજ',
+      'guestUser': 'મહેમાન',
+      'appName': 'Fixly',
+      'tagline': 'સહયોગી ગિગ સેવાઓ',
+      'continueLabel': 'ચાલુ રાખો',
+      'login': 'લોગિન',
+      'signIn': 'સાઇન ઇન',
+      'username': 'યુઝરનેમ',
+      'usernameHint': 'યુઝર આઈડી અથવા ઇમેલ દાખલ કરો',
+      'forgotPassword': 'પાસવર્ડ ભૂલ્યો',
+      'rememberMe': 'મને યાદ રાખો',
+      'orShort': 'અથવા',
+      'appleSignInUnavailable': 'Apple સાઇન ઇન હજી ઉપલબ્ધ નથી',
+      'forgotPasswordHint': 'પાસવર્ડ રીસેટ કરવા માટે તમારો ઇમેલ દાખલ કરો',
+      'forgotPasswordSent': 'જો ખાતું અસ્તિત્વમાં હોય, તો રીસેટ લિંક મોકલવામાં આવી છે',
+      'signUp': 'સાઇન અપ',
+      'createAccount': 'ખાતું બનાવો',
+      'sendOtp': 'OTP મોકલો',
+      'verifyOtp': 'OTP ચકાસો',
+      'otpSentTo': 'OTP મોકલવામાં આવ્યું છે',
+      'resendOtp': 'OTP ફરી મોકલો',
+      'otpResent': 'નવું OTP મોકલવામાં આવ્યું છે',
+      'fullName': 'પૂર્ણ નામ',
+      'fullNameHint': 'તમારું નામ દાખલ કરો',
+      'email': 'ઇમેલ',
+      'password': 'પાસવર્ડ',
+      'passwordHint': 'તમારો પાસવર્ડ દાખલ કરો',
+      'phoneNumber': 'ફોન નંબર',
+      'phoneHint': '10-અંકનો મોબાઇલ નંબર',
+      'continueWithGoogle': 'Google',
+      'continueWithFacebook': 'Facebook',
+      'orContinueWith': 'અથવા ઇમેલ સાથે ચાલુ રાખો',
+      'locationRequiredForSignup': 'સાઇન અપ કરવા માટે GPS સક્રિય કરો અને સ્થાનની ઍક્સેસ આપો',
+      'locationServicesOffTitle': 'સ્થાન બંધ છે',
+      'locationServicesOffBody': 'ફોનની સેટિંગ્સમાં સ્થાન ચાલુ કરો જેથી અમે સાઇન‑અપ સાથે તમારો વિસ્તાર મોકલી શકીએ, પછી ફરી પ્રયાસ કરો.',
+      'turnOnLocation': 'સ્થાન ચાલુ કરો',
+      'locationPermissionBlockedTitle': 'સ્થાન અવરોધિત',
+      'locationPermissionBlockedBody': 'Fixly ને સ્થાનની ઍક્સેસ જોઈએ. તેને સક્રિય કરવા માટે સેટિંગ્સ ખોલો.',
+      'openSettings': 'સેટિંગ્સ ખોલો',
+      'locationEnableTitle': 'સ્થાન સક્રિય કરો',
+      'locationEnableBody': 'Fixly ને નજીકના કામદારો શોધવા અને બુકિંગ સરનામા સેટ કરવા માટે તમારું સ્થાન જોઈએ.',
+      'notNow': 'હમણાં નહીં',
+      'allow': 'મંજૂર કરો',
+      'dontHaveAccount': 'ખાતું નથી?',
+      'alreadyHaveAccount': 'ખાતું પહેલેથી છે?',
+      'signInAsWorker': 'કાર્યકર્તા તરીકે સાઇન ઇન કરો',
+      'signInAsWorkerHint': 'કાર્યકર્તા તરીકે સાઇન ઇન — નીચેની કોઈપણ વિકલ્પ ઉપયોગ કરો',
+      'loginSubtitle': 'ચાલુ રાખવા માટે લોગિન કરો',
+      'signUpSubtitle': 'શરૂ કરવા માટે ખાતું બનાવો',
+      'authEmailTab': 'ઇમેલ',
+      'authPhoneTab': 'ફોન',
+      'customer': 'ગ્રાહક',
+      'worker': 'કર્મચારી',
+      'selectLanguage': 'ભાષા પસંદ કરો',
+      'choosePreferredLanguage': 'તમારી પસંદગીની ભાષા પસંદ કરો',
+      'cooperativeWelcomeTitle': 'સહકારમાં આપનું સ્વાગત છે',
+      'cooperativeWelcomeBody': 'સભ્યો દ્વારા માલિકી ધરાવતી પ્લેટફોર્મ, 10–15% કમિશન અને ન્યાયસંગત પગાર સાથે.',
+      'chooseRole': 'તમારી ભૂમિકા પસંદ કરો',
+      'customerRoleSubtitle': 'ઘરેલુ સેવાઓ માટે વિશ્વસનીય કર્મચારીઓને બુક કરો',
+      'workerRoleSubtitle': 'કુશળતા પ્રદાન કરો અને ન્યાયસંગત પગાર મેળવો',
+      'fairWages': 'ન્યાયસંગત પગાર',
+      'fairWagesDesc': 'સહકારના સભ્યો બજાર દર કરતાં વધુ કમાય છે',
+      'memberOwned': 'સભ્યો દ્વારા માલિકી',
+      'memberOwnedDesc': 'લાભ સભ્યોમાં વહેંચાય છે',
+      'welfareCoverage': 'સામાજિક કલ્યાણ કવરેજ',
+      'welfareCoverageDesc': 'ઇ-શ્રમ અને વીમા સહાય',
+      'navHome': 'ઘર',
+      'navSearch': 'શોધ',
+      'navBookings': 'બુકિંગ્સ',
+      'navAi': 'એઆઈ',
+      'navProfile': 'પ્રોફાઇલ',
+      'navJobs': 'જોબ્સ',
+      'navWallet': 'વોલેટ',
+      'categories': 'વર્ગો',
+      'allCategories': 'બધા વર્ગો',
+      'viewAll': 'બધા જુઓ',
+      'popularServices': 'પ્રખ્યાત સેવાઓ',
+      'aiHelper': 'એઆઈ સહાયક',
+      'homeBooking': 'ઘર બુકિંગ',
+      'searchHint': 'સેવાઓ શોધો...',
+      'servicesInCategory': 'આ વર્ગમાં સેવાઓ',
+      'noServicesFound': 'કોઈ સેવા મળી નથી',
+      'settings': 'સેટિંગ્સ',
+      'hindiLanguage': 'હિન્દી ભાષા',
+      'appearance': 'દેખાવ',
+      'theme': 'થીમ',
+      'themeSystem': 'સિસ્ટમ',
+      'themeLight': 'લાઇટ',
+      'themeDark': 'ડાર્ક',
+      'pushNotifications': 'પુશ સૂચનાઓ',
+      'pushNotificationsHint': 'બુકિંગ અપડેટ્સ અને ઓફર્સ',
+      'updateYourDetails': 'તમારું નામ અને ફોન અપડેટ કરો',
+      'notificationsOn': 'સૂચનાઓ ચાલુ',
+      'notificationsOff': 'સૂચનાઓ બંધ',
+      'notificationPreferences': 'સૂચના પસંદગીઓ',
+      'privacySecurity': 'ગોપનીયતા અને સુરક્ષા',
+      'aboutCooperative': 'સહકાર વિશે',
+      'screenGallery': 'સ્ક્રીન ગેલેરી',
+      'emergencySos': 'આપત્તિ SOS',
+      'languageHindi': 'ભાષા: હિન્દી',
+      'languageEnglish': 'ભાષા: અંગ્રેજી',
+      'profile': 'પ્રોફાઇલ',
+      'editProfile': 'પ્રોફાઇલ સંપાદિત કરો',
+      'signOut': 'સાઇન આઉટ',
+      'signOutConfirm': 'આ ખાતાથી સાઇન આઉટ કરવું છે?',
+      'cancel': 'રદ કરો',
+      'preferences': 'પ્રાથમિકતાઓ',
+      'account': 'ખાતું',
+      'language': 'ભાષા',
+      'english': 'ઇંગ્લિશ',
+      'hindi': 'હિન્દી',
+      'appVersion': 'સંસ્કરણ',
+      'profileSaved': 'પ્રોફાઇલ સાચવાઈ ગઈ',
+      'insuredMember': 'વિમિત સભ્ય',
+      'customerMember': 'ગ્રાહક સભ્ય',
+      'workerMember': 'કાર્યકર્તા સભ્ય',
+      'helpSafety': 'મદદ અને સુરક્ષા',
+      'whyFixly': 'ફિક્સલી કેમ?',
+      'fairWagesBenefit': 'કાર્યકર્તાઓને તેમની કમાણીનું 85–90% મળે છે — કોઈ શોષણકારી કાપ નથી.',
+      'memberOwnedBenefit': 'સહકારાત્મક શાસન કાર્યકર્તાઓ અને ગ્રાહકોને પ્રથમ સ્થાન આપે છે.',
+      'welfareBenefit': 'ગિગ કાર્યકર્તાઓ માટે PMSBY વીમા અને e-શ્રમ સહાય.',
+      'howUseFixly': 'તમે ફિક્સલીનો ઉપયોગ કેવી રીતે કરશો?',
+      'support': 'સપોર્ટ',
+      'fromPrice': '₹%s થી',
+      'orderHistory': 'ઓર્ડર ઇતિહાસ',
+      'notifications': 'સૂચનાઓ',
+      'supportChat': 'સપોર્ટ ચેટ',
+      'supportTicket': 'સપોર્ટ ટિકિટ',
+      'sos': 'SOS અને ઇમર્જન્સી',
+      'search': 'શોધો',
+      'homeBookingTitle': 'હોમ બુકિંગ',
+      'bookService': 'સેવા બુક કરો',
+      'service': 'સેવા',
+      'priceEstimate': 'કિંમત અંદાજ',
+      'reviewEstimate': 'અંદાજની સમીક્ષા',
+      'findingWorker': 'કાર્યકર્તા શોધી રહ્યા છીએ',
+      'workerAssigned': 'કાર્યકર્તા નિમણૂક થયો',
+      'workerAccepted': 'કાર્યકર્તા સ્વીકાર્યો',
+      'liveTracking': 'લાઈવ ટ્રેકિંગ',
+      'workInProgress': 'કાર્ય પ્રગતિમાં છે',
+      'workStarted': 'કાર્ય શરૂ થયું',
+      'payment': 'ચુકવણી',
+      'completePayment': 'ચુકવણી પૂર્ણ કરો',
+      'rateService': 'સેવા રેટ કરો',
+      'bookingConfirmed': 'બુકિંગ પુષ્ટિ થઈ',
+      'addParts': 'ભાગો ઉમેરો',
+      'availableWorkers': 'ઉપલબ્ધ કાર્યકર્તાઓ',
+      'workerProfile': 'કાર્યકર્તા પ્રોફાઇલ',
+      'aiDiscovery': 'AI શોધ',
+      'aiMatchedWorkers': 'AI મેળ ખાતા કાર્યકર્તાઓ',
+      'destination': 'કાર્યકર્તાની ગંતવ્ય',
+      'workersDestination': 'કર્મચારીનું ગંતવ્ય',
+      'skipToWorkStarted': 'કાર્ય શરૂ થયું સુધી સ્કિપ કરો',
+      'dashboard': 'ડેશબોર્ડ',
+      'jobFeed': 'જોબ ફીડ',
+      'incomingOrders': 'આગમન ઓર્ડર્સ',
+      'orderDetails': 'ઓર્ડર વિગતો',
+      'activeJob': 'સક્રિય કામ',
+      'navigation': 'નેવિગેશન',
+      'startNavigation': 'નેવિગેશન શરૂ કરો',
+      'navigationStarted': 'ટર્ન-બાય-ટર્ન નેવિગેશન શરૂ થયું',
+      'availability': 'ઉપલબ્ધતા',
+      'availabilityStatus': 'ઉપલબ્ધતા સ્થિતિ',
+      'earnings': 'આવક',
+      'wallet': 'વોલેટ',
+      'myProfile': 'મારો પ્રોફાઇલ',
+      'reliabilityScore': 'વિશ્વસનીયતા સ્કોર',
+      'identityKyc': 'ઓળખ અને ચકાસણી',
+      'workProfile': 'કૌશલ્યો અને વિસ્તાર',
+      'payoutWelfare': 'પેઆઉટ અને કલ્યાણ',
+      'personalDetails': 'વ્યક્તિગત વિગતો',
+      'aadhaarVerification': 'આધાર ચકાસણી',
+      'panVerification': 'પેન ચકાસણી',
+      'selfieVerification': 'સેલ્ફી ચકાસણી',
+      'skillCertificate': 'કૌશલ્ય પ્રમાણપત્ર',
+      'selectSkills': 'કૌશલ્યો પસંદ કરો',
+      'otherSkills': 'અન્ય',
+      'otherSkillsHint': 'કૌશલ્ય ટાઇપ કરો, પછી વધુ ઉમેરવા માટે કોમ્મા નાખો',
+      'serviceArea': 'તમારું સ્થાન',
+      'serviceAreaHint': 'નકશા પર તમારું વર્તમાન સ્થાન જુઓ. નજીકના વિસ્તારો શોધવા માટે પેન કરો.',
+      'yourRates': 'તમારી દરો',
+      'yourRatesHint': 'તમે પસંદ કરેલા દરેક કૌશલ્ય માટે કલાકની દર (₹) સેટ કરો.',
+      'experienceYears': 'અનુભવ વર્ષો',
+      'workerBio': 'સંક્ષિપ્ત બાયો',
+      'workerBioHint': 'ગ્રાહકોને તમારા અનુભવ વિશે જણાવો',
+      'hourlyRateLabel': 'કલાકની દર (₹)',
+      'selectSkillsFirstForRates': 'દર સેટ કરવા માટે ઉપર કૌશલ્યો પસંદ કરો.',
+      'largerRadiusHint': 'મોટો વ્યાસ = વધુ નજીકના કામ',
+      'locationOnMap': 'નકશા પર સ્થાન',
+      'youAreHere': 'તમે અહીં છો',
+      'waitingForLocation': 'સ્થાનની રાહ જોઈ રહ્યા છીએ…',
+      'refreshLocation': 'સ્થાન રિફ્રેશ કરો',
+      'welfareInsurance': 'કલ્યાણ અને વીમા',
+      'bankUpi': 'બેંક અને યુપીઆઈ',
+      'kycStatus': 'અરજી ચકાસણી',
+      'upiSubtitle': 'ગૂગલ પે, ફોનપી, પેટેમ',
+      'card': 'કાર્ડ',
+      'cardSubtitle': 'વિસા, માસ્ટરકાર્ડ, રૂપે',
+      'cash': 'નગદ',
+      'cashSubtitle': 'સેવા પછી ચુકવણી',
+      'goBack': 'પાછા જાઓ',
+      'showPassword': 'પાસવર્ડ બતાવો',
+      'hidePassword': 'પાસવર્ડ છુપાવો',
+      'sendMessage': 'મોકલો',
+      'unknownState': 'અજ્ઞાત સ્થિતિ',
+      'etaFormat': 'ETA: %s મિનિટ',
+      'arrived': 'પહોંચી ગયું',
+      'percentComplete': '%s%% પૂર્ણ',
+      'noOrdersYet': 'હજુ કોઈ ઓર્ડર નથી',
+      'noWorkersNearby': 'આસપાસ કોઈ કામદાર નથી',
+      'noEarningsYet': 'હજુ કોઈ કમાણી નથી',
+      'noNotificationsTitle': 'કોઈ સૂચનાઓ નથી',
+      'noResultsFound': 'કોઈ પરિણામ મળ્યા નથી',
+      'noInternet': 'ઇન્ટરનેટ કનેક્શન નથી',
+      'locationDenied': 'સ્થાનની ઍક્સેસ નકારી દેવામાં આવી',
+      'cameraDenied': 'કેમેરા ઍક્સેસ નકારી દેવામાં આવી',
+      'otpFailed': 'OTP પુષ્ટિ નિષ્ફળ',
+      'paymentFailed': 'ચુકવણી નિષ્ફળ',
+      'bookingFailed': 'બુકિંગ નિષ્ફળ',
+      'kycFailed': 'KYC પુષ્ટિ નિષ્ફળ',
+      'serverError': 'કંઈક ખોટું થયું',
+      'sessionExpired': 'સત્ર સમાપ્ત થયું',
+      'paymentSuccessful': 'ચુકવણી સફળ',
+      'kycSubmitted': 'અરજી સબમિટ કરવામાં આવી',
+      'profileUpdated': 'પ્રોફાઇલ અપડેટ થઈ',
+      'ratingSubmitted': 'રેટિંગ સબમિટ થયું',
+      'complaintSubmitted': 'ફરિયાદ સબમિટ થઈ',
+    },
+    'pa': {
+      'morningGreeting': 'ਸ਼ੁਭ ਸਵੇਰ',
+      'afternoonGreeting': 'ਸ਼ੁਭ ਦੁਪਹਿਰ',
+      'eveningGreeting': 'ਸ਼ੁਭ ਸ਼ਾਮ',
+      'guestUser': 'ਮਹਿਮਾਨ',
+      'appName': 'Fixly',
+      'tagline': 'ਸਹਿਕਾਰਤਮਕ ਗਿਗ ਸੇਵਾਵਾਂ',
+      'continueLabel': 'ਜਾਰੀ ਰੱਖੋ',
+      'login': 'ਲਾਗਇਨ',
+      'signIn': 'ਸਾਈਨ ਇਨ',
+      'username': 'ਉਪਭੋਗਤਾ ਨਾਮ',
+      'usernameHint': 'ਉਪਭੋਗਤਾ ID ਜਾਂ ਈਮੇਲ ਦਰਜ ਕਰੋ',
+      'forgotPassword': 'ਪਾਸਵਰਡ ਭੁੱਲ ਗਏ',
+      'rememberMe': 'ਮੈਨੂੰ ਯਾਦ ਰੱਖੋ',
+      'orShort': 'ਜਾਂ',
+      'appleSignInUnavailable': 'ਐਪਲ ਸਾਈਨ ਇਨ ਹਾਲੇ ਉਪਲਬਧ ਨਹੀਂ ਹੈ',
+      'forgotPasswordHint': 'ਪਾਸਵਰਡ ਰੀਸੈਟ ਕਰਨ ਲਈ ਆਪਣੀ ਈਮੇਲ ਦਰਜ ਕਰੋ',
+      'forgotPasswordSent': 'ਜੇਕਰ ਖਾਤਾ ਮੌਜੂਦ ਹੈ, ਤਾਂ ਰੀਸੈਟ ਲਿੰਕ ਭੇਜਿਆ ਗਿਆ ਹੈ',
+      'signUp': 'ਸਾਈਨ ਅਪ',
+      'createAccount': 'ਖਾਤਾ ਬਣਾਓ',
+      'sendOtp': 'OTP ਭੇਜੋ',
+      'verifyOtp': 'OTP ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ',
+      'otpSentTo': 'OTP ਭੇਜਿਆ ਗਿਆ',
+      'resendOtp': 'OTP ਮੁੜ ਭੇਜੋ',
+      'otpResent': 'ਨਵਾਂ OTP ਭੇਜਿਆ ਗਿਆ ਹੈ',
+      'fullName': 'ਪੂਰਾ ਨਾਮ',
+      'fullNameHint': 'ਆਪਣਾ ਨਾਮ ਦਰਜ ਕਰੋ',
+      'email': 'ਈਮੇਲ',
+      'password': 'ਪਾਸਵਰਡ',
+      'passwordHint': 'ਆਪਣਾ ਪਾਸਵਰਡ ਦਰਜ ਕਰੋ',
+      'phoneNumber': 'ਫੋਨ ਨੰਬਰ',
+      'phoneHint': '10-ਅੰਕਾਂ ਵਾਲਾ ਮੋਬਾਈਲ ਨੰਬਰ',
+      'continueWithGoogle': 'ਗੂਗਲ',
+      'continueWithFacebook': 'ਫੇਸਬੁੱਕ',
+      'orContinueWith': 'ਜਾਂ ਈਮੇਲ ਨਾਲ ਜਾਰੀ ਰੱਖੋ',
+      'locationRequiredForSignup': 'ਸਾਈਨ ਅਪ ਲਈ GPS ਚਾਲੂ ਕਰੋ ਅਤੇ ਲੋਕੇਸ਼ਨ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ',
+      'locationServicesOffTitle': 'ਲੋਕੇਸ਼ਨ ਬੰਦ ਹੈ',
+      'locationServicesOffBody': 'ਫੋਨ ਦੀਆਂ ਸੈਟਿੰਗਜ਼ ਵਿੱਚ ਲੋਕੇਸ਼ਨ ਚਾਲੂ ਕਰੋ ਤਾਂ ਜੋ ਅਸੀਂ ਤੁਹਾਡਾ ਖੇਤਰ ਸਾਈਨ-ਅਪ ਨਾਲ ਭੇਜ ਸਕੀਏ, ਫਿਰ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।',
+      'turnOnLocation': 'ਲੋਕੇਸ਼ਨ ਚਾਲੂ ਕਰੋ',
+      'locationPermissionBlockedTitle': 'ਲੋਕੇਸ਼ਨ ਬਲੌਕ ਹੈ',
+      'locationPermissionBlockedBody': 'Fixly ਨੂੰ ਲੋਕੇਸ਼ਨ ਦੀ ਲੋੜ ਹੈ। ਇਸ ਨੂੰ ਯੋਗ ਕਰਨ ਲਈ ਸੈਟਿੰਗਜ਼ ਖੋਲ੍ਹੋ।',
+      'openSettings': 'ਸੈਟਿੰਗਜ਼ ਖੋਲ੍ਹੋ',
+      'locationEnableTitle': 'ਲੋਕੇਸ਼ਨ ਯੋਗ ਕਰੋ',
+      'locationEnableBody': 'Fixly ਨੂੰ ਨੇੜਲੇ ਕਰਮਚਾਰੀਆਂ ਨੂੰ ਲੱਭਣ ਅਤੇ ਬੁਕਿੰਗ ਪਤੇ ਸੈੱਟ ਕਰਨ ਲਈ ਤੁਹਾਡੀ ਲੋਕੇਸ਼ਨ ਦੀ ਲੋੜ ਹੈ।',
+      'notNow': 'ਹੁਣ ਨਹੀਂ',
+      'allow': 'ਇਜਾਜ਼ਤ ਦਿਓ',
+      'dontHaveAccount': 'ਕੀ ਤੁਹਾਡੇ ਕੋਲ ਖਾਤਾ ਨਹੀਂ ਹੈ?',
+      'alreadyHaveAccount': 'ਕੀ ਤੁਹਾਡੇ ਕੋਲ ਪਹਿਲਾਂ ਹੀ ਖਾਤਾ ਹੈ?',
+      'signInAsWorker': 'ਕਰਮਚਾਰੀ ਵਜੋਂ ਸਾਈਨ ਇਨ ਕਰੋ',
+      'signInAsWorkerHint': 'ਕਰਮਚਾਰੀ ਵਜੋਂ ਸਾਈਨ ਇਨ — ਹੇਠਾਂ ਦਿੱਤੇ ਕਿਸੇ ਵੀ ਵਿਕਲਪ ਦੀ ਵਰਤੋਂ ਕਰੋ',
+      'loginSubtitle': 'ਜਾਰੀ ਰੱਖਣ ਲਈ ਲਾਗਇਨ ਕਰੋ',
+      'signUpSubtitle': 'ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਖਾਤਾ ਬਣਾਓ',
+      'authEmailTab': 'ਈਮੇਲ',
+      'authPhoneTab': 'ਫੋਨ',
+      'customer': 'ਗਾਹਕ',
+      'worker': 'ਕਰਮਚਾਰੀ',
+      'selectLanguage': 'ਭਾਸ਼ਾ ਚੁਣੋ',
+      'choosePreferredLanguage': 'ਆਪਣੀ ਪਸੰਦੀਦਾ ਭਾਸ਼ਾ ਚੁਣੋ',
+      'cooperativeWelcomeTitle': 'ਸਹਿਕਾਰਤਾ ਵਿੱਚ ਤੁਹਾਡਾ ਸਵਾਗਤ ਹੈ',
+      'cooperativeWelcomeBody': 'ਸਦੱਸ-ਮਾਲਕੀ ਵਾਲਾ ਪਲੇਟਫਾਰਮ, 10–15% ਕਮਿਸ਼ਨ ਅਤੇ ਨਿਆਂਪੂਰਨ ਤਨਖਾਹਾਂ ਨਾਲ।',
+      'chooseRole': 'ਆਪਣਾ ਰੋਲ ਚੁਣੋ',
+      'customerRoleSubtitle': 'ਘਰੇਲੂ ਸੇਵਾਵਾਂ ਲਈ ਭਰੋਸੇਮੰਦ ਕਰਮਚਾਰੀਆਂ ਦੀ ਬੁਕਿੰਗ ਕਰੋ',
+      'workerRoleSubtitle': 'ਕੁਸ਼ਲਤਾਵਾਂ ਪੇਸ਼ ਕਰੋ ਅਤੇ ਨਿਆਂਪੂਰਨ ਤਨਖਾਹ ਕਮਾਓ',
+      'fairWages': 'ਨਿਆਂਪੂਰਨ ਤਨਖਾਹ',
+      'fairWagesDesc': 'ਸਹਿਕਾਰਤਾ ਦੇ ਮੈਂਬਰ ਬਾਜ਼ਾਰ ਦਰਾਂ ਤੋਂ ਉੱਚੀ ਤਨਖਾਹ ਕਮਾਉਂਦੇ ਹਨ',
+      'memberOwned': 'ਸਦੱਸ-ਮਾਲਕੀ',
+      'memberOwnedDesc': 'ਲਾਭ ਮੈਂਬਰਾਂ ਵਿੱਚ ਵੰਡਿਆ ਜਾਂਦਾ ਹੈ',
+      'welfareCoverage': 'ਕਲਿਆਣ ਕਵਰੇਜ',
+      'welfareCoverageDesc': 'ਈ-ਸ਼੍ਰਮ ਅਤੇ ਬੀਮਾ ਸਹਾਇਤਾ',
+      'navHome': 'ਹੋਮ',
+      'navSearch': 'ਖੋਜ',
+      'navBookings': 'ਬੁਕਿੰਗਜ਼',
+      'navAi': 'ਏ.ਆਈ.',
+      'navProfile': 'ਪ੍ਰੋਫਾਈਲ',
+      'navJobs': 'ਨੌਕਰੀਆਂ',
+      'navWallet': 'ਵਾਲਿਟ',
+      'categories': 'ਸ਼੍ਰੇਣੀਆਂ',
+      'allCategories': 'ਸਭ ਸ਼੍ਰੇਣੀਆਂ',
+      'viewAll': 'ਸਭ ਵੇਖੋ',
+      'popularServices': 'ਪ੍ਰਸਿੱਧ ਸੇਵਾਵਾਂ',
+      'aiHelper': 'ਏ.ਆਈ. ਸਹਾਇਕ',
+      'homeBooking': 'ਘਰੇਲੂ ਬੁਕਿੰਗ',
+      'searchHint': 'ਸੇਵਾਵਾਂ ਦੀ ਖੋਜ...',
+      'servicesInCategory': 'ਇਸ ਸ਼੍ਰੇਣੀ ਦੀਆਂ ਸੇਵਾਵਾਂ',
+      'noServicesFound': 'ਕੋਈ ਸੇਵਾ ਨਹੀਂ ਮਿਲੀ',
+      'settings': 'ਸੈਟਿੰਗਜ਼',
+      'hindiLanguage': 'ਹਿੰਦੀ ਭਾਸ਼ਾ',
+      'appearance': 'ਦਿੱਖ',
+      'theme': 'ਥੀਮ',
+      'themeSystem': 'ਸਿਸਟਮ',
+      'themeLight': 'ਲਾਈਟ',
+      'themeDark': 'ਡਾਰਕ',
+      'pushNotifications': 'ਪੁਸ਼ ਨੋਟੀਫਿਕੇਸ਼ਨ',
+      'pushNotificationsHint': 'ਬੁਕਿੰਗ ਅਪਡੇਟਸ ਅਤੇ ਪੇਸ਼ਕਸ਼ਾਂ',
+      'updateYourDetails': 'ਆਪਣਾ ਨਾਮ ਅਤੇ ਫ਼ੋਨ ਅਪਡੇਟ ਕਰੋ',
+      'notificationsOn': 'ਨੋਟੀਫਿਕੇਸ਼ਨ ਚਾਲੂ',
+      'notificationsOff': 'ਨੋਟੀਫਿਕੇਸ਼ਨ ਬੰਦ',
+      'notificationPreferences': 'ਨੋਟੀਫਿਕੇਸ਼ਨ ਪਸੰਦ',
+      'privacySecurity': 'ਗੋਪਨੀਯਤਾ ਅਤੇ ਸੁਰੱਖਿਆ',
+      'aboutCooperative': 'ਸਹਿਕਾਰਤਾ ਬਾਰੇ',
+      'screenGallery': 'ਸਕਰੀਨ ਗੈਲਰੀ',
+      'emergencySos': 'ਐਮਰਜੈਂਸੀ SOS',
+      'languageHindi': 'ਭਾਸ਼ਾ: ਹਿੰਦੀ',
+      'languageEnglish': 'ਭਾਸ਼ਾ: ਅੰਗਰੇਜ਼ੀ',
+      'profile': 'ਪ੍ਰੋਫਾਈਲ',
+      'editProfile': 'ਪ੍ਰੋਫਾਈਲ ਸੰਪਾਦਿਤ ਕਰੋ',
+      'signOut': 'ਸਾਈਨ ਆਉਟ',
+      'signOutConfirm': 'ਕੀ ਤੁਸੀਂ ਇਸ ਖਾਤੇ ਤੋਂ ਸਾਈਨ ਆਉਟ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?',
+      'cancel': 'ਰੱਦ ਕਰੋ',
+      'preferences': 'ਪਸੰਦਾਂ',
+      'account': 'ਖਾਤਾ',
+      'language': 'ਭਾਸ਼ਾ',
+      'english': 'ਅੰਗਰੇਜ਼ੀ',
+      'hindi': 'ਹਿੰਦੀ',
+      'appVersion': 'ਸੰਸਕਰਣ',
+      'profileSaved': 'ਪ੍ਰੋਫਾਈਲ ਸੰਭਾਲਿਆ ਗਿਆ',
+      'insuredMember': 'ਬੀਮਾ ਯੋਗ ਮੈਂਬਰ',
+      'customerMember': 'ਗਾਹਕ ਮੈਂਬਰ',
+      'workerMember': 'ਕਰਮਚਾਰੀ ਮੈਂਬਰ',
+      'helpSafety': 'ਮਦਦ ਅਤੇ ਸੁਰੱਖਿਆ',
+      'whyFixly': 'ਫਿਕਸਲੀ ਕਿਉਂ?',
+      'fairWagesBenefit': 'ਕਰਮਚਾਰੀਆਂ ਨੂੰ 85–90% ਕਮਾਈ ਮਿਲਦੀ ਹੈ — ਕੋਈ ਸ਼ੋਸ਼ਣਕਾਰੀ ਕਟੌਤੀ ਨਹੀਂ।',
+      'memberOwnedBenefit': 'ਸਹਿਕਾਰੀ ਸ਼ਾਸਨ ਕਰਮਚਾਰੀਆਂ ਅਤੇ ਗਾਹਕਾਂ ਨੂੰ ਪਹਿਲਾਂ ਰੱਖਦਾ ਹੈ।',
+      'welfareBenefit': 'PMSBY ਬੀਮਾ ਅਤੇ ਗਿਗ ਕਰਮਚਾਰੀਆਂ ਲਈ e-ਸ਼ਰਮ ਸਹਾਇਤਾ।',
+      'howUseFixly': 'ਤੁਸੀਂ ਫਿਕਸਲੀ ਨੂੰ ਕਿਵੇਂ ਵਰਤੋਗੇ?',
+      'support': 'ਸਹਾਇਤਾ',
+      'fromPrice': '₹%s ਤੋਂ',
+      'orderHistory': 'ਆਰਡਰ ਇਤਿਹਾਸ',
+      'notifications': 'ਸੂਚਨਾਵਾਂ',
+      'supportChat': 'ਸਹਾਇਤਾ ਚੈਟ',
+      'supportTicket': 'ਸਹਾਇਤਾ ਟਿਕਟ',
+      'sos': 'SOS ਅਤੇ ਐਮਰਜੈਂਸੀ',
+      'search': 'ਖੋਜੋ',
+      'homeBookingTitle': 'ਘਰ ਬੁਕਿੰਗ',
+      'bookService': 'ਸੇਵਾ ਬੁੱਕ ਕਰੋ',
+      'service': 'ਸੇਵਾ',
+      'priceEstimate': 'ਕੀਮਤ ਅੰਦਾਜ਼ਾ',
+      'reviewEstimate': 'ਅੰਦਾਜ਼ਾ ਸਮੀਖਿਆ ਕਰੋ',
+      'findingWorker': 'ਕਰਮਚਾਰੀ ਲੱਭ ਰਹੇ ਹਾਂ',
+      'workerAssigned': 'ਕਰਮਚਾਰੀ ਨਿਰਧਾਰਤ ਕੀਤਾ ਗਿਆ',
+      'workerAccepted': 'ਕਰਮਚਾਰੀ ਨੇ ਸਵੀਕਾਰ ਕੀਤਾ',
+      'liveTracking': 'ਲਾਈਵ ਟਰੈਕਿੰਗ',
+      'workInProgress': 'ਕੰਮ ਚੱਲ ਰਿਹਾ ਹੈ',
+      'workStarted': 'ਕੰਮ ਸ਼ੁਰੂ ਹੋ ਗਿਆ',
+      'payment': 'ਭੁਗਤਾਨ',
+      'completePayment': 'ਭੁਗਤਾਨ ਪੂਰਾ ਕਰੋ',
+      'rateService': 'ਸੇਵਾ ਦੀ ਰੇਟਿੰਗ ਕਰੋ',
+      'bookingConfirmed': 'ਬੁਕਿੰਗ ਦੀ ਪੁਸ਼ਟੀ ਹੋ ਗਈ',
+      'addParts': 'ਭਾਗ ਸ਼ਾਮਲ ਕਰੋ',
+      'availableWorkers': 'ਉਪਲਬਧ ਕਰਮਚਾਰੀ',
+      'workerProfile': 'ਕਰਮਚਾਰੀ ਪ੍ਰੋਫਾਈਲ',
+      'aiDiscovery': 'AI ਖੋਜ',
+      'aiMatchedWorkers': 'AI ਨਾਲ ਮਿਲੇ ਕਰਮਚਾਰੀ',
+      'destination': 'ਕਰਮਚਾਰੀ ਦੀ ਮੰਜ਼ਿਲ',
+      'workersDestination': 'ਕਰਮਚਾਰੀ ਦੀ ਮੰਜ਼ਿਲ',
+      'skipToWorkStarted': 'ਕੰਮ ਸ਼ੁਰੂ ਹੋਣ ਤੱਕ ਛੱਡੋ',
+      'dashboard': 'ਡੈਸ਼ਬੋਰਡ',
+      'jobFeed': 'ਨੌਕਰੀ ਫੀਡ',
+      'incomingOrders': 'ਆਉਣ ਵਾਲੇ ਆਰਡਰ',
+      'orderDetails': 'ਆਰਡਰ ਵੇਰਵੇ',
+      'activeJob': 'ਸਕਰੀਅ ਨੌਕਰੀ',
+      'navigation': 'ਨੇਵੀਗੇਸ਼ਨ',
+      'startNavigation': 'ਨੇਵੀਗੇਸ਼ਨ ਸ਼ੁਰੂ ਕਰੋ',
+      'navigationStarted': 'ਪਲਟ-ਪਲਟ ਨੇਵੀਗੇਸ਼ਨ ਸ਼ੁਰੂ ਹੋ ਗਿਆ',
+      'availability': 'ਉਪਲਬਧਤਾ',
+      'availabilityStatus': 'ਉਪਲਬਧਤਾ ਦੀ ਸਥਿਤੀ',
+      'earnings': 'ਕਮਾਈ',
+      'wallet': 'ਵਾਲਿਟ',
+      'myProfile': 'ਮੇਰਾ ਪ੍ਰੋਫਾਈਲ',
+      'reliabilityScore': 'ਭਰੋਸੇਯੋਗਤਾ ਸਕੋਰ',
+      'identityKyc': 'ਪਛਾਣ ਅਤੇ ਜਾਂਚ',
+      'workProfile': 'ਕੁਸ਼ਲਤਾਵਾਂ ਅਤੇ ਖੇਤਰ',
+      'payoutWelfare': 'ਪੇਆਉਟ ਅਤੇ ਕਲਿਆਣ',
+      'personalDetails': 'ਨਿੱਜੀ ਵੇਰਵੇ',
+      'aadhaarVerification': 'ਆਧਾਰ ਜਾਂਚ',
+      'panVerification': 'ਪੈਨ ਜਾਂਚ',
+      'selfieVerification': 'ਸੈਲਫੀ ਜਾਂਚ',
+      'skillCertificate': 'ਕੁਸ਼ਲਤਾ ਸਰਟੀਫਿਕੇਟ',
+      'selectSkills': 'ਕੁਸ਼ਲਤਾਵਾਂ ਚੁਣੋ',
+      'otherSkills': 'ਹੋਰ',
+      'otherSkillsHint': 'ਕੁਸ਼ਲਤਾ ਟਾਈਪ ਕਰੋ, ਫਿਰ ਕਾਮਾ ਨਾਲ ਹੋਰ ਜੋੜੋ',
+      'serviceArea': 'ਤੁਹਾਡੀ ਸਥਿਤੀ',
+      'serviceAreaHint': 'ਨਕਸ਼ੇ \'ਤੇ ਆਪਣੀ ਮੌਜੂਦਾ ਸਥਿਤੀ ਵੇਖੋ। ਨੇੜਲੇ ਖੇਤਰ ਦੀ ਖੋਜ ਲਈ ਪੈਨ ਕਰੋ।',
+      'yourRates': 'ਤੁਹਾਡੇ ਦਰ',
+      'yourRatesHint': 'ਚੁਣੀ ਹਰ ਕੁਸ਼ਲਤਾ ਲਈ ਘੰਟਾ ਦਰ (₹) ਸੈੱਟ ਕਰੋ।',
+      'experienceYears': 'ਤਜਰਬੇ ਦੇ ਸਾਲ',
+      'workerBio': 'ਛੋਟੀ ਜੀਵਨੀ',
+      'workerBioHint': 'ਗਾਹਕਾਂ ਨੂੰ ਆਪਣਾ ਤਜਰਬਾ ਦੱਸੋ',
+      'hourlyRateLabel': 'ਘੰਟਾ ਦਰ (₹)',
+      'selectSkillsFirstForRates': 'ਦਰ ਸੈੱਟ ਕਰਨ ਲਈ ਉੱਪਰ ਕੁਸ਼ਲਤਾਵਾਂ ਚੁਣੋ।',
+      'largerRadiusHint': 'ਵੱਡਾ ਰੇਡੀਅਸ = ਹੋਰ ਨੇੜਲੇ ਕੰਮ',
+      'locationOnMap': 'ਨਕਸ਼ੇ \'ਤੇ ਸਥਿਤੀ',
+      'youAreHere': 'ਤੁਸੀਂ ਇੱਥੇ ਹੋ',
+      'waitingForLocation': 'ਸਥਿਤੀ ਦੀ ਉਡੀਕ ਕਰ ਰਹੇ ਹਾਂ…',
+      'refreshLocation': 'ਸਥਿਤੀ ਤਾਜ਼ਾ ਕਰੋ',
+      'welfareInsurance': 'ਕਲਿਆਣ ਅਤੇ ਬੀਮਾ',
+      'bankUpi': 'ਬੈਂਕ ਅਤੇ ਯੂਪੀਆਈ',
+      'kycStatus': 'ਅਰਜ਼ੀ ਦੀ ਜਾਂਚ',
+      'upiSubtitle': 'ਗੂਗਲ ਪੇ, ਫੋਨਪੀ, ਪੇਟਮ',
+      'card': 'ਕਾਰਡ',
+      'cardSubtitle': 'ਵੀਜ਼ਾ, ਮਾਸਟਰਕਾਰਡ, ਰੂਪੇ',
+      'cash': 'ਨਕਦ',
+      'cashSubtitle': 'ਸੇਵਾ ਦੇ ਬਾਅਦ ਭੁਗਤਾਨ',
+      'goBack': 'ਵਾਪਸ ਜਾਓ',
+      'showPassword': 'ਪਾਸਵਰਡ ਦਿਖਾਓ',
+      'hidePassword': 'ਪਾਸਵਰਡ ਲੁਕਾਓ',
+      'sendMessage': 'ਭੇਜੋ',
+      'unknownState': 'ਅਣਜਾਣ ਹਾਲਤ',
+      'etaFormat': 'ਅੰਦਾਜ਼ਾ ਸਮਾਂ: %s ਮਿੰਟ',
+      'arrived': 'ਪਹੁੰਚ ਗਏ',
+      'percentComplete': '%s%% ਪੂਰਾ',
+      'noOrdersYet': 'ਹਾਲੇ ਕੋਈ ਆਰਡਰ ਨਹੀਂ',
+      'noWorkersNearby': 'ਨਜ਼ਦੀਕ ਕੋਈ ਕਰਮਚਾਰੀ ਨਹੀਂ',
+      'noEarningsYet': 'ਹਾਲੇ ਕੋਈ ਕਮਾਈ ਨਹੀਂ',
+      'noNotificationsTitle': 'ਕੋਈ ਸੂਚਨਾ ਨਹੀਂ',
+      'noResultsFound': 'ਕੋਈ ਨਤੀਜਾ ਨਹੀਂ ਮਿਲਿਆ',
+      'noInternet': 'ਇੰਟਰਨੈਟ ਕਨੈਕਸ਼ਨ ਨਹੀਂ',
+      'locationDenied': 'ਲੋਕੇਸ਼ਨ ਦੀ ਪਹੁੰਚ ਇਨਕਾਰ ਕੀਤੀ ਗਈ',
+      'cameraDenied': 'ਕੈਮਰਾ ਦੀ ਪਹੁੰਚ ਇਨਕਾਰ ਕੀਤੀ ਗਈ',
+      'otpFailed': 'ਓਟੀਪੀ ਪੁਸ਼ਟੀ ਫੇਲ੍ਹ ਹੋ ਗਈ',
+      'paymentFailed': 'ਭੁਗਤਾਨ ਫੇਲ੍ਹ ਹੋ ਗਿਆ',
+      'bookingFailed': 'ਬੁਕਿੰਗ ਫੇਲ੍ਹ ਹੋ ਗਈ',
+      'kycFailed': 'ਪੁਸ਼ਟੀ ਫੇਲ੍ਹ ਹੋ ਗਈ',
+      'serverError': 'ਕੁਝ ਗਲਤ ਹੋ ਗਿਆ',
+      'sessionExpired': 'ਸੈਸ਼ਨ ਸਮਾਪਤ ਹੋ ਗਿਆ',
+      'paymentSuccessful': 'ਭੁਗਤਾਨ ਸਫਲ',
+      'kycSubmitted': 'ਅਰਜ਼ੀ ਜਮ੍ਹਾ ਕੀਤੀ ਗਈ',
+      'profileUpdated': 'ਪ੍ਰੋਫਾਈਲ ਅਪਡੇਟ ਕੀਤਾ',
+      'ratingSubmitted': 'ਰੇਟਿੰਗ ਜਮ੍ਹਾ ਕੀਤੀ',
+      'complaintSubmitted': 'ਸ਼ਿਕਾਇਤ ਜਮ੍ਹਾ ਕੀਤੀ',
+    },
+  };
 }
 
 extension AppStringsX on BuildContext {

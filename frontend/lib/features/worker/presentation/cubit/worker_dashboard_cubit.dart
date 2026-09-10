@@ -33,6 +33,7 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
   StreamSubscription? _incomingSub;
   StreamSubscription? _claimedSub;
   StreamSubscription? _statusSub;
+  StreamSubscription? _connectionSub;
 
   Future<void> load() async {
     emit(state.copyWith(status: WorkerDashboardStatus.loading, clearError: true));
@@ -60,6 +61,8 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
       WorkerRealtimeService.instance.initForWorker(userId);
       if (active.isNotEmpty) {
         WorkerRealtimeService.instance.trackBooking(active.first.id);
+      } else {
+        WorkerRealtimeService.instance.untrackBooking();
       }
 
       _incomingSub ??= WorkerRealtimeService.instance.incomingJobsStream.listen((_) {
@@ -70,6 +73,11 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
       });
       _statusSub ??= WorkerRealtimeService.instance.bookingStatusStream.listen((_) {
         _silentRefresh();
+      });
+      _connectionSub ??= WorkerRealtimeService.instance.connectionStream.listen((connected) {
+        if (connected) {
+          _silentRefresh();
+        }
       });
 
       emit(
@@ -101,17 +109,25 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
         _payments.workerEarningsSummary(),
         _bookings.workerIncoming(),
         _bookings.workerActive(),
+        _workers.fetchAvailability(),
       ]);
       final summary = results[0] as Map<String, dynamic>;
       final incoming = results[1] as List<WorkerJob>;
       final active = results[2] as List<WorkerJob>;
+      final availability = results[3] as Map<String, dynamic>;
       if (!isClosed) {
+        if (active.isNotEmpty) {
+          WorkerRealtimeService.instance.trackBooking(active.first.id);
+        } else {
+          WorkerRealtimeService.instance.untrackBooking();
+        }
         emit(state.copyWith(
           todayEarnings: (summary['today'] as num?)?.toDouble() ?? state.todayEarnings,
           completedJobs: (summary['completedJobs'] as num?)?.toInt() ?? state.completedJobs,
           incomingCount: incoming.length,
           incomingJobs: incoming,
           activeJob: active.isEmpty ? null : active.first,
+          isAvailable: availability['isOnline'] == true,
         ));
       }
     } catch (_) {}
@@ -122,6 +138,9 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
     try {
       final online = await _workers.setOnline(next);
       emit(state.copyWith(isAvailable: online));
+      if (online) {
+        WorkerRealtimeService.instance.reconnect();
+      }
     } on ApiException catch (e) {
       emit(state.copyWith(error: e.message));
     }
@@ -168,6 +187,7 @@ class WorkerDashboardCubit extends Cubit<WorkerDashboardState> {
     _incomingSub?.cancel();
     _claimedSub?.cancel();
     _statusSub?.cancel();
+    _connectionSub?.cancel();
     return super.close();
   }
 }

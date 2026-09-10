@@ -77,21 +77,28 @@ class _WorkerOtpEntryPageState extends State<WorkerOtpEntryPage> {
   String get _otp => _controllers.map((c) => c.text).join();
 
   void _submitOtp() {
-    context.read<ActiveJobCubit>().verifyOtpAndStart(otp: _otp);
+    context.read<ActiveJobCubit>().verifyArrivalOtp(otp: _otp);
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<ActiveJobCubit, ActiveJobState>(
       listener: (context, state) {
-        if (state.status == ActiveJobStatus.inProgress) {
-          context.go(RouteNames.workerActiveJob);
+        if (state.status == ActiveJobStatus.loaded ||
+            state.status == ActiveJobStatus.inProgress) {
+          final raw = state.job?.rawStatus;
+          if (raw == 'ARRIVED' ||
+              raw == 'IN_PROGRESS' ||
+              raw == 'READY_TO_START' ||
+              raw == 'ESTIMATION_GIVEN') {
+            context.go(RouteNames.workerActiveJob);
+          }
         } else if (state.status == ActiveJobStatus.failure) {
           ToastUtils.showToast(context: context, message: state.error ?? 'Failed to verify OTP');
         }
       },
       child: AppScaffold(
-        title: 'Start Job',
+        title: 'Arrival OTP',
         showBack: true,
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -174,7 +181,7 @@ class _WorkerOtpEntryPageState extends State<WorkerOtpEntryPage> {
                       ),
                       const Spacer(),
                       SwipeActionButton(
-                        label: 'Swipe to Start Job',
+                        label: 'Swipe to Confirm Arrival',
                         enabled: _otp.length == 4,
                         onCompleted: _submitOtp,
                       ),

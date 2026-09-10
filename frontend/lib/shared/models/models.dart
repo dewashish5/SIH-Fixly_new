@@ -469,7 +469,22 @@ class Booking extends Equatable {
       return baseServiceFee! + extra + platform + urgent;
     }
 
-    return estimatedPrice > 0 ? estimatedPrice : extra;
+    return estimatedPrice + urgent;
+  }
+
+  bool get isSosBooking =>
+      isEmergency ||
+      (bookingType ?? '').toUpperCase() == 'EMERGENCY_SOS' ||
+      (bookingType ?? '').toUpperCase() == 'SOS' ||
+      (bookingType ?? '').toUpperCase() == 'EMERGENCY';
+
+  bool get isScheduledBooking =>
+      (bookingType ?? '').toUpperCase() == 'SCHEDULED' || scheduledAt != null;
+
+  String get jobTypeLabel {
+    if (isSosBooking) return 'EMERGENCY SOS';
+    if (isScheduledBooking) return 'SCHEDULED';
+    return 'STANDARD';
   }
 
   Booking copyWith({
@@ -567,6 +582,7 @@ class WorkerJob extends Equatable {
     this.customerAvatar,
     this.problemDescription,
     this.problemPhotos = const [],
+    this.problemVideos = const [],
     this.serviceCategory,
     this.serviceImage,
     this.arrivalOtp,
@@ -580,6 +596,7 @@ class WorkerJob extends Equatable {
     this.invoice,
     this.scheduledAt,
     this.bookingType,
+    this.isEmergency = false,
   });
 
   final String id;
@@ -595,6 +612,7 @@ class WorkerJob extends Equatable {
   final String? customerAvatar;
   final String? problemDescription;
   final List<String> problemPhotos;
+  final List<String> problemVideos;
   final String? serviceCategory;
   final String? serviceImage;
   final String? arrivalOtp;
@@ -611,8 +629,24 @@ class WorkerJob extends Equatable {
 
   final DateTime? scheduledAt;
   final String? bookingType;
+  final bool isEmergency;
 
   String get bookingId => id;
+
+  bool get isSosBooking =>
+      isEmergency ||
+      (bookingType ?? '').toUpperCase() == 'EMERGENCY_SOS' ||
+      (bookingType ?? '').toUpperCase() == 'SOS' ||
+      (bookingType ?? '').toUpperCase() == 'EMERGENCY';
+
+  bool get isScheduledBooking =>
+      (bookingType ?? '').toUpperCase() == 'SCHEDULED' || scheduledAt != null;
+
+  String get jobTypeLabel {
+    if (isSosBooking) return 'EMERGENCY SOS';
+    if (isScheduledBooking) return 'SCHEDULED';
+    return 'STANDARD';
+  }
 
   WorkerJob copyWith({
     String? id,

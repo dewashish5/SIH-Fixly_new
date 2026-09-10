@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:go_router/go_router.dart';
+
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/widgets/core_widgets.dart';
+import '../../../../shared/models/models.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
+import '../../../worker/presentation/widgets/worker_payout_account_sheet.dart';
 import '../../../../core/utils/toast_utils.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -68,6 +73,29 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  String _getLanguageLabel(String code) {
+    switch (code) {
+      case 'hi':
+        return 'हिन्दी (Hindi)';
+      case 'mr':
+        return 'मराठी (Marathi)';
+      case 'ta':
+        return 'தமிழ் (Tamil)';
+      case 'te':
+        return 'తెలుగు (Telugu)';
+      case 'kn':
+        return 'ಕನ್ನಡ (Kannada)';
+      case 'bn':
+        return 'বাংলা (Bengali)';
+      case 'gu':
+        return 'ગુજરાતી (Gujarati)';
+      case 'pa':
+        return 'ਪੰਜਾਬੀ (Punjabi)';
+      default:
+        return 'English (US)';
+    }
   }
 
   @override
@@ -148,6 +176,49 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: AppSpacing.xl),
 
+              // Worker Payouts & Bank Account Section
+              if (cubit.currentUser?.role == UserRole.worker) ...[
+                _SectionLabel(
+                  icon: Icons.account_balance_outlined,
+                  text: 'Payouts & Bank Account',
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                _SettingsCard(
+                  child: Column(
+                    children: [
+                      _SettingsNavTile(
+                        icon: Icons.groups_rounded,
+                        title: 'Cooperative Society & Federation',
+                        subtitle: 'Digital membership card, primary society & welfare',
+                        onTap: () => context.push(RouteNames.workerCooperative),
+                      ),
+                      const Divider(height: 1),
+                      _SettingsNavTile(
+                        icon: Icons.currency_rupee_rounded,
+                        title: 'Category Rate Settings',
+                        subtitle: 'Customize per-category base prices and view wage floors',
+                        onTap: () => context.push(RouteNames.workerRateSettings),
+                      ),
+                      const Divider(height: 1),
+                      _SettingsNavTile(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: 'Wallet & Withdrawals',
+                        subtitle: 'Check balance, withdraw funds & transactions',
+                        onTap: () => context.push(RouteNames.workerWallet),
+                      ),
+                      const Divider(height: 1),
+                      _SettingsNavTile(
+                        icon: Icons.account_balance_rounded,
+                        title: 'Bank Account & UPI Details',
+                        subtitle: 'Setup or update accounts for automated payouts',
+                        onTap: () => WorkerPayoutAccountSheet.show(context),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+              ],
+
               // Language Section
               _SectionLabel(icon: Icons.language_rounded, text: l10n.language),
               const SizedBox(height: AppSpacing.xs),
@@ -169,9 +240,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              session.locale == 'hi'
-                                  ? 'हिंदी (Hindi)'
-                                  : 'English (US)',
+                              _getLanguageLabel(session.locale),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: context.muted,
                               ),
@@ -198,31 +267,40 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(
-                          value: 'en',
-                          label: Text('English'),
-                          icon: Icon(Icons.translate_rounded, size: 18),
-                        ),
-                        ButtonSegment(
-                          value: 'hi',
-                          label: Text('हिंदी (Hindi)'),
-                          icon: Icon(Icons.translate_rounded, size: 18),
-                        ),
-                      ],
-                      selected: {session.locale},
-                      onSelectionChanged: (selected) {
-                        cubit.setLocale(selected.first);
-                      },
-                      style: ButtonStyle(
-                        visualDensity: VisualDensity.comfortable,
-                        shape: WidgetStatePropertyAll(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.md),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: const [
+                        ('en', 'English'),
+                        ('hi', 'हिन्दी'),
+                        ('mr', 'मराठी'),
+                        ('ta', 'தமிழ்'),
+                        ('te', 'తెలుగు'),
+                        ('kn', 'ಕನ್ನಡ'),
+                        ('bn', 'বাংলা'),
+                        ('gu', 'ગુજરાતી'),
+                        ('pa', 'ਪੰਜਾਬੀ'),
+                      ].map((lang) {
+                        final isSelected = session.locale == lang.$1;
+                        return ChoiceChip(
+                          label: Text(
+                            lang.$2,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              color: isSelected ? scheme.onPrimary : null,
+                            ),
                           ),
-                        ),
-                      ),
+                          selected: isSelected,
+                          selectedColor: scheme.primary,
+                          showCheckmark: false,
+                          onSelected: (selected) {
+                            if (selected) {
+                              cubit.setLocale(lang.$1);
+                            }
+                          },
+                        );
+                      }).toList(),
                     ),
                   ],
                 ),

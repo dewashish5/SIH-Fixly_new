@@ -21,6 +21,14 @@ class _WorkerAddPartsPageState extends State<WorkerAddPartsPage> {
   final List<Map<String, dynamic>> _parts = [];
   final TextEditingController _titleCtrl = TextEditingController();
   final TextEditingController _priceCtrl = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _priceCtrl.dispose();
+    super.dispose();
+  }
 
   void _addPart() {
     final title = _titleCtrl.text.trim();
@@ -40,15 +48,12 @@ class _WorkerAddPartsPageState extends State<WorkerAddPartsPage> {
     }
   }
 
-  void _completeJob() {
-    if (_parts.isEmpty) {
-      context.read<ActiveJobCubit>().completeJob();
-    } else {
-      context.read<ActiveJobCubit>().addExtraParts(_parts).then((_) {
-        if (!mounted) return;
-        context.read<ActiveJobCubit>().completeJob();
-      });
-    }
+  Future<void> _requestPayment() async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    await context
+        .read<ActiveJobCubit>()
+        .finalizeBillingAndRequestPayment(List.from(_parts));
   }
 
   @override
@@ -56,20 +61,27 @@ class _WorkerAddPartsPageState extends State<WorkerAddPartsPage> {
     double total = _parts.fold(0, (sum, part) => sum + (part['price'] as double));
 
     return BlocListener<ActiveJobCubit, ActiveJobState>(
+      listenWhen: (prev, curr) => prev.status != curr.status,
       listener: (context, state) {
-        if (state.status == ActiveJobStatus.completed) {
-          context.push('${RouteNames.workerRating}?bookingId=${widget.bookingId}');
+        if (state.status == ActiveJobStatus.awaitingPayment ||
+            state.status == ActiveJobStatus.paymentReceived) {
+          // Back to active job wait/payment-received UI — do not jump to rating yet.
+          context.go(RouteNames.workerActiveJob);
         } else if (state.status == ActiveJobStatus.failure) {
-          ToastUtils.showToast(context: context, message: state.error ?? 'Failed to complete job');
+          setState(() => _submitting = false);
+          ToastUtils.showToast(
+            context: context,
+            message: state.error ?? 'Failed to request payment',
+          );
         }
       },
       child: AppScaffold(
-        title: 'Add Extra Parts (Optional)',
+        title: 'Final Billing',
         body: Column(
           children: [
             const SizedBox(height: 16),
             Text(
-              'Were any additional parts or materials used?',
+              'Add any extra parts used, then request payment.',
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
@@ -81,6 +93,7 @@ class _WorkerAddPartsPageState extends State<WorkerAddPartsPage> {
                   child: AppTextField(
                     controller: _titleCtrl,
                     hint: 'Part name',
+                    enabled: !_submitting,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -89,12 +102,13 @@ class _WorkerAddPartsPageState extends State<WorkerAddPartsPage> {
                     controller: _priceCtrl,
                     hint: 'Price',
                     keyboardType: TextInputType.number,
+                    enabled: !_submitting,
                   ),
                 ),
                 const SizedBox(width: 12),
                 IconButton(
                   icon: const Icon(Icons.add_circle, color: AppColors.primary, size: 32),
-                  onPressed: _addPart,
+                  onPressed: _submitting ? null : _addPart,
                 )
               ],
             ),
@@ -113,11 +127,13 @@ class _WorkerAddPartsPageState extends State<WorkerAddPartsPage> {
                         Text('₹${part['price']}'),
                         IconButton(
                           icon: const Icon(Icons.delete, color: AppColors.error),
-                          onPressed: () {
-                            setState(() {
-                              _parts.removeAt(index);
-                            });
-                          },
+                          onPressed: _submitting
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _parts.removeAt(index);
+                                  });
+                                },
                         ),
                       ],
                     ),
@@ -136,17 +152,23 @@ class _WorkerAddPartsPageState extends State<WorkerAddPartsPage> {
                 ],
               ),
             ),
-            SecondaryButton(
-              label: 'Skip — Job Complete',
-              onPressed: () {
-                context.read<ActiveJobCubit>().completeJob();
-              },
-            ),
-            const SizedBox(height: 12),
-            SwipeActionButton(
-              label: 'Confirm & Complete',
-              onCompleted: _completeJob,
-            ),
+            if (_submitting)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 16),
+                child: CircularProgressIndicator(),
+              )
+            else ...[
+              SecondaryButton(
+                label: 'Skip Parts — Request Payment',
+                onPressed: _requestPayment,
+              ),
+              const SizedBox(height: 12),
+              SwipeActionButton(
+                label: 'Swipe to Request Payment',
+                enabled: !_submitting,
+                onCompleted: _requestPayment,
+              ),
+            ],
             const SizedBox(height: 32),
           ],
         ),

@@ -7,6 +7,7 @@ import {
     patchMyAvailability,
     putAvailabilitySchedule,
     getWorkerReliability,
+    getWorkerRates,
     updateWorkerRates,
 } from '../controllers/workerController.js';
 import {
@@ -44,6 +45,7 @@ router.put('/setup-profile', protect, upload.any(), setupWorkerProfile);
 router.get('/me/availability', protect, authorize('worker'), getMyAvailability);
 router.patch('/me/availability', protect, authorize('worker'), patchMyAvailability);
 router.put('/me/availability/schedule', protect, authorize('worker'), putAvailabilitySchedule);
+router.get('/me/rates', protect, authorize('worker'), getWorkerRates);
 router.put('/me/rates', protect, authorize('worker'), updateWorkerRates);
 
 router.post('/me/certificates', protect, authorize('worker'), createCertificate);

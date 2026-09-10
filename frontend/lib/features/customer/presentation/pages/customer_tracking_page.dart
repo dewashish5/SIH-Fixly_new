@@ -11,6 +11,7 @@ import '../../../../core/utils/toast_utils.dart';
 import '../../../../core/utils/tracking_helpers.dart';
 import '../../../../core/widgets/fixly_map_view.dart';
 import '../../../../shared/models/models.dart';
+import '../../../bookings/data/bookings_api_repository.dart';
 import '../cubit/booking_flow_cubit.dart';
 import '../cubit/tracking_cubit.dart';
 
@@ -30,8 +31,12 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
   void initState() {
     super.initState();
     final booking = context.read<BookingFlowCubit>().state.booking;
+    final bookingId = widget.bookingId ?? booking?.id;
+    if (bookingId != null && bookingId.isNotEmpty) {
+      context.read<BookingFlowCubit>().listenToSocketUpdates(bookingId);
+    }
     context.read<TrackingCubit>().startTracking(
-      bookingId: widget.bookingId ?? booking?.id,
+      bookingId: bookingId,
       workerName: booking?.workerName,
       destination: booking?.customerLat == null || booking?.customerLng == null
           ? null
@@ -496,7 +501,8 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                               ],
                             ),
                           ),
-                          if (booking?.rawStatus == 'ESTIMATION_SUBMITTED') ...[
+                          if (booking?.rawStatus == 'ESTIMATION_GIVEN' ||
+                              booking?.rawStatus == 'ESTIMATION_SUBMITTED') ...[
                             const SizedBox(height: 16),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
@@ -509,6 +515,45 @@ class _CustomerTrackingPageState extends State<CustomerTrackingPage> {
                                 '${RouteNames.customerEstimationReview}?bookingId=${booking?.id ?? ''}',
                               ),
                               child: const Text('Review Price Estimation', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                            ),
+                          ] else if (booking?.rawStatus == 'READY_TO_START') ...[
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                minimumSize: const Size(double.infinity, 48),
+                              ),
+                              onPressed: () async {
+                                final id = booking?.id;
+                                if (id == null || id.isEmpty) return;
+                                try {
+                                  await BookingsApiRepository().startJob(id);
+                                  if (context.mounted) {
+                                    context.read<BookingFlowCubit>().refreshBooking(id);
+                                    ToastUtils.showSuccess(
+                                      context: context,
+                                      message: 'Work started',
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ToastUtils.showError(
+                                      context: context,
+                                      message: e.toString(),
+                                    );
+                                  }
+                                }
+                              },
+                              child: const Text(
+                                'Start Work',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
                             ),
                           ] else if (isPaid) ...[
                             const SizedBox(height: 16),

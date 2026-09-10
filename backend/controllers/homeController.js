@@ -6,11 +6,13 @@ import Service from '../models/Service.js';
 import Banner from '../models/Banner.js';
 import { seedDefaultBannersIfEmpty } from './bannerController.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
+import { getRequestLanguage, localizeServices, localizeService, localizeCategories } from '../utils/i18nHelper.js';
 
-// Screen 1: Home Dashboard Data (Redis Cached)
+// Screen 1: Home Dashboard Data (Redis Cached per language)
 export const getHomeData = async (req, res) => {
     try {
-        const cacheKey = 'app:home:dashboard';
+        const lang = getRequestLanguage(req);
+        const cacheKey = `app:home:dashboard:${lang}`;
         const cachedData = await redis.get(cacheKey);
 
         if (cachedData) {
@@ -21,12 +23,16 @@ export const getHomeData = async (req, res) => {
         const ttl = parseInt(process.env.CACHE_TTL_HOME, 10) || 3600;
 
         await seedDefaultBannersIfEmpty();
-        const categories = await Service.distinct('category');
-        const topServices = await Service.find({ isActive: true }).limit(limit).lean();
+        const rawCategories = await Service.distinct('category');
+        const rawTopServices = await Service.find({ isActive: true }).limit(limit).lean();
         const banners = await Banner.find({ isActive: true }).sort({ priority: -1, createdAt: -1 }).lean();
+
+        const topServices = await localizeServices(rawTopServices, lang);
+        const categories = localizeCategories(rawCategories, lang);
 
         const responsePayload = {
             categories,
+            rawCategories,
             topServices,
             banners,
             featuredOffers: banners.length > 0 ? banners : [
@@ -43,10 +49,11 @@ export const getHomeData = async (req, res) => {
     }
 };
 
-// Screen 2: All Categories & Sub-Services (Redis Cached)
+// Screen 2: All Categories & Sub-Services (Redis Cached per language)
 export const getCategories = async (req, res) => {
     try {
-        const cacheKey = 'app:services:categories';
+        const lang = getRequestLanguage(req);
+        const cacheKey = `app:services:categories:${lang}`;
         const cachedData = await redis.get(cacheKey);
 
         if (cachedData) {
@@ -55,10 +62,13 @@ export const getCategories = async (req, res) => {
 
         const ttl = parseInt(process.env.CACHE_TTL_CATEGORIES, 10) || 86400;
 
-        const services = await Service.find({ isActive: true }).lean();
+        const rawServices = await Service.find({ isActive: true }).lean();
+        const services = await localizeServices(rawServices, lang);
+
         const groupedCategories = services.reduce((acc, service) => {
-            acc[service.category] = acc[service.category] || [];
-            acc[service.category].push(service);
+            const catKey = service.category;
+            acc[catKey] = acc[catKey] || [];
+            acc[catKey].push(service);
             return acc;
         }, {});
 
@@ -74,11 +84,12 @@ export const getCategories = async (req, res) => {
     }
 };
 
-// Screen 3: Service Pricing & Details
+// Screen 3: Service Pricing & Details (Localized)
 export const getServiceDetails = async (req, res) => {
     try {
         const { serviceId } = req.params;
-        const cacheKey = `service:details:${serviceId}`;
+        const lang = getRequestLanguage(req);
+        const cacheKey = `service:details:${serviceId}:${lang}`;
 
         const cachedService = await redis.get(cacheKey);
         if (cachedService) {
@@ -87,8 +98,10 @@ export const getServiceDetails = async (req, res) => {
 
         const ttl = parseInt(process.env.CACHE_TTL_SERVICE_DETAILS, 10) || 1800;
 
-        const service = await Service.findById(serviceId).lean();
-        if (!service) return res.status(404).json({ success: false, message: 'Service not found' });
+        const rawService = await Service.findById(serviceId).lean();
+        if (!rawService) return res.status(404).json({ success: false, message: 'Service not found' });
+
+        const service = await localizeService(rawService, lang);
 
         await redis.set(cacheKey, JSON.stringify(service), 'EX', ttl);
 

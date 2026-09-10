@@ -76,6 +76,7 @@ import '../../features/worker/presentation/pages/worker_rate_settings_page.dart'
 import '../../features/worker/presentation/pages/worker_profile_page.dart';
 import '../../features/worker/presentation/pages/worker_rating_page.dart';
 import '../../features/worker/presentation/pages/worker_reliability_page.dart';
+import '../../features/worker/presentation/pages/worker_cooperative_page.dart';
 import '../../features/worker/presentation/pages/worker_welfare_page.dart';
 import '../../features/worker/presentation/pages/worker_wallet_page.dart';
 import '../../core/widgets/customer_main_shell.dart';
@@ -542,6 +543,11 @@ GoRouter createAppRouter() {
       _page(
         RouteNames.workerWelfare,
         (_, s) => const WorkerWelfarePage(),
+        overlay: true,
+      ),
+      _page(
+        RouteNames.workerCooperative,
+        (_, s) => const WorkerCooperativePage(),
         overlay: true,
       ),
 

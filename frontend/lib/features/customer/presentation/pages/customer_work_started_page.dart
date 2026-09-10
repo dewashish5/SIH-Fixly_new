@@ -10,14 +10,31 @@ import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../cubit/booking_flow_cubit.dart';
 
-class CustomerWorkStartedPage extends StatelessWidget {
+class CustomerWorkStartedPage extends StatefulWidget {
   const CustomerWorkStartedPage({super.key});
+
+  @override
+  State<CustomerWorkStartedPage> createState() => _CustomerWorkStartedPageState();
+}
+
+class _CustomerWorkStartedPageState extends State<CustomerWorkStartedPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final id = context.read<BookingFlowCubit>().state.booking?.id;
+      if (id != null && id.isNotEmpty) {
+        context.read<BookingFlowCubit>().listenToSocketUpdates(id);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<BookingFlowCubit, BookingFlowState>(
       listenWhen: (previous, current) =>
           previous.step != current.step ||
+          previous.booking?.rawStatus != current.booking?.rawStatus ||
           previous.booking?.paymentStatus != current.booking?.paymentStatus,
       listener: (context, state) {
         if (state.step == BookingStatus.paid || state.booking?.paymentStatus == 'PAID') {

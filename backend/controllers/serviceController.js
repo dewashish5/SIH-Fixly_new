@@ -1,6 +1,7 @@
 import Service from '../models/Service.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
 import redis from '../config/redis.js';
+import { getRequestLanguage, localizeServices, localizeService } from '../utils/i18nHelper.js';
 
 // 1. Create New Service / Category (Uses Multer + Cloudinary)
 export const createService = async (req, res) => {
@@ -85,7 +86,7 @@ export const createService = async (req, res) => {
     }
 };
 
-// 2. Search Services
+// 2. Search Services (Localized)
 export const searchServices = async (req, res) => {
     try {
         const { query } = req.query;
@@ -93,7 +94,8 @@ export const searchServices = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Search query string is required' });
         }
 
-        const services = await Service.find({
+        const lang = getRequestLanguage(req);
+        const rawServices = await Service.find({
             isActive: true,
             $or: [
                 { title: { $regex: query, $options: 'i' } },
@@ -101,17 +103,20 @@ export const searchServices = async (req, res) => {
             ]
         }).lean();
 
+        const services = await localizeServices(rawServices, lang);
+
         return res.status(200).json({ success: true, services });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// 3. Get All Categories (Grouped - 24 Hours Redis Cache)
+// 3. Get All Categories (Grouped - 24 Hours Redis Cache per language)
 export const getCategories = async (req, res) => {
     // #swagger.tags = ['Services']
     try {
-        const cacheKey = 'app:services:categories';
+        const lang = getRequestLanguage(req);
+        const cacheKey = `app:services:categories:${lang}`;
         let cachedData = null;
 
         // Redis cache check
@@ -130,10 +135,12 @@ export const getCategories = async (req, res) => {
         }
 
         // Cache miss: Hit DB directly one time
-        const services = await Service.find({ isActive: true }).lean();
+        const rawServices = await Service.find({ isActive: true }).lean();
+        const services = await localizeServices(rawServices, lang);
         const groupedCategories = services.reduce((acc, service) => {
-            acc[service.category] = acc[service.category] || [];
-            acc[service.category].push(service);
+            const catKey = service.category;
+            acc[catKey] = acc[catKey] || [];
+            acc[catKey].push(service);
             return acc;
         }, {});
 

@@ -49,6 +49,7 @@ dependencies:
   pdf: ^3.11.0
   printing: ^5.13.1
   share_plus: ^13.3.0
+  fl_chart: ^1.2.0
 
 dev_dependencies:
   flutter_test:
@@ -59,9 +60,11 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/app_icon.png
+  image_path: assets/app_icon_padded.png
   min_sdk_android: 21
   remove_alpha_ios: true
+  adaptive_icon_background: "#F8FAFB"
+  adaptive_icon_foreground: assets/app_icon_adaptive_foreground.png
 
 flutter_native_splash:
   color: "#F8FAFB"
@@ -72,10 +75,10 @@ flutter_native_splash:
   ios_content_mode: scaleAspectFit
   android_12:
     color: "#F8FAFB"
-    image: assets/app_icon.png
+    image: assets/android12_splash_icon.png
     icon_background_color: "#F8FAFB"
     color_dark: "#F8FAFB"
-    image_dark: assets/app_icon.png
+    image_dark: assets/android12_splash_icon.png
     icon_background_color_dark: "#F8FAFB"
   android: true
   ios: true

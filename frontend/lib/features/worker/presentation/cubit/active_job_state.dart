@@ -1,6 +1,17 @@
 part of 'active_job_cubit.dart';
 
-enum ActiveJobStatus { initial, loading, loaded, inProgress, navigating, completed, reviewSubmitted, failure }
+enum ActiveJobStatus {
+  initial,
+  loading,
+  loaded,
+  inProgress,
+  navigating,
+  awaitingPayment,
+  paymentReceived,
+  completed,
+  reviewSubmitted,
+  failure,
+}
 
 class ActiveJobState extends Equatable {
   const ActiveJobState({
@@ -17,11 +28,12 @@ class ActiveJobState extends Equatable {
     ActiveJobStatus? status,
     WorkerJob? job,
     String? error,
+    bool clearError = false,
   }) {
     return ActiveJobState(
       status: status ?? this.status,
       job: job ?? this.job,
-      error: error ?? this.error,
+      error: clearError ? null : (error ?? this.error),
     );
   }
 

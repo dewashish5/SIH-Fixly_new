@@ -21,6 +21,17 @@ class CustomerEstimationReviewPage extends StatefulWidget {
 class _CustomerEstimationReviewPageState extends State<CustomerEstimationReviewPage> {
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.bookingId.isNotEmpty) {
+        context.read<BookingFlowCubit>().listenToSocketUpdates(widget.bookingId);
+        context.read<BookingFlowCubit>().refreshBooking(widget.bookingId);
+      }
+    });
+  }
+
   Future<void> _acceptEstimation() async {
     setState(() => _isLoading = true);
     try {

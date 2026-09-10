@@ -11,8 +11,7 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/map_constants.dart';
 import '../../../../core/constants/map_token_loader.dart';
-import '../../../../core/location/location_service.dart';
-import '../../../../core/notifications/notification_service.dart';
+import '../../../../core/permissions/app_permissions_service.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
 
 class SplashPage extends StatefulWidget {
@@ -70,9 +69,9 @@ class _SplashPageState extends State<SplashPage>
       maps.timeout(SplashPage._maxWait, onTimeout: () {}),
     ]);
 
+    // After splash branding: ask every runtime permission (customer + worker).
     if (mounted) {
-      await LocationService.instance.ensureOnAppOpen(context);
-      await NotificationService.instance.requestPermissionsAndSync();
+      await AppPermissionsService.instance.requestAllAfterSplash(context);
     }
 
     if (!mounted) return;

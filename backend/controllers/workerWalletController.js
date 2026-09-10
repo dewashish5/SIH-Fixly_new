@@ -80,6 +80,9 @@ const summarize = async (workerId, from, to) => {
         lastPayout: lastPayout || null,
         transactions: history,
         walletTransactions: history,
+        payoutMethod: profile.payoutMethod || (profile.upi?.upiId ? 'upi' : 'bank'),
+        upi: profile.upi || null,
+        bank: profile.bank || null,
     };
 };
 

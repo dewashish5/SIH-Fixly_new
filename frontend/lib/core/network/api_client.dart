@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../auth/device_id.dart';
 import '../auth/token_storage.dart';
+import '../preferences/app_preferences.dart';
 import 'api_config.dart';
 import 'api_enpoints.dart';
 import 'api_exception.dart';
@@ -37,6 +38,11 @@ class ApiClient {
           }
           final device = await _deviceId.getOrCreate();
           options.headers['x-device-id'] = device;
+          final locale = AppPreferences.instance.locale;
+          if (locale.isNotEmpty) {
+            options.headers['Accept-Language'] = locale;
+            options.queryParameters.putIfAbsent('lang', () => locale);
+          }
           handler.next(options);
         },
         onError: (error, handler) async {
@@ -167,10 +173,16 @@ class ApiClient {
   }
 
   String _getKey(String path, Map<String, dynamic>? query) {
-    if (query == null || query.isEmpty) return 'GET $path';
+    final lang = AppPreferences.instance.locale;
+    final base = 'GET [$lang] $path';
+    if (query == null || query.isEmpty) return base;
     final keys = query.keys.toList()..sort();
     final q = keys.map((k) => '$k=${query[k]}').join('&');
-    return 'GET $path?$q';
+    return '$base?$q';
+  }
+
+  void clearCache() {
+    _getCache.clear();
   }
 
   Future<Map<String, dynamic>> get(

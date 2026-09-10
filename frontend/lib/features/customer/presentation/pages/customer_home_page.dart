@@ -24,6 +24,7 @@ import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../../../shared/widgets/category_icon_tile.dart';
 import '../../../ai/presentation/widgets/hey_flexi_voice_sheet.dart';
+import '../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../cubit/customer_home_cubit.dart';
 
 class CustomerHomePage extends StatelessWidget {
@@ -33,7 +34,13 @@ class CustomerHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => CustomerHomeCubit()..load(),
-      child: const _CustomerHomeView(),
+      child: BlocListener<AppSessionCubit, AppSessionState>(
+        listenWhen: (prev, curr) => prev.locale != curr.locale,
+        listener: (context, session) {
+          context.read<CustomerHomeCubit>().load(forceNetwork: true);
+        },
+        child: const _CustomerHomeView(),
+      ),
     );
   }
 }

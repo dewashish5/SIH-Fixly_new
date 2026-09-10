@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -17,36 +19,33 @@ class WorkerActiveJobPage extends StatefulWidget {
 }
 
 class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
+  Timer? _reviewNavTimer;
+  bool _reviewNavScheduled = false;
+
   @override
   void initState() {
     super.initState();
     context.read<ActiveJobCubit>().load();
   }
 
-  void _showCompleteDialog(BuildContext context, String bookingId) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Complete Job'),
-        content: const Text('Did you use any extra parts for this job?'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<ActiveJobCubit>().completeJob();
-            },
-            child: const Text('No, Complete Directly'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.push('${RouteNames.workerAddParts}?bookingId=$bookingId');
-            },
-            child: const Text('Yes, Add Parts'),
-          ),
-        ],
-      ),
-    );
+  @override
+  void dispose() {
+    _reviewNavTimer?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleReviewNavigation(String bookingId) {
+    if (_reviewNavScheduled) return;
+    _reviewNavScheduled = true;
+    _reviewNavTimer?.cancel();
+    _reviewNavTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      context.push('${RouteNames.workerRating}?bookingId=$bookingId');
+    });
+  }
+
+  void _openFinalBilling(BuildContext context, String bookingId) {
+    context.push('${RouteNames.workerAddParts}?bookingId=$bookingId');
   }
 
   @override
@@ -59,12 +58,9 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
           context.go(RouteNames.workerDashboard);
         } else if (state.status == ActiveJobStatus.loaded && state.job == null) {
           context.go(RouteNames.workerDashboard);
-        } else if (state.status == ActiveJobStatus.completed) {
-          if (state.job != null) {
-            context.push(
-              '${RouteNames.workerRating}?bookingId=${state.job!.id}',
-            );
-          }
+        } else if (state.status == ActiveJobStatus.paymentReceived &&
+            state.job != null) {
+          _scheduleReviewNavigation(state.job!.id);
         } else if (state.error != null && state.error!.isNotEmpty) {
           ToastUtils.showError(context: context, message: state.error!);
         }
@@ -134,7 +130,7 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
           padding: EdgeInsets.zero,
           body: Column(
             children: [
-              _buildStatusBanner(rawStatus),
+              _buildStatusBanner(rawStatus, state.status),
               Expanded(
                 child: AppRefreshIndicator(
                   onRefresh: () => context.read<ActiveJobCubit>().load(),
@@ -143,45 +139,63 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
                     padding: const EdgeInsets.all(16),
                     children: [
                       _buildServiceCard(job, context),
-                    const SizedBox(height: 16),
-                    _buildCustomerCard(job, context),
-                    if (job.problemDescription != null && job.problemDescription!.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      _buildProblemDescriptionCard(job, context),
-                    ],
-                    if (job.problemPhotos.isNotEmpty) ...[
+                      _buildCustomerCard(job, context),
+                      if (job.problemDescription != null && job.problemDescription!.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        _buildProblemDescriptionCard(job, context),
+                      ],
+                      if (job.problemPhotos.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        _buildProblemPhotos(job),
+                      ],
                       const SizedBox(height: 16),
-                      _buildProblemPhotos(job),
+                      _buildInvoiceCard(job, context),
+                      const SizedBox(height: 32),
+                      _buildBottomAction(rawStatus, job, context, state),
+                      const SizedBox(height: 32),
                     ],
-                    const SizedBox(height: 16),
-                    _buildInvoiceCard(job, context),
-                    const SizedBox(height: 32),
-                    _buildBottomAction(rawStatus, job, context),
-                    const SizedBox(height: 32),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildStatusBanner(String rawStatus) {
+  Widget _buildStatusBanner(String rawStatus, ActiveJobStatus status) {
     Color bgColor = AppColors.primary100;
     Color textColor = AppColors.primary;
     String text = 'Worker Accepted — Head to customer';
 
-    if (rawStatus == 'ARRIVED') {
+    if (status == ActiveJobStatus.paymentReceived ||
+        rawStatus == 'PAYMENT_PAID' ||
+        rawStatus == 'COMPLETED') {
+      bgColor = AppColors.success.withValues(alpha: 0.1);
+      textColor = AppColors.success;
+      text = 'Payment received — opening review…';
+    } else if (rawStatus == 'ARRIVED') {
       bgColor = AppColors.warning.withValues(alpha: 0.1);
       textColor = AppColors.warning;
-      text = 'Arrived — Awaiting OTP verification';
+      text = 'Arrived — Estimate or start work';
+    } else if (rawStatus == 'ESTIMATION_GIVEN' || rawStatus == 'ESTIMATION_SUBMITTED') {
+      bgColor = AppColors.warning.withValues(alpha: 0.1);
+      textColor = AppColors.warning;
+      text = 'Waiting for customer to accept estimation';
+    } else if (rawStatus == 'READY_TO_START') {
+      bgColor = AppColors.primary100;
+      textColor = AppColors.primary;
+      text = 'Customer accepted — ready to start';
     } else if (rawStatus == 'IN_PROGRESS') {
       bgColor = AppColors.success.withValues(alpha: 0.1);
       textColor = AppColors.success;
-      text = 'Job In Progress';
+      text = 'Job In Progress — Working';
+    } else if (rawStatus == 'PAYMENT_PENDING' || status == ActiveJobStatus.awaitingPayment) {
+      bgColor = const Color(0xFFFFFBEB);
+      textColor = const Color(0xFFD97706);
+      text = 'Awaiting customer payment';
     }
 
     return Container(
@@ -215,7 +229,8 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
                   height: 120,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox(height: 120, child: Icon(Icons.image_not_supported)),
+                  errorBuilder: (_, __, ___) =>
+                      const SizedBox(height: 120, child: Icon(Icons.image_not_supported)),
                 ),
               ),
             ),
@@ -294,7 +309,7 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
   }
 
   Future<void> _makeWebRTCCall(dynamic job) async {
-    final bookingId = job.bookingId as String?;
+    final bookingId = job.id as String?;
     if (bookingId == null || bookingId.isEmpty) {
       ToastUtils.showToast(context: context, message: 'Booking ID not available');
       return;
@@ -331,7 +346,10 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Problem Description', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Problem Description',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Text(job.problemDescription ?? ''),
         ],
@@ -372,7 +390,10 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Pricing', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Pricing',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
           if (job.baseServiceFee != null) ...[
             _buildPriceRow('Base fee', job.baseServiceFee!),
@@ -392,7 +413,10 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Text('₹${job.pay.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(
+                '₹${job.pay.toStringAsFixed(0)}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
             ],
           ),
         ],
@@ -410,36 +434,86 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
     );
   }
 
-  Widget _buildBottomAction(String rawStatus, dynamic job, BuildContext context) {
+  Widget _buildBottomAction(
+    String rawStatus,
+    dynamic job,
+    BuildContext context,
+    ActiveJobState state,
+  ) {
+    if (state.status == ActiveJobStatus.paymentReceived ||
+        rawStatus == 'PAYMENT_PAID' ||
+        (rawStatus == 'COMPLETED' && job.invoice?.paymentStatus == 'PAID')) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFBBF7D0)),
+        ),
+        child: const Column(
+          children: [
+            Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 40),
+            SizedBox(height: 12),
+            Text(
+              'Payment Received!',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF166534)),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Taking you to the review screen in 3 seconds…',
+              style: TextStyle(fontSize: 13, color: Color(0xFF15803D), height: 1.4),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
     if (rawStatus == 'APPROVED' || rawStatus == 'ACCEPTED') {
       return SwipeActionButton(
         label: 'Swipe to Navigate',
         onCompleted: () => context.push('${RouteNames.workerNavigation}?bookingId=${job.id}'),
       );
-    } else if (rawStatus == 'ARRIVED') {
+    }
+
+    if (rawStatus == 'ARRIVED') {
       return Column(
         children: [
-          SwipeActionButton(
-            label: 'Swipe to Enter OTP',
-            onCompleted: () => context.push('${RouteNames.workerOtpEntry}?bookingId=${job.id}'),
+          PrimaryButton(
+            label: 'Start Work',
+            onPressed: () => context.read<ActiveJobCubit>().startJob(),
           ),
           const SizedBox(height: 12),
-          PrimaryButton(
-            label: 'Give Price Estimation',
-            onPressed: () => context.push('${RouteNames.workerPriceEstimation}?bookingId=${job.id}'),
+          SecondaryButton(
+            label: 'Show Rough Estimation to Customer',
+            onPressed: () =>
+                context.push('${RouteNames.workerPriceEstimation}?bookingId=${job.id}'),
           ),
         ],
       );
-    } else if (rawStatus == 'ESTIMATION_SUBMITTED') {
+    }
+
+    if (rawStatus == 'ESTIMATION_GIVEN' || rawStatus == 'ESTIMATION_SUBMITTED') {
       return const Padding(
         padding: EdgeInsets.all(16.0),
         child: Text(
-          'Waiting for customer to accept estimation...',
+          'Waiting for customer to accept estimation…',
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.textSecondary, fontStyle: FontStyle.italic),
         ),
       );
-    } else if (rawStatus == 'IN_PROGRESS' || rawStatus == 'ESTIMATION_ACCEPTED') {
+    }
+
+    if (rawStatus == 'READY_TO_START') {
+      return SwipeActionButton(
+        label: 'Swipe to Start Work',
+        onCompleted: () => context.read<ActiveJobCubit>().startJob(),
+      );
+    }
+
+    if (rawStatus == 'IN_PROGRESS') {
       return Column(
         children: [
           Text(
@@ -448,17 +522,19 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
           ),
           const SizedBox(height: 16),
           SwipeActionButton(
-            label: 'Swipe to Request Payment',
-            onCompleted: () => _showCompleteDialog(context, job.id),
+            label: 'Swipe — Work Complete & Bill',
+            onCompleted: () => _openFinalBilling(context, job.id),
           ),
           const SizedBox(height: 12),
           SecondaryButton(
-            label: 'Request Payment',
-            onPressed: () => _showCompleteDialog(context, job.id),
+            label: 'Final Billing & Request Payment',
+            onPressed: () => _openFinalBilling(context, job.id),
           ),
         ],
       );
-    } else if (rawStatus == 'PAYMENT_PENDING') {
+    }
+
+    if (rawStatus == 'PAYMENT_PENDING' || state.status == ActiveJobStatus.awaitingPayment) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -478,28 +554,15 @@ class _WorkerActiveJobPageState extends State<WorkerActiveJobPage> {
             ),
             SizedBox(height: 8),
             Text(
-              'Customer has been asked to pay via Razorpay.\nThis screen will automatically update upon payment.',
+              'Customer has been asked to pay.\nThis screen updates automatically when payment is received.',
               style: TextStyle(fontSize: 13, color: Color(0xFFB45309), height: 1.4),
               textAlign: TextAlign.center,
             ),
           ],
         ),
       );
-    } else if (rawStatus == 'PAYMENT_PAID' || job.invoice?.paymentStatus == 'PAID') {
-      return Column(
-        children: [
-          const Text(
-            'Payment Received Successfully!',
-            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const SizedBox(height: 16),
-          SwipeActionButton(
-            label: 'Swipe to Complete Job',
-            onCompleted: () => context.read<ActiveJobCubit>().completeJob(),
-          ),
-        ],
-      );
     }
+
     return const SizedBox();
   }
 }

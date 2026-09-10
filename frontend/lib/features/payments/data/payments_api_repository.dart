@@ -38,11 +38,29 @@ class WalletSnapshot {
     required this.balance,
     required this.history,
     this.totalEarnings = 0,
+    this.pendingBalance = 0,
+    this.payoutMethod,
+    this.upiId,
+    this.accountHolderName,
+    this.bankAccount,
+    this.ifscCode,
+    this.bankName,
   });
 
   final double balance;
   final double totalEarnings;
+  final double pendingBalance;
   final List<Map<String, dynamic>> history;
+  final String? payoutMethod;
+  final String? upiId;
+  final String? accountHolderName;
+  final String? bankAccount;
+  final String? ifscCode;
+  final String? bankName;
+
+  bool get hasPayoutAccount =>
+      (upiId != null && upiId!.isNotEmpty) ||
+      (bankAccount != null && bankAccount!.isNotEmpty);
 }
 
 class PaymentsApiRepository {
@@ -126,6 +144,9 @@ class PaymentsApiRepository {
         data['transactions'] ??
         res['walletTransactions'] ??
         res['transactions'];
+    final upi = data['upi'] is Map ? Map<String, dynamic>.from(data['upi'] as Map) : null;
+    final bank = data['bank'] is Map ? Map<String, dynamic>.from(data['bank'] as Map) : null;
+
     return WalletSnapshot(
       balance: (data['availableBalance'] as num?)?.toDouble() ??
           (res['walletBalance'] as num?)?.toDouble() ??
@@ -133,8 +154,44 @@ class PaymentsApiRepository {
       totalEarnings: (data['totalEarnings'] as num?)?.toDouble() ??
           (data['totalEarned'] as num?)?.toDouble() ??
           0,
+      pendingBalance: (data['pendingBalance'] as num?)?.toDouble() ?? 0,
       history: _mapHistory(history),
+      payoutMethod: data['payoutMethod']?.toString(),
+      upiId: upi?['upiId']?.toString(),
+      accountHolderName: bank?['accountHolderName']?.toString(),
+      bankAccount: bank?['accountNumber']?.toString(),
+      ifscCode: bank?['ifscCode']?.toString(),
+      bankName: bank?['bankName']?.toString(),
     );
+  }
+
+  Future<void> updatePayoutDetails({
+    required String payoutMethod,
+    String? upiId,
+    String? accountHolderName,
+    String? accountNumber,
+    String? ifscCode,
+    String? bankName,
+  }) async {
+    final body = <String, dynamic>{
+      'payoutMethod': payoutMethod,
+    };
+    if (upiId != null) {
+      body['upi'] = {'upiId': upiId.trim()};
+      body['upiId'] = upiId.trim();
+    }
+    if (accountNumber != null || accountHolderName != null || ifscCode != null) {
+      body['bank'] = {
+        'accountHolderName': accountHolderName?.trim() ?? '',
+        'accountNumber': accountNumber?.trim() ?? '',
+        'ifscCode': ifscCode?.trim() ?? '',
+        if (bankName != null && bankName.trim().isNotEmpty) 'bankName': bankName.trim(),
+      };
+    }
+    final res = await _api.put(ApiEndpoints.setupProfile, data: body);
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Failed to update payout details');
+    }
   }
 
   Future<Map<String, dynamic>> workerEarningsSummary() async {

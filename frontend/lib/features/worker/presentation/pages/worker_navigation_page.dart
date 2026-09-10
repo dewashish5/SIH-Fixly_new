@@ -276,7 +276,7 @@ class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
                   try {
                     await _bookings.verifyArrivalOtp(bookingId: widget.bookingId!, otp: otp);
                     if (mounted) {
-                      ToastUtils.showToast(context: context, message: 'OTP verified! Job started.');
+                      ToastUtils.showToast(context: context, message: 'OTP verified! Arrived at customer.');
                       context.go(RouteNames.workerActiveJob);
                     }
                   } catch (e) {
@@ -286,7 +286,7 @@ class _WorkerNavigationPageState extends State<WorkerNavigationPage> {
                   }
                 }
               },
-              child: const Text('Verify & Start Work', style: TextStyle(color: Colors.white)),
+              child: const Text('Verify Arrival', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),

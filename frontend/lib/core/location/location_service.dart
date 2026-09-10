@@ -175,19 +175,23 @@ class LocationService {
 
     var status = await Permission.locationWhenInUse.status;
 
-    if (status.isGranted) return true;
+    if (status.isGranted) {
+      AppLocation.instance.permissionGranted = true;
+      return true;
+    }
 
+    // Splash already ran permission_handler. Only re-prompt / settings here
+    // when still missing (denied forever or never granted).
     if (status.isPermanentlyDenied) {
       if (!context.mounted) return false;
       await LocationPermissionDialogs.showOpenSettings(context);
       status = await Permission.locationWhenInUse.status;
-      return status.isGranted;
+      final granted = status.isGranted;
+      AppLocation.instance.permissionGranted = granted;
+      return granted;
     }
 
     if (!context.mounted) return false;
-    final proceed = await LocationPermissionDialogs.showRationale(context);
-    if (!proceed) return false;
-
     try {
       status = await Permission.locationWhenInUse.request();
     } catch (e) {
@@ -200,7 +204,9 @@ class LocationService {
       status = await Permission.locationWhenInUse.status;
     }
 
-    return status.isGranted;
+    final granted = status.isGranted;
+    AppLocation.instance.permissionGranted = granted;
+    return granted;
   }
 
   static String _formatPlacemark(Placemark p) {

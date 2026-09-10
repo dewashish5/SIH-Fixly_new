@@ -208,75 +208,175 @@ class SwipeActionButton extends StatefulWidget {
   State<SwipeActionButton> createState() => _SwipeActionButtonState();
 }
 
-class _SwipeActionButtonState extends State<SwipeActionButton> {
+class _SwipeActionButtonState extends State<SwipeActionButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  Animation<double>? _anim;
   double _drag = 0;
+  bool _isCompleted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _animateTo(double target, {VoidCallback? onDone}) {
+    _anim = Tween<double>(begin: _drag, end: target).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+    )..addListener(() {
+        setState(() => _drag = _anim!.value);
+      });
+    _animController.forward(from: 0).then((_) {
+      onDone?.call();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       height: 56,
       decoration: BoxDecoration(
         color: widget.enabled
-            ? scheme.primary.withValues(alpha: 0.12)
-            : scheme.surfaceContainerHighest,
+            ? (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9))
+            : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)),
         borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.08),
+        ),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final maxDrag = constraints.maxWidth - 52;
-          return InkWell(
-            borderRadius: BorderRadius.circular(28),
-            onTap: widget.enabled ? widget.onCompleted : null,
-            child: Stack(
-              alignment: Alignment.centerLeft,
-              children: [
-                Center(
-                  child: Text(
-                    widget.label,
-                    style: TextStyle(
-                      color: widget.enabled ? scheme.primary : scheme.outline,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+          final maxDrag = (constraints.maxWidth - 52).clamp(0.0, double.infinity);
+          final dragRatio = maxDrag > 0 ? (_drag / maxDrag).clamp(0.0, 1.0) : 0.0;
+
+          return Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              // Progress fill behind the knob
+              if (widget.enabled && _drag > 0)
                 Positioned(
-                  left: _drag,
-                  child: GestureDetector(
-                    onHorizontalDragUpdate: !widget.enabled
-                        ? null
-                        : (details) => setState(() {
-                            _drag = (_drag + details.delta.dx).clamp(
-                              0.0,
-                              maxDrag,
-                            );
-                          }),
-                    onHorizontalDragEnd: !widget.enabled
-                        ? null
-                        : (_) {
-                            if (_drag >= maxDrag * 0.7) {
-                              setState(() => _drag = maxDrag);
-                              widget.onCompleted();
-                            } else {
-                              setState(() => _drag = 0);
-                            }
-                          },
-                    child: Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: widget.enabled ? scheme.primary : scheme.outline,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.double_arrow_rounded,
-                        color: scheme.onPrimary,
-                      ),
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: _drag + 52,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(28),
                     ),
                   ),
                 ),
-              ],
-            ),
+
+              // Centered prompt text (fades as user drags)
+              Center(
+                child: Opacity(
+                  opacity: (1.0 - dragRatio * 1.5).clamp(0.0, 1.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.label,
+                        style: TextStyle(
+                          color: widget.enabled
+                              ? (isDark ? Colors.white70 : const Color(0xFF334155))
+                              : Colors.grey,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 18,
+                        color: widget.enabled
+                            ? (isDark ? Colors.white38 : Colors.black26)
+                            : Colors.grey,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Draggable Action Knob
+              Positioned(
+                left: _drag,
+                child: GestureDetector(
+                  onHorizontalDragUpdate: !widget.enabled || _isCompleted
+                      ? null
+                      : (details) {
+                          setState(() {
+                            _drag = (_drag + details.delta.dx).clamp(0.0, maxDrag);
+                          });
+                        },
+                  onHorizontalDragEnd: !widget.enabled || _isCompleted
+                      ? null
+                      : (_) {
+                          if (_drag >= maxDrag * 0.6) {
+                            setState(() => _isCompleted = true);
+                            _animateTo(maxDrag, onDone: () {
+                              widget.onCompleted();
+                            });
+                          } else {
+                            _animateTo(0.0);
+                          }
+                        },
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: widget.enabled
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey.shade400,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: widget.enabled ? 0.35 : 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: !widget.enabled
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Icon(
+                              _isCompleted
+                                  ? Icons.check_rounded
+                                  : Icons.arrow_forward_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),

@@ -35,8 +35,12 @@ class _CustomerFindingWorkerPageState extends State<CustomerFindingWorkerPage> {
   Future<void> _startSearch() async {
     final cubit = context.read<BookingFlowCubit>();
     await cubit.searchWorker();
-    
-    // Polling as fallback
+    final bookingId = cubit.state.booking?.id;
+    if (bookingId != null && bookingId.isNotEmpty) {
+      cubit.listenToSocketUpdates(bookingId);
+    }
+
+    // Polling as fallback if socket misses accept event
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       cubit.workerAccepted();
     });

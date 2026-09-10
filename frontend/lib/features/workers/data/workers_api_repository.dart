@@ -132,14 +132,30 @@ class WorkersApiRepository {
     return isOnline;
   }
 
+  Future<Map<String, dynamic>> fetchWorkerRates() async {
+    final res = await _api.get('/api/workers/me/rates');
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Failed to fetch rates');
+    }
+    return Map<String, dynamic>.from(res['data'] as Map? ?? res);
+  }
+
   Future<void> updateWorkerRates(List<Map<String, dynamic>> rates) async {
     final res = await _api.put(
-      '/api/workers/me/rates', // Use the endpoint required
+      '/api/workers/me/rates',
       data: {'categoryRates': rates},
     );
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Failed to update rates');
     }
+  }
+
+  Future<Map<String, dynamic>> fetchMyCooperativeMembership() async {
+    final res = await _api.get('/api/cooperative/my-society');
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Failed to fetch cooperative details');
+    }
+    return Map<String, dynamic>.from(res['data'] as Map? ?? res);
   }
 
   static WorkerProfile mapWorker(

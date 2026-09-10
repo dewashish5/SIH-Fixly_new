@@ -1,46 +1,39 @@
+import { translateService, translateServices, CATEGORY_DICTIONARY } from '../services/translationService.js';
+
 export const getRequestLanguage = (req) => {
-    const supported = ['en', 'hi', 'ta', 'te', 'kn', 'bn', 'mr', 'gu'];
+    const supported = ['en', 'hi', 'ta', 'te', 'kn', 'bn', 'mr', 'gu', 'pa'];
     const qLang = req.query?.lang;
-    if (qLang && supported.includes(qLang)) return qLang;
+    if (qLang && supported.includes(qLang.toLowerCase())) return qLang.toLowerCase();
 
     const userLang = req.user?.preferredLanguage;
-    if (userLang && supported.includes(userLang)) return userLang;
+    if (userLang && supported.includes(userLang.toLowerCase())) return userLang.toLowerCase();
 
     const header = req.headers?.['accept-language'];
     if (header) {
+        const clean = header.toLowerCase();
         for (const lang of supported) {
-            if (header.toLowerCase().includes(lang)) return lang;
+            if (clean.startsWith(lang) || clean.includes(lang)) return lang;
         }
     }
 
     return 'en';
 };
 
-export const localizeService = (service, lang = 'en') => {
+export const localizeService = async (service, lang = 'en') => {
     if (!service) return service;
-    const isDoc = typeof service.toObject === 'function';
-    const obj = isDoc ? service.toObject() : { ...service };
-
-    if (lang !== 'en') {
-        obj.displayTitle = obj.titleI18n?.[lang] || obj.title;
-        obj.displayCategory = obj.categoryI18n?.[lang] || obj.category;
-        obj.displayDescription = obj.descriptionI18n?.[lang] || obj.description || '';
-        obj.displayWhatsIncluded = (obj.whatsIncludedI18n?.[lang] && obj.whatsIncludedI18n[lang].length)
-            ? obj.whatsIncludedI18n[lang]
-            : obj.whatsIncluded;
-    } else {
-        obj.displayTitle = obj.titleI18n?.en || obj.title;
-        obj.displayCategory = obj.categoryI18n?.en || obj.category;
-        obj.displayDescription = obj.descriptionI18n?.en || obj.description || '';
-        obj.displayWhatsIncluded = (obj.whatsIncludedI18n?.en && obj.whatsIncludedI18n.en.length)
-            ? obj.whatsIncludedI18n.en
-            : obj.whatsIncluded;
-    }
-
-    return obj;
+    return await translateService(service, lang);
 };
 
-export const localizeServices = (services, lang = 'en') => {
+export const localizeServices = async (services, lang = 'en') => {
     if (!Array.isArray(services)) return [];
-    return services.map((s) => localizeService(s, lang));
+    return await translateServices(services, lang);
+};
+
+export const localizeCategories = (categories, lang = 'en') => {
+    if (!Array.isArray(categories)) return [];
+    if (!lang || lang === 'en') return categories;
+    return categories.map(cat => {
+        const lower = String(cat).toLowerCase().trim();
+        return CATEGORY_DICTIONARY[lower]?.[lang] || cat;
+    });
 };

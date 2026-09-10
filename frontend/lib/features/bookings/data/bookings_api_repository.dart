@@ -290,9 +290,11 @@ class BookingsApiRepository {
     String? notes,
   }) async {
     final res = await _api.post(
-      '/api/bookings/$bookingId/price-estimation',
+      '/api/bookings/$bookingId/submit-estimation',
       data: {
+        'laborCost': labor,
         'estimatedLaborCost': labor,
+        if (parts != null) 'partsEstimate': parts,
         if (parts != null) 'estimatedPartsCost': parts,
         if (serviceCharge != null) 'serviceCharge': serviceCharge,
         if (notes != null) 'notes': notes,
@@ -353,10 +355,14 @@ class BookingsApiRepository {
   Future<void> addParts({
     required String bookingId,
     required List<Map<String, dynamic>> extraItems,
+    bool replace = false,
   }) async {
     final res = await _api.patch(
       ApiEndpoints.addParts(bookingId),
-      data: {'extraItems': extraItems},
+      data: {
+        'extraItems': extraItems,
+        'replace': replace,
+      },
     );
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'Add parts failed');
@@ -510,6 +516,7 @@ class BookingsApiRepository {
       customerAvatar: customerAvatar,
       problemDescription: json['problemDescription']?.toString(),
       problemPhotos: strings(json['problemPhotos']),
+      problemVideos: strings(json['problemVideos'] ?? (json['problemVideoUrl'] != null ? [json['problemVideoUrl']] : null)),
       serviceCategory: serviceCategory,
       serviceImage: serviceImage,
       arrivalOtp: json['arrivalOtp']?.toString(),
@@ -523,6 +530,7 @@ class BookingsApiRepository {
       invoice: invoice is Map ? BookingInvoice.fromJson(Map<String, dynamic>.from(invoice)) : null,
       scheduledAt: parseDate(json['scheduledTime'] ?? json['scheduledAt']),
       bookingType: json['bookingType']?.toString(),
+      isEmergency: json['isEmergency'] == true || (json['bookingType']?.toString().toUpperCase() == 'EMERGENCY_SOS'),
     );
   }
 
@@ -706,12 +714,17 @@ class BookingsApiRepository {
       case 'EN_ROUTE':
         return BookingStatus.accepted;
       case 'ARRIVED':
+      case 'ESTIMATION_GIVEN':
+      case 'ESTIMATION_SUBMITTED':
+      case 'READY_TO_START':
+        // Still pre-work — do not treat as inProgress or UI jumps to "work started".
         return BookingStatus.arrived;
       case 'IN_PROGRESS':
       case 'STARTED':
         return BookingStatus.inProgress;
       case 'PAYMENT_PENDING':
       case 'AWAITING_PAYMENT':
+        return BookingStatus.completed;
       case 'COMPLETED':
         return BookingStatus.completed;
       case 'PAID':

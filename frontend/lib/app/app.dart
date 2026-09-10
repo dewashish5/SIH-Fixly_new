@@ -75,6 +75,13 @@ class _AppState extends State<App> with WidgetsBindingObserver {
               supportedLocales: const [
                 Locale('en'),
                 Locale('hi'),
+                Locale('mr'),
+                Locale('ta'),
+                Locale('te'),
+                Locale('kn'),
+                Locale('bn'),
+                Locale('gu'),
+                Locale('pa'),
               ],
               localizationsDelegates: const [
                 GlobalMaterialLocalizations.delegate,

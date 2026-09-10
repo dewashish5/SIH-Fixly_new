@@ -5,7 +5,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../cubit/welfare_cubit.dart';
 
@@ -24,17 +23,33 @@ class WorkerWelfarePage extends StatelessWidget {
 class _WorkerWelfareView extends StatelessWidget {
   const _WorkerWelfareView();
 
-  Future<void> _launchUrl(String urlString) async {
+  Future<void> _launchUrl(BuildContext context, String urlString) async {
     final url = Uri.parse(urlString);
-    if (!await launchUrl(url, mode: LaunchMode.inAppBrowserView)) {
-      debugPrint('Could not launch $url');
+    try {
+      final launched = await launchUrl(
+        url,
+        mode: LaunchMode.inAppWebView,
+        webViewConfiguration: const WebViewConfiguration(
+          enableJavaScript: true,
+          enableDomStorage: true,
+        ),
+      );
+      if (!launched) {
+        await launchUrl(url, mode: LaunchMode.inAppBrowserView);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open page: $e')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Welfare & Insurance',
+      title: 'Welfare & Fund',
       body: BlocBuilder<WelfareCubit, WelfareState>(
         builder: (context, state) {
           if (state.isLoading && state.resources.isEmpty) {
@@ -46,32 +61,61 @@ class _WorkerWelfareView extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.md),
               children: [
-                // Welfare Balance Card
+                // Welfare Fund Overview Card (No pricing)
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
                     borderRadius: BorderRadius.circular(AppRadius.xl),
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [AppColors.primaryDark, AppColors.primary],
+                      colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)],
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Welfare Fund Balance',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.security_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Cooperative Welfare Fund',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '₹${state.balance.toStringAsFixed(2)}',
-                        style: const TextStyle(
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Comprehensive social security, accidental insurance, and government welfare scheme linkage for registered cooperative partners.',
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          height: 1.4,
                         ),
                       ),
                     ],
@@ -106,20 +150,20 @@ class _WorkerWelfareView extends StatelessWidget {
                         title: Text(state.hasUan ? 'UAN Registered' : 'Registration Pending'),
                         subtitle: Text(
                           state.hasUan 
-                            ? 'Your insurance is active.' 
-                            : 'Register to access insurance benefits.',
+                            ? 'Your social security linkage is active.' 
+                            : 'Register to access official insurance benefits.',
                         ),
                       ),
                       const SizedBox(height: 8),
                       SizedBox(
                         width: double.infinity,
                         child: PrimaryButton(
-                          label: state.hasUan ? 'View Insurance' : 'Register for e-Shram',
+                          label: state.hasUan ? 'Open e-Shram Portal' : 'Register for e-Shram',
                           onPressed: () {
                             if (state.hasUan) {
-                              _launchUrl('https://eshram.gov.in/');
+                              _launchUrl(context, 'https://eshram.gov.in/');
                             } else {
-                              _launchUrl('https://eshram.gov.in/registration');
+                              _launchUrl(context, 'https://register.eshram.gov.in/');
                             }
                           },
                         ),
@@ -148,7 +192,7 @@ class _WorkerWelfareView extends StatelessWidget {
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {
                           if (res['url'] != null) {
-                            _launchUrl(res['url']);
+                            _launchUrl(context, res['url']);
                           }
                         },
                       ),

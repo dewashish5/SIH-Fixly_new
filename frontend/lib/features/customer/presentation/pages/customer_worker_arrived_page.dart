@@ -8,17 +8,36 @@ import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../cubit/booking_flow_cubit.dart';
 
-class CustomerWorkerArrivedPage extends StatelessWidget {
+class CustomerWorkerArrivedPage extends StatefulWidget {
   const CustomerWorkerArrivedPage({super.key});
+
+  @override
+  State<CustomerWorkerArrivedPage> createState() =>
+      _CustomerWorkerArrivedPageState();
+}
+
+class _CustomerWorkerArrivedPageState extends State<CustomerWorkerArrivedPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final id = context.read<BookingFlowCubit>().state.booking?.id;
+      if (id != null && id.isNotEmpty) {
+        context.read<BookingFlowCubit>().listenToSocketUpdates(id);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<BookingFlowCubit, BookingFlowState>(
       listenWhen: (previous, current) =>
           previous.step != current.step ||
+          previous.booking?.rawStatus != current.booking?.rawStatus ||
           previous.booking?.paymentStatus != current.booking?.paymentStatus,
       listener: (context, state) {
-        if (state.step == BookingStatus.inProgress) {
+        if (state.booking?.rawStatus == 'IN_PROGRESS' ||
+            state.step == BookingStatus.inProgress) {
           context.pushReplacement(RouteNames.customerWorkStarted);
         } else if (state.step == BookingStatus.paid || state.booking?.paymentStatus == 'PAID') {
           context.push(RouteNames.customerRating);

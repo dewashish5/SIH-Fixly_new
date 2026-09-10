@@ -13,6 +13,7 @@ import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../../../shared/presentation/cubit/profile_cubit.dart';
+import '../widgets/worker_payout_account_sheet.dart';
 import '../../../../core/utils/toast_utils.dart';
 
 class WorkerProfilePage extends StatefulWidget {
@@ -188,18 +189,28 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                           _WorkerMenuTile(
                             icon: Icons.account_balance_wallet_outlined,
                             iconColor: AppColors.primary,
-                            title: 'Wallet & Payouts',
+                            title: 'Wallet & Withdrawals',
                             subtitle: 'Earnings, withdraw funds & transactions',
                             onTap: () =>
                                 context.push(RouteNames.workerWallet),
                           ),
                           _WorkerMenuTile(
+                            icon: Icons.account_balance_rounded,
+                            iconColor: AppColors.primary,
+                            title: 'Bank & UPI Settings',
+                            subtitle: 'Setup or update bank account & UPI ID for payouts',
+                            onTap: () => WorkerPayoutAccountSheet.show(
+                              context,
+                              initialUpi: state.upiId,
+                            ),
+                          ),
+                          _WorkerMenuTile(
                             icon: Icons.groups_rounded,
-                            iconColor: AppColors.secondary,
-                            title: 'Cooperative Society',
-                            subtitle: 'Affiliation & welfare benefits',
+                            iconColor: AppColors.primary,
+                            title: 'Cooperative Society & Federation',
+                            subtitle: 'Membership ID, affiliation & welfare benefits',
                             onTap: () =>
-                                context.push('/worker/cooperative'), // Or defined RouteName
+                                context.push(RouteNames.workerCooperative),
                           ),
                           _WorkerMenuTile(
                             icon: Icons.health_and_safety_outlined,

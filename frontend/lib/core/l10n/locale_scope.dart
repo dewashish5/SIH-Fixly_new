@@ -19,6 +19,7 @@ class LocaleScope extends InheritedWidget {
     'bn',
     'mr',
     'gu',
+    'pa',
   ];
 
   static LocaleScope of(BuildContext context) {

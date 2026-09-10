@@ -46,7 +46,7 @@ class WelfareCubit extends Cubit<WelfareState> {
     try {
       final api = ApiServices.client;
       
-      double balance = 5000.0;
+      double balance = 0.0;
       bool hasUan = false;
       List<Map<String, dynamic>> resources = [];
       
@@ -55,7 +55,7 @@ class WelfareCubit extends Cubit<WelfareState> {
         balance = (res['balance'] as num?)?.toDouble() ?? balance;
         hasUan = (res['hasUan'] as bool?) ?? hasUan;
       } catch (e) {
-        hasUan = true; // mock
+        hasUan = false;
       }
 
       try {
@@ -66,14 +66,19 @@ class WelfareCubit extends Cubit<WelfareState> {
       } catch (e) {
         resources = [
           {
-            'title': 'Safety Guidelines',
-            'description': 'Read the latest safety protocols for workers.',
-            'url': 'https://example.com/safety'
+            'title': 'e-Shram Self Registration Portal',
+            'description': 'Official Government of India portal for unorganized worker registration.',
+            'url': 'https://register.eshram.gov.in/'
           },
           {
-            'title': 'Health Insurance Details',
-            'description': 'Understand your coverage and benefits.',
-            'url': 'https://example.com/insurance'
+            'title': 'Pradhan Mantri Suraksha Bima Yojana',
+            'description': 'Accidental insurance coverage for workers under social security.',
+            'url': 'https://financialservices.gov.in/'
+          },
+          {
+            'title': 'Pradhan Mantri Shram Yogi Maan-dhan',
+            'description': 'Old age pension scheme for gig and unorganized workers.',
+            'url': 'https://maandhan.in/'
           }
         ];
       }

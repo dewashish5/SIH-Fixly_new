@@ -48,4 +48,15 @@ class ToastUtils {
       type: ToastificationType.error,
     );
   }
+
+  static void showInfo({
+    required BuildContext context,
+    required String message,
+  }) {
+    showToast(
+      context: context,
+      message: message,
+      type: ToastificationType.info,
+    );
+  }
 }

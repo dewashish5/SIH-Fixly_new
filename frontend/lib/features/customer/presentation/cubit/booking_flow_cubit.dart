@@ -33,6 +33,7 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
 
   Timer? _statusPollTimer;
   io.Socket? _statusSocket;
+  String? _listeningBookingId;
 
   void selectService(ServiceItem service) {
     emit(state.copyWith(service: service, step: BookingStatus.draft));
@@ -46,6 +47,7 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
       step: booking.status,
       clearError: true,
     ));
+    listenToSocketUpdates(booking.id);
   }
 
   /// Start polling booking status every 5s (for finding-worker / accepted screens).
@@ -63,8 +65,17 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
 
   /// Connect to socket and listen for real-time booking_status_update events.
   void listenToSocketUpdates(String bookingId) {
+    if (bookingId.isEmpty) return;
+    if (_listeningBookingId == bookingId && _statusSocket != null) {
+      if (_statusSocket!.connected) {
+        _statusSocket!.emit('join_booking_room', bookingId);
+      }
+      return;
+    }
+
     _statusSocket?.disconnect();
     _statusSocket?.dispose();
+    _listeningBookingId = bookingId;
 
     final socket = io.io(
       ApiConfig.baseUrl,
@@ -81,16 +92,51 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
     });
 
     void onStatusUpdate(dynamic data) async {
-      // Refresh booking to get latest data including the new status
-      await refreshBooking();
+      if (data is! Map) {
+        await refreshBooking(bookingId);
+        return;
+      }
+      final map = Map<String, dynamic>.from(data);
+      final eventBookingId = map['bookingId']?.toString();
+      final canonicalId = map['canonicalBookingId']?.toString();
+      final current = state.booking;
+      if (current != null &&
+          eventBookingId != null &&
+          eventBookingId != current.id &&
+          canonicalId != current.id &&
+          eventBookingId != bookingId) {
+        return;
+      }
+
+      final newStatus = map['status']?.toString();
+      final paymentStatus = map['paymentStatus']?.toString();
+
+      // Instant UI from socket payload, then hydrate via API.
+      if (current != null && (newStatus != null || paymentStatus != null)) {
+        final mapped = BookingsApiRepository.mapStatus(newStatus ?? current.rawStatus);
+        emit(
+          state.copyWith(
+            booking: current.copyWith(
+              status: paymentStatus == 'PAID' ? BookingStatus.paid : mapped,
+              rawStatus: paymentStatus == 'PAID'
+                  ? 'COMPLETED'
+                  : (newStatus ?? current.rawStatus),
+              paymentStatus: paymentStatus ?? current.paymentStatus,
+            ),
+            step: paymentStatus == 'PAID' ? BookingStatus.paid : mapped,
+          ),
+        );
+      }
+      await refreshBooking(bookingId);
     }
 
     socket.on('booking_status_update', onStatusUpdate);
     socket.on('booking:status', onStatusUpdate);
     socket.on('status_update', onStatusUpdate);
+    socket.on('booking:updated', onStatusUpdate);
     socket.connect();
 
-    // Also start polling as fallback
+    // Polling as fallback when socket drops
     startStatusPolling(bookingId);
   }
 
@@ -129,6 +175,7 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
           isLoading: false,
         ),
       );
+      listenToSocketUpdates(booking.id);
     } on ApiException catch (e) {
       emit(state.copyWith(isLoading: false, errorMessage: e.message));
     } catch (e) {
@@ -186,6 +233,8 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
       );
       _repo.activeBooking = updated;
       emit(state.copyWith(booking: updated, step: updated.status, clearError: true));
+      // Keep socket joined for live status without manual reload.
+      listenToSocketUpdates(updated.id);
     } on ApiException catch (e) {
       emit(state.copyWith(errorMessage: e.message));
     }
@@ -282,6 +331,11 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
   }
 
   void reset() {
+    _statusPollTimer?.cancel();
+    _statusSocket?.disconnect();
+    _statusSocket?.dispose();
+    _statusSocket = null;
+    _listeningBookingId = null;
     _razorpay.dispose();
     _repo.activeBooking = null;
     emit(const BookingFlowState());
@@ -290,6 +344,8 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
   @override
   Future<void> close() {
     _statusPollTimer?.cancel();
+    _statusSocket?.disconnect();
+    _statusSocket?.dispose();
     _razorpay.dispose();
     return super.close();
   }

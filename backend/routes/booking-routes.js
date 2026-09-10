@@ -54,6 +54,7 @@ router.post('/:bookingId/accept', protect, acceptBooking);
 router.post('/:bookingId/start-navigation', protect, startNavigation);
 router.post('/:bookingId/verify-otp', protect, verifyArrivalOtp);
 router.post('/:bookingId/submit-estimation', protect, submitPriceEstimation);
+router.post('/:bookingId/price-estimation', protect, submitPriceEstimation);
 router.post('/:bookingId/accept-estimation', protect, acceptEstimation);
 router.post('/:bookingId/verify-completion-otp', protect, verifyCompletionOtp);
 router.post('/:bookingId/start-job', protect, startJob);

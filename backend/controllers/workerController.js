@@ -4,6 +4,7 @@ dotenv.config();
 import User from '../models/User.js';
 import Booking from '../models/Booking.js';
 import Review from '../models/Review.js';
+import Cooperative from '../models/Cooperative.js';
 import redis from '../config/redis.js';
 import { uploadDataUriOrUrl } from '../utils/cloudinary.js';
 import { updateUserProfile } from './authController.js';
@@ -459,6 +460,90 @@ export const getWorkerReliability = async (req, res) => {
     }
 };
 
+export const getCategoryWageFloor = (category, floor) => {
+    if (!floor) return 300;
+    const cat = (category || '').toLowerCase();
+    if (cat.includes('plumb')) return floor.plumbing || floor.default || 350;
+    if (cat.includes('electr')) return floor.electrical || floor.default || 400;
+    if (cat.includes('carpent')) return floor.carpentry || floor.default || 400;
+    if (cat.includes('clean')) return floor.cleaning || floor.default || 250;
+    if (cat.includes('paint')) return floor.painting || floor.default || 350;
+    if (cat.includes('appliance') || cat.includes('ac') || cat.includes('repair')) return floor.appliance || floor.default || 350;
+    if (cat.includes('garden')) return floor.gardening || floor.default || 250;
+    return floor[cat] || floor.default || 300;
+};
+
+export const getWorkerRates = async (req, res) => {
+    try {
+        if (req.user.role !== 'worker') {
+            return res.status(403).json({ success: false, code: 'FORBIDDEN', message: 'Worker role required' });
+        }
+        const user = await User.findById(req.user.id).select('federation workerProfile');
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        let federation = null;
+        if (user.federation) {
+            federation = await Cooperative.findById(user.federation);
+        }
+        if (!federation) {
+            federation = await Cooperative.findOne({ active: true });
+        }
+        if (!federation) {
+            federation = await Cooperative.create({});
+        }
+
+        const floor = federation.minimumWageFloor?.toObject ? federation.minimumWageFloor.toObject() : (federation.minimumWageFloor || {});
+
+        const profile = user.workerProfile || {};
+        let categories = [];
+        if (Array.isArray(profile.categories) && profile.categories.length > 0) {
+            categories = profile.categories;
+        } else if (profile.category) {
+            categories = [profile.category];
+        } else if (Array.isArray(profile.skills) && profile.skills.length > 0) {
+            categories = profile.skills;
+        } else {
+            categories = ['Plumbing'];
+        }
+
+        const existingRates = Array.isArray(profile.categoryRates) ? profile.categoryRates : [];
+        const rateMap = {};
+        for (const r of existingRates) {
+            if (r && r.category) {
+                rateMap[r.category.toLowerCase().trim()] = r.rate;
+            }
+        }
+
+        const resolvedCategories = categories.map(cat => {
+            const catKey = cat.toLowerCase().trim();
+            const minFloor = getCategoryWageFloor(cat, floor);
+            const userRate = rateMap[catKey] ?? profile.hourlyRate ?? profile.rate ?? minFloor;
+            return {
+                category: cat,
+                rate: Math.max(Number(userRate) || minFloor, minFloor),
+                minimumFloor: minFloor,
+            };
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                categories: resolvedCategories,
+                federation: {
+                    _id: federation._id,
+                    name: federation.name,
+                    federationName: federation.federationName,
+                    registrationNumber: federation.registrationNumber,
+                    fairWagePolicy: federation.fairWagePolicy,
+                    minimumWageFloor: floor,
+                }
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 export const updateWorkerRates = async (req, res) => {
     try {
         if (req.user.role !== 'worker') {
@@ -466,38 +551,86 @@ export const updateWorkerRates = async (req, res) => {
         }
         
         const { categoryRates } = req.body;
-        if (!categoryRates || typeof categoryRates !== 'object') {
-             return res.status(400).json({ success: false, message: 'categoryRates required' });
+        if (!categoryRates) {
+            return res.status(400).json({ success: false, message: 'categoryRates required' });
         }
         
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
         
+        let federation = null;
         if (user.federation) {
-            const Cooperative = (await import('../models/Cooperative.js')).default;
-            const federation = await Cooperative.findById(user.federation);
-            if (federation && federation.minimumWageFloor) {
-                const floor = federation.minimumWageFloor.toObject ? federation.minimumWageFloor.toObject() : federation.minimumWageFloor;
-                for (const [cat, rate] of Object.entries(categoryRates)) {
-                    // normalize category string for matching
-                    const catKey = cat.toLowerCase();
-                    const minRate = floor[catKey] || floor.default || 300;
-                    if (Number(rate) < minRate) {
-                        return res.status(400).json({ 
-                            success: false, 
-                            code: 'BELOW_WAGE_FLOOR', 
-                            message: `Rate for ${cat} cannot be below the minimum wage floor of ₹${minRate}` 
-                        });
-                    }
-                }
+            federation = await Cooperative.findById(user.federation);
+        }
+        if (!federation) {
+            federation = await Cooperative.findOne({ active: true });
+        }
+        if (!federation) {
+            federation = await Cooperative.create({});
+        }
+
+        const floor = federation.minimumWageFloor?.toObject ? federation.minimumWageFloor.toObject() : (federation.minimumWageFloor || {});
+
+        // Normalize rates from Array or Object
+        let rateEntries = [];
+        if (Array.isArray(categoryRates)) {
+            rateEntries = categoryRates.map(item => ({
+                category: (item.category || item.name || '').toString().trim(),
+                rate: Number(item.rate ?? 0)
+            })).filter(item => item.category);
+        } else if (typeof categoryRates === 'object') {
+            rateEntries = Object.entries(categoryRates).map(([cat, val]) => ({
+                category: cat.trim(),
+                rate: Number(val ?? 0)
+            })).filter(item => item.category);
+        }
+
+        if (rateEntries.length === 0) {
+            return res.status(400).json({ success: false, message: 'No valid category rates provided' });
+        }
+
+        // Validate each category against federation minimum wage floor
+        for (const entry of rateEntries) {
+            const minRate = getCategoryWageFloor(entry.category, floor);
+            if (entry.rate < minRate) {
+                return res.status(400).json({ 
+                    success: false, 
+                    code: 'BELOW_WAGE_FLOOR', 
+                    message: `Rate for ${entry.category} cannot be below the federation minimum wage floor of ₹${minRate}` 
+                });
             }
         }
         
         if (!user.workerProfile) user.workerProfile = {};
-        user.workerProfile.categoryRates = { ...user.workerProfile.categoryRates, ...categoryRates };
+
+        // Merge into existing categoryRates array
+        const existingRates = Array.isArray(user.workerProfile.categoryRates) ? user.workerProfile.categoryRates : [];
+        const rateMap = new Map();
+        for (const r of existingRates) {
+            if (r && r.category) rateMap.set(r.category.toLowerCase().trim(), { category: r.category, rate: r.rate });
+        }
+        for (const r of rateEntries) {
+            rateMap.set(r.category.toLowerCase().trim(), { category: r.category, rate: r.rate });
+        }
+        const updatedArray = Array.from(rateMap.values());
+
+        user.workerProfile.categoryRates = updatedArray;
+        if (rateEntries.length > 0) {
+            user.workerProfile.hourlyRate = rateEntries[0].rate;
+            user.workerProfile.rate = rateEntries[0].rate;
+        }
         await user.save();
         
-        return res.status(200).json({ success: true, categoryRates: user.workerProfile.categoryRates });
+        return res.status(200).json({ 
+            success: true, 
+            categoryRates: user.workerProfile.categoryRates,
+            federation: {
+                _id: federation._id,
+                name: federation.name,
+                federationName: federation.federationName,
+                minimumWageFloor: floor,
+            }
+        });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }

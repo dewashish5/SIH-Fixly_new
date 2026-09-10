@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/network/worker_realtime_service.dart';
 import '../../../../core/utils/toast_utils.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
-import '../../../ai/presentation/widgets/hey_flexi_voice_sheet.dart';
 import '../cubit/worker_dashboard_cubit.dart';
 import '../widgets/worker_sos_sheet.dart';
 
@@ -26,6 +25,15 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
   void initState() {
     super.initState();
     context.read<WorkerDashboardCubit>().load();
+  }
+
+  void _navigateToTab(int branchIndex, String routeName) {
+    final shell = StatefulNavigationShell.maybeOf(context);
+    if (shell != null) {
+      shell.goBranch(branchIndex);
+    } else {
+      context.go(routeName);
+    }
   }
 
   Future<void> _handleAcceptJob(WorkerJob job) async {
@@ -71,19 +79,7 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
 
         return Scaffold(
           backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-          appBar: _buildAppBar(context, workerName, isDark),
-          floatingActionButton: FloatingActionButton.extended(
-            heroTag: 'hey_flexi_worker_fab',
-            onPressed: () => HeyFlexiVoiceSheet.show(context),
-            backgroundColor: const Color(0xFF2563EB),
-            foregroundColor: Colors.white,
-            elevation: 4,
-            icon: const Icon(Icons.mic_rounded),
-            label: const Text(
-              'Hey Flexi AI',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-          ),
+          appBar: _buildAppBar(context, state, workerName, isDark),
           body: AppRefreshIndicator(
             onRefresh: () => context.read<WorkerDashboardCubit>().load(),
             child: state.status == WorkerDashboardStatus.loading
@@ -92,28 +88,28 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
                     physics: appRefreshScrollPhysics,
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
                     children: [
-                      // 1. Availability Status Hero Card
+                      // 1. Availability Status Hero Card with Custom Tactile Toggle
                       _buildAvailabilityHero(context, state, isDark),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
 
-                      // 2. Incoming Job Requests (Direct Accept & Decline)
+                      // 2. Daily Performance & Stats Bar
+                      _buildDailyStatsBar(context, state, isDark),
+                      const SizedBox(height: 18),
+
+                      // 3. Incoming Job Requests (Direct Accept & Decline)
                       if (state.incomingJobs.isNotEmpty) ...[
                         _buildIncomingJobsSection(context, state, isDark),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
                       ],
 
-                      // 3. Active Ongoing Job (If any)
+                      // 4. Active Ongoing Job (If any)
                       if (state.activeJob != null) ...[
                         _buildActiveJobCard(context, state.activeJob!, isDark),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
                       ],
 
-                      // 4. Performance & Earnings Metrics (2x2 Grid)
-                      _buildStatsGrid(context, state, isDark),
-                      const SizedBox(height: 20),
-
-                      // 5. Worker Tools & Workspace Shortcuts
-                      _buildToolsSection(context, isDark),
+                      // 5. Unified Workspace & Performance Hub
+                      _buildWorkspaceHub(context, state, isDark),
                     ],
                   ),
           ),
@@ -122,50 +118,63 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, String workerName, bool isDark) {
+  PreferredSizeWidget _buildAppBar(
+    BuildContext context,
+    WorkerDashboardState state,
+    String workerName,
+    bool isDark,
+  ) {
     return AppBar(
       automaticallyImplyLeading: false,
       elevation: 0,
+      titleSpacing: 12,
       backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
       title: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           CircleAvatar(
-            radius: 20,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+            radius: 17,
+            backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
             child: Text(
               workerName.isNotEmpty ? workerName[0].toUpperCase() : 'W',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
-                fontSize: 16,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                fontSize: 14,
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Hi, $workerName 👋',
+                  'Hi, $workerName',
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const Row(
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.verified, size: 12, color: Color(0xFF10B981)),
-                    SizedBox(width: 3),
-                    Text(
-                      'Cooperative Partner',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF10B981),
-                        fontWeight: FontWeight.w600,
+                    const Icon(Icons.verified, size: 12, color: Color(0xFF10B981)),
+                    const SizedBox(width: 3),
+                    Flexible(
+                      child: Text(
+                        'Verified Partner',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -176,62 +185,86 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
         ],
       ),
       actions: [
-        // Live Socket Status Indicator
+        // Worker Availability Status Badge
         StreamBuilder<bool>(
           stream: WorkerRealtimeService.instance.connectionStream,
           initialData: WorkerRealtimeService.instance.isConnected,
           builder: (context, snapshot) {
-            final isLive = snapshot.data ?? false;
-            return Container(
-              margin: const EdgeInsets.symmetric(vertical: 14),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: isLive
-                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                    : Colors.grey.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isLive ? const Color(0xFF10B981) : Colors.grey,
+            final isLive = snapshot.data ?? WorkerRealtimeService.instance.isConnected;
+            final isOnline = state.isAvailable;
+            final badgeDotColor = isOnline ? const Color(0xFF10B981) : const Color(0xFF94A3B8);
+            final statusLabel = isOnline ? 'ONLINE' : 'OFFLINE';
+            final tooltipMsg = isOnline
+                ? (isLive ? 'Online • Live Sync Active' : 'Online • Connecting...')
+                : 'Offline • Tap to go online';
+
+            return Tooltip(
+              message: tooltipMsg,
+              child: GestureDetector(
+                onTap: () {
+                  context.read<WorkerDashboardCubit>().toggleAvailability();
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isOnline
+                          ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                          : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                      width: 1,
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    isLive ? 'LIVE' : 'IDLE',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: isLive ? const Color(0xFF10B981) : Colors.grey,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: badgeDotColor,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        statusLabel,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                          color: isOnline
+                              ? const Color(0xFF10B981)
+                              : (isDark ? Colors.white60 : const Color(0xFF64748B)),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             );
           },
         ),
-        const SizedBox(width: 4),
 
-        // Worker SOS Action (Dedicated worker safety modal)
+        // Worker SOS Action
         IconButton(
-          tooltip: 'Worker Emergency SOS',
+          tooltip: 'Emergency SOS',
+          visualDensity: VisualDensity.compact,
+          padding: const EdgeInsets.all(4),
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
           icon: Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.12),
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
             ),
             child: const Icon(
               Icons.health_and_safety_rounded,
               color: Colors.red,
-              size: 20,
+              size: 16,
             ),
           ),
           onPressed: () => WorkerSosSheet.show(context),
@@ -240,7 +273,10 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
         // Notifications
         IconButton(
           tooltip: 'Notifications',
-          icon: const Icon(Icons.notifications_outlined),
+          visualDensity: VisualDensity.compact,
+          padding: const EdgeInsets.all(6),
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          icon: const Icon(Icons.notifications_outlined, size: 20),
           onPressed: () => context.push(RouteNames.sharedNotifications),
         ),
         const SizedBox(width: 4),
@@ -252,40 +288,50 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
     final isOnline = state.isAvailable;
 
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isOnline
-              ? [const Color(0xFF064E3B), const Color(0xFF047857)]
-              : isDark
-                  ? [const Color(0xFF1E293B), const Color(0xFF334155)]
-                  : [const Color(0xFF334155), const Color(0xFF475569)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: isOnline
+            ? (isDark ? const Color(0xFF0F291E) : const Color(0xFFF0FDF4))
+            : (isDark ? const Color(0xFF1E293B) : Colors.white),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isOnline
+              ? const Color(0xFF10B981).withValues(alpha: 0.45)
+              : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+          width: 1.2,
         ),
-        borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-            color: isOnline
-                ? const Color(0xFF10B981).withValues(alpha: 0.25)
-                : Colors.black.withValues(alpha: 0.1),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
+          if (isOnline)
+            BoxShadow(
+              color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.2 : 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
         ],
       ),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
+          // Icon badge with status indicator
           Container(
-            padding: const EdgeInsets.all(12),
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
               shape: BoxShape.circle,
+              color: isOnline
+                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                  : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9)),
+              border: Border.all(
+                color: isOnline
+                    ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                    : (isDark ? Colors.white10 : const Color(0xFFCBD5E1)),
+              ),
             ),
             child: Icon(
-              isOnline ? Icons.radar_rounded : Icons.pause_circle_outline_rounded,
-              color: Colors.white,
-              size: 28,
+              isOnline ? Icons.sensors_rounded : Icons.power_settings_new_rounded,
+              color: isOnline
+                  ? const Color(0xFF10B981)
+                  : (isDark ? Colors.white54 : const Color(0xFF64748B)),
+              size: 24,
             ),
           ),
           const SizedBox(width: 14),
@@ -296,12 +342,14 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
                 Row(
                   children: [
                     Text(
-                      isOnline ? 'ONLINE & ACTIVE' : 'OFFLINE',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      isOnline ? 'ONLINE & ACTIVE' : 'YOU ARE OFFLINE',
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        letterSpacing: 0.5,
+                        fontSize: 14.5,
+                        letterSpacing: 0.4,
+                        color: isOnline
+                            ? (isDark ? const Color(0xFF34D399) : const Color(0xFF059669))
+                            : (isDark ? Colors.white : const Color(0xFF0F172A)),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -310,7 +358,16 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
                       height: 8,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isOnline ? const Color(0xFF34D399) : Colors.grey.shade400,
+                        color: isOnline
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFF94A3B8),
+                        boxShadow: [
+                          if (isOnline)
+                            BoxShadow(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.6),
+                              blurRadius: 6,
+                            ),
+                        ],
                       ),
                     ),
                   ],
@@ -318,28 +375,165 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
                 const SizedBox(height: 3),
                 Text(
                   isOnline
-                      ? 'Receiving instant booking alerts nearby'
-                      : 'Toggle on to receive customer job requests',
+                      ? 'Live on radar • Ready for job alerts'
+                      : 'Toggle on to start receiving bookings',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
+                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
                     fontSize: 12,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
             ),
           ),
-          Transform.scale(
-            scale: 0.9,
-            child: Switch(
-              value: isOnline,
-              activeThumbColor: const Color(0xFF34D399),
-              activeTrackColor: Colors.white.withValues(alpha: 0.3),
-              inactiveThumbColor: Colors.white,
-              inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
-              onChanged: (_) => context.read<WorkerDashboardCubit>().toggleAvailability(),
+          const SizedBox(width: 8),
+
+          // Custom tactile toggle button
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              context.read<WorkerDashboardCubit>().toggleAvailability();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeInOut,
+              width: 64,
+              height: 34,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: isOnline
+                    ? const Color(0xFF10B981)
+                    : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                boxShadow: [
+                  if (isOnline)
+                    BoxShadow(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                ],
+              ),
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutBack,
+                alignment: isOnline ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 4,
+                        offset: Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    isOnline ? Icons.check_rounded : Icons.power_settings_new_rounded,
+                    size: 15,
+                    color: isOnline ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDailyStatsBar(
+    BuildContext context,
+    WorkerDashboardState state,
+    bool isDark,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      child: Row(
+        children: [
+          _buildStatItem(
+            label: "Today's Earned",
+            value: '₹${state.todayEarnings.toStringAsFixed(0)}',
+            isDark: isDark,
+            onTap: () => context.push(RouteNames.workerEarnings),
+          ),
+          Container(
+            height: 28,
+            width: 1,
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          ),
+          _buildStatItem(
+            label: 'Jobs Done',
+            value: '${state.completedJobs}',
+            isDark: isDark,
+            onTap: () => _navigateToTab(1, RouteNames.workerJobs),
+          ),
+          Container(
+            height: 28,
+            width: 1,
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          ),
+          _buildStatItem(
+            label: 'Trust Score',
+            value: '${state.reliabilityScore}%',
+            isDark: isDark,
+            onTap: () => context.push(RouteNames.workerReliability),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required String label,
+    required String value,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -353,37 +547,41 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
+                const Text(
+                  'Incoming Requests',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.bolt, color: Colors.orange, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        'NEW REQUESTS (${state.incomingJobs.length})',
-                        style: const TextStyle(
-                          color: Colors.orange,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${state.incomingJobs.length}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white70 : const Color(0xFF475569),
+                    ),
                   ),
                 ),
               ],
             ),
             TextButton(
-              onPressed: () => context.push(RouteNames.workerJobs),
-              style: TextButton.styleFrom(padding: EdgeInsets.zero),
-              child: const Row(
-                children: [
-                  Text('All Jobs', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  Icon(Icons.chevron_right, size: 16),
-                ],
+              onPressed: () => _navigateToTab(1, RouteNames.workerJobs),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+              ),
+              child: const Text(
+                'View All',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -398,171 +596,165 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
   }
 
   Widget _buildJobRequestCard(BuildContext context, WorkerJob job, bool isAccepting, bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.orange.withValues(alpha: 0.35), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.orange.withValues(alpha: 0.12),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+    return Material(
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          context.push(RouteNames.workerJobDetailPath(job.id)).then((_) {
+            if (context.mounted) context.read<WorkerDashboardCubit>().load();
+          });
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            ),
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          padding: const EdgeInsets.all(15),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      job.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Customer: ${job.customerName}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Theme.of(context).hintColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
-                ),
-                child: Text(
-                  '₹${job.pay.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    color: Color(0xFF059669),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(Icons.location_on_rounded, size: 16, color: Colors.redAccent),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  job.address.isNotEmpty ? job.address : 'Near your service zone',
-                  style: const TextStyle(fontSize: 12),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '${job.distanceKm.toStringAsFixed(1)} km away',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.blue,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (job.problemDescription != null && job.problemDescription!.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline, size: 14, color: Colors.grey),
-                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          job.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            letterSpacing: -0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${job.customerName} • ${job.distanceKm.toStringAsFixed(1)} km away',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '₹${job.pay.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 17,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 14,
+                    color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                  ),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      job.problemDescription!,
-                      style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
-                      maxLines: 2,
+                      job.address.isNotEmpty ? job.address : 'Near your service area',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                      ),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              OutlinedButton(
-                onPressed: isAccepting ? null : () => _handleDeclineJob(job),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  side: BorderSide(color: Colors.grey.withValues(alpha: 0.4)),
-                ),
-                child: const Text(
-                  'Decline',
-                  style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: isAccepting ? null : () => _handleAcceptJob(job),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              if (job.problemDescription != null && job.problemDescription!.trim().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
                     ),
-                    elevation: 2,
                   ),
-                  icon: isAccepting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.check_circle_rounded, size: 18),
-                  label: Text(
-                    isAccepting ? 'Accepting...' : 'Accept Job Now',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  child: Text(
+                    'Note: ${job.problemDescription!.trim()}',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontStyle: FontStyle.italic,
+                      color: isDark ? Colors.white60 : const Color(0xFF475569),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  OutlinedButton(
+                    onPressed: isAccepting ? null : () => _handleDeclineJob(job),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: isDark ? Colors.white70 : const Color(0xFF64748B),
+                      side: BorderSide(
+                        color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'Decline',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: isAccepting ? null : () => _handleAcceptJob(job),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: isAccepting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Accept Job',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -571,38 +763,42 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.4), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(15),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Row(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.sync_rounded, color: Color(0xFF3B82F6), size: 14),
-                    SizedBox(width: 4),
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFF10B981),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
                     Text(
                       'ACTIVE ONGOING JOB',
                       style: TextStyle(
-                        color: Color(0xFF3B82F6),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
+                        color: isDark ? Colors.white70 : const Color(0xFF475569),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 10,
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ],
@@ -612,9 +808,8 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
               Text(
                 '₹${activeJob.pay.toStringAsFixed(0)}',
                 style: const TextStyle(
-                  color: Color(0xFF10B981),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 17,
                 ),
               ),
             ],
@@ -622,54 +817,79 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
           const SizedBox(height: 10),
           Text(
             activeJob.title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const SizedBox(height: 2),
           Text(
             'Customer: ${activeJob.customerName}',
-            style: TextStyle(color: Theme.of(context).hintColor, fontSize: 13),
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+            ),
           ),
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.location_on, size: 14, color: Colors.redAccent),
+              Icon(
+                Icons.location_on_outlined,
+                size: 14,
+                color: isDark ? Colors.white54 : const Color(0xFF64748B),
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   activeJob.address,
-                  style: const TextStyle(fontSize: 12),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Row(
             children: [
               if (activeJob.customerPhone != null && activeJob.customerPhone!.isNotEmpty) ...[
-                IconButton.filledTonal(
+                OutlinedButton(
                   onPressed: () => launchUrl(Uri.parse('tel:${activeJob.customerPhone}')),
-                  icon: const Icon(Icons.phone_rounded, color: Color(0xFF2563EB)),
-                  tooltip: 'Call Customer',
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? Colors.white70 : const Color(0xFF334155),
+                    side: BorderSide(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.phone_outlined, size: 15),
+                      SizedBox(width: 4),
+                      Text('Call', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
                 ),
                 const SizedBox(width: 8),
               ],
               Expanded(
-                child: ElevatedButton.icon(
+                child: FilledButton(
                   onPressed: () => context.push(RouteNames.workerActiveJob),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  icon: const Icon(Icons.navigation_rounded, size: 18),
-                  label: const Text(
-                    'Open Task & Navigate',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  child: const Text(
+                    'Open Job Console',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                 ),
               ),
@@ -680,122 +900,70 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
     );
   }
 
-  Widget _buildStatsGrid(BuildContext context, WorkerDashboardState state, bool isDark) {
+  Widget _buildWorkspaceHub(BuildContext context, WorkerDashboardState state, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Performance & Earnings',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                title: 'Today Earnings',
-                value: '₹${state.todayEarnings.toStringAsFixed(0)}',
-                subtitle: 'Payout on schedule',
-                icon: Icons.currency_rupee_rounded,
-                color: const Color(0xFF10B981),
-                isDark: isDark,
-                onTap: () => context.push(RouteNames.workerEarnings),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _MetricCard(
-                title: 'Jobs Done',
-                value: '${state.completedJobs}',
-                subtitle: 'All-time fulfilled',
-                icon: Icons.check_circle_outline_rounded,
-                color: const Color(0xFF2563EB),
-                isDark: isDark,
-                onTap: () => context.push(RouteNames.workerJobs),
-              ),
-            ),
-          ],
+          'Workspace & Tools',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -0.2),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                title: 'Reliability',
-                value: '${state.reliabilityScore}%',
-                subtitle: 'Top Tier Rating',
-                icon: Icons.verified_rounded,
-                color: const Color(0xFFF59E0B),
-                isDark: isDark,
-                onTap: () => context.push(RouteNames.workerReliability),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _MetricCard(
-                title: 'Welfare Fund',
-                value: '₹${state.welfareFund.toStringAsFixed(0)}',
-                subtitle: 'e-Shram & Insurance',
-                icon: Icons.security_rounded,
-                color: const Color(0xFF8B5CF6),
-                isDark: isDark,
-                onTap: () => context.push(RouteNames.workerWelfare),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildToolsSection(BuildContext context, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Worker Workspace & Tools',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,
-          childAspectRatio: 1.5,
+          childAspectRatio: 1.25,
           children: [
-            _ToolCard(
-              title: 'Job Feed',
-              subtitle: 'Nearby broadcast requests',
-              icon: Icons.work_outline_rounded,
-              color: const Color(0xFF0284C7),
+            _HubCard(
+              title: 'Earnings',
+              badge: '₹${state.todayEarnings.toStringAsFixed(0)}',
+              subtitle: 'Today & breakdown',
+              icon: Icons.insights_rounded,
               isDark: isDark,
-              onTap: () => context.push(RouteNames.workerJobs),
+              onTap: () => context.push(RouteNames.workerEarnings),
             ),
-            _ToolCard(
+            _HubCard(
               title: 'My Wallet',
-              subtitle: 'Bank & UPI payouts',
+              badge: 'Payouts',
+              subtitle: 'Bank & UPI transfers',
               icon: Icons.account_balance_wallet_outlined,
-              color: const Color(0xFF059669),
               isDark: isDark,
-              onTap: () => context.push(RouteNames.workerWallet),
+              onTap: () => _navigateToTab(2, RouteNames.workerWallet),
             ),
-            _ToolCard(
-              title: 'Welfare & Benefits',
-              subtitle: 'e-Shram, medical, schemes',
+            _HubCard(
+              title: 'Job Feed',
+              badge: '${state.completedJobs} Done',
+              subtitle: 'Requests & history',
+              icon: Icons.assignment_outlined,
+              isDark: isDark,
+              onTap: () => _navigateToTab(1, RouteNames.workerJobs),
+            ),
+            _HubCard(
+              title: 'Reliability',
+              badge: '${state.reliabilityScore}%',
+              subtitle: 'Trust & rating score',
+              icon: Icons.verified_outlined,
+              isDark: isDark,
+              onTap: () => context.push(RouteNames.workerReliability),
+            ),
+            _HubCard(
+              title: 'Welfare Fund',
+              badge: 'e-Shram',
+              subtitle: 'Govt benefits & aid',
               icon: Icons.shield_outlined,
-              color: const Color(0xFF7C3AED),
               isDark: isDark,
               onTap: () => context.push(RouteNames.workerWelfare),
             ),
-            _ToolCard(
-              title: 'Earnings Analytics',
-              subtitle: 'Weekly & monthly charts',
-              icon: Icons.insights_rounded,
-              color: const Color(0xFFD97706),
+            _HubCard(
+              title: 'Rate Settings',
+              badge: 'Base Rates',
+              subtitle: 'Configure pricing',
+              icon: Icons.tune_outlined,
               isDark: isDark,
-              onTap: () => context.push(RouteNames.workerEarnings),
+              onTap: () => context.push(RouteNames.workerRateSettings),
             ),
           ],
         ),
@@ -804,142 +972,128 @@ class _WorkerDashboardPageState extends State<WorkerDashboardPage> {
   }
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
+class _HubCard extends StatelessWidget {
+  const _HubCard({
     required this.title,
-    required this.value,
+    required this.badge,
     required this.subtitle,
     required this.icon,
-    required this.color,
     required this.isDark,
     required this.onTap,
   });
 
   final String title;
-  final String value;
+  final String badge;
   final String subtitle;
   final IconData icon;
-  final Color color;
   final bool isDark;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: isDark ? 0.18 : 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: primaryColor.withValues(alpha: isDark ? 0.3 : 0.15),
+                      ),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: primaryColor,
+                      size: 20,
+                    ),
                   ),
-                  child: Icon(icon, color: color, size: 18),
-                ),
-                Icon(Icons.arrow_forward_ios, size: 11, color: Colors.grey.withValues(alpha: 0.6)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white70 : Colors.black87,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                      child: Text(
+                        badge,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white70 : const Color(0xFF475569),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 10, color: Theme.of(context).hintColor),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ToolCard extends StatelessWidget {
-  const _ToolCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.isDark,
-    required this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final bool isDark;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 20),
-                const Spacer(),
-                Icon(Icons.arrow_forward_ios, size: 10, color: Colors.grey.withValues(alpha: 0.5)),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 10, color: Theme.of(context).hintColor),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            letterSpacing: -0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 16,
+                        color: isDark ? Colors.white38 : Colors.black26,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w400,
+                      color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

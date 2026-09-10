@@ -1,5 +1,5 @@
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, ValueNotifier;
 
 /// API host configuration with dynamic candidate failover.
 class ApiConfig {
@@ -11,9 +11,13 @@ class ApiConfig {
   );
 
   static String? _overrideUrl;
+  static final ValueNotifier<String> urlNotifier = ValueNotifier<String>(_defaultUrl);
 
   static void setBaseUrl(String url) {
-    _overrideUrl = url;
+    if (_overrideUrl != url) {
+      _overrideUrl = url;
+      urlNotifier.value = url;
+    }
   }
 
   static String get baseUrl {
@@ -27,7 +31,8 @@ class ApiConfig {
       return 'http://localhost:8005';
     }
     if (Platform.isAndroid) {
-      return 'http://10.0.2.2:8005'; // Android Emulator
+      // Prioritize localhost (works with adb reverse for both physical device and emulator)
+      return 'http://localhost:8005';
     }
     return 'http://localhost:8005'; // iOS simulator or desktop
   }
@@ -37,6 +42,9 @@ class ApiConfig {
     urls.add(baseUrl);
     if (!urls.contains('http://localhost:8005')) urls.add('http://localhost:8005');
     if (!urls.contains('http://127.0.0.1:8005')) urls.add('http://127.0.0.1:8005');
+    if (!urls.contains('http://192.168.1.197:8005')) {
+      urls.add('http://192.168.1.197:8005');
+    }
     if (Platform.isAndroid && !urls.contains('http://10.0.2.2:8005')) {
       urls.add('http://10.0.2.2:8005');
     }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/core_widgets.dart';
@@ -151,9 +150,14 @@ class _WorkerPriceEstimationPageState extends State<WorkerPriceEstimationPage> {
             ),
             const SizedBox(height: 32),
             PrimaryButton(
-              label: 'Submit Estimation',
+              label: 'Show Estimation to Customer',
               loading: _isLoading,
               onPressed: _submit,
+            ),
+            const SizedBox(height: 12),
+            SecondaryButton(
+              label: 'Cancel',
+              onPressed: _isLoading ? null : () => Navigator.pop(context),
             ),
           ],
         ),

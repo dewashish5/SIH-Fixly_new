@@ -37,27 +37,27 @@ class _WorkerIncomingOrdersPageState extends State<WorkerIncomingOrdersPage> {
           title: context.l10n.incomingOrders,
           body: state.status == JobFeedStatus.loading
               ? const Center(child: CircularProgressIndicator())
-              : Column(
-                  children: [
-                    if (incoming.isEmpty)
-                      Expanded(
-                        child: Center(
-                          child: Text(
-                            'No incoming orders',
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child: AppRefreshIndicator(
-                          onRefresh: () => context.read<JobFeedCubit>().load(),
-                          child: ListView.separated(
-                            physics: appRefreshScrollPhysics,
-                            itemCount: incoming.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
+              : AppRefreshIndicator(
+                  onRefresh: () => context.read<JobFeedCubit>().load(),
+                  child: incoming.isEmpty
+                      ? ListView(
+                          physics: appRefreshScrollPhysics,
+                          children: [
+                            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                            Center(
+                              child: Text(
+                                'No incoming orders',
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          physics: appRefreshScrollPhysics,
+                          itemCount: incoming.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
                             final job = incoming[index];
                             return JobListTile(
                               title: job.title,
@@ -75,9 +75,6 @@ class _WorkerIncomingOrdersPageState extends State<WorkerIncomingOrdersPage> {
                             );
                           },
                         ),
-                      ),
-                    ),
-                  ],
                 ),
         );
       },

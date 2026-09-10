@@ -23,7 +23,12 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<BookingFlowCubit>().refreshBooking(widget.bookingId);
+      final cubit = context.read<BookingFlowCubit>();
+      cubit.refreshBooking(widget.bookingId);
+      final id = widget.bookingId ?? cubit.state.booking?.id;
+      if (id != null && id.isNotEmpty) {
+        cubit.listenToSocketUpdates(id);
+      }
     });
   }
 

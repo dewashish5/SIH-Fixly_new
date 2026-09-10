@@ -8,6 +8,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../core/auth/google_auth_service.dart';
 import '../../../../core/location/location_service.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/preferences/app_preferences.dart';
 import '../../../../core/notifications/notification_service.dart';
@@ -110,6 +111,9 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   Future<void> setLocale(String locale) async {
     await _prefs.setLocale(locale);
     _repo.locale = locale;
+    try {
+      ApiServices.client.clearCache();
+    } catch (_) {}
     emit(state.copyWith(locale: locale));
   }
 
