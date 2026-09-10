@@ -23,7 +23,6 @@ import '../../../../core/widgets/fixly_map_view.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../../../shared/widgets/category_icon_tile.dart';
-import '../../../ai/presentation/widgets/hey_flexi_voice_sheet.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../cubit/customer_home_cubit.dart';
 
@@ -867,7 +866,7 @@ class _CustomerHomeViewState extends State<_CustomerHomeView>
           borderRadius: BorderRadius.circular(30),
           onTap: () {
             HapticFeedback.mediumImpact();
-            HeyFlexiVoiceSheet.show(context);
+            context.push('${RouteNames.customerAiChat}?live=1');
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

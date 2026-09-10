@@ -51,6 +51,7 @@ dependencies:
   share_plus: ^13.3.0
   fl_chart: ^1.2.0
   web_socket_channel: ^3.0.3
+  animated_text_kit: ^4.3.0
 
 dev_dependencies:
   flutter_test:
@@ -100,3 +101,4 @@ flutter:
     - assets/icons/start.png
     - assets/icons/stop.png
     - assets/icons/bike_marker.png
+    - assets/ai/siri_orb.gif

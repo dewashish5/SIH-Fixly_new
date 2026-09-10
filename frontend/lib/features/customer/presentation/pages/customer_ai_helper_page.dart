@@ -14,6 +14,7 @@ import '../../../../core/location/app_location.dart';
 import '../../../../services/gemini_live_service.dart';
 import '../../../../services/speech_service.dart';
 import '../../../ai/data/ai_api_repository.dart';
+import '../../../ai/presentation/widgets/ai_fade_in_text.dart';
 import '../../../ai/presentation/widgets/ai_thinking_dots.dart';
 import '../../../ai/presentation/widgets/siri_glow_frame.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
@@ -52,14 +53,19 @@ class _ChatMessage {
 }
 
 class CustomerAiHelperPage extends StatefulWidget {
-  const CustomerAiHelperPage({super.key});
+  const CustomerAiHelperPage({
+    super.key,
+    this.startInLiveMode = false,
+  });
+
+  /// When true (Hey Flexi FAB), open straight into Siri-style live voice.
+  final bool startInLiveMode;
 
   @override
   State<CustomerAiHelperPage> createState() => _CustomerAiHelperPageState();
 }
 
-class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
-    with SingleTickerProviderStateMixin {
+class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
   final _queryController = TextEditingController();
   final _scrollController = ScrollController();
   final _picker = ImagePicker();
@@ -84,7 +90,6 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
   String _liveSpokenText = '';
   String _liveAiReplyText = '';
   bool _liveBridgeReady = false;
-  late AnimationController _pulseAnimController;
 
   static const _langLabels = <String, String>{
     'en': 'EN',
@@ -101,11 +106,6 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
   @override
   void initState() {
     super.initState();
-    _pulseAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
-
     _speechService.initialize();
 
     // App locale first; only supported Fixly locales.
@@ -114,6 +114,12 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
     _conversationState['language'] = _selectedLanguage;
 
     _initConversation();
+
+    if (widget.startInLiveMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startLiveMode();
+      });
+    }
   }
 
   String _normalizeLang(String? raw) {
@@ -208,7 +214,6 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
 
   @override
   void dispose() {
-    _pulseAnimController.dispose();
     _queryController.dispose();
     _scrollController.dispose();
     _speechService.stopListening();
@@ -783,11 +788,24 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
 
   @override
   Widget build(BuildContext context) {
+    final glowMode = !_isLiveMode
+        ? SiriGlowMode.idle
+        : switch (_liveVoiceState) {
+            LiveVoiceState.listening => SiriGlowMode.listening,
+            LiveVoiceState.thinking => SiriGlowMode.thinking,
+            LiveVoiceState.speaking => SiriGlowMode.speaking,
+            LiveVoiceState.paused => SiriGlowMode.idle,
+          };
+
     return SiriGlowFrame(
-      active: true,
-      intensity: _isLiveMode ? 1.25 : 0.85,
+      active: _isLiveMode,
+      mode: glowMode,
+      borderRadius: _isLiveMode ? 0 : 28,
       child: Scaffold(
-      appBar: AppBar(
+      backgroundColor: _isLiveMode ? Colors.black : null,
+      appBar: _isLiveMode
+          ? null
+          : AppBar(
         titleSpacing: 12,
         title: Row(
           children: [
@@ -912,8 +930,9 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
       ),
       body: Stack(
         children: [
-          // --- Main Chat View ---
-          Column(
+          // --- Main Chat View (hidden in Siri live mode) ---
+          if (!_isLiveMode)
+            Column(
             children: [
               // Message List
               Expanded(
@@ -929,13 +948,11 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
               ),
 
               // Dynamic Suggested Replies Horizontal Bar (hidden in live)
-              if (!_isLiveMode &&
-                  _suggestedReplies.isNotEmpty &&
-                  !_awaitingReply)
+              if (_suggestedReplies.isNotEmpty && !_awaitingReply)
                 _buildSuggestedRepliesBar(),
 
-              // Modern Input Bar — hidden while live voice is on
-              if (!_isLiveMode) _buildBottomInputBar(),
+              // Modern Input Bar
+              _buildBottomInputBar(),
             ],
           ),
 
@@ -1935,146 +1952,108 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
   }
 
   // --- AI Live Voice Talking Fullscreen Overlay ---
+  // --- Siri-style live: edge glow + chats only ---
   Widget _buildLiveVoiceOverlay() {
     final isListening = _liveVoiceState == LiveVoiceState.listening;
     final isThinking = _liveVoiceState == LiveVoiceState.thinking;
     final isSpeaking = _liveVoiceState == LiveVoiceState.speaking;
 
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-      top: 0,
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        color: Colors.black.withValues(alpha: 0.88),
+    return Positioned.fill(
+      child: ColoredBox(
+        color: Colors.black,
         child: SafeArea(
           child: Column(
             children: [
-              // Top Bar with Close button and Live Status
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: isSpeaking
-                                ? Colors.cyanAccent
-                                : (isThinking
-                                    ? Colors.amberAccent
-                                    : const Color(0xFF10B981)),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: (isSpeaking
-                                        ? Colors.cyanAccent
-                                        : const Color(0xFF10B981))
-                                    .withValues(alpha: 0.8),
-                                blurRadius: 8,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _selectedLanguage == 'hi' ? 'लाइव टॉक' : 'AI LIVE TALKING',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.1,
-                          ),
-                        ),
-                      ],
+                    IconButton(
+                      onPressed: () {
+                        _closeLiveMode();
+                        if (widget.startInLiveMode && context.canPop()) {
+                          context.pop();
+                        }
+                      },
+                      icon: const Icon(Icons.close_rounded, color: Colors.white70),
                     ),
-                    Row(
-                      children: [
-                        _buildOverlayLangToggle(),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          onPressed: _closeLiveMode,
-                          icon: const Icon(
-                            Icons.close_rounded,
-                            color: Colors.white70,
-                            size: 26,
-                          ),
-                        ),
-                      ],
+                    const Spacer(),
+                    Text(
+                      isSpeaking
+                          ? 'Flexi speaking'
+                          : (isThinking
+                              ? 'Thinking'
+                              : (isListening ? 'Listening' : 'Paused')),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.55),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4,
+                      ),
                     ),
+                    const Spacer(),
+                    _buildOverlayLangToggle(),
                   ],
                 ),
               ),
-
-              const Spacer(flex: 1),
-
-              // Animated Pulsating Glowing Voice Orb
-              Center(
-                child: AnimatedBuilder(
-                  animation: _pulseAnimController,
-                  builder: (context, child) {
-                    final scale = 1.0 + (_pulseAnimController.value * 0.15);
-                    final glowRadius = 24.0 + (_pulseAnimController.value * 28.0);
-
-                    return Container(
-                      width: 160 * scale,
-                      height: 160 * scale,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: isSpeaking
-                              ? [
-                                  Colors.cyanAccent,
-                                  context.scheme.primary,
-                                  Colors.transparent,
-                                ]
-                              : (isThinking
-                                  ? [
-                                      Colors.purpleAccent,
-                                      Colors.deepPurple,
-                                      Colors.transparent,
-                                    ]
-                                  : [
-                                      const Color(0xFF10B981),
-                                      context.scheme.primary,
-                                      Colors.transparent,
-                                    ]),
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
+                  itemCount: _messages.length +
+                      (_liveSpokenText.trim().isNotEmpty && isListening ? 1 : 0) +
+                      (isThinking ? 1 : 0) +
+                      (isSpeaking && _liveAiReplyText.trim().isNotEmpty ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index < _messages.length) {
+                      return _buildSiriChatLine(_messages[index]);
+                    }
+                    var after = index - _messages.length;
+                    final hasPartial =
+                        _liveSpokenText.trim().isNotEmpty && isListening;
+                    if (hasPartial) {
+                      if (after == 0) {
+                        // Live partial — plain text (avoid restart flicker).
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              _liveSpokenText,
+                              textAlign: TextAlign.right,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                height: 1.35,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      after -= 1;
+                    }
+                    if (isThinking && after == 0) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: AiThinkingDots(color: Colors.white70),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (isSpeaking
-                                    ? Colors.cyanAccent
-                                    : (isThinking
-                                        ? Colors.purpleAccent
-                                        : const Color(0xFF10B981)))
-                                .withValues(alpha: 0.4),
-                            blurRadius: glowRadius,
-                            spreadRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 90,
-                          height: 90,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF0F172A),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            isSpeaking
-                                ? Icons.volume_up_rounded
-                                : (isThinking
-                                    ? Icons.hourglass_top_rounded
-                                    : Icons.mic_rounded),
-                            size: 44,
-                            color: Colors.white,
+                      );
+                    }
+                    // Speaking transcript / TTS line
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: AiFadeInText(
+                          text: _liveAiReplyText,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.92),
+                            fontSize: 20,
+                            height: 1.35,
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
                       ),
@@ -2082,145 +2061,76 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage>
                   },
                 ),
               ),
-
-              const SizedBox(height: 32),
-
-              // Status State Pill
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: isThinking
-                    ? const AiThinkingDots(color: Colors.amberAccent, size: 9)
-                    : Text(
-                  isSpeaking
-                      ? 'Flexi AI is Speaking...'
-                      : 'Listening to You...',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isSpeaking
-                        ? Colors.cyanAccent
-                        : const Color(0xFF34D399),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Live Subtitles / Live Transcript Box
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 24),
-                padding: const EdgeInsets.all(16),
-                constraints: const BoxConstraints(minHeight: 80, maxHeight: 150),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-                ),
-                child: SingleChildScrollView(
-                  child: Text(
-                    isSpeaking
-                        ? _liveAiReplyText
-                        : (_liveSpokenText.isNotEmpty
-                            ? _liveSpokenText
-                            : 'Speak now (e.g. "My AC is leaking", "Need an electrician", "Where is my worker")'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      height: 1.4,
-                      color: isSpeaking ? Colors.white : Colors.white70,
-                      fontWeight:
-                          isSpeaking ? FontWeight.w500 : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              ),
-
-              const Spacer(flex: 1),
-
-              // Live mode: no chips / typing chrome — only voice + transcript
-
-              // Bottom Control Buttons in Live Mode
+              // Siri-style orb — bottom center, transparent GIF (no plate BG)
               Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Mute / Pause Listening
-                    IconButton.filledTonal(
-                      onPressed: () {
-                        if (isListening) {
-                          _speechService.stopListening();
-                          setState(() => _liveVoiceState = LiveVoiceState.paused);
-                        } else {
-                          _listenInLiveMode();
-                        }
-                      },
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.15),
-                        padding: const EdgeInsets.all(14),
-                      ),
-                      icon: Icon(
-                        isListening ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-
-                    // Main Action (Stop AI speaking or Force Send)
                     if (isSpeaking)
-                      FilledButton.icon(
+                      TextButton(
                         onPressed: _interruptSpeaking,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.redAccent.withValues(alpha: 0.8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
+                        child: const Text(
+                          'Tap to interrupt',
+                          style: TextStyle(color: Colors.white54),
+                        ),
+                      ),
+                    Semantics(
+                      label: isSpeaking
+                          ? 'Flexi speaking'
+                          : (isThinking ? 'Flexi thinking' : 'Flexi listening'),
+                      child: ExcludeSemantics(
+                        child: Image.asset(
+                          'assets/ai/siri_orb.gif',
+                          width: 132,
+                          height: 132,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                          filterQuality: FilterQuality.high,
+                          errorBuilder: (_, error, stackTrace) => const SizedBox(
+                            width: 132,
+                            height: 132,
                           ),
                         ),
-                        icon: const Icon(Icons.stop_rounded),
-                        label: const Text('Interrupt / Speak'),
-                      )
-                    else
-                      FilledButton.icon(
-                        onPressed: () {
-                          if (_liveSpokenText.trim().isNotEmpty) {
-                            _sendMessage(_liveSpokenText);
-                          } else {
-                            _listenInLiveMode();
-                          }
-                        },
-                        style: FilledButton.styleFrom(
-                          backgroundColor: context.scheme.primary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                        ),
-                        icon: const Icon(Icons.send_rounded, size: 18),
-                        label: const Text('Send Spoken Words'),
-                      ),
-
-                    // End Live Session
-                    IconButton.filledTonal(
-                      onPressed: _closeLiveMode,
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.redAccent.withValues(alpha: 0.2),
-                        padding: const EdgeInsets.all(14),
-                      ),
-                      icon: const Icon(
-                        Icons.call_end_rounded,
-                        color: Colors.redAccent,
-                        size: 24,
                       ),
                     ),
                   ],
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSiriChatLine(_ChatMessage msg) {
+    final isBot = msg.isBot;
+    if (msg.loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 14),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: AiThinkingDots(color: Colors.white70),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Align(
+        alignment: isBot ? Alignment.centerLeft : Alignment.centerRight,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.sizeOf(context).width * 0.88,
+          ),
+          child: AiFadeInText(
+            text: msg.text,
+            style: TextStyle(
+              color: isBot ? Colors.white.withValues(alpha: 0.92) : Colors.white,
+              fontSize: isBot ? 20 : 17,
+              height: 1.35,
+              fontWeight: isBot ? FontWeight.w400 : FontWeight.w600,
+            ),
           ),
         ),
       ),

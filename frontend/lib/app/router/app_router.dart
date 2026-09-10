@@ -182,7 +182,9 @@ GoRouter createAppRouter() {
             routes: [
               _page(
                 RouteNames.customerAiHelper,
-                (_, s) => const CustomerAiHelperPage(),
+                (_, s) => CustomerAiHelperPage(
+                  startInLiveMode: s.uri.queryParameters['live'] == '1',
+                ),
               ),
             ],
           ),
@@ -396,7 +398,9 @@ GoRouter createAppRouter() {
       ),
       _page(
         RouteNames.customerAiChat,
-        (_, s) => const CustomerAiHelperPage(),
+        (_, s) => CustomerAiHelperPage(
+          startInLiveMode: s.uri.queryParameters['live'] == '1',
+        ),
         overlay: true,
       ),
       GoRoute(
