@@ -34,7 +34,22 @@
   - [x] 12.2 Update ActiveJobCubit & ReviewsApiRepository to pass reviewerRole and photoPaths <!-- id: 33 -->
   - [x] 12.3 Update WorkerRatingPage with image picker (camera/gallery, up to 3 optional photos) and description text field <!-- id: 34 -->
   - [x] 12.4 Verify Dart compilation and test review submission <!-- id: 35 -->
-- [x] 13. Fix Hot Restart Routing to "No Active Job" <!-- id: 36 -->
-  - [x] 13.1 Update AppSessionCubit.postAuthRoute to route verified workers to Worker Dashboard by default <!-- id: 37 -->
-  - [x] 13.2 Update WorkerActiveJobPage to handle null job with auto-redirect, clear preference, and "Go to Dashboard" button <!-- id: 38 -->
-  - [x] 13.3 Verify Dart compilation and test flow <!-- id: 39 -->
+- [x] 14. Fixly Conversational AI Multilingual Integration & Models <!-- id: 40 -->
+  - [x] 14.1 Create `frontend/lib/models/ai_agent_response.dart` with robust deserialization <!-- id: 41 -->
+  - [x] 14.2 Update `frontend/lib/features/ai/data/ai_api_repository.dart` for `data` object & language support <!-- id: 42 -->
+  - [x] 14.3 Add language toggle, dynamic STT/TTS locale, localized greetings/chips to `CustomerAiHelperPage` <!-- id: 43 -->
+  - [x] 14.4 Add language toggle & dynamic locale handling to `HeyFlexiVoiceSheet` <!-- id: 44 -->
+  - [x] 14.5 Verify Flutter compilation & analyze <!-- id: 45 -->
+- [x] 15. Fix Auth Session Drops & Unexpected Logouts ("Not authorized, token missing") <!-- id: 46 -->
+  - [x] 15.1 Make backend `refreshToken` resilient to Redis flush/reboots (MongoDB fallback verification) <!-- id: 47 -->
+  - [x] 15.2 Improve `TokenStorage` exception resilience & cache consistency <!-- id: 48 -->
+  - [x] 15.3 Proactive token refresh in `ApiClient.onRequest` when token missing & refresh exists <!-- id: 49 -->
+  - [x] 15.4 Only clear session on explicit 401/403 auth rejection, NEVER on network/5xx/timeout errors in `ApiClient` and `AuthApiRepository` <!-- id: 50 -->
+  - [x] 15.5 Verify via `flutter analyze` & backend tests <!-- id: 51 -->
+- [x] 16. Fix Socket Disconnections & Enable Persistent Socket on Customer + Worker Screens <!-- id: 52 -->
+  - [x] 16.1 Remove aggressive 4s failover timer in `WorkerRealtimeService` causing socket close loop <!-- id: 53 -->
+  - [x] 16.2 Create persistent `CustomerRealtimeService` for customer app screens <!-- id: 54 -->
+  - [x] 16.3 Hook customer socket into `CustomerMainShell` & `BookingFlowCubit` <!-- id: 55 -->
+  - [x] 16.4 Enhance `LiveTrackingSocket` reconnection params & add customer room listeners to backend <!-- id: 56 -->
+  - [x] 16.5 Verify via `flutter analyze` <!-- id: 57 -->
+

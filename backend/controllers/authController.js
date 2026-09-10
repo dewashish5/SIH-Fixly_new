@@ -763,30 +763,58 @@ export const refreshToken = async (req, res) => {
 
         if (!refreshToken) return res.status(401).json({ success: false, message: 'Refresh Token required' });
 
-        const savedToken = await redis.get(`session:${userId}:${deviceId}`);
-        if (!savedToken || savedToken !== refreshToken) {
-            return res.status(403).json({ success: false, message: 'Invalid or expired session. Please login again.' });
+        let decoded;
+        try {
+            decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
+        } catch (jwtErr) {
+            return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
         }
 
-        const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
-
-        const user = await User.findById(decoded.id).select('role').lean();
+        const effectiveUserId = decoded.id || userId;
+        const user = await User.findById(effectiveUserId).select('role activeDeviceId').lean();
         if (!user) return res.status(404).json({ success: false, message: 'User no longer exists' });
 
+        // Check Redis session
+        let savedToken = null;
+        if (redis && effectiveUserId && deviceId) {
+            try {
+                savedToken = await redis.get(`session:${effectiveUserId}:${deviceId}`);
+            } catch (_) {}
+        }
+
+        // If Redis has a record for this device and it does not match, reject (revoked or rotated token replay)
+        if (savedToken && savedToken !== refreshToken) {
+            return res.status(403).json({ success: false, message: 'Invalid session. Token already rotated or revoked.' });
+        }
+
+        // If Redis key missing (e.g. Redis reboot/eviction), enforce single-device check via MongoDB activeDeviceId
+        if (!savedToken && user.activeDeviceId && deviceId && user.activeDeviceId !== deviceId) {
+            return res.status(403).json({ success: false, message: 'Session expired. Account logged in on another device.' });
+        }
+
         const newAccessToken = jwt.sign(
-            { id: decoded.id, role: user.role },
+            { id: effectiveUserId, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
         );
 
         const newRefreshToken = jwt.sign(
-            { id: decoded.id },
+            { id: effectiveUserId },
             process.env.REFRESH_SECRET,
             { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' }
         );
 
         const sessionTtl = parseInt(process.env.REDIS_SESSION_TTL_SEC, 10) || 7 * 24 * 60 * 60;
-        await redis.set(`session:${userId}:${deviceId}`, newRefreshToken, 'EX', sessionTtl);
+        if (redis && deviceId) {
+            try {
+                const pipeline = redis.pipeline();
+                pipeline.set(`user:active-device:${effectiveUserId}`, deviceId, 'EX', sessionTtl);
+                pipeline.set(`session:${effectiveUserId}:${deviceId}`, newRefreshToken, 'EX', sessionTtl);
+                await pipeline.exec();
+            } catch (err) {
+                console.warn('Redis sync error during refreshToken:', err.message);
+            }
+        }
 
         return res.status(200).json({
             success: true,

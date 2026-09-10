@@ -10,6 +10,8 @@ import '../../../../core/auth/google_auth_service.dart';
 import '../../../../core/location/location_service.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/network/customer_realtime_service.dart';
+import '../../../../core/network/worker_realtime_service.dart';
 import '../../../../core/preferences/app_preferences.dart';
 import '../../../../core/notifications/notification_service.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
@@ -106,6 +108,11 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         marketingEnabled: marketingEnabled,
       ),
     );
+    if (session.user.role == UserRole.worker) {
+      WorkerRealtimeService.instance.initForWorker(session.user.id);
+    } else {
+      CustomerRealtimeService.instance.initForCustomer(session.user.id);
+    }
   }
 
   Future<void> setLocale(String locale) async {
@@ -410,6 +417,8 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   }
 
   Future<void> signOut() async {
+    CustomerRealtimeService.instance.dispose();
+    WorkerRealtimeService.instance.dispose();
     await NotificationService.instance.onSignedOut();
     await _auth.logout();
     _repo.currentUser = null;
@@ -470,5 +479,10 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         marketingEnabled: marketingEnabled,
       ),
     );
+    if (session.user.role == UserRole.worker) {
+      WorkerRealtimeService.instance.initForWorker(session.user.id);
+    } else {
+      CustomerRealtimeService.instance.initForCustomer(session.user.id);
+    }
   }
 }

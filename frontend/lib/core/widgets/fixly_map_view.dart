@@ -268,13 +268,40 @@ class _FixlyMapViewState extends State<FixlyMapView> {
       debugPrint('FixlyMapView mapbox settings error: $e');
     }
 
-    _polylineManager = await mapboxMap.annotations
-        .createPolylineAnnotationManager();
-    _polygonManager = await mapboxMap.annotations
-        .createPolygonAnnotationManager();
-    _pointManager = await mapboxMap.annotations.createPointAnnotationManager();
+    // Safe resilient annotation manager initialization
+    Future<void> initManagers() async {
+      try {
+        _polylineManager ??= await mapboxMap.annotations.createPolylineAnnotationManager();
+      } catch (e) {
+        debugPrint('FixlyMapView polylineManager init: $e');
+      }
+      try {
+        _polygonManager ??= await mapboxMap.annotations.createPolygonAnnotationManager();
+      } catch (e) {
+        debugPrint('FixlyMapView polygonManager init: $e');
+      }
+      try {
+        _pointManager ??= await mapboxMap.annotations.createPointAnnotationManager();
+      } catch (e) {
+        debugPrint('FixlyMapView pointManager init: $e');
+      }
+    }
 
-    await _refreshAnnotations();
+    await initManagers();
+
+    // If initial attempt missed due to channel binding / hot-restart, retry once after short delay
+    if (_pointManager == null || _polylineManager == null) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!_isDisposed && _mapboxMap == mapboxMap) {
+        await initManagers();
+      }
+    }
+
+    try {
+      await _refreshAnnotations();
+    } catch (e) {
+      debugPrint('FixlyMapView refreshAnnotations error: $e');
+    }
   }
 
   Future<Uint8List?> _loadAsset(String path) async {

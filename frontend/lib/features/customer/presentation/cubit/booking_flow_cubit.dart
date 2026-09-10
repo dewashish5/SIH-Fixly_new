@@ -2,10 +2,8 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:socket_io_client/socket_io_client.dart' as io;
-
-import '../../../../core/network/api_config.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/network/customer_realtime_service.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
@@ -32,7 +30,7 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
   final RazorpayCheckoutService _razorpay;
 
   Timer? _statusPollTimer;
-  io.Socket? _statusSocket;
+  StreamSubscription<Map<String, dynamic>>? _statusSubscription;
   String? _listeningBookingId;
 
   void selectService(ServiceItem service) {
@@ -66,37 +64,12 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
   /// Connect to socket and listen for real-time booking_status_update events.
   void listenToSocketUpdates(String bookingId) {
     if (bookingId.isEmpty) return;
-    if (_listeningBookingId == bookingId && _statusSocket != null) {
-      if (_statusSocket!.connected) {
-        _statusSocket!.emit('join_booking_room', bookingId);
-      }
-      return;
-    }
-
-    _statusSocket?.disconnect();
-    _statusSocket?.dispose();
+    if (_listeningBookingId == bookingId && _statusSubscription != null) return;
     _listeningBookingId = bookingId;
+    CustomerRealtimeService.instance.trackBooking(bookingId);
 
-    final socket = io.io(
-      ApiConfig.baseUrl,
-      io.OptionBuilder()
-          .setTransports(['websocket'])
-          .disableAutoConnect()
-          .enableReconnection()
-          .build(),
-    );
-    _statusSocket = socket;
-
-    socket.onConnect((_) {
-      socket.emit('join_booking_room', bookingId);
-    });
-
-    void onStatusUpdate(dynamic data) async {
-      if (data is! Map) {
-        await refreshBooking(bookingId);
-        return;
-      }
-      final map = Map<String, dynamic>.from(data);
+    _statusSubscription?.cancel();
+    _statusSubscription = CustomerRealtimeService.instance.bookingStatusStream.listen((map) async {
       final eventBookingId = map['bookingId']?.toString();
       final canonicalId = map['canonicalBookingId']?.toString();
       final current = state.booking;
@@ -128,13 +101,7 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
         );
       }
       await refreshBooking(bookingId);
-    }
-
-    socket.on('booking_status_update', onStatusUpdate);
-    socket.on('booking:status', onStatusUpdate);
-    socket.on('status_update', onStatusUpdate);
-    socket.on('booking:updated', onStatusUpdate);
-    socket.connect();
+    });
 
     // Polling as fallback when socket drops
     startStatusPolling(bookingId);
@@ -332,9 +299,8 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
 
   void reset() {
     _statusPollTimer?.cancel();
-    _statusSocket?.disconnect();
-    _statusSocket?.dispose();
-    _statusSocket = null;
+    _statusSubscription?.cancel();
+    CustomerRealtimeService.instance.untrackBooking();
     _listeningBookingId = null;
     _razorpay.dispose();
     _repo.activeBooking = null;
@@ -344,8 +310,8 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
   @override
   Future<void> close() {
     _statusPollTimer?.cancel();
-    _statusSocket?.disconnect();
-    _statusSocket?.dispose();
+    _statusSubscription?.cancel();
+    CustomerRealtimeService.instance.untrackBooking();
     _razorpay.dispose();
     return super.close();
   }

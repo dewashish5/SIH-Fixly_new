@@ -3,6 +3,9 @@ import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_enpoints.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../models/ai_agent_response.dart';
+
+export '../../../models/ai_agent_response.dart';
 
 class AiAnalysis {
   const AiAnalysis({
@@ -18,30 +21,6 @@ class AiAnalysis {
   final String aiNote;
   final String? suggestedService;
   final String? issueImageUrl;
-}
-
-class AiAgentResponse {
-  const AiAgentResponse({
-    required this.reply,
-    this.state = const {},
-    this.action,
-    this.booking,
-    this.bookings = const [],
-    this.workers = const [],
-    this.estimate,
-    this.policy,
-    this.suggestedReplies = const [],
-  });
-
-  final String reply;
-  final Map<String, dynamic> state;
-  final String? action;
-  final Map<String, dynamic>? booking;
-  final List<dynamic> bookings;
-  final List<dynamic> workers;
-  final Map<String, dynamic>? estimate;
-  final Map<String, dynamic>? policy;
-  final List<String> suggestedReplies;
 }
 
 class AiApiRepository {
@@ -79,22 +58,51 @@ class AiApiRepository {
       throw ApiException(res['message']?.toString() ?? 'AI agent failed');
     }
 
-    final rawSuggestions = res['suggestedReplies'];
-    final suggestions = rawSuggestions is List
-        ? rawSuggestions.map((e) => e.toString()).toList()
-        : <String>[];
+    return AiAgentResponse.fromJson(res);
+  }
 
-    return AiAgentResponse(
-      reply: res['reply']?.toString() ?? '',
-      state: (res['state'] as Map<String, dynamic>?) ?? {},
-      action: res['action']?.toString(),
-      booking: res['booking'] as Map<String, dynamic>?,
-      bookings: res['bookings'] as List<dynamic>? ?? const [],
-      workers: res['workers'] as List<dynamic>? ?? const [],
-      estimate: res['estimate'] as Map<String, dynamic>?,
-      policy: res['policy'] as Map<String, dynamic>?,
-      suggestedReplies: suggestions,
+  Future<Map<String, dynamic>> mintLiveToken({String? language}) async {
+    final res = await _api.post(
+      ApiEndpoints.aiAgentLiveToken,
+      data: {
+        if (language != null && language.isNotEmpty) 'language': language,
+      },
     );
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Live token failed');
+    }
+    return Map<String, dynamic>.from(res);
+  }
+
+  Future<AiAgentResponse> liveToolBridge({
+    required String utterance,
+    Map<String, dynamic>? conversationState,
+    String? language,
+    List<double>? coordinates,
+    String? addressLine,
+  }) async {
+    final payload = <String, dynamic>{
+      'utterance': utterance,
+      'conversationState': conversationState ?? <String, dynamic>{},
+    };
+    if (language != null && language.isNotEmpty) {
+      payload['language'] = language;
+    }
+    if (coordinates != null && coordinates.length >= 2) {
+      payload['coordinates'] = coordinates;
+    }
+    if (addressLine != null && addressLine.isNotEmpty) {
+      payload['addressLine'] = addressLine;
+    }
+
+    final res = await _api.post(
+      ApiEndpoints.aiAgentLiveTool,
+      data: payload,
+    );
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Live tool failed');
+    }
+    return AiAgentResponse.fromJson(res);
   }
 
   Future<AiAnalysis> analyzeIssue(

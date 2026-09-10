@@ -37,14 +37,10 @@ class _HeyFlexiVoiceSheetState extends State<HeyFlexiVoiceSheet>
 
   HeyFlexiState _state = HeyFlexiState.listening;
   String _spokenText = '';
+  String _selectedLanguage = 'en';
   String _aiReplyText = 'Listening... Speak naturally to Flexi (Hindi or English)';
   Map<String, dynamic> _conversationState = {};
-  List<String> _suggestedReplies = [
-    '💧 Nal leak ho raha hai (Plumber)',
-    '⚡ Switch kharab hai (Electrician)',
-    '🧹 Deep cleaning chahiye',
-    '📦 Booking status check karo',
-  ];
+  List<String> _suggestedReplies = [];
   Map<String, dynamic>? _createdBooking;
 
   late AnimationController _pulseController;
@@ -58,7 +54,49 @@ class _HeyFlexiVoiceSheetState extends State<HeyFlexiVoiceSheet>
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
+    final appLocale = context.read<AppSessionCubit>().state.locale;
+    _selectedLanguage = (appLocale == 'hi' || appLocale == 'hindi') ? 'hi' : 'en';
+    _conversationState['language'] = _selectedLanguage;
+    _aiReplyText = _selectedLanguage == 'hi'
+        ? 'सुन रहा हूँ... फ्लेक्सी से हिंदी में बोलें'
+        : 'Listening... Speak naturally to Flexi (Hindi or English)';
+    _suggestedReplies = _getDefaultSuggestedReplies(_selectedLanguage);
+
     _initAndListen();
+  }
+
+  List<String> _getDefaultSuggestedReplies(String lang) {
+    if (lang == 'hi') {
+      return [
+        '💧 बाथरूम में नल लीक (Plumber)',
+        '⚡ स्विच खराब है (Electrician)',
+        '🧹 घर की गहरी सफाई चाहिए',
+        '📦 बुकिंग स्थिति चेक करो',
+      ];
+    }
+    return [
+      '💧 Tap leaking (Plumber)',
+      '⚡ Switch broken (Electrician)',
+      '🧹 Deep cleaning needed',
+      '📦 Check booking status',
+    ];
+  }
+
+  void _switchLanguage(String newLang) {
+    if (_selectedLanguage == newLang) return;
+    setState(() {
+      _selectedLanguage = newLang;
+      _conversationState['language'] = newLang;
+      _aiReplyText = newLang == 'hi'
+          ? 'सुन रहा हूँ... फ्लेक्सी से हिंदी में बोलें'
+          : 'Listening... Speak naturally to Flexi (Hindi or English)';
+      _suggestedReplies = _getDefaultSuggestedReplies(newLang);
+    });
+    HapticFeedback.selectionClick();
+    if (_state == HeyFlexiState.listening) {
+      _speechService.stopListening();
+      _startListening();
+    }
   }
 
   @override
@@ -86,8 +124,7 @@ class _HeyFlexiVoiceSheetState extends State<HeyFlexiVoiceSheet>
       _spokenText = '';
     });
 
-    final currentLocale = context.read<AppSessionCubit>().state.locale;
-    final localeId = currentLocale == 'hi' ? 'hi_IN' : 'en_IN';
+    final localeId = _selectedLanguage == 'hi' ? 'hi_IN' : 'en_IN';
 
     await _speechService.startListening(
       localeId: localeId,
@@ -129,8 +166,7 @@ class _HeyFlexiVoiceSheetState extends State<HeyFlexiVoiceSheet>
     });
 
     try {
-      final sessionCubit = context.read<AppSessionCubit>();
-      final lang = sessionCubit.state.locale;
+      final lang = _selectedLanguage;
 
       List<double>? coords;
       if (AppLocation.instance.hasFix) {
@@ -153,7 +189,8 @@ class _HeyFlexiVoiceSheetState extends State<HeyFlexiVoiceSheet>
       if (_isDisposed || !mounted) return;
 
       // 1. Update multi-turn state in memory
-      _conversationState = res.state;
+      _conversationState = Map<String, dynamic>.from(res.state);
+      _conversationState['language'] = _selectedLanguage;
 
       setState(() {
         _aiReplyText = res.reply;
@@ -163,7 +200,7 @@ class _HeyFlexiVoiceSheetState extends State<HeyFlexiVoiceSheet>
       // 2. Action Handlers
       if (res.action == 'SESSION_EXPIRED') {
         // Reset state from memory and allow fresh input
-        _conversationState = {};
+        _conversationState = {'language': _selectedLanguage};
         _speakAiReply(res.reply, onComplete: () {
           if (!_isDisposed && mounted) {
             _startListening();
@@ -171,7 +208,7 @@ class _HeyFlexiVoiceSheetState extends State<HeyFlexiVoiceSheet>
         });
       } else if (res.action == 'SESSION_ABORTED') {
         // Reset state and close modal
-        _conversationState = {};
+        _conversationState = {'language': _selectedLanguage};
         _speakAiReply(res.reply, onComplete: () {
           if (!_isDisposed && mounted) {
             Navigator.of(context).pop();
@@ -207,7 +244,9 @@ class _HeyFlexiVoiceSheetState extends State<HeyFlexiVoiceSheet>
       if (_isDisposed || !mounted) return;
       setState(() {
         _state = HeyFlexiState.idle;
-        _aiReplyText = 'Sorry, could not process request. Please tap mic and try again.';
+        _aiReplyText = _selectedLanguage == 'hi'
+            ? 'क्षमा करें, अनुरोध संसाधित नहीं हो सका। कृपया माइक दबाकर पुनः बोलें।'
+            : 'Sorry, could not process request. Please tap mic and try again.';
       });
     }
   }
@@ -217,7 +256,7 @@ class _HeyFlexiVoiceSheetState extends State<HeyFlexiVoiceSheet>
 
     setState(() => _state = HeyFlexiState.speaking);
 
-    final lang = _conversationState['language'] == 'hi' ? 'hi-IN' : 'en-IN';
+    final lang = _selectedLanguage == 'hi' ? 'hi-IN' : 'en-IN';
     _speechService.speak(
       replyText,
       language: lang,
@@ -299,9 +338,9 @@ class _HeyFlexiVoiceSheetState extends State<HeyFlexiVoiceSheet>
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Hey Flexi AI Assistant',
-                        style: TextStyle(
+                      Text(
+                        _selectedLanguage == 'hi' ? 'फ्लेक्सी AI' : 'Hey Flexi AI',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -309,9 +348,15 @@ class _HeyFlexiVoiceSheetState extends State<HeyFlexiVoiceSheet>
                       ),
                     ],
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                  Row(
+                    children: [
+                      _buildLanguageToggle(),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -639,6 +684,47 @@ class _HeyFlexiVoiceSheetState extends State<HeyFlexiVoiceSheet>
                 ],
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageToggle() {
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white24, width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildLangItem('en', 'EN'),
+          _buildLangItem('hi', 'हिन्दी'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLangItem(String code, String label) {
+    final isSelected = _selectedLanguage == code;
+    return GestureDetector(
+      onTap: () => _switchLanguage(code),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF38BDF8) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? const Color(0xFF0F172A) : Colors.white70,
           ),
         ),
       ),

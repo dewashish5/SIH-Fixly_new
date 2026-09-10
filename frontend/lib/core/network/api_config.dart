@@ -7,11 +7,14 @@ class ApiConfig {
 
   static const String _defaultUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8005',
+    defaultValue: 'https://processing-oakland-loc-talks.trycloudflare.com',
   );
 
   static String? _overrideUrl;
-  static final ValueNotifier<String> urlNotifier = ValueNotifier<String>(_defaultUrl);
+  
+  static final ValueNotifier<String> urlNotifier = ValueNotifier<String>(
+    _defaultUrl,
+  );
 
   static void setBaseUrl(String url) {
     if (_overrideUrl != url) {
@@ -24,28 +27,26 @@ class ApiConfig {
     if (_overrideUrl != null) {
       return _overrideUrl!;
     }
-    if (const bool.hasEnvironment('API_BASE_URL')) {
-      return _defaultUrl;
-    }
-    if (kIsWeb) {
-      return 'http://localhost:8005';
-    }
-    if (Platform.isAndroid) {
-      // Prioritize localhost (works with adb reverse for both physical device and emulator)
-      return 'http://localhost:8005';
-    }
-    return 'http://localhost:8005'; // iOS simulator or desktop
+    return _defaultUrl;
   }
 
   static List<String> get candidateUrls {
     final urls = <String>[];
-    urls.add(baseUrl);
-    if (!urls.contains('http://localhost:8005')) urls.add('http://localhost:8005');
-    if (!urls.contains('http://127.0.0.1:8005')) urls.add('http://127.0.0.1:8005');
-    if (!urls.contains('http://192.168.1.197:8005')) {
-      urls.add('http://192.168.1.197:8005');
+    // 1. Primary: Cloudflare tunnel URL
+    if (_overrideUrl != null && !urls.contains(_overrideUrl)) {
+      urls.add(_overrideUrl!);
     }
-    if (Platform.isAndroid && !urls.contains('http://10.0.2.2:8005')) {
+    if (!urls.contains(_defaultUrl)) {
+      urls.add(_defaultUrl);
+    }
+    // 2. Secondary fallback local hosts
+    if (!urls.contains('http://localhost:8005')) {
+      urls.add('http://localhost:8005');
+    }
+    if (!urls.contains('http://127.0.0.1:8005')) {
+      urls.add('http://127.0.0.1:8005');
+    }
+    if (!kIsWeb && Platform.isAndroid && !urls.contains('http://10.0.2.2:8005')) {
       urls.add('http://10.0.2.2:8005');
     }
     return urls;

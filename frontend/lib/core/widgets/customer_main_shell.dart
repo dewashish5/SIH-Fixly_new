@@ -4,17 +4,34 @@ import 'package:go_router/go_router.dart';
 
 import '../constants/app_strings.dart';
 import '../../features/auth/presentation/cubit/app_session_cubit.dart';
+import '../network/customer_realtime_service.dart';
 import 'animated_bottom_nav_bar.dart';
 
-class CustomerMainShell extends StatelessWidget {
+class CustomerMainShell extends StatefulWidget {
   const CustomerMainShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
+  @override
+  State<CustomerMainShell> createState() => _CustomerMainShellState();
+}
+
+class _CustomerMainShellState extends State<CustomerMainShell> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AppSessionCubit>().currentUser;
+      if (user != null && user.id.isNotEmpty) {
+        CustomerRealtimeService.instance.initForCustomer(user.id);
+      }
+    });
+  }
+
   void _onTap(int index) {
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 
@@ -26,9 +43,9 @@ class CustomerMainShell extends StatelessWidget {
         final l10n = AppStrings(session.locale);
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: navigationShell,
+          body: widget.navigationShell,
           bottomNavigationBar: AnimatedBottomNavBar(
-            currentIndex: navigationShell.currentIndex,
+            currentIndex: widget.navigationShell.currentIndex,
             onTap: _onTap,
             items: [
               NavBarItem(

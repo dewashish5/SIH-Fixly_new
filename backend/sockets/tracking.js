@@ -67,6 +67,22 @@ export const registerSocketHandlers = (io) => {
             socket.join('workers_all');
         });
 
+        // 1c. Join Customer Room (For real-time booking updates, worker arrival, status)
+        socket.on('join_customer_room', (customerId) => {
+            if (!customerId) return;
+            const clean = String(customerId).trim();
+            socket.join(`customer_${clean}`);
+            socket.join(`user_${clean}`);
+            socket.join('customers_all');
+        });
+
+        socket.on('join_user_room', (userId) => {
+            if (!userId) return;
+            const clean = String(userId).trim();
+            socket.join(`user_${clean}`);
+            socket.join(`customer_${clean}`);
+        });
+
         // 1c. Support Chat Rooms
         socket.on('join_support_ticket', (ticketId) => {
             if (!ticketId) return;

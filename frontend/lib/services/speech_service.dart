@@ -18,6 +18,7 @@ class SpeechService {
   bool _isSpeaking = false;
 
   VoidCallback? _onSpeechComplete;
+  Function(bool)? _listeningChanged;
 
   /// Request system permissions for microphone & speech recognition
   Future<bool> requestPermissions() async {
@@ -46,10 +47,18 @@ class SpeechService {
     try {
       await requestPermissions();
 
-      // Initialize speech-to-text
-      bool sttAvailable = await _speech.initialize(
-        onStatus: (val) => debugPrint('onStatus: $val'),
-        onError: (val) => debugPrint('onError: $val'),
+      final bool sttAvailable = await _speech.initialize(
+        onStatus: (val) {
+          debugPrint('onStatus: $val');
+          final listening = val == 'listening';
+          _isListening = listening;
+          _listeningChanged?.call(listening);
+        },
+        onError: (val) {
+          debugPrint('onError: $val');
+          _isListening = false;
+          _listeningChanged?.call(false);
+        },
       );
 
       if (!sttAvailable) {
@@ -57,11 +66,9 @@ class SpeechService {
         return false;
       }
 
-      // Initialize text-to-speech
-      await _tts.setLanguage('hi-IN'); // Hindi as primary language
-      await _tts.setSpeechRate(0.5);
+      await _tts.setSpeechRate(0.52);
       await _tts.setVolume(1.0);
-      await _tts.setPitch(1.0);
+      await _tts.setPitch(1.05);
 
       _tts.setCompletionHandler(() {
         _isSpeaking = false;
@@ -71,7 +78,10 @@ class SpeechService {
       });
       _tts.setCancelHandler(() {
         _isSpeaking = false;
+        // Still notify so live loop can resume listening.
+        final cb = _onSpeechComplete;
         _onSpeechComplete = null;
+        cb?.call();
       });
       _tts.setErrorHandler((dynamic msg) {
         debugPrint('TTS Error: $msg');
@@ -98,11 +108,12 @@ class SpeechService {
     String? localeId,
   }) async {
     if (!_isInitialized) {
-      bool initialized = await initialize();
+      final initialized = await initialize();
       if (!initialized) return false;
     }
 
     try {
+      _listeningChanged = onListeningChanged;
       _isListening = true;
       onListeningChanged(true);
 
@@ -120,6 +131,7 @@ class SpeechService {
           listenMode: ListenMode.dictation,
           partialResults: true,
           localeId: localeId,
+          cancelOnError: true,
         ),
       );
 
@@ -134,21 +146,18 @@ class SpeechService {
     }
   }
 
-  /// Stop listening for speech input
   Future<void> stopListening() async {
-    if (_isListening) {
+    if (_isListening || _speech.isListening) {
       await _speech.stop();
       _isListening = false;
+      _listeningChanged?.call(false);
     }
   }
 
-  /// Check if currently listening
   bool get isListening => _isListening;
 
-  /// Get the last recognized words
   String get lastWords => _lastWords;
 
-  /// Speak text using TTS
   Future<void> speak(
     String text, {
     String? language,
@@ -161,9 +170,9 @@ class SpeechService {
       final lang = language ??
           (RegExp(r'[\u0900-\u097F]').hasMatch(text) ? 'hi-IN' : 'en-IN');
       await _tts.setLanguage(lang);
-      await _tts.setSpeechRate(0.5);
+      await _tts.setSpeechRate(0.55);
       await _tts.setVolume(1.0);
-      await _tts.setPitch(1.0);
+      await _tts.setPitch(1.05);
 
       _isSpeaking = true;
       await _tts.speak(text);
@@ -175,7 +184,6 @@ class SpeechService {
     }
   }
 
-  /// Stop speaking
   Future<void> stopSpeaking() async {
     if (_isSpeaking) {
       await _tts.stop();
@@ -183,10 +191,8 @@ class SpeechService {
     }
   }
 
-  /// Check if currently speaking
   bool get isSpeaking => _isSpeaking;
 
-  /// Get available languages for speech recognition
   Future<List<dynamic>> getLocales() async {
     if (!_isInitialized) {
       await initialize();
@@ -194,7 +200,6 @@ class SpeechService {
     return await _speech.locales();
   }
 
-  /// Dispose resources
   void dispose() {
     _speech.cancel();
     _tts.stop();

@@ -1,0 +1,79 @@
+import 'package:flutter/material.dart';
+
+/// Smooth 3-dot wave loader shown while Flexi AI is thinking.
+class AiThinkingDots extends StatefulWidget {
+  const AiThinkingDots({
+    super.key,
+    this.color,
+    this.size = 8,
+    this.gap = 6,
+  });
+
+  final Color? color;
+  final double size;
+  final double gap;
+
+  @override
+  State<AiThinkingDots> createState() => _AiThinkingDotsState();
+}
+
+class _AiThinkingDotsState extends State<AiThinkingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color =
+        widget.color ?? Theme.of(context).colorScheme.primary;
+    return Semantics(
+      label: 'AI is thinking',
+      child: SizedBox(
+        height: widget.size * 3,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(3, (i) {
+                final phase = (_controller.value + i * 0.18) % 1.0;
+                final t = (phase < 0.5 ? phase : 1 - phase) * 2;
+                final dy = -widget.size * Curves.easeInOut.transform(t);
+                return Padding(
+                  padding: EdgeInsets.only(
+                    right: i == 2 ? 0 : widget.gap,
+                  ),
+                  child: Transform.translate(
+                    offset: Offset(0, dy),
+                    child: Container(
+                      width: widget.size,
+                      height: widget.size,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.55 + 0.45 * t),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

@@ -23,30 +23,76 @@ class TokenStorage {
 
   Future<String?> get accessToken async {
     if (_accessKnown) return _accessMem;
-    _accessMem = await _storage.read(key: _kAccess);
-    _accessKnown = true;
+    try {
+      _accessMem = await _storage.read(key: _kAccess);
+      _accessKnown = true;
+    } catch (_) {
+      return _accessMem;
+    }
     return _accessMem;
   }
 
   Future<String?> get refreshToken async {
     if (_refreshKnown) return _refreshMem;
-    _refreshMem = await _storage.read(key: _kRefresh);
-    _refreshKnown = true;
+    try {
+      _refreshMem = await _storage.read(key: _kRefresh);
+      _refreshKnown = true;
+    } catch (_) {
+      return _refreshMem;
+    }
     return _refreshMem;
   }
 
   Future<String?> get userId async {
     if (_userIdKnown) return _userIdMem;
-    _userIdMem = await _storage.read(key: _kUserId);
-    _userIdKnown = true;
+    try {
+      _userIdMem = await _storage.read(key: _kUserId);
+      _userIdKnown = true;
+    } catch (_) {
+      return _userIdMem;
+    }
     return _userIdMem;
   }
 
-  Future<String?> get deviceId => _storage.read(key: _kDeviceId);
-  Future<String?> get email => _storage.read(key: _kEmail);
-  Future<String?> get name => _storage.read(key: _kName);
-  Future<String?> get role => _storage.read(key: _kRole);
-  Future<String?> get phone => _storage.read(key: _kPhone);
+  Future<String?> get deviceId async {
+    try {
+      return await _storage.read(key: _kDeviceId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> get email async {
+    try {
+      return await _storage.read(key: _kEmail);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> get name async {
+    try {
+      return await _storage.read(key: _kName);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> get role async {
+    try {
+      return await _storage.read(key: _kRole);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> get phone async {
+    try {
+      return await _storage.read(key: _kPhone);
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> saveSession({
     required String accessToken,
@@ -112,14 +158,16 @@ class TokenStorage {
     _accessKnown = true;
     _refreshKnown = true;
     _userIdKnown = true;
-    await Future.wait([
-      _storage.delete(key: _kAccess),
-      _storage.delete(key: _kRefresh),
-      _storage.delete(key: _kUserId),
-      _storage.delete(key: _kEmail),
-      _storage.delete(key: _kName),
-      _storage.delete(key: _kRole),
-      _storage.delete(key: _kPhone),
-    ]);
+    try {
+      await Future.wait([
+        _storage.delete(key: _kAccess),
+        _storage.delete(key: _kRefresh),
+        _storage.delete(key: _kUserId),
+        _storage.delete(key: _kEmail),
+        _storage.delete(key: _kName),
+        _storage.delete(key: _kRole),
+        _storage.delete(key: _kPhone),
+      ]);
+    } catch (_) {}
   }
 }

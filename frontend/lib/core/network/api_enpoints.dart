@@ -105,6 +105,8 @@ abstract final class ApiEndpoints {
   // --- AI ---
   static const String aiAnalyzeIssue = '/api/ai/analyze-issue';
   static const String aiAgentChat = '/api/ai/agent/chat';
+  static const String aiAgentLiveToken = '/api/ai/agent/live-token';
+  static const String aiAgentLiveTool = '/api/ai/agent/live-tool';
   static const String aiServiceDiscovery = '/api/ai/service-discovery';
   static const String aiMatchWorkers = '/api/ai/match-workers';
 

@@ -15,7 +15,6 @@ class WorkerRealtimeService {
   io.Socket? _socket;
   String? _currentWorkerId;
   String? _activeBookingId;
-  int _candidateIndex = 0;
   Timer? _candidateFailoverTimer;
   String? _currentConnectedUrl;
 
@@ -46,64 +45,43 @@ class WorkerRealtimeService {
       return;
     }
     _currentWorkerId = workerId;
-    _candidateIndex = 0;
     _connectSocket();
   }
 
   /// Explicit reconnect (e.g. from refresh button or tapping status badge)
   void reconnect() {
-    _candidateIndex = 0;
     _connectSocket();
   }
 
   void _connectSocket() {
-    final candidates = ApiConfig.candidateUrls;
-    final targetUrl = (_candidateIndex < candidates.length)
-        ? candidates[_candidateIndex]
-        : ApiConfig.baseUrl;
-    _connectToUrl(targetUrl);
-  }
-
-  void _tryNextCandidate() {
-    final candidates = ApiConfig.candidateUrls;
-    if (candidates.isEmpty) return;
-    _candidateIndex = (_candidateIndex + 1) % candidates.length;
-    final nextUrl = candidates[_candidateIndex];
-    debugPrint('[WorkerRealtimeService] Socket failover to candidate: $nextUrl');
-    _connectToUrl(nextUrl);
+    _connectToUrl(ApiConfig.baseUrl);
   }
 
   void _connectToUrl(String url) {
+    if (_socket != null && _socket!.connected && _currentConnectedUrl == url) {
+      return;
+    }
+
     _candidateFailoverTimer?.cancel();
     _socket?.disconnect();
     _socket?.dispose();
 
-    debugPrint('[WorkerRealtimeService] Connecting to Socket.io at: $url');
+    debugPrint('[WorkerRealtimeService] Connecting persistent Socket.io at: $url');
     final socket = io.io(
       url,
       io.OptionBuilder()
-          .setTransports(['websocket'])
-          .disableAutoConnect()
+          .setTransports(['websocket', 'polling'])
           .enableReconnection()
           .setReconnectionDelay(1000)
-          .setReconnectionAttempts(5)
-          .setTimeout(4000)
+          .setReconnectionDelayMax(5000)
+          .setReconnectionAttempts(double.maxFinite.toInt())
+          .setTimeout(20000)
           .build(),
     );
     _socket = socket;
 
-    // Failover timer: if not connected within 4 seconds, try next candidate
-    _candidateFailoverTimer = Timer(const Duration(seconds: 4), () {
-      if (_socket == socket && !socket.connected) {
-        debugPrint('[WorkerRealtimeService] Socket connection timed out for $url, trying next candidate');
-        _tryNextCandidate();
-      }
-    });
-
     socket.onConnect((_) {
-      _candidateFailoverTimer?.cancel();
       _currentConnectedUrl = url;
-      ApiConfig.setBaseUrl(url);
       debugPrint('[WorkerRealtimeService] Connected to Socket.io at $url ✅');
       if (!_connectionStream.isClosed) _connectionStream.add(true);
       if (_currentWorkerId != null) {
@@ -114,15 +92,14 @@ class WorkerRealtimeService {
       }
     });
 
-    socket.onDisconnect((_) {
-      debugPrint('[WorkerRealtimeService] Disconnected from Socket.io');
+    socket.onDisconnect((reason) {
+      debugPrint('[WorkerRealtimeService] Disconnected from Socket.io: $reason');
       if (!_connectionStream.isClosed) _connectionStream.add(false);
     });
 
     socket.onConnectError((err) {
       debugPrint('[WorkerRealtimeService] Connect error on $url: $err');
       if (!_connectionStream.isClosed) _connectionStream.add(false);
-      _tryNextCandidate();
     });
 
     // Real-time Booking status updates (ARRIVED, IN_PROGRESS, PAYMENT_PENDING, COMPLETED, PAID)

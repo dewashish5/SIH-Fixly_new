@@ -32,9 +32,21 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final access = await _tokens.accessToken;
-          if (access != null && access.isNotEmpty) {
-            options.headers['Authorization'] = 'Bearer $access';
+          if (!_isAuthPath(options.path)) {
+            var access = await _tokens.accessToken;
+            if (access == null || access.isEmpty) {
+              final refresh = await _tokens.refreshToken;
+              if (refresh != null && refresh.isNotEmpty) {
+                // Proactively refresh before sending to avoid "token missing" rejection
+                final ok = await _tryRefresh();
+                if (ok) {
+                  access = await _tokens.accessToken;
+                }
+              }
+            }
+            if (access != null && access.isNotEmpty) {
+              options.headers['Authorization'] = 'Bearer $access';
+            }
           }
           final device = await _deviceId.getOrCreate();
           options.headers['x-device-id'] = device;
@@ -94,20 +106,27 @@ class ApiClient {
               final req = error.requestOptions;
               req.extra['retried'] = true;
               final access = await _tokens.accessToken;
-              if (access != null) {
+              if (access != null && access.isNotEmpty) {
                 req.headers['Authorization'] = 'Bearer $access';
               }
               try {
                 final response = await _dio.fetch(req);
                 return handler.resolve(response);
+              } on DioException catch (retryErr) {
+                if (retryErr.response?.statusCode == 401 ||
+                    retryErr.response?.statusCode == 403) {
+                  await _tokens.clearSession();
+                  clearGetCache();
+                }
+                return handler.next(retryErr);
               } catch (_) {
-                await _tokens.clearSession();
-                clearGetCache();
                 return handler.next(error);
               }
             }
-            await _tokens.clearSession();
-            clearGetCache();
+            if (_sessionInvalidated) {
+              await _tokens.clearSession();
+              clearGetCache();
+            }
           }
           handler.next(error);
         },
@@ -121,6 +140,7 @@ class ApiClient {
   final TokenStorage _tokens;
   final DeviceId _deviceId;
   Future<bool>? _refreshInFlight;
+  bool _sessionInvalidated = false;
 
   final Map<String, Future<Map<String, dynamic>>> _getInFlight = {};
   final Map<String, _CachedGet> _getCache = {};
@@ -166,7 +186,14 @@ class ApiClient {
       if (access == null || access.isEmpty) return false;
       final newRefresh = data['refreshToken'] as String?;
       await _tokens.saveTokens(accessToken: access, refreshToken: newRefresh);
+      _sessionInvalidated = false;
       return true;
+    } on DioException catch (dioErr) {
+      final status = dioErr.response?.statusCode;
+      if (status == 401 || status == 403) {
+        _sessionInvalidated = true;
+      }
+      return false;
     } catch (_) {
       return false;
     }

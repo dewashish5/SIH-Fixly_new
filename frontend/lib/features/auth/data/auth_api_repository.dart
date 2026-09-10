@@ -230,10 +230,46 @@ class AuthApiRepository {
         accessToken: (await _tokens.accessToken) ?? '',
         refreshToken: (await _tokens.refreshToken) ?? refresh,
       );
+    } on ApiException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        await _tokens.clearSession();
+        _api.clearGetCache();
+        return null;
+      }
+      // Offline / transient network error: preserve session using cached identity
+      final email = await _tokens.email;
+      final name = await _tokens.name;
+      final roleStr = await _tokens.role;
+      final phone = await _tokens.phone;
+      final user = AppUser(
+        id: userId,
+        email: email ?? '',
+        name: name ?? '',
+        phone: phone ?? '',
+        role: roleStr == 'worker' ? UserRole.worker : UserRole.customer,
+      );
+      return AuthSession(
+        user: user,
+        accessToken: (await _tokens.accessToken) ?? '',
+        refreshToken: (await _tokens.refreshToken) ?? refresh,
+      );
     } catch (_) {
-      await _tokens.clearSession();
-      _api.clearGetCache();
-      return null;
+      final email = await _tokens.email;
+      final name = await _tokens.name;
+      final roleStr = await _tokens.role;
+      final phone = await _tokens.phone;
+      final user = AppUser(
+        id: userId,
+        email: email ?? '',
+        name: name ?? '',
+        phone: phone ?? '',
+        role: roleStr == 'worker' ? UserRole.worker : UserRole.customer,
+      );
+      return AuthSession(
+        user: user,
+        accessToken: (await _tokens.accessToken) ?? '',
+        refreshToken: (await _tokens.refreshToken) ?? refresh,
+      );
     }
   }
 

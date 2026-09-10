@@ -4,17 +4,34 @@ import 'package:go_router/go_router.dart';
 
 import '../constants/app_strings.dart';
 import '../../features/auth/presentation/cubit/app_session_cubit.dart';
+import '../network/worker_realtime_service.dart';
 import 'animated_bottom_nav_bar.dart';
 
-class WorkerMainShell extends StatelessWidget {
+class WorkerMainShell extends StatefulWidget {
   const WorkerMainShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
+  @override
+  State<WorkerMainShell> createState() => _WorkerMainShellState();
+}
+
+class _WorkerMainShellState extends State<WorkerMainShell> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AppSessionCubit>().currentUser;
+      if (user != null && user.id.isNotEmpty) {
+        WorkerRealtimeService.instance.initForWorker(user.id);
+      }
+    });
+  }
+
   void _onTap(int index) {
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 
@@ -26,9 +43,9 @@ class WorkerMainShell extends StatelessWidget {
         final l10n = AppStrings(session.locale);
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: navigationShell,
+          body: widget.navigationShell,
           bottomNavigationBar: AnimatedBottomNavBar(
-            currentIndex: navigationShell.currentIndex,
+            currentIndex: widget.navigationShell.currentIndex,
             onTap: _onTap,
             items: [
               NavBarItem(

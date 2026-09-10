@@ -22,10 +22,12 @@ class LiveTrackingSocket {
     final socket = io.io(
       ApiConfig.baseUrl,
       io.OptionBuilder()
-          .setTransports(['websocket'])
-          .disableAutoConnect()
+          .setTransports(['websocket', 'polling'])
           .enableReconnection()
           .setReconnectionDelay(1000)
+          .setReconnectionDelayMax(5000)
+          .setReconnectionAttempts(double.maxFinite.toInt())
+          .setTimeout(20000)
           .build(),
     );
     _socket = socket;
