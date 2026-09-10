@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 
 // 1. Saved Address Schema (Sub-document)
 const addressSchema = new mongoose.Schema({
-    label: { type: String, enum: ['Home', 'Work', 'Other'], default: 'Home' },
+    label: { type: String, enum: ['Home', 'Work', 'Other', 'Apartment', 'Work Base', 'Hub'], default: 'Home' },
     addressLine: { type: String, required: true },
     city: { type: String, required: true },
     pincode: { type: String, required: true },

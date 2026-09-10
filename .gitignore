@@ -2,3 +2,6 @@
 # graphify local knowledge graph (never commit)
 graphify-out/
 graphify/
+*.zip
+.DS_Store
+

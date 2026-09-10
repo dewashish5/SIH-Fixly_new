@@ -98,8 +98,9 @@ export const submitReview = async (req, res) => {
 
 export const getWorkerReviews = async (req, res) => {
     try {
+        const defaultLimit = parseInt(process.env.REVIEWS_PAGE_LIMIT, 10) || 5;
         const page = Math.max(1, Number(req.query.page) || 1);
-        const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+        const limit = Math.min(50, Math.max(1, Number(req.query.limit) || defaultLimit));
         const workerId = req.params.workerId;
         const [reviews, total, all] = await Promise.all([
             Review.find({ worker: workerId })

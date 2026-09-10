@@ -46,7 +46,7 @@ export const getNearbyWorkers = async (req, res) => {
     try {
         const settings = await getPlatformSettings();
         const defaultRadius = Number(settings.workerSearchRadiusKm) || 10;
-        const defaultPageLimit = 5;
+        const defaultPageLimit = parseInt(process.env.DEFAULT_WORKER_PAGE_LIMIT, 10) || 5;
 
         const {
             lng,

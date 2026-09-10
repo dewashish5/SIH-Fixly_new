@@ -69,6 +69,29 @@ const sampleServices = [
 
 const sampleWorkers = [
   {
+    _id: new mongoose.Types.ObjectId('6a9d255bf09b371a043e8b77'),
+    name: 'Vaibhav Jain',
+    email: 'vaibhav.jain@fixly.com',
+    phone: '+91 9876543201',
+    password: 'WorkerPass123!',
+    role: 'worker',
+    isVerified: true,
+    location: { type: 'Point', coordinates: [77.2167, 28.6328] },
+    savedAddresses: [{ label: 'Work', addressLine: 'Connaught Place, New Delhi', city: 'New Delhi', pincode: '110001', location: { type: 'Point', coordinates: [77.2167, 28.6328] } }],
+    workerProfile: {
+      category: 'Electrical',
+      categories: ['Electrical'],
+      rate: 200,
+      hourlyRate: 200,
+      experienceYears: 6,
+      bio: 'Master Electrician specialized in smart fixtures, circuits, and appliances.',
+      rating: 4.9,
+      totalJobs: 156,
+      isOnline: true,
+      skills: ['Wiring Repair', 'MCB Box Setup', 'Switchboard Repair']
+    }
+  },
+  {
     name: 'Sarah Jenkins',
     email: 'sarah.jenkins@gigconnect.com',
     phone: '+91 9876543209',

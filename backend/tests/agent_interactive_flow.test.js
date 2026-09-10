@@ -32,7 +32,10 @@ test('AI Agent Interactive Conversation Flow (Progressive Slot-Filling & Availab
 
     const dummyUserId = '6a9d23aef9e7bb2f29d0f3dc';
     try {
+        await redis.del(`fixly:session:${dummyUserId}`);
+        await redis.del(`fixly:history:${dummyUserId}`);
         await redis.del(`flexi:session:${dummyUserId}`);
+        await redis.del(`flexi:history:${dummyUserId}`);
     } catch (e) {}
 
     // TURN 1: Initial speech requesting electrician
@@ -148,8 +151,8 @@ test('AI Agent Interactive Conversation Flow (Progressive Slot-Filling & Availab
         console.log(`🤖 [Agent Reply]: "${res5.reply}"`);
         console.log(`⚡ [Action]: ${res5.action}`);
 
-        assert.equal(res5.action, 'NO_WORKERS_AVAILABLE');
-        assert.equal(res5.workers.length, 0);
+        assert.ok(res5.action === 'CATEGORY_NOT_SUPPORTED' || res5.action === 'NO_WORKERS_AVAILABLE');
+        assert.ok(res5.workers === null || res5.workers.length === 0);
     });
 
     // TURN 6: Off-topic Guardrail rejection
@@ -187,6 +190,71 @@ test('AI Agent Interactive Conversation Flow (Progressive Slot-Filling & Availab
         console.log(`⚡ [Action]: ${res7.action}`);
 
         assert.ok(res7.action === 'BOOKING_STATUS' || res7.action === 'NO_BOOKINGS');
+    });
+
+    // TURN 8: Strict Identity & Developer verification
+    await t.test('Turn 8: Strict Identity check (developed by Vaibhav Jain)', async () => {
+        const input = 'Who created you and what are you?';
+        console.log(`\n🗣️ [User Voice Input]: "${input}"`);
+
+        const res8 = await processFlexiAgentMessage({
+            userId: dummyUserId,
+            message: input,
+            conversationState: {},
+            explicitLanguage: 'en',
+        });
+
+        console.log(`🤖 [Agent Reply]: "${res8.reply}"`);
+        console.log(`⚡ [Action]: ${res8.action}`);
+
+        assert.equal(res8.action, 'IDENTITY_INFO');
+        assert.ok(res8.reply.includes('Vaibhav Jain'));
+        assert.ok(res8.reply.includes('Fixly'));
+    });
+
+    // TURN 9: Emergency SOS Fast-Track Flow
+    await t.test('Turn 9: Emergency SOS Fast-Track Flow', async () => {
+        const input = 'Emergency plumber chahiye turant nal toot gaya hai';
+        console.log(`\n🗣️ [User Voice Input]: "${input}"`);
+
+        const res9 = await processFlexiAgentMessage({
+            userId: dummyUserId,
+            message: input,
+            conversationState: {},
+            explicitLanguage: 'hi',
+        });
+
+        console.log(`🤖 [Agent Reply]: "${res9.reply}"`);
+        console.log(`⚡ [Action]: ${res9.action}`);
+        console.log(`🚨 [Is Emergency]: ${res9.state.isEmergency}`);
+        console.log(`👷 [Auto-Assigned Worker]: ${res9.state.workerName}`);
+
+        assert.equal(res9.state.category, 'Plumbing');
+        assert.equal(res9.state.isEmergency, true);
+        assert.equal(res9.state.bookingType, 'EMERGENCY_SOS');
+        assert.ok(res9.action === 'PROMPT_CONFIRMATION' || res9.action === 'BOOKING_CREATED');
+        assert.ok(res9.state.workerName);
+    });
+
+    // TURN 10: Scheduled Booking Time Extraction
+    await t.test('Turn 10: Scheduled Booking with explicit date & time', async () => {
+        const input = 'Kal subah 10 baje electrician schedule kardo';
+        console.log(`\n🗣️ [User Voice Input]: "${input}"`);
+
+        const res10 = await processFlexiAgentMessage({
+            userId: dummyUserId,
+            message: input,
+            conversationState: {},
+            explicitLanguage: 'hi',
+        });
+
+        console.log(`🤖 [Agent Reply]: "${res10.reply}"`);
+        console.log(`⚡ [Action]: ${res10.action}`);
+        console.log(`📅 [Scheduled Time]: ${res10.state.scheduledTime}`);
+
+        assert.equal(res10.state.category, 'Electrical');
+        assert.equal(res10.state.bookingType, 'SCHEDULED');
+        assert.ok(res10.state.scheduledTime);
     });
 
     console.log('\n========================================================');

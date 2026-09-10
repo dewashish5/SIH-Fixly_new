@@ -1303,62 +1303,6 @@ export const getReviews = async (req, res) => {
         const rating = req.query.rating;
 
         let total = await Review.countDocuments();
-
-        // Seed initial customer reviews if DB is empty
-        if (total === 0) {
-            const customers = await User.find({ role: 'customer' }).limit(3);
-            const workers = await User.find({ role: 'worker' }).limit(3);
-            const bookings = await Booking.find().limit(5);
-
-            if (customers.length > 0 && workers.length > 0 && bookings.length > 0) {
-                const seedReviews = [
-                    {
-                        booking: bookings[0]._id,
-                        customer: customers[0]._id,
-                        worker: workers[0]._id,
-                        rating: 5,
-                        feedback: 'Excellent electrical repair service! Amit arrived within 15 mins and fixed the circuit breaker quickly.',
-                        badgesGiven: ['Punctual', 'Professional', 'Clean Workspace']
-                    },
-                    {
-                        booking: bookings[1 % bookings.length]._id,
-                        customer: customers[1 % customers.length]._id,
-                        worker: workers[1 % workers.length]._id,
-                        rating: 5,
-                        feedback: 'Deep cleaning was superb! House is sparkling clean now. Highly recommended service.',
-                        badgesGiven: ['Polite', 'Thorough', 'Value for Money']
-                    },
-                    {
-                        booking: bookings[2 % bookings.length]._id,
-                        customer: customers[2 % customers.length]._id,
-                        worker: workers[2 % workers.length]._id,
-                        rating: 4,
-                        feedback: 'Good plumbing leakage repair work by Rajesh. Solved the pipe leakage effectively.',
-                        badgesGiven: ['Skilled Trade', 'On Time']
-                    },
-                    {
-                        booking: bookings[3 % bookings.length]._id,
-                        customer: customers[0]._id,
-                        worker: workers[1 % workers.length]._id,
-                        rating: 5,
-                        feedback: 'AC servicing was done smoothly with proper gas pressure check. Very satisfied!',
-                        badgesGiven: ['Expert Technician', 'Clean Work']
-                    },
-                    {
-                        booking: bookings[4 % bookings.length]._id,
-                        customer: customers[1 % customers.length]._id,
-                        worker: workers[0]._id,
-                        rating: 4,
-                        feedback: 'Custom carpentry repair work completed neatly. Good professional behavior.',
-                        badgesGiven: ['Craftsmanship']
-                    }
-                ];
-
-                await Review.insertMany(seedReviews);
-                total = seedReviews.length;
-            }
-        }
-
         const query = {};
         if (rating && rating !== 'All') {
             query.rating = Number(rating);

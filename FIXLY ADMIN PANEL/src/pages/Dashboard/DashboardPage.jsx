@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -99,19 +99,14 @@ export default function DashboardPage() {
   const [sosAlerts, setSosAlerts] = useState([]);
 
   useEffect(() => {
-    // Attempt to hook into socket if available globally or import socket
-    // We'll mock it if not available easily to satisfy the requirement
-    try {
-      const socketModule = require('../../services/socket');
-      const socket = socketModule.default || socketModule.socket;
-      if (socket) {
-        socket.on('sos:alert', (data) => {
-          setSosAlerts(prev => [...prev, data]);
-        });
-        return () => socket.off('sos:alert');
-      }
-    } catch(err) {
-      console.warn("Socket not found or not initialized");
+    if (typeof window !== 'undefined' && window.socket) {
+      const handleSos = (data) => {
+        setSosAlerts((prev) => [...prev, data]);
+      };
+      window.socket.on('sos:alert', handleSos);
+      return () => {
+        window.socket.off('sos:alert', handleSos);
+      };
     }
   }, []);
 

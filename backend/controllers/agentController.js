@@ -1,17 +1,17 @@
-import { processFlexiAgentMessage } from '../agent/flexiAgent.js';
+import { processFixlyAgentMessage } from '../agent/index.js';
 import { fail, ok } from '../utils/http.js';
 import { aiLogger } from '../utils/aiLogger.js';
 
 export const chatWithFlexiAgent = async (req, res) => {
     // #swagger.tags = ['AI Agent']
-    // #swagger.description = 'Interact with Hey Flexi Conversational AI voice/text booking assistant'
+    // #swagger.description = 'Interact with Fixly Conversational AI voice/text booking assistant'
     try {
         const { message, conversationState, coordinates, addressLine, language, lang } = req.body;
         if (!message) {
             return fail(res, 400, 'VALIDATION_ERROR', 'Message is required');
         }
 
-        const userId = req.user?.id;
+        const userId = req.user?.id || req.headers['x-user-id'] || 'guest_user';
         const chosenLanguage = String(language || lang || req.user?.preferredLanguage || 'en').toLowerCase().trim();
         const normalizedLanguage = (chosenLanguage === 'hi' || chosenLanguage === 'hindi') ? 'hi' : 'en';
 
@@ -26,7 +26,7 @@ export const chatWithFlexiAgent = async (req, res) => {
         });
 
         const io = req.app.get('io');
-        const result = await processFlexiAgentMessage({
+        const result = await processFixlyAgentMessage({
             userId,
             message,
             conversationState: conversationState || {},
@@ -41,6 +41,15 @@ export const chatWithFlexiAgent = async (req, res) => {
             reply: result.reply,
             state: result.state,
             action: result.action,
+            data: {
+                workers: result.workers || null,
+                booking: result.booking || null,
+                bookings: result.bookings || null,
+                estimate: result.estimate || null,
+                policy: result.policy || null,
+                step: result.state?.step || null,
+                category: result.state?.category || null
+            },
             booking: result.booking || null,
             bookings: result.bookings || null,
             workers: result.workers || null,

@@ -10,13 +10,51 @@ import { notifyUser, notifyUsers, safeNotify } from '../services/notificationSer
 import { findEligibleWorkerIds } from '../services/eligibleWorkers.js';
 import { getPlatformSettings } from '../services/settingsService.js';
 import { scheduleReminders } from '../queues/scheduledBookingQueue.js';
+import { validateAndCalculateCoupon } from '../services/couponService.js';
+
+// Real-time Coupon Code Verification for Customer Checkout
+export const validateCoupon = async (req, res) => {
+    // #swagger.tags = ['Bookings']
+    // #swagger.description = 'Validate a promotional coupon code and calculate real-time discount amount'
+    try {
+        const { couponCode, amount, serviceId, category } = req.body;
+        if (!couponCode) {
+            return res.status(400).json({ success: false, message: 'couponCode is required' });
+        }
+
+        let resolvedCategory = category;
+        if (!resolvedCategory && serviceId) {
+            const service = await Service.findById(serviceId).lean();
+            resolvedCategory = service?.category;
+        }
+
+        const result = await validateAndCalculateCoupon({
+            couponCode,
+            baseAmount: Number(amount) || 0,
+            serviceCategory: resolvedCategory,
+            userRole: req.user?.role || 'customer'
+        });
+
+        if (!result.isValid) {
+            return res.status(400).json({ success: false, message: result.message });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Coupon '${result.couponCode}' applied successfully!`,
+            data: result
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
 
 // Screen 5 & 6: Estimate Price Breakdown
 export const calculateEstimate = async (req, res) => {
     // #swagger.tags = ['Bookings']
-    // #swagger.parameters['body'] = { in: 'body', description: 'Estimate Input', required: true, schema: { serviceId: '64f1bc000000000000000002', estimatedHours: 2, isEmergency: false, bookingType: 'STANDARD' } }
+    // #swagger.parameters['body'] = { in: 'body', description: 'Estimate Input', required: true, schema: { serviceId: '64f1bc000000000000000002', estimatedHours: 2, isEmergency: false, bookingType: 'STANDARD', couponCode: 'FIXLY50' } }
     try {
-        const { serviceId, estimatedHours = 1, isEmergency, bookingType } = req.body;
+        const { serviceId, estimatedHours = 1, isEmergency, bookingType, couponCode } = req.body;
 
         const settings = await getPlatformSettings();
         const Cooperative = (await import('../models/Cooperative.js')).default;
@@ -55,6 +93,29 @@ export const calculateEstimate = async (req, res) => {
             ? (Number(settings.emergencySurchargeFixed) || Math.round(laborMin * (Number(settings.emergencySurchargePercent || 20) / 100)) || 50)
             : 0;
 
+        let couponDiscount = 0;
+        let appliedCoupon = null;
+        if (couponCode) {
+            const couponRes = await validateAndCalculateCoupon({
+                couponCode,
+                baseAmount: laborMin,
+                serviceCategory: service?.category,
+                userRole: req.user?.role || 'customer'
+            });
+            if (couponRes.isValid) {
+                couponDiscount = couponRes.discountAmount;
+                appliedCoupon = {
+                    code: couponRes.couponCode,
+                    title: couponRes.title,
+                    discount: couponRes.discount,
+                    discountAmount: couponRes.discountAmount
+                };
+            }
+        }
+
+        const rawMin = laborMin + materialsMin + platformFee + urgentFee;
+        const rawMax = laborMax + materialsMax + platformFee + urgentFee;
+
         return res.status(200).json({
             success: true,
             estimate: {
@@ -62,14 +123,16 @@ export const calculateEstimate = async (req, res) => {
                 materialsParts: { min: materialsMin, max: materialsMax },
                 serviceFee: platformFee,
                 urgentFee,
+                couponDiscount,
+                appliedCoupon,
                 isEmergency: isSos,
                 totalEstimate: {
-                    min: laborMin + materialsMin + platformFee + urgentFee,
-                    max: laborMax + materialsMax + platformFee + urgentFee
+                    min: Math.max(0, rawMin - couponDiscount),
+                    max: Math.max(0, rawMax - couponDiscount)
                 },
                 baseServiceFee: laborMin,
                 demandAdjustment: 0,
-                estimatedTotal: laborMin + materialsMin + platformFee + urgentFee,
+                estimatedTotal: Math.max(0, rawMin - couponDiscount),
                 currency: 'INR',
                 isEstimate: true,
             }
@@ -94,7 +157,8 @@ export const createBooking = async (req, res) => {
             scheduledTime,
             timeSlot,
             bookingType = 'STANDARD',
-            isEmergency = false
+            isEmergency = false,
+            couponCode = null
         } = req.body;
 
         if (!serviceId) {
@@ -218,7 +282,23 @@ export const createBooking = async (req, res) => {
         const urgentFee = isSos
             ? (Number(settings.emergencySurchargeFixed) || Math.round(baseFee * (Number(settings.emergencySurchargePercent || 20) / 100)) || 50)
             : 0;
-        const totalAmount = baseFee + platformFee + urgentFee;
+
+        let couponDiscount = 0;
+        let appliedCouponCode = null;
+        if (couponCode) {
+            const couponRes = await validateAndCalculateCoupon({
+                couponCode,
+                baseAmount: baseFee,
+                serviceCategory: service?.category,
+                userRole: req.user?.role || 'customer'
+            });
+            if (couponRes.isValid) {
+                couponDiscount = couponRes.discountAmount;
+                appliedCouponCode = couponRes.couponCode;
+            }
+        }
+
+        const totalAmount = Math.max(0, baseFee + platformFee + urgentFee - couponDiscount);
 
         // Create booking with initial status: 'PENDING'
         const booking = await Booking.create({
@@ -241,6 +321,8 @@ export const createBooking = async (req, res) => {
                 extraPartsTotal: 0,
                 platformFee: platformFee,
                 urgentFee: urgentFee,
+                couponCode: appliedCouponCode,
+                couponDiscount: couponDiscount,
                 totalAmount: totalAmount,
                 paymentStatus: 'PENDING',
                 paymentMethod: 'UPI'
@@ -301,11 +383,12 @@ export const createBooking = async (req, res) => {
             }
             const allWorkers = await User.find({ role: 'worker', isVerified: true }).select('location savedAddresses').lean();
             const workerIds = [];
+            const broadcastRadius = Number(settings.workerSearchRadiusKm) || 10;
             for (const w of allWorkers) {
                 const wCoords = (w.location && w.location.coordinates) || (w.savedAddresses?.[0]?.location?.coordinates);
                 if (wCoords && wCoords.length === 2) {
                     const dist = calculateHaversineDistanceKm(coords[1], coords[0], wCoords[1], wCoords[0]);
-                    if (dist <= 15) workerIds.push(String(w._id));
+                    if (dist <= broadcastRadius) workerIds.push(String(w._id));
                 }
             }
             await notifyUsers(workerIds, {
@@ -1029,10 +1112,11 @@ export const createEmergencyBooking = async (req, res) => {
 
         const coords = [parseFloat(longitude), parseFloat(latitude)];
         
-        const service = await Service.findById(serviceId);
-        let baseFee = offeredPrice || (service ? (service.basePrice || 100) : 100);
-
         const settings = await getPlatformSettings();
+        const defaultRate = Number(settings.defaultLaborRatePerHour) || 50;
+        const service = await Service.findById(serviceId);
+        let baseFee = offeredPrice || (service ? (service.basePrice || defaultRate) : defaultRate);
+
         const platformFee = settings.customerPlatformFee !== undefined && settings.customerPlatformFee !== null
             ? Number(settings.customerPlatformFee)
             : 0;

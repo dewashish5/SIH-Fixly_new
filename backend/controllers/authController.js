@@ -148,7 +148,13 @@ export const registerUser = async (req, res) => {
             authProvider: 'local',
             phone: phone || null,
             location: location || null,
-            workerProfile: (registeredRole === 'worker' && hasFullWorkerProfile) ? workerProfile : null,
+            workerProfile: registeredRole === 'worker' ? {
+                ...(hasFullWorkerProfile ? workerProfile : {}),
+                rating: 0.0,
+                totalJobs: 0,
+                walletBalance: 0,
+                totalEarnings: 0
+            } : null,
             ...(validFederationId && { federation: validFederationId })
         };
 
@@ -630,6 +636,8 @@ export const updateUserProfile = async (req, res) => {
             bio: body.bio || currentProfile.bio || null,
             skills: skillsVal,
             certifications: finalCertifications,
+            rating: currentProfile.rating !== undefined ? currentProfile.rating : 0.0,
+            totalJobs: currentProfile.totalJobs !== undefined ? currentProfile.totalJobs : 0,
             workAddress: body.workAddress || currentProfile.workAddress || null,
             eshramUan: body.eshramUan || currentProfile.eshramUan || null,
             

@@ -15,6 +15,7 @@ import {
     declineBooking,
     workerCancelBooking,
     createEmergencyBooking,
+    validateCoupon,
 } from '../controllers/bookingController.js';
 import {
     verifyArrivalOtp,
@@ -39,6 +40,7 @@ router.get('/worker/incoming', protect, listWorkerIncoming);
 router.get('/worker/active', protect, listWorkerActive);
 router.get('/worker/completed', protect, listWorkerCompleted);
 router.post('/estimate', protect, calculateEstimate);
+router.post('/validate-coupon', protect, validateCoupon);
 router.post('/emergency', protect, createEmergencyBooking);
 router.post('/', protect, upload.array('photos', 5), createBooking);
 router.get('/:bookingId/review', protect, getBookingReview);

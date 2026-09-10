@@ -113,6 +113,8 @@ const bookingSchema = new mongoose.Schema({
         platformFee: { type: Number, default: null },
         urgentFee: { type: Number, default: 0 },
         cancellationFee: { type: Number, default: 0 },
+        couponCode: { type: String, default: null, trim: true },
+        couponDiscount: { type: Number, default: 0 },
         totalAmount: { type: Number, default: 0 },
         paymentStatus: { type: String, enum: ['PENDING', 'PAID', 'FAILED'], default: 'PENDING' },
         paymentMethod: { type: String, default: 'UPI' },
