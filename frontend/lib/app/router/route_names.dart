@@ -70,6 +70,7 @@ abstract final class RouteNames {
   static const workerReliability = '/worker/reliability';
   static const workerWelfare = '/worker/welfare';
   static const workerCooperative = '/worker/cooperative';
+  static const workerFaq = '/worker/faq';
   static const workerOtpEntry = '/worker/otp-entry';
   static const workerAddParts = '/worker/add-parts';
   static const workerRating = '/worker/rating';

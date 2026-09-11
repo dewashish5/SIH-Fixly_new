@@ -10,6 +10,7 @@ import '../../../../core/network/api_config.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../shared/models/models.dart';
+import '../../../shared/presentation/widgets/service_scope_widgets.dart';
 import '../../../workers/data/workers_api_repository.dart';
 
 class CustomerWorkerProfilePage extends StatefulWidget {
@@ -495,10 +496,46 @@ class _CustomerWorkerProfilePageState extends State<CustomerWorkerProfilePage> {
 
                 const SizedBox(height: 16),
 
+                // Cooperative Federation Affiliation
+                if (worker.federationName != null && worker.federationName!.isNotEmpty) ...[
+                  CooperativeFederationBadge(
+                    federationName: worker.federationName!,
+                  ).animate().fadeIn(delay: 160.ms),
+                  const SizedBox(height: 16),
+                ] else ...[
+                  const CooperativeFederationBadge(
+                    federationName: 'National Labour Cooperative Federation of India (NLCF)',
+                  ).animate().fadeIn(delay: 160.ms),
+                  const SizedBox(height: 16),
+                ],
+
+                // What is Included & Not Included (Reference Image 1)
+                WhatIsIncludedCard(
+                  primaryCategoryId: worker.category,
+                  includedTasks: worker.includedTasks,
+                  excludedTasks: worker.excludedTasks,
+                ).animate().fadeIn(delay: 180.ms),
+
+                const SizedBox(height: 16),
+
+                // How it's Done (Reference Image 2)
+                HowItsDoneCard(
+                  primaryCategoryId: worker.category,
+                ).animate().fadeIn(delay: 200.ms),
+
+                const SizedBox(height: 16),
+
+                // Frequently Asked Questions (Reference Image 2)
+                ServiceFaqSection(
+                  primaryCategoryId: worker.category,
+                ).animate().fadeIn(delay: 220.ms),
+
+                const SizedBox(height: 16),
+
                 // 4. Trust, Safety & Verification
                 _buildTrustCard(context, worker, kycLabel)
                     .animate()
-                    .fadeIn(delay: 200.ms),
+                    .fadeIn(delay: 240.ms),
 
                 const SizedBox(height: 16),
 
@@ -546,7 +583,7 @@ class _CustomerWorkerProfilePageState extends State<CustomerWorkerProfilePage> {
     final bottomPadding = MediaQuery.paddingOf(context).bottom;
     final rateText = worker.rateFormatted ??
         (worker.hourlyRate != null
-            ? '₹${worker.hourlyRate!.toStringAsFixed(0)} / hr'
+            ? '₹${worker.hourlyRate!.toStringAsFixed(0)} base price'
             : (worker.minimumCharge != null
                 ? 'From ₹${worker.minimumCharge!.toStringAsFixed(0)}'
                 : 'Standard rate'));
@@ -764,7 +801,7 @@ class _CustomerWorkerProfilePageState extends State<CustomerWorkerProfilePage> {
                     const SizedBox(height: 8),
                     Text(
                       worker.rateFormatted ??
-                          '₹${worker.hourlyRate!.toStringAsFixed(0)}/hr',
+                          '₹${worker.hourlyRate!.toStringAsFixed(0)} base price',
                       style: TextStyle(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.w800,

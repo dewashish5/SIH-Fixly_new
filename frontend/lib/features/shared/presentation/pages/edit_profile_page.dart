@@ -583,7 +583,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                     color: scheme.primary,
                                   ),
                                   const SizedBox(width: 10),
-                                  Text('${cat.nameEn} (${cat.nameHi})'),
+                                  Flexible(
+                                    child: Text(
+                                      '${cat.nameEn} (${cat.nameHi})',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -629,7 +634,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           Expanded(
                             child: AppTextField(
                               controller: _rateController,
-                              label: 'Hourly Rate (₹)',
+                              label: 'Base Price (₹)',
                               hint: 'e.g. 250',
                               keyboardType: TextInputType.number,
                               prefixIcon:

@@ -993,7 +993,7 @@ class _WorkerCard extends StatelessWidget {
                     Text(
                       worker.rateFormatted ??
                           (worker.hourlyRate != null
-                              ? '₹${worker.hourlyRate!.toInt()}'
+                              ? '₹${worker.hourlyRate!.toInt()} base price'
                               : 'Top Rated'),
                       style: const TextStyle(
                         fontSize: 12,

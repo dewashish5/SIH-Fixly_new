@@ -12,6 +12,7 @@ import '../../../../core/utils/toast_utils.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
+import '../../../shared/data/service_scope_data.dart';
 import '../cubit/job_feed_cubit.dart';
 
 class WorkerOrderDetailPage extends StatefulWidget {
@@ -76,16 +77,12 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
   Future<void> _callCustomer(String phone) async {
     final clean = phone.replaceAll(RegExp(r'[^0-9+]'), '');
     final uri = Uri.parse('tel:$clean');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
   String _formatMediaUrl(String path) {
     if (path.isEmpty) return '';
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
-    }
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
     final base = ApiConfig.baseUrl.endsWith('/')
         ? ApiConfig.baseUrl.substring(0, ApiConfig.baseUrl.length - 1)
         : ApiConfig.baseUrl;
@@ -108,13 +105,13 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
                 child: Image.network(
                   fullUrl,
                   fit: BoxFit.contain,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
                     return const Center(
                       child: CircularProgressIndicator(color: Colors.white),
                     );
                   },
-                errorBuilder: (_, _, _) => const Center(
+                  errorBuilder: (_, _, _) => const Center(
                     child: Text(
                       'Unable to load photo',
                       style: TextStyle(color: Colors.white70),
@@ -140,14 +137,13 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
   Future<void> _openMediaUrl(String url) async {
     final fullUrl = _formatMediaUrl(url);
     final uri = Uri.parse(fullUrl);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
 
     if (_loading) {
       return AppScaffold(
@@ -167,43 +163,44 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
       );
     }
 
+    // ── Data resolution ──────────────────────────────────────────────────────
     final title = booking?.serviceTitle ?? fallback?.title ?? 'Service Booking';
-    final customerName =
-        booking?.customerName ?? fallback?.customerName ?? 'Customer';
+    final displayId = booking?.displayId;
+    final customerName = (booking?.customerName ?? fallback?.customerName ?? '').trim();
     final customerPhone = booking?.customerPhone ?? fallback?.customerPhone;
+    final customerAvatar = booking?.customerAvatar ?? fallback?.customerAvatar;
     final address = booking?.address ?? fallback?.address ?? '';
-    final amount = booking?.totalAmount ??
-        booking?.totalPrice ??
-        booking?.estimatedPrice ??
-        fallback?.pay ??
-        0;
+    final category = booking?.serviceCategory ?? fallback?.serviceCategory ?? '';
+    final amount = booking?.totalPrice ?? fallback?.pay ?? 0.0;
+    final createdAt = booking?.createdAt;
 
     final isPending = booking?.status == BookingStatus.searching ||
         fallback?.status == JobStatus.incoming;
-
     final isActive = booking?.status == BookingStatus.accepted ||
         booking?.status == BookingStatus.arrived ||
         booking?.status == BookingStatus.inProgress ||
         fallback?.status == JobStatus.active;
-
     final isCompleted = booking?.status == BookingStatus.completed ||
         booking?.status == BookingStatus.paid ||
         fallback?.status == JobStatus.completed;
 
     final isSos = booking?.isSosBooking ?? fallback?.isSosBooking ?? false;
-    final isScheduled =
-        booking?.isScheduledBooking ?? fallback?.isScheduledBooking ?? false;
+    final isScheduled = booking?.isScheduledBooking ?? fallback?.isScheduledBooking ?? false;
     final scheduledAt = booking?.scheduledAt ?? fallback?.scheduledAt;
     final timeSlot = booking?.timeSlot;
 
-    final problemDesc =
-        booking?.problemDescription ?? fallback?.problemDescription;
+    final problemDesc = booking?.problemDescription ?? fallback?.problemDescription;
     final photos = booking?.problemPhotos.isNotEmpty == true
         ? booking!.problemPhotos
         : (fallback?.problemPhotos ?? const <String>[]);
     final videos = booking?.problemVideos.isNotEmpty == true
         ? booking!.problemVideos
         : (fallback?.problemVideos ?? const <String>[]);
+
+    // ── Surface colours ──────────────────────────────────────────────────────
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final mutedText = isDark ? Colors.white54 : const Color(0xFF64748B);
 
     return AppScaffold(
       title: context.l10n.orderDetails,
@@ -212,134 +209,165 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
         onRefresh: _resolve,
         child: SingleChildScrollView(
           physics: appRefreshScrollPhysics,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Acceptance Status Prompt Banner
+
+              // ── Status Banner ─────────────────────────────────────────────
               if (isPending)
-                _buildStatusBanner(
+                _StatusBanner(
                   icon: Icons.hourglass_top_rounded,
-                  title: 'Customer is waiting for acceptance',
-                  subtitle:
-                      'Accept this booking to get navigation and customer contact. You have to go once accepted.',
+                  title: 'Waiting for your response',
+                  subtitle: 'Accept to get navigation & customer contact.',
+                  color: const Color(0xFFF59E0B),
                   isDark: isDark,
-                  isAlert: true,
                 )
               else if (isActive)
-                _buildStatusBanner(
+                _StatusBanner(
                   icon: Icons.navigation_rounded,
-                  title: 'Job Accepted • You are en route',
-                  subtitle:
-                      'Customer is expecting your arrival. Head over to the location.',
+                  title: 'Job Accepted • En Route',
+                  subtitle: 'Customer is expecting your arrival.',
+                  color: const Color(0xFF3B82F6),
                   isDark: isDark,
-                  isAlert: false,
                 )
               else if (isCompleted)
-                _buildStatusBanner(
+                _StatusBanner(
                   icon: Icons.check_circle_outline_rounded,
                   title: 'Order Fulfilled & Settled',
                   subtitle: 'This service request has been completed.',
+                  color: const Color(0xFF10B981),
                   isDark: isDark,
-                  isAlert: false,
                 ),
 
-              const SizedBox(height: 16),
+              if (isPending || isActive || isCompleted) const SizedBox(height: 16),
 
-              // 2. Job Type Badge & Title Row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildJobTypeBadge(
-                          isSos: isSos,
-                          isScheduled: isScheduled,
-                          isDark: isDark,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '₹${amount.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      Text(
-                        'Guaranteed Payout',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-              Divider(
-                height: 1,
-                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-              ),
-              const SizedBox(height: 16),
-
-              // 3. Customer & Location Information
-              _buildSectionTitle('Customer & Location', isDark),
-              const SizedBox(height: 10),
+              // ── Title + Payout hero ───────────────────────────────────────
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
-                  ),
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: cardBorder),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Job type badge row
                     Row(
                       children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: isDark
-                              ? Colors.white12
-                              : const Color(0xFF0F172A).withValues(alpha: 0.1),
+                        _JobTypeBadge(isSos: isSos, isScheduled: isScheduled, isDark: isDark),
+                        if (category.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: scheme.primary.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                category,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: scheme.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        const Spacer(),
+                        if (displayId != null)
+                          Text(
+                            '#$displayId',
+                            style: TextStyle(fontSize: 11, color: mutedText),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Service title + payout
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
                           child: Text(
-                            customerName.isNotEmpty
-                                ? customerName.substring(0, 1).toUpperCase()
-                                : 'C',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                              height: 1.2,
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '₹${amount.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: scheme.primary,
+                              ),
+                            ),
+                            Text(
+                              'Your payout',
+                              style: TextStyle(fontSize: 10, color: mutedText),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    if (createdAt != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Requested ${DateFormat('MMM d, y • h:mm a').format(createdAt)}',
+                        style: TextStyle(fontSize: 11, color: mutedText),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── Customer card ─────────────────────────────────────────────
+              _SectionLabel('Customer Details', isDark),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: cardBorder),
+                ),
+                child: Column(
+                  children: [
+                    // Avatar + name + phone + call button
+                    Row(
+                      children: [
+                        // Avatar
+                        _CustomerAvatar(
+                          name: customerName.isNotEmpty ? customerName : 'C',
+                          avatarUrl: customerAvatar,
+                          isDark: isDark,
+                        ),
+                        const SizedBox(width: 12),
+                        // Name + phone
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                customerName,
+                                customerName.isNotEmpty ? customerName : 'Customer',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 15,
@@ -349,76 +377,81 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
                                 const SizedBox(height: 2),
                                 Text(
                                   customerPhone,
+                                  style: TextStyle(fontSize: 12, color: mutedText),
+                                ),
+                              ] else ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Phone not available',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                    fontStyle: FontStyle.italic,
+                                    color: mutedText,
                                   ),
                                 ),
                               ],
                             ],
                           ),
                         ),
+                        // Call button
                         if (customerPhone != null && customerPhone.isNotEmpty)
-                          OutlinedButton.icon(
+                          FilledButton.tonalIcon(
                             onPressed: () => _callCustomer(customerPhone),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              side: BorderSide(
-                                color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              visualDensity: VisualDensity.compact,
                             ),
                             icon: const Icon(Icons.phone_rounded, size: 14),
                             label: const Text(
                               'Call',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                             ),
                           ),
                       ],
                     ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Divider(height: 1),
-                    ),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 16,
-                          color: isDark ? Colors.white54 : const Color(0xFF64748B),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            address.isNotEmpty ? address : 'Address not specified',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isDark ? Colors.white70 : const Color(0xFF334155),
-                              height: 1.3,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (isScheduled && scheduledAt != null) ...[
-                      const SizedBox(height: 8),
+
+                    // Address
+                    if (address.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Divider(height: 1),
+                      ),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.schedule_rounded,
-                            size: 16,
-                            color: isDark ? Colors.white54 : const Color(0xFF64748B),
-                          ),
+                          Icon(Icons.location_on_outlined, size: 16, color: mutedText),
                           const SizedBox(width: 8),
-                          Text(
-                            'Slot: ${DateFormat('EEE, MMM d, y • h:mm a').format(scheduledAt)}${timeSlot != null ? ' ($timeSlot)' : ''}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white70 : const Color(0xFF334155),
+                          Expanded(
+                            child: Text(
+                              address,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    // Scheduled slot
+                    if (isScheduled && scheduledAt != null) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.schedule_rounded, size: 16, color: mutedText),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Slot: ${DateFormat('EEE, MMM d, y • h:mm a').format(scheduledAt)}'
+                              '${timeSlot != null ? '  ($timeSlot)' : ''}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white70 : const Color(0xFF334155),
+                              ),
                             ),
                           ),
                         ],
@@ -428,31 +461,29 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // 4. Customer Problem Description & Attached Photos/Videos
-              _buildSectionTitle('Customer Request & Media', isDark),
-              const SizedBox(height: 10),
+              // ── Problem description & media ────────────────────────────────
+              _SectionLabel('Customer Request', isDark),
+              const SizedBox(height: 8),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
-                  ),
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: cardBorder),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Problem Description
                     Text(
                       'Issue Description',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                        color: mutedText,
+                        letterSpacing: 0.3,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -462,7 +493,7 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
                           : 'No written description provided by customer.',
                       style: TextStyle(
                         fontSize: 14,
-                        height: 1.4,
+                        height: 1.5,
                         fontStyle: problemDesc == null || problemDesc.trim().isEmpty
                             ? FontStyle.italic
                             : FontStyle.normal,
@@ -470,20 +501,26 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
                       ),
                     ),
 
-                    // Photos Gallery
+                    // Photos
                     if (photos.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      Text(
-                        'Attached Photos (${photos.length}) • Tap to zoom',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white54 : const Color(0xFF64748B),
-                        ),
+                      Row(
+                        children: [
+                          Icon(Icons.photo_library_outlined, size: 14, color: mutedText),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${photos.length} Photo${photos.length > 1 ? 's' : ''} • Tap to zoom',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: mutedText,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       SizedBox(
-                        height: 86,
+                        height: 88,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: photos.length,
@@ -491,15 +528,14 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
                           itemBuilder: (context, index) {
                             final photoUrl = photos[index];
                             final formattedUrl = _formatMediaUrl(photoUrl);
-
                             return InkWell(
                               onTap: () => _previewImage(context, photoUrl),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(10),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                                 child: Container(
-                                  width: 86,
-                                  height: 86,
+                                  width: 88,
+                                  height: 88,
                                   color: isDark ? Colors.black26 : const Color(0xFFE2E8F0),
                                   child: Image.network(
                                     formattedUrl,
@@ -516,38 +552,46 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
                       ),
                     ],
 
-                    // Videos Attachments
+                    // Videos
                     if (videos.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      Text(
-                        'Attached Video Clip',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white54 : const Color(0xFF64748B),
-                        ),
+                      Row(
+                        children: [
+                          Icon(Icons.videocam_outlined, size: 14, color: mutedText),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${videos.length} Video Attachment${videos.length > 1 ? 's' : ''}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: mutedText,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
-                      ...videos.map((vidUrl) {
-                        return Padding(
+                      ...videos.map(
+                        (vidUrl) => Padding(
                           padding: const EdgeInsets.only(bottom: 6),
                           child: InkWell(
                             onTap: () => _openMediaUrl(vidUrl),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isDark ? Colors.white12 : const Color(0xFFCBD5E1),
-                                ),
+                                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: cardBorder),
                               ),
-                              child: const Row(
+                              child: Row(
                                 children: [
-                                  Icon(Icons.play_circle_fill_rounded, size: 20),
-                                  SizedBox(width: 8),
-                                  Expanded(
+                                  Icon(
+                                    Icons.play_circle_fill_rounded,
+                                    size: 20,
+                                    color: scheme.primary,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Expanded(
                                     child: Text(
                                       'View Customer Video Attachment',
                                       style: TextStyle(
@@ -556,24 +600,24 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
                                       ),
                                     ),
                                   ),
-                                  Icon(Icons.open_in_new_rounded, size: 16),
+                                  Icon(Icons.open_in_new_rounded, size: 14, color: mutedText),
                                 ],
                               ),
                             ),
                           ),
-                        );
-                      }),
+                        ),
+                      ),
                     ],
 
-                    if (photos.isEmpty && videos.isEmpty && (problemDesc == null || problemDesc.isEmpty))
+                    if (photos.isEmpty && videos.isEmpty && (problemDesc == null || problemDesc.trim().isEmpty))
                       Padding(
-                        padding: const EdgeInsets.only(top: 6),
+                        padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          'No photo or video attachments sent.',
+                          'No photo or video attachments provided.',
                           style: TextStyle(
                             fontSize: 12,
                             fontStyle: FontStyle.italic,
-                            color: isDark ? Colors.white38 : Colors.grey,
+                            color: mutedText,
                           ),
                         ),
                       ),
@@ -581,60 +625,70 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // 5. Payout Breakdown Section
-              _buildSectionTitle('Payout Breakdown', isDark),
-              const SizedBox(height: 10),
+              // ── Scope & Worker Procedure Guidelines ───────────────────────
+              _SectionLabel('Work Scope & Guidelines', isDark),
+              const SizedBox(height: 8),
+              _buildScopeAndGuidelineCard(context, category, isDark, cardBg, cardBorder, mutedText),
+
+              const SizedBox(height: 16),
+
+              // ── Payout Breakdown ──────────────────────────────────────────
+              _SectionLabel('Payout Breakdown', isDark),
+              const SizedBox(height: 8),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
-                  ),
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: cardBorder),
                 ),
                 child: Column(
                   children: [
-                    _buildPriceRow(
-                      'Base Service Fee',
-                      booking?.baseServiceFee ?? fallback?.baseServiceFee ?? (amount * 0.85),
-                      isDark,
+                    _PriceRow(
+                      label: 'Base Service Fee',
+                      amount: booking?.baseServiceFee ?? fallback?.baseServiceFee ?? (amount * 0.85),
+                      isDark: isDark,
                     ),
                     if (isSos) ...[
                       const SizedBox(height: 8),
-                      _buildPriceRow(
-                        'Emergency Dispatch Fee',
-                        booking?.urgentFee ?? 100.0,
-                        isDark,
+                      _PriceRow(
+                        label: 'Emergency Dispatch Fee',
+                        amount: booking?.urgentFee ?? 100.0,
+                        isDark: isDark,
+                        highlight: true,
                       ),
                     ],
                     if ((booking?.extraPartsTotal ?? 0) > 0 || (fallback?.extraPartsTotal ?? 0) > 0) ...[
                       const SizedBox(height: 8),
-                      _buildPriceRow(
-                        'Approved Replacement Parts',
-                        booking?.extraPartsTotal ?? fallback?.extraPartsTotal ?? 0,
-                        isDark,
+                      _PriceRow(
+                        label: 'Approved Replacement Parts',
+                        amount: booking?.extraPartsTotal ?? fallback?.extraPartsTotal ?? 0,
+                        isDark: isDark,
                       ),
                     ],
                     const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
+                      padding: EdgeInsets.symmetric(vertical: 10),
                       child: Divider(height: 1),
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Total Worker Payout',
-                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                        const Flexible(
+                          child: Text(
+                            'Total Worker Payout',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                          ),
                         ),
+                        const SizedBox(width: 12),
                         Text(
                           '₹${amount.toStringAsFixed(0)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w800,
-                            fontSize: 17,
+                            fontSize: 18,
+                            color: scheme.primary,
                           ),
                         ),
                       ],
@@ -645,7 +699,7 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
 
               const SizedBox(height: 28),
 
-              // 6. Action Button Section (Smooth Swiping + Decline or Active Navigation)
+              // ── Action Buttons ────────────────────────────────────────────
               if (isPending) ...[
                 SwipeActionButton(
                   label: 'Swipe to accept booking',
@@ -664,13 +718,9 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
                           },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: isDark ? Colors.white70 : const Color(0xFF475569),
-                      side: BorderSide(
-                        color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                      side: BorderSide(color: cardBorder),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     child: const Text(
                       'Decline Job',
@@ -681,16 +731,11 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
               ] else if (isActive) ...[
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
+                  child: FilledButton.icon(
                     onPressed: () => context.push(RouteNames.workerActiveJob),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
+                    style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     icon: const Icon(Icons.navigation_rounded, size: 18),
                     label: const Text(
@@ -705,16 +750,13 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
                   child: OutlinedButton(
                     onPressed: () => context.pop(),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     child: const Text('Back to Job Feed'),
                   ),
                 ),
               ],
-              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -722,173 +764,395 @@ class _WorkerOrderDetailPageState extends State<WorkerOrderDetailPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title, bool isDark) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.1,
-        color: isDark ? Colors.white : const Color(0xFF0F172A),
-      ),
-    );
-  }
+  Widget _buildScopeAndGuidelineCard(
+    BuildContext context,
+    String category,
+    bool isDark,
+    Color cardBg,
+    Color cardBorder,
+    Color mutedText,
+  ) {
+    final scope = ServiceScopeData.getScopeForCategory(category);
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
-  Widget _buildPriceRow(String label, double price, bool isDark) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            color: isDark ? Colors.white60 : const Color(0xFF64748B),
-          ),
-        ),
-        Text(
-          '₹${price.toStringAsFixed(0)}',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white70 : const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusBanner({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool isDark,
-    required bool isAlert,
-  }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(13),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isAlert
-              ? (isDark ? Colors.white24 : const Color(0xFF94A3B8))
-              : (isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
-        ),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cardBorder),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.assignment_turned_in_outlined, size: 20, color: primaryColor),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Standard Checklist & Boundaries',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    Text(
+                      'Review before starting service for ${scope.title}',
+                      style: TextStyle(fontSize: 11, color: mutedText),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
+          const SizedBox(height: 14),
+
+          // Included tasks preview
+          const Text(
+            'WHAT YOU ARE EXPECTED TO DO',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+              color: Color(0xFF16A34A),
+            ),
+          ),
+          const SizedBox(height: 6),
+          ...scope.included.take(3).map(
+                (task) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.check_circle_rounded, size: 15, color: Color(0xFF16A34A)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          task,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: isDark ? Colors.white70 : const Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+              ),
+
+          const SizedBox(height: 10),
+
+          // Excluded tasks preview
+          const Text(
+            'DO NOT PROCEED WITHOUT PRIOR CHARGES / APPROVAL',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+              color: Color(0xFFDC2626),
+            ),
+          ),
+          const SizedBox(height: 6),
+          ...scope.excluded.take(2).map(
+                (task) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.cancel_rounded, size: 15, color: Color(0xFFDC2626)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          task,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: isDark ? Colors.white70 : const Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
+
+          const SizedBox(height: 12),
+          Divider(height: 1, color: cardBorder),
+          const SizedBox(height: 10),
+
+          // Button to view full SOP and FAQs
+          InkWell(
+            onTap: () {
+              context.push(
+                '${RouteNames.workerFaq}?category=${Uri.encodeComponent(category)}',
+              );
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.help_outline_rounded, size: 16, color: primaryColor),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      'Full SOP, How it Works & Worker FAQs',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 12, color: primaryColor),
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildJobTypeBadge({
-    required bool isSos,
-    required bool isScheduled,
-    required bool isDark,
-  }) {
-    if (isSos) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
+// ─── Private sub-widgets ─────────────────────────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.label, this.isDark);
+  final String label;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) => Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.1,
+          color: isDark ? Colors.white70 : const Color(0xFF475569),
         ),
-        child: const Row(
+      );
+}
+
+class _StatusBanner extends StatelessWidget {
+  const _StatusBanner({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.isDark,
+  });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: isDark ? 0.12 : 0.06),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _CustomerAvatar extends StatelessWidget {
+  const _CustomerAvatar({
+    required this.name,
+    required this.isDark,
+    this.avatarUrl,
+  });
+  final String name;
+  final String? avatarUrl;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = name.isNotEmpty ? name[0].toUpperCase() : 'C';
+    final bg = isDark ? Colors.white12 : const Color(0xFF0F172A).withValues(alpha: 0.1);
+    final fg = isDark ? Colors.white : const Color(0xFF0F172A);
+
+    if (avatarUrl != null && avatarUrl!.isNotEmpty) {
+      return CircleAvatar(
+        radius: 22,
+        backgroundImage: NetworkImage(avatarUrl!),
+        backgroundColor: bg,
+        onBackgroundImageError: (_, _) {},
+        child: null,
+      );
+    }
+    return CircleAvatar(
+      radius: 22,
+      backgroundColor: bg,
+      child: Text(
+        initials,
+        style: TextStyle(fontWeight: FontWeight.bold, color: fg, fontSize: 16),
+      ),
+    );
+  }
+}
+
+class _JobTypeBadge extends StatelessWidget {
+  const _JobTypeBadge({
+    required this.isSos,
+    required this.isScheduled,
+    required this.isDark,
+  });
+  final bool isSos;
+  final bool isScheduled;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isSos) {
+      return _badge(
+        icon: Icons.warning_amber_rounded,
+        label: 'EMERGENCY SOS',
+        bg: Colors.red.withValues(alpha: 0.1),
+        border: Colors.red.withValues(alpha: 0.4),
+        fg: Colors.red,
+      );
+    }
+    if (isScheduled) {
+      return _badge(
+        icon: Icons.calendar_month_outlined,
+        label: 'SCHEDULED',
+        bg: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+        border: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
+        fg: isDark ? Colors.white70 : const Color(0xFF475569),
+      );
+    }
+    return _badge(
+      icon: Icons.flash_on_rounded,
+      label: 'ON-DEMAND',
+      bg: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+      border: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+      fg: isDark ? Colors.white54 : const Color(0xFF64748B),
+    );
+  }
+
+  Widget _badge({
+    required IconData icon,
+    required String label,
+    required Color bg,
+    required Color border,
+    required Color fg,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: border),
+        ),
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.warning_amber_rounded, size: 12, color: Colors.red),
-            SizedBox(width: 4),
+            Icon(icon, size: 11, color: fg),
+            const SizedBox(width: 4),
             Text(
-              'EMERGENCY SOS',
+              label,
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
-                color: Colors.red,
+                color: fg,
                 letterSpacing: 0.3,
               ),
             ),
           ],
         ),
       );
-    }
-
-    if (isScheduled) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
-          ),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.calendar_month_outlined, size: 12),
-            SizedBox(width: 4),
-            Text(
-              'SCHEDULED',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.2,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-        ),
-      ),
-      child: const Text(
-        'STANDARD',
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.2,
-        ),
-      ),
-    );
-  }
 }
 
+class _PriceRow extends StatelessWidget {
+  const _PriceRow({
+    required this.label,
+    required this.amount,
+    required this.isDark,
+    this.highlight = false,
+  });
+  final String label;
+  final double amount;
+  final bool isDark;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '₹${amount.toStringAsFixed(0)}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: highlight
+                  ? Colors.red
+                  : (isDark ? Colors.white70 : const Color(0xFF334155)),
+            ),
+          ),
+        ],
+      );
+}

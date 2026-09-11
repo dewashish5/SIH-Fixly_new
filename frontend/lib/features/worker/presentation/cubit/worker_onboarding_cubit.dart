@@ -188,6 +188,47 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
     _emitForm(state.formData.copyWith(bio: value));
   }
 
+  void updateFederation({required String id, required String name}) {
+    _emitForm(
+      state.formData.copyWith(
+        federationId: id,
+        federationName: name,
+      ),
+    );
+  }
+
+  void toggleIncludedTask(String category, String task) {
+    final currentMap = Map<String, List<String>>.from(state.formData.includedTasks);
+    final list = List<String>.from(currentMap[category] ?? []);
+    if (list.contains(task)) {
+      list.remove(task);
+    } else {
+      list.add(task);
+    }
+    currentMap[category] = list;
+    _emitForm(state.formData.copyWith(includedTasks: currentMap));
+  }
+
+  void toggleExcludedTask(String category, String task) {
+    final currentMap = Map<String, List<String>>.from(state.formData.excludedTasks);
+    final list = List<String>.from(currentMap[category] ?? []);
+    if (list.contains(task)) {
+      list.remove(task);
+    } else {
+      list.add(task);
+    }
+    currentMap[category] = list;
+    _emitForm(state.formData.copyWith(excludedTasks: currentMap));
+  }
+
+  void setScopeTasksForCategory(String category, {required List<String> included, required List<String> excluded}) {
+    final incMap = Map<String, List<String>>.from(state.formData.includedTasks);
+    final excMap = Map<String, List<String>>.from(state.formData.excludedTasks);
+    incMap[category] = List<String>.from(included);
+    excMap[category] = List<String>.from(excluded);
+    _emitForm(state.formData.copyWith(includedTasks: incMap, excludedTasks: excMap));
+  }
+
   void updateServiceRadius(double km) {
     _emitForm(state.formData.copyWith(serviceRadiusKm: km));
   }
@@ -298,7 +339,7 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
         for (final skill in data.skills) {
           final rate = data.categoryRates[skill] ?? 0;
           if (rate <= 0) {
-            return 'Enter an hourly rate for each selected skill';
+            return 'Enter a base price for each selected skill';
           }
         }
         if (data.experienceYears < 0 || data.experienceYears > 50) {

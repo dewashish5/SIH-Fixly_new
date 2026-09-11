@@ -568,6 +568,9 @@ class BookingsApiRepository {
     final customerPhone = customer is Map
         ? customer['phone']?.toString()
         : null;
+    final customerAvatar = customer is Map
+        ? (customer['avatar'] ?? customer['profileImage'])?.toString()
+        : null;
 
     final address = json['serviceAddress'];
     String? addressLine;
@@ -689,6 +692,7 @@ class BookingsApiRepository {
       workerAvatar: workerAvatar,
       customerName: customerName,
       customerPhone: customerPhone,
+      customerAvatar: customerAvatar,
       customerLat: customerLat,
       customerLng: customerLng,
       rawStatus: json['status']?.toString(),

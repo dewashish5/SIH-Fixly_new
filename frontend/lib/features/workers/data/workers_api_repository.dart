@@ -255,7 +255,10 @@ class WorkersApiRepository {
       title: (json['title'] ?? profileMap['title'])?.toString(),
       hourlyRate: hourlyRate > 0 ? hourlyRate : null,
       minimumCharge: (json['minimumCharge'] as num?)?.toDouble(),
-      rateFormatted: json['rateFormatted']?.toString(),
+      rateFormatted: json['rateFormatted']
+          ?.toString()
+          .replaceAll(RegExp(r'\s*/\s*hr\b', caseSensitive: false), ' base price')
+          .replaceAll(RegExp(r'\s*/\s*hour\b', caseSensitive: false), ' base price'),
       distanceKm: distanceKm != null
           ? double.parse(distanceKm.toStringAsFixed(1))
           : null,
@@ -281,6 +284,18 @@ class WorkersApiRepository {
       experienceYears: experienceYears,
       isVerified: json['isVerified'] != false,
       insured: json['insured'] == true || profileMap['insured'] == true,
+      federationId: (profileMap['federationId'] ?? json['federationId'])?.toString(),
+      federationName: (profileMap['federationName'] ?? json['federationName'] ?? 'National Labour Cooperative Federation (NLCF)')?.toString(),
+      includedTasks: (profileMap['includedTasks'] is List
+          ? (profileMap['includedTasks'] as List).map((e) => e.toString()).toList()
+          : (json['includedTasks'] is List
+              ? (json['includedTasks'] as List).map((e) => e.toString()).toList()
+              : const <String>[])),
+      excludedTasks: (profileMap['excludedTasks'] is List
+          ? (profileMap['excludedTasks'] as List).map((e) => e.toString()).toList()
+          : (json['excludedTasks'] is List
+              ? (json['excludedTasks'] as List).map((e) => e.toString()).toList()
+              : const <String>[])),
     );
   }
 

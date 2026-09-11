@@ -465,20 +465,17 @@ class AuthCurvedShell extends StatelessWidget {
     final bottomPad = media.padding.bottom;
     final keyboard = media.viewInsets.bottom;
     final l10n = context.l10n;
-    // Short screens → auto-compact so form + CTA fit without clipping.
-    final useCompact = compact || media.size.height < 820;
-    final headerExtra = useCompact ? 132.0 : 168.0;
-    final iconSize = useCompact ? 72.0 : 88.0;
-    final curve = useCompact ? 48.0 : 56.0;
+
+    // Responsive sizing — scales with actual screen height/width
+    final useCompact = compact || context.isSmallPhone;
+    final headerExtra = context.rh(useCompact ? 120.0 : 152.0);
+    final iconSize = context.rh(useCompact ? 64.0 : 80.0);
+    final curve = context.rh(useCompact ? 40.0 : 52.0);
+    final hPad = context.rw(useCompact ? 20.0 : 24.0);
     final scrollBottom = footer == null
-        ? (useCompact ? 20.0 : 28.0) + bottomPad + keyboard
-        : (useCompact ? 12.0 : 16.0) + keyboard;
-    final pad = EdgeInsets.fromLTRB(
-      useCompact ? 24 : 28,
-      useCompact ? 20 : 28,
-      useCompact ? 24 : 28,
-      scrollBottom,
-    );
+        ? (useCompact ? 16.0 : 24.0) + bottomPad + keyboard
+        : (useCompact ? 10.0 : 14.0) + keyboard;
+    final pad = EdgeInsets.fromLTRB(hPad, useCompact ? 16 : 24, hPad, scrollBottom);
 
     final body = scrollable
         ? SingleChildScrollView(
@@ -523,7 +520,7 @@ class AuthCurvedShell extends StatelessWidget {
               child: ColoredBox(
                 color: AppColors.primaryDark,
                 child: Padding(
-                  padding: EdgeInsets.only(left: 28, right: 28, top: topPad),
+                  padding: EdgeInsets.only(left: hPad, right: hPad, top: topPad),
                   child: Align(
                     child: Container(
                       decoration: BoxDecoration(
@@ -586,9 +583,9 @@ class AuthCurvedShell extends StatelessWidget {
                             minimum: const EdgeInsets.only(bottom: 8),
                             child: Padding(
                               padding: EdgeInsets.fromLTRB(
-                                useCompact ? 24 : 28,
+                                hPad,
                                 4,
-                                useCompact ? 24 : 28,
+                                hPad,
                                 keyboard > 0 ? 8 : 4,
                               ),
                               child: footer!,
@@ -625,6 +622,7 @@ class AuthPageTitle extends StatelessWidget {
         fontWeight: FontWeight.w800,
         letterSpacing: -0.6,
         height: 1.1,
+        fontSize: context.sp(compact ? 22 : 28),
       ),
     );
   }
@@ -766,7 +764,7 @@ class AuthUnderlineField extends StatelessWidget {
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w700,
             color: context.ink,
-            fontSize: dense ? 12.5 : 14,
+            fontSize: context.sp(dense ? 12 : 13),
             height: 1.25,
           ),
         ),
@@ -784,7 +782,7 @@ class AuthUnderlineField extends StatelessWidget {
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: context.ink,
             fontWeight: FontWeight.w500,
-            fontSize: dense ? 15 : 16,
+            fontSize: context.sp(dense ? 14 : 15),
             height: 1.35,
           ),
           decoration: InputDecoration(
@@ -792,7 +790,7 @@ class AuthUnderlineField extends StatelessWidget {
             counterText: maxLength == null ? null : '',
             hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: context.ink.withValues(alpha: 0.42),
-              fontSize: dense ? 14.5 : 15.5,
+              fontSize: context.sp(dense ? 13.5 : 14.5),
               height: 1.35,
             ),
             border: baseBorder,
@@ -856,7 +854,7 @@ class AuthDarkButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = compact ? 48.0 : 52.0;
+    final h = context.rh(compact ? 44.0 : 50.0);
     return SizedBox(
       height: h,
       width: double.infinity,
@@ -877,7 +875,7 @@ class AuthDarkButton extends StatelessWidget {
           ),
           textStyle: TextStyle(
             fontWeight: FontWeight.w800,
-            fontSize: compact ? 15 : 16,
+            fontSize: context.sp(compact ? 14 : 15),
             letterSpacing: 0.2,
           ),
         ),
@@ -910,7 +908,7 @@ class AuthGoogleSquare extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = compact ? 48.0 : 56.0;
+    final h = context.rh(compact ? 44.0 : 52.0);
     return Semantics(
       button: true,
       label: context.l10n.continueWithGoogle,

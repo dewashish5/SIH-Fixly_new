@@ -62,15 +62,15 @@ abstract final class AppTextStyles {
         color: primary,
       ),
       bodyLarge: GoogleFonts.inter(
-        fontSize: 18,
-        fontWeight: FontWeight.w400,
-        height: 28 / 18,
-        color: primary,
-      ),
-      bodyMedium: GoogleFonts.inter(
         fontSize: 16,
         fontWeight: FontWeight.w400,
         height: 24 / 16,
+        color: primary,
+      ),
+      bodyMedium: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        height: 20 / 14,
         color: primary,
       ),
       bodySmall: GoogleFonts.inter(

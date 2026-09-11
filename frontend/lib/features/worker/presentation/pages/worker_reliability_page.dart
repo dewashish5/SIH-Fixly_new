@@ -252,13 +252,16 @@ class _WorkerReliabilityPageState extends State<WorkerReliabilityPage> {
                         children: [
                           Icon(tierIcon, size: 14, color: scoreColor),
                           const SizedBox(width: 5),
-                          Text(
-                            tierName.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                              color: scoreColor,
+                          Flexible(
+                            child: Text(
+                              tierName.toUpperCase(),
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                                color: scoreColor,
+                              ),
                             ),
                           ),
                         ],
@@ -416,23 +419,28 @@ class _WorkerReliabilityPageState extends State<WorkerReliabilityPage> {
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       tab['icon'] as IconData,
-                      size: 15,
+                      size: 14,
                       color: isSelected
                           ? (isDark ? Colors.white : primaryColor)
                           : (isDark ? Colors.white54 : const Color(0xFF64748B)),
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      tab['title'] as String,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected
-                            ? (isDark ? Colors.white : primaryColor)
-                            : (isDark ? Colors.white60 : const Color(0xFF64748B)),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        tab['title'] as String,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected
+                              ? (isDark ? Colors.white : primaryColor)
+                              : (isDark ? Colors.white60 : const Color(0xFF64748B)),
+                        ),
                       ),
                     ),
                   ],
@@ -672,12 +680,18 @@ class _WorkerReliabilityPageState extends State<WorkerReliabilityPage> {
                 ),
                 child: Icon(icon, size: 16, color: color),
               ),
-              Text(
-                benchmark,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white54 : const Color(0xFF64748B),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  benchmark,
+                  textAlign: TextAlign.end,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                  ),
                 ),
               ),
             ],

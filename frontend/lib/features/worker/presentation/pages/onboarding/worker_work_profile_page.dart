@@ -21,6 +21,7 @@ import '../../../../../shared/widgets/category_chip.dart';
 import '../../cubit/worker_onboarding_cubit.dart';
 import 'worker_onboarding_layout.dart';
 import '../../../../../core/utils/toast_utils.dart';
+import '../../../../shared/data/service_scope_data.dart';
 
 class WorkerWorkProfilePage extends StatefulWidget {
   const WorkerWorkProfilePage({super.key});
@@ -38,6 +39,9 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
   var _othersOpen = false;
   var _refreshingLocation = false;
   var _updatingAddress = false;
+  int _scopeSelectedSkillIndex = 0;
+  final _customIncludedController = TextEditingController();
+  final _customExcludedController = TextEditingController();
 
   static final _categoryIds =
       ServiceCategories.all.map((c) => c.id).toSet();
@@ -51,6 +55,16 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
     );
     _bioController = TextEditingController(text: data.bio);
     _syncRateControllers(data.skills, data.categoryRates);
+
+    // Default to first registered federation if not chosen
+    if (data.federationId == null && ServiceScopeData.federations.isNotEmpty) {
+      final defaultFed = ServiceScopeData.federations.first;
+      context.read<WorkerOnboardingCubit>().updateFederation(
+            id: defaultFed.id,
+            name: defaultFed.name,
+          );
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _ensureLocation();
     });
@@ -62,6 +76,8 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
     _othersFocus.dispose();
     _experienceController.dispose();
     _bioController.dispose();
+    _customIncludedController.dispose();
+    _customExcludedController.dispose();
     for (final c in _rateControllers.values) {
       c.dispose();
     }
@@ -180,6 +196,13 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
     for (final entry in _rateControllers.entries) {
       final rate = int.tryParse(entry.value.text.trim()) ?? 0;
       cubit.updateCategoryRate(entry.key, rate);
+    }
+    // Ensure scope tasks are initialized for all skills
+    for (final skill in cubit.state.formData.skills) {
+      final scope = ServiceScopeData.getScopeForCategory(skill);
+      final inc = cubit.state.formData.includedTasks[skill] ?? scope.included;
+      final exc = cubit.state.formData.excludedTasks[skill] ?? scope.excluded;
+      cubit.setScopeTasksForCategory(skill, included: inc, excluded: exc);
     }
     final error = cubit.validateStep(2);
     if (error != null) {
@@ -469,6 +492,8 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
                   ],
                 ),
               ),
+              _buildFederationSection(context, state, cubit),
+              _buildScopeOfWorkSection(context, state, cubit, locale),
               OnboardingSection(
                 title: l10n.serviceArea,
                 child: Column(
@@ -562,6 +587,495 @@ class _WorkerWorkProfilePageState extends State<WorkerWorkProfilePage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFederationSection(
+    BuildContext context,
+    WorkerOnboardingState state,
+    WorkerOnboardingCubit cubit,
+  ) {
+    final currentFedName = state.formData.federationName ??
+        (ServiceScopeData.federations.isNotEmpty
+            ? ServiceScopeData.federations.first.name
+            : 'National Labour Cooperative Federation (NLCF)');
+
+    return OnboardingSection(
+      title: 'Cooperative Federation',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Affiliate with a registered labour cooperative federation for fair wage protection and verified cooperative identity.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF10B981).withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.groups_rounded,
+                    color: Color(0xFF10B981),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'SELECTED FEDERATION',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF10B981),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        currentFedName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                OutlinedButton(
+                  onPressed: () => _showFederationPicker(context, state, cubit),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: const Text('Change'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFederationPicker(
+    BuildContext context,
+    WorkerOnboardingState state,
+    WorkerOnboardingCubit cubit,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.65,
+        maxChildSize: 0.9,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (context, scrollController) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const Text(
+                'Select Cooperative Federation',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Choose your affiliated labour cooperative federation:',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView.separated(
+                  controller: scrollController,
+                  itemCount: ServiceScopeData.federations.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final fed = ServiceScopeData.federations[index];
+                    final isSelected = state.formData.federationId == fed.id ||
+                        (state.formData.federationId == null && index == 0);
+
+                    return InkWell(
+                      onTap: () {
+                        cubit.updateFederation(id: fed.id, name: fed.name);
+                        Navigator.of(ctx).pop();
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                              : Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF10B981)
+                                : Colors.grey.withValues(alpha: 0.2),
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_off,
+                              color: isSelected ? const Color(0xFF10B981) : Colors.grey,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    fed.name,
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                      fontSize: 13.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${fed.state} • Reg: ${fed.regNo}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isSelected ? const Color(0xFF10B981) : Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScopeOfWorkSection(
+    BuildContext context,
+    WorkerOnboardingState state,
+    WorkerOnboardingCubit cubit,
+    String locale,
+  ) {
+    if (state.formData.skills.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (_scopeSelectedSkillIndex >= state.formData.skills.length) {
+      _scopeSelectedSkillIndex = 0;
+    }
+
+    final activeSkill = state.formData.skills[_scopeSelectedSkillIndex];
+    final defaultScope = ServiceScopeData.getScopeForCategory(activeSkill);
+
+    final currentIncluded = state.formData.includedTasks[activeSkill] ?? defaultScope.included;
+    final currentExcluded = state.formData.excludedTasks[activeSkill] ?? defaultScope.excluded;
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return OnboardingSection(
+      title: 'Scope of Work & Deliverables',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Select what you will do and what you will NOT do for your skills. Customers will see these transparent boundaries before booking.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Skill selector tabs if multiple skills
+          if (state.formData.skills.length > 1) ...[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(state.formData.skills.length, (index) {
+                  final skill = state.formData.skills[index];
+                  final isSelected = index == _scopeSelectedSkillIndex;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(_skillLabel(skill, locale)),
+                      selected: isSelected,
+                      onSelected: (val) {
+                        if (val) setState(() => _scopeSelectedSkillIndex = index);
+                      },
+                    ),
+                  );
+                }),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+
+          // Deliverables Card matching reference design
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Section 1: The expert is trained to (What is included)
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.check, size: 12, color: Colors.white),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'The expert is trained to (Included)',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Included tasks list with check toggle
+                for (final task in defaultScope.included)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: InkWell(
+                      onTap: () => cubit.toggleIncludedTask(activeSkill, task),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            currentIncluded.contains(task)
+                                ? Icons.check_box_rounded
+                                : Icons.check_box_outline_blank_rounded,
+                            color: currentIncluded.contains(task)
+                                ? const Color(0xFF10B981)
+                                : Colors.grey,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              task,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: currentIncluded.contains(task)
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                                color: currentIncluded.contains(task)
+                                    ? (isDark ? Colors.white : const Color(0xFF1E293B))
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // Custom included task field
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _customIncludedController,
+                          style: const TextStyle(fontSize: 12),
+                          decoration: InputDecoration(
+                            hintText: 'Add another task you will do...',
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filledTonal(
+                        onPressed: () {
+                          final text = _customIncludedController.text.trim();
+                          if (text.isNotEmpty) {
+                            cubit.toggleIncludedTask(activeSkill, text);
+                            _customIncludedController.clear();
+                          }
+                        },
+                        icon: const Icon(Icons.add, size: 16),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+
+                // Section 2: What is not included (Boundaries)
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEF4444),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, size: 12, color: Colors.white),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'What is not included (Your Boundaries)',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Excluded tasks list with check toggle
+                for (final task in defaultScope.excluded)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: InkWell(
+                      onTap: () => cubit.toggleExcludedTask(activeSkill, task),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            currentExcluded.contains(task)
+                                ? Icons.check_box_rounded
+                                : Icons.check_box_outline_blank_rounded,
+                            color: currentExcluded.contains(task)
+                                ? const Color(0xFFEF4444)
+                                : Colors.grey,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              task,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: currentExcluded.contains(task)
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                                color: currentExcluded.contains(task)
+                                    ? (isDark ? Colors.white70 : const Color(0xFF475569))
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // Custom excluded task field
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _customExcludedController,
+                          style: const TextStyle(fontSize: 12),
+                          decoration: InputDecoration(
+                            hintText: 'Add another task you will NOT do...',
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filledTonal(
+                        onPressed: () {
+                          final text = _customExcludedController.text.trim();
+                          if (text.isNotEmpty) {
+                            cubit.toggleExcludedTask(activeSkill, text);
+                            _customExcludedController.clear();
+                          }
+                        },
+                        icon: const Icon(Icons.add, size: 16),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Equipment Notice
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded, size: 16, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          defaultScope.equipmentNotice,
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

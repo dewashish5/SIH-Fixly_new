@@ -1353,7 +1353,7 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
                       ],
                     ),
                     Text(
-                      '₹$rate/hr',
+                      '₹$rate base price',
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 14,

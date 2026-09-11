@@ -129,6 +129,10 @@ class WorkerProfile extends Equatable {
     this.bio,
     this.experienceYears,
     this.isVerified = true,
+    this.federationId,
+    this.federationName,
+    this.includedTasks = const [],
+    this.excludedTasks = const [],
   });
 
   final String id;
@@ -161,6 +165,10 @@ class WorkerProfile extends Equatable {
   final String? bio;
   final int? experienceYears;
   final bool isVerified;
+  final String? federationId;
+  final String? federationName;
+  final List<String> includedTasks;
+  final List<String> excludedTasks;
 
   @override
   List<Object?> get props => [
@@ -394,6 +402,7 @@ class Booking extends Equatable {
     this.workerAvatar,
     this.customerName,
     this.customerPhone,
+    this.customerAvatar,
     this.customerLat,
     this.customerLng,
     this.rawStatus,
@@ -437,6 +446,7 @@ class Booking extends Equatable {
   final String? workerAvatar;
   final String? customerName;
   final String? customerPhone;
+  final String? customerAvatar;
   final double? customerLat;
   final double? customerLng;
   final String? rawStatus;
@@ -534,6 +544,7 @@ class Booking extends Equatable {
       workerAvatar: workerAvatar,
       customerName: customerName,
       customerPhone: customerPhone,
+      customerAvatar: customerAvatar,
       customerLat: customerLat,
       customerLng: customerLng,
       rawStatus: rawStatus ?? this.rawStatus,
@@ -877,6 +888,10 @@ class OnboardingFormData extends Equatable {
     this.certificateFileName,
     this.selfieVerified = false,
     this.selfieImageUrl,
+    this.federationId,
+    this.federationName,
+    this.includedTasks = const {},
+    this.excludedTasks = const {},
   });
 
   final String fullName;
@@ -911,6 +926,10 @@ class OnboardingFormData extends Equatable {
   final String? certificateFileName;
   final bool selfieVerified;
   final String? selfieImageUrl;
+  final String? federationId;
+  final String? federationName;
+  final Map<String, List<String>> includedTasks;
+  final Map<String, List<String>> excludedTasks;
 
   bool get hasAadhaarPhotos =>
       (aadhaarFrontPath?.isNotEmpty ?? false) &&
@@ -965,6 +984,10 @@ class OnboardingFormData extends Equatable {
     Object? certificateFileName = _unset,
     bool? selfieVerified,
     Object? selfieImageUrl = _unset,
+    String? federationId,
+    String? federationName,
+    Map<String, List<String>>? includedTasks,
+    Map<String, List<String>>? excludedTasks,
   }) {
     return OnboardingFormData(
       fullName: fullName ?? this.fullName,
@@ -1013,6 +1036,10 @@ class OnboardingFormData extends Equatable {
       selfieImageUrl: identical(selfieImageUrl, _unset)
           ? this.selfieImageUrl
           : selfieImageUrl as String?,
+      federationId: federationId ?? this.federationId,
+      federationName: federationName ?? this.federationName,
+      includedTasks: includedTasks ?? this.includedTasks,
+      excludedTasks: excludedTasks ?? this.excludedTasks,
     );
   }
 

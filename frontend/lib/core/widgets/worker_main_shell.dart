@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/router/route_names.dart';
 import '../constants/app_strings.dart';
 import '../../features/auth/presentation/cubit/app_session_cubit.dart';
 import '../network/worker_realtime_service.dart';
@@ -28,6 +29,59 @@ class _WorkerMainShellState extends State<WorkerMainShell> {
     });
   }
 
+  /// Routes that logically belong to each tab index.
+  ///  0 = Dashboard, 1 = Jobs, 2 = Wallet, 3 = Profile
+  static const _tabRoutes = <int, List<String>>{
+    0: [
+      RouteNames.workerDashboard,
+      RouteNames.workerEarnings,
+      RouteNames.workerReliability,
+      RouteNames.workerAvailability,
+      RouteNames.workerIncoming,
+      RouteNames.workerActiveJob,
+      RouteNames.workerOtpEntry,
+      RouteNames.workerAddParts,
+      RouteNames.workerRating,
+      RouteNames.workerNavigation,
+      RouteNames.workerPriceEstimation,
+      RouteNames.workerCooperative,
+      RouteNames.workerWelfare,
+    ],
+    1: [
+      RouteNames.workerJobs,
+      RouteNames.workerJobDetail,
+    ],
+    2: [
+      RouteNames.workerWallet,
+    ],
+    3: [
+      RouteNames.workerProfileTab,
+      RouteNames.workerProfile,
+      RouteNames.workerRateSettings,
+      RouteNames.sharedProfile,
+      RouteNames.sharedEditProfile,
+      RouteNames.sharedSettings,
+      RouteNames.sharedNotifications,
+      RouteNames.sharedOrderHistory,
+      RouteNames.sharedSupportChat,
+      RouteNames.sharedSupportTicket,
+      RouteNames.sharedSos,
+    ],
+  };
+
+  /// Derive tab index from the current route location.
+  /// Falls back to [navigationShell.currentIndex] if no match found.
+  int _resolveTabIndex(String location) {
+    for (final entry in _tabRoutes.entries) {
+      for (final route in entry.value) {
+        // Strip path params (e.g. /worker/job/:id → /worker/job/)
+        final pattern = route.replaceAll(RegExp(r':[^/]+'), '');
+        if (location.startsWith(pattern)) return entry.key;
+      }
+    }
+    return widget.navigationShell.currentIndex;
+  }
+
   void _onTap(int index) {
     widget.navigationShell.goBranch(
       index,
@@ -37,6 +91,10 @@ class _WorkerMainShellState extends State<WorkerMainShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen to route changes so the bottom nav updates for overlay routes too.
+    final location = GoRouterState.of(context).uri.toString();
+    final effectiveIndex = _resolveTabIndex(location);
+
     return BlocBuilder<AppSessionCubit, AppSessionState>(
       buildWhen: (prev, curr) => prev.locale != curr.locale,
       builder: (context, session) {
@@ -45,7 +103,7 @@ class _WorkerMainShellState extends State<WorkerMainShell> {
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: widget.navigationShell,
           bottomNavigationBar: AnimatedBottomNavBar(
-            currentIndex: widget.navigationShell.currentIndex,
+            currentIndex: effectiveIndex,
             onTap: _onTap,
             items: [
               NavBarItem(

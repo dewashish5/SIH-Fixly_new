@@ -20,6 +20,7 @@ import '../../../../core/widgets/core_widgets.dart';
 import '../../../../core/widgets/fixly_map_view.dart';
 import '../../../../shared/models/models.dart';
 import '../../../home/data/home_api_repository.dart';
+import '../../../shared/presentation/widgets/service_scope_widgets.dart';
 import '../../../workers/data/workers_api_repository.dart';
 import '../cubit/booking_flow_cubit.dart';
 
@@ -829,6 +830,13 @@ class _CustomerBookingPageState extends State<CustomerBookingPage> {
                     ],
                   ],
                 ),
+                if (worker.federationName != null && worker.federationName!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  CooperativeFederationBadge(
+                    federationName: worker.federationName!,
+                    compact: true,
+                  ),
+                ],
               ],
             ),
           ),
@@ -1588,6 +1596,41 @@ class _CustomerBookingPageState extends State<CustomerBookingPage> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+
+            // Cooperative Federation Affiliation
+            if (_worker?.federationName != null && _worker!.federationName!.isNotEmpty)
+              CooperativeFederationBadge(
+                federationName: _worker!.federationName!,
+              )
+            else
+              const CooperativeFederationBadge(
+                federationName: 'National Labour Cooperative Federation of India (NLCF)',
+              ),
+
+            const SizedBox(height: 16),
+
+            // What is included & What is not included (Image 1)
+            WhatIsIncludedCard(
+              primaryCategoryId: _selectedCategory ?? _worker?.category,
+              includedTasks: _worker?.includedTasks,
+              excludedTasks: _worker?.excludedTasks,
+            ),
+
+            const SizedBox(height: 16),
+
+            // How it's done (Image 2)
+            HowItsDoneCard(
+              primaryCategoryId: _selectedCategory ?? _worker?.category,
+            ),
+
+            const SizedBox(height: 16),
+
+            // FAQs (Image 2)
+            ServiceFaqSection(
+              primaryCategoryId: _selectedCategory ?? _worker?.category,
+            ),
+
             const SizedBox(height: 24),
 
             // 7. Sticky/Bottom Continue Button Card

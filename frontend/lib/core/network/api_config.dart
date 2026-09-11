@@ -1,54 +1,19 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb, ValueNotifier;
+import 'package:flutter/foundation.dart' show ValueNotifier;
 
-/// API host configuration with dynamic candidate failover.
+/// API configuration — change [baseUrl] to point to your backend.
 class ApiConfig {
   ApiConfig._();
 
-  static const String _defaultUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'https://processing-oakland-loc-talks.trycloudflare.com',
-  );
+  // ─── ✏️  CHANGE THIS to your backend URL ───────────────────────────────────
+  //
+  //  Android emulator (AVD):         http://10.0.2.2:8005
+  //  iOS Simulator:                  http://localhost:8005
+  //  Physical device (your WiFi):    http://192.168.1.88:8005  ← your LAN IP
+  //  Tunnel / production:            https://your-tunnel-url.com
+  //
+  static const String baseUrl = 'http://192.168.1.88:8005';
+  // ───────────────────────────────────────────────────────────────────────────
 
-  static String? _overrideUrl;
-  
-  static final ValueNotifier<String> urlNotifier = ValueNotifier<String>(
-    _defaultUrl,
-  );
-
-  static void setBaseUrl(String url) {
-    if (_overrideUrl != url) {
-      _overrideUrl = url;
-      urlNotifier.value = url;
-    }
-  }
-
-  static String get baseUrl {
-    if (_overrideUrl != null) {
-      return _overrideUrl!;
-    }
-    return _defaultUrl;
-  }
-
-  static List<String> get candidateUrls {
-    final urls = <String>[];
-    // 1. Primary: Cloudflare tunnel URL
-    if (_overrideUrl != null && !urls.contains(_overrideUrl)) {
-      urls.add(_overrideUrl!);
-    }
-    if (!urls.contains(_defaultUrl)) {
-      urls.add(_defaultUrl);
-    }
-    // 2. Secondary fallback local hosts
-    if (!urls.contains('http://localhost:8005')) {
-      urls.add('http://localhost:8005');
-    }
-    if (!urls.contains('http://127.0.0.1:8005')) {
-      urls.add('http://127.0.0.1:8005');
-    }
-    if (!kIsWeb && Platform.isAndroid && !urls.contains('http://10.0.2.2:8005')) {
-      urls.add('http://10.0.2.2:8005');
-    }
-    return urls;
-  }
+  /// Notifier in case any widget needs to react to URL changes at runtime.
+  static final ValueNotifier<String> urlNotifier = ValueNotifier<String>(baseUrl);
 }

@@ -69,6 +69,10 @@ abstract final class WorkerSetupProfileMapper {
         'ifscCode': data.ifscCode.trim().toUpperCase(),
       },
       'upi': {'upiId': data.upiId.trim()},
+      if (data.federationId != null) 'federationId': data.federationId,
+      if (data.federationName != null) 'federationName': data.federationName,
+      if (data.includedTasks.isNotEmpty) 'includedTasks': data.includedTasks,
+      if (data.excludedTasks.isNotEmpty) 'excludedTasks': data.excludedTasks,
     };
   }
 

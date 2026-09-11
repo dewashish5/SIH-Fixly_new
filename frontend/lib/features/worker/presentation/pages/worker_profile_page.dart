@@ -182,7 +182,7 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                             icon: Icons.currency_rupee_outlined,
                             iconColor: AppColors.primary,
                             title: 'Rate Settings',
-                            subtitle: 'Manage your hourly or per-visit rates',
+                            subtitle: 'Manage your base price or service rates',
                             onTap: () =>
                                 context.push(RouteNames.workerRateSettings),
                           ),
@@ -219,6 +219,14 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                             subtitle: 'View your e-Shram status and resources',
                             onTap: () =>
                                 context.push(RouteNames.workerWelfare),
+                          ),
+                          _WorkerMenuTile(
+                            icon: Icons.assignment_turned_in_outlined,
+                            iconColor: AppColors.primary,
+                            title: 'Work Scope, SOP & FAQs',
+                            subtitle: 'Trade procedures, boundaries & worker rights',
+                            onTap: () =>
+                                context.push(RouteNames.workerFaq),
                           ),
                           _WorkerMenuTile(
                             icon: Icons.support_agent_rounded,
@@ -445,9 +453,9 @@ class _WorkerHeroCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _HeroMetric(
-                label: 'Hourly Rate',
+                label: 'Base Price',
                 value: hourlyRate > 0
-                    ? '₹${hourlyRate.toStringAsFixed(0)}/hr'
+                    ? '₹${hourlyRate.toStringAsFixed(0)} base price'
                     : 'Standard',
                 icon: Icons.currency_rupee_rounded,
               ),
