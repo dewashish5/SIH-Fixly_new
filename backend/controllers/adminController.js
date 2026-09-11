@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
@@ -463,6 +464,8 @@ export const getWorkers = async (req, res) => {
         const search = req.query.search || '';
         const category = req.query.category || '';
         const isVerified = req.query.isVerified;
+        const pendingApproval = req.query.pendingApproval;
+        const kycStatus = req.query.kycStatus;
 
         const query = { role: 'worker' };
         if (req.federationFilter) {
@@ -484,6 +487,28 @@ export const getWorkers = async (req, res) => {
 
         if (isVerified !== undefined && isVerified !== '') {
             query.isVerified = isVerified === 'true';
+        }
+
+        if (pendingApproval === 'true') {
+            // Worker has submitted KYC but is not yet approved
+            query.isVerified = { $ne: true };
+            query['kycDocuments.status'] = { $in: ['submitted', 'pending', 'SUBMITTED', 'PENDING'] };
+        } else if (kycStatus) {
+            if (kycStatus === 'approved') {
+                query.$or = [
+                    { 'kycDocuments.status': { $in: ['approved', 'APPROVED'] } },
+                    { isVerified: true }
+                ];
+            } else if (kycStatus === 'rejected') {
+                query['kycDocuments.status'] = { $in: ['rejected', 'declined', 'REJECTED'] };
+            } else if (kycStatus === 'MANUAL_REVIEW' || kycStatus === 'manual_review') {
+                query['kycDocuments.status'] = { $in: ['MANUAL_REVIEW', 'manual_review'] };
+            } else if (kycStatus === 'pending') {
+                query.isVerified = { $ne: true };
+                query['kycDocuments.status'] = { $in: ['submitted', 'pending', 'SUBMITTED', 'PENDING'] };
+            } else {
+                query['kycDocuments.status'] = kycStatus;
+            }
         }
 
         const total = await User.countDocuments(query);
@@ -1021,8 +1046,8 @@ export const createCategory = async (req, res) => {
             }
         }
 
-        if (!imageUrl) {
-            imageUrl = 'https://via.placeholder.com/300x200?text=' + encodeURIComponent(categoryName || 'Category');
+        if (!imageUrl || !String(imageUrl).trim()) {
+            return res.status(400).json({ success: false, message: 'Service icon/image is strictly mandatory. Please upload an icon.' });
         }
 
         // Parse whatsIncluded list safely
@@ -1724,14 +1749,24 @@ export const uploadAdminFile = async (req, res) => {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
+        const isWelfare = req.originalUrl?.includes('welfare') || req.body?.type === 'welfare' || req.file.mimetype === 'application/pdf';
+        const folder = req.body?.folder || (isWelfare ? 'insurance_welfare' : 'gigconnect_services');
+
+        const fileSizeStr = req.file.size > 1024 * 1024
+            ? `${(req.file.size / (1024 * 1024)).toFixed(2)} MB`
+            : `${Math.round(req.file.size / 1024)} KB`;
+
         if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
             try {
-                const cloudResult = await uploadToCloudinary(req.file.buffer, 'gigconnect_services');
+                const cloudResult = await uploadToCloudinary(req.file.buffer, folder);
                 if (cloudResult && cloudResult.secure_url) {
                     return res.status(200).json({
                         success: true,
                         url: cloudResult.secure_url,
-                        message: 'Image uploaded to Cloudinary successfully'
+                        fileUrl: cloudResult.secure_url,
+                        fileName: req.file.originalname,
+                        fileSize: fileSizeStr,
+                        message: 'File uploaded successfully'
                     });
                 }
             } catch (cloudErr) {
@@ -1744,7 +1779,10 @@ export const uploadAdminFile = async (req, res) => {
         return res.status(200).json({
             success: true,
             url: dataUrl,
-            message: 'Image processed successfully'
+            fileUrl: dataUrl,
+            fileName: req.file.originalname,
+            fileSize: fileSizeStr,
+            message: 'File processed successfully'
         });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });

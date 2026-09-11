@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/admin';
 
 const adminApi = axios.create({
   baseURL: API_BASE_URL,
@@ -9,12 +9,15 @@ const adminApi = axios.create({
   }
 });
 
-// Request Interceptor: Attach JWT Token
+// Request Interceptor: Attach JWT Token & Auto-handle FormData
 adminApi.interceptors.request.use(
   (config) => {
     const token = sessionStorage.getItem('adminToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
     }
     return config;
   },
@@ -300,29 +303,63 @@ export const api = {
     return res.data;
   },
 
-  // Welfare Resources
+  // Platform Governance Settings
+  getSettings: async () => {
+    const res = await adminApi.get('/settings');
+    return res.data;
+  },
+  updateSettings: async (settingsData) => {
+    const res = await adminApi.put('/settings', settingsData);
+    return res.data;
+  },
+
+  // Mobile App Version & Force Update Governance
+  getAppVersion: async () => {
+    const res = await adminApi.get('/settings/app-version');
+    return res.data;
+  },
+  updateAppVersion: async (versionData) => {
+    const res = await adminApi.put('/settings/app-version', versionData);
+    return res.data;
+  },
+
+  // Redis Cache Flush & Memory Management
+  clearRedisCache: async (type = 'all') => {
+    const res = await adminApi.post(`/redis/clear/${type}`);
+    return res.data;
+  },
+
+  // Image & File Upload
+  uploadImage: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await adminApi.post('/upload', formData);
+    return res.data;
+  },
+
+  // Welfare Resources & e-Shram Guides
   getWelfareResources: async () => {
-    const res = await adminApi.get('/admin/welfare/resources');
+    const res = await adminApi.get('/welfare/resources');
     return res.data;
   },
   createWelfareResource: async (data) => {
-    const res = await adminApi.post('/admin/welfare/resources', data);
+    const res = await adminApi.post('/welfare/resources', data);
     return res.data;
   },
   updateWelfareResource: async (id, data) => {
-    const res = await adminApi.put(`/admin/welfare/resources/${id}`, data);
+    const res = await adminApi.put(`/welfare/resources/${id}`, data);
     return res.data;
   },
   deleteWelfareResource: async (id) => {
-    const res = await adminApi.delete(`/admin/welfare/resources/${id}`);
+    const res = await adminApi.delete(`/welfare/resources/${id}`);
     return res.data;
   },
   uploadWelfareResourcePdf: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await adminApi.post('/admin/welfare/resources/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    formData.append('folder', 'insurance_welfare');
+    formData.append('type', 'welfare');
+    const res = await adminApi.post('/welfare/resources/upload', formData);
     return res.data;
   },
 

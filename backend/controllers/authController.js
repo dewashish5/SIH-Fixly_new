@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Cooperative from '../models/Cooperative.js';
+import CooperativeSociety from '../models/CooperativeSociety.js';
 import redis from '../config/redis.js';
 import { generateOtpEmailHtml } from '../utils/emailTemplate.js';
 import bcrypt from 'bcryptjs';
@@ -620,9 +621,49 @@ export const updateUserProfile = async (req, res) => {
             }
         });
 
+        // 4.5 Resolve Cooperative Society & Regional Federation
+        const rawSocietyId = body.societyId || body.society || currentProfile.society || null;
+        let finalSocietyId = null;
+        let resolvedFederationId = body.federationId || body.federation || user.federation || null;
+        let generatedMemberId = body.societyMemberId || currentProfile.societyMemberId || null;
+        let workerState = body.state || currentProfile.state || null;
+        let workerDistrict = body.district || currentProfile.district || null;
+
+        if (rawSocietyId) {
+            try {
+                const soc = await CooperativeSociety.findById(rawSocietyId);
+                if (soc) {
+                    finalSocietyId = soc._id;
+                    if (soc.federation) {
+                        resolvedFederationId = soc.federation;
+                    }
+                    if (!workerState && soc.state) workerState = soc.state;
+                    if (!workerDistrict && soc.district) workerDistrict = soc.district;
+                    if (!generatedMemberId) {
+                        const distCode = (soc.district || 'GEN').toUpperCase().slice(0, 3);
+                        generatedMemberId = `MEM-${distCode}-${Math.floor(1000 + Math.random() * 9000)}`;
+                    }
+                    // Sync active member count on society
+                    CooperativeSociety.countDocuments({ role: 'worker', 'workerProfile.society': soc._id })
+                        .then(cnt => CooperativeSociety.findByIdAndUpdate(soc._id, { activeMembersCount: cnt }))
+                        .catch(() => {});
+                }
+            } catch (err) {
+                console.warn('Could not resolve society in updateUserProfile:', err.message);
+            }
+        }
+
+        if (resolvedFederationId) {
+            userUpdates.federation = resolvedFederationId;
+        }
+
         // 5. Build Worker Profile Object with resolved Cloudinary URLs
         userUpdates.workerProfile = {
             ...currentProfile,
+            state: workerState,
+            district: workerDistrict,
+            society: finalSocietyId,
+            societyMemberId: generatedMemberId,
             dateOfBirth: body.dateOfBirth || body.dob || currentProfile.dateOfBirth || null,
             gender: body.gender || currentProfile.gender || 'male',
             selfieImageUrl: finalAvatar,
@@ -698,7 +739,10 @@ export const updateUserProfile = async (req, res) => {
             userId,
             { $set: userUpdates },
             { returnDocument: 'after', runValidators: true }
-        ).select('-password');
+        )
+            .populate('workerProfile.society', 'name registrationNumber state district')
+            .populate('federation', 'name federationName state district')
+            .select('-password');
 
         // 7. Clear Redis Cache & Sync User Cache
         if (redis) {

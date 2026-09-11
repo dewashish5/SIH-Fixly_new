@@ -364,7 +364,8 @@ export function AppProvider({ children }) {
           estimatedTime: s.estimatedTime || '1 Hour',
           whatsIncluded: s.whatsIncluded || [],
           isActive: s.isActive,
-          icon: 'Layers'
+          image: s.image || s.icon || '',
+          icon: s.icon || 'Layers'
         }));
         setServices(formatted);
         setServicesPagination(res.pagination || { page: 1, limit: 10, total: formatted.length, totalPages: 1 });

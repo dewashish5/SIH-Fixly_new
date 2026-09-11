@@ -113,10 +113,14 @@ export const getWelfareResources = async (req, res) => {
         if (federationId) {
             filter.$or = [
                 { federation: null },
+                { federation: { $exists: false } },
                 { federation: federationId }
             ];
         } else {
-            filter.federation = null;
+            filter.$or = [
+                { federation: null },
+                { federation: { $exists: false } }
+            ];
         }
 
         const resources = await WelfareResource.find(filter).sort({ priority: -1, createdAt: -1 }).lean();

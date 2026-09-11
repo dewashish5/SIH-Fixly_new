@@ -1,33 +1,16 @@
-# ==========================================================
-# Production Multi-Stage Dockerfile for AWS ECR & ECS (Fargate)
-# ==========================================================
-FROM node:20-alpine AS base
+FROM node:20-alpine
 
-# Install security updates & dumb-init for proper signal handling in ECS
-RUN apk update && apk add --no-cache dumb-init curl
+WORKDIR /app
 
-WORKDIR /usr/src/app
-
-# Install dependencies with production focus
+# Dependencies install karna
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --omit=dev
 
-# Copy application source
+# Pura backend code copy karna
 COPY . .
 
-# Set production environment variables
-ENV NODE_ENV=production
-ENV PORT=8000
-
-# Expose HTTP & Socket.io port
+# Port expose karna
 EXPOSE 8000
 
-# Health check for AWS ECS Target Group
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl -f http://localhost:8000/ || exit 1
-
-# Run with non-root node user for container security
-USER node
-
-ENTRYPOINT ["dumb-init", "--"]
+# Server start command
 CMD ["node", "server.js"]

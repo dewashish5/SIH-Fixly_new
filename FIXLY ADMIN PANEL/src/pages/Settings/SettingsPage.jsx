@@ -32,7 +32,9 @@ import {
   Sparkles,
   Flame,
   ChevronRight,
-  Info
+  Info,
+  Smartphone,
+  Database
 } from 'lucide-react';
 import Avatar from '../../components/common/Avatar';
 
@@ -80,6 +82,73 @@ export default function SettingsPage() {
       showToast('success', 'Emergency contact added');
     } catch(err) {
       showToast('error', 'Failed to add emergency contact');
+    }
+  };
+
+  // -------------------------------------------------------------
+  // TAB: APP VERSION & REDIS CACHE GOVERNANCE STATE
+  // -------------------------------------------------------------
+  const [appVersionForm, setAppVersionForm] = useState({
+    apiVersion: 'V1',
+    appVersion: '1.0.0',
+    minVersion: 'V1',
+    forceUpdate: false,
+    updateTitle: 'Update Available',
+    updateMessage: 'A new version of Fixly is available. Please update the app to continue.',
+    updateUrl: 'https://play.google.com/store/apps/details?id=com.fixly.app',
+    platform: 'all'
+  });
+  const [savingAppVersion, setSavingAppVersion] = useState(false);
+  const [clearingRedis, setClearingRedis] = useState(false);
+  const [activeRedisAction, setActiveRedisAction] = useState('');
+
+  const fetchAppVersionData = async () => {
+    try {
+      const res = await api.getAppVersion();
+      if (res && res.version) {
+        setAppVersionForm({
+          apiVersion: res.version.apiVersion || 'V1',
+          appVersion: res.version.appVersion || '1.0.0',
+          minVersion: res.version.minVersion || 'V1',
+          forceUpdate: Boolean(res.version.forceUpdate),
+          updateTitle: res.version.updateTitle || 'Update Available',
+          updateMessage: res.version.updateMessage || '',
+          updateUrl: res.version.updateUrl || '',
+          platform: res.version.platform || 'all'
+        });
+      }
+    } catch (err) {
+      console.warn('Could not fetch app version:', err);
+    }
+  };
+
+  const handleSaveAppVersion = async (e) => {
+    if (e) e.preventDefault();
+    try {
+      setSavingAppVersion(true);
+      const res = await api.updateAppVersion(appVersionForm);
+      showToast('success', res?.message || `App version updated to ${appVersionForm.apiVersion} & Redis synced!`);
+    } catch (err) {
+      showToast('error', err.response?.data?.message || 'Failed to update app version');
+    } finally {
+      setSavingAppVersion(false);
+    }
+  };
+
+  const handleClearRedisCache = async (type) => {
+    if (type === 'all' && !window.confirm('Are you sure you want to FLUSH all Redis cache? This will clear all cached sessions and query results.')) {
+      return;
+    }
+    try {
+      setClearingRedis(true);
+      setActiveRedisAction(type);
+      const res = await api.clearRedisCache(type);
+      showToast('success', res?.message || `Redis cache cleared for ${type}!`);
+    } catch (err) {
+      showToast('error', err.response?.data?.message || `Failed to clear Redis cache for ${type}`);
+    } finally {
+      setClearingRedis(false);
+      setActiveRedisAction('');
     }
   };
 
@@ -294,6 +363,7 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    if (activeTab === 'app_version') fetchAppVersionData();
     if (activeTab === 'wage_floors') fetchFederationData();
     if (activeTab === 'societies') fetchSocieties();
     if (activeTab === 'banners') fetchBanners();
@@ -460,6 +530,7 @@ export default function SettingsPage() {
       <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid #e2e8f0', marginBottom: '24px', overflowX: 'auto' }}>
         {[
           { key: 'platform', label: 'Platform & Fees', icon: Sliders },
+          { key: 'app_version', label: 'App Version & Redis', icon: Smartphone },
           { key: 'wage_floors', label: 'Wage Floors & Policy', icon: DollarSign },
           { key: 'societies', label: 'Cooperative Societies', icon: Building2 },
           { key: 'banners', label: 'Promotions & Coupons', icon: Tag },
@@ -733,6 +804,453 @@ export default function SettingsPage() {
             </button>
           </div>
         </form>
+      )}
+
+      {/* ========================================================= */}
+      {/* TAB: MOBILE APP VERSION & REDIS CACHE GOVERNANCE */}
+      {/* ========================================================= */}
+      {activeTab === 'app_version' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Card 1: App Version & Force Update Configuration */}
+          <form onSubmit={handleSaveAppVersion} style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ padding: '10px', borderRadius: '10px', backgroundColor: '#eef2ff' }}>
+                  <Smartphone size={22} color="#4f46e5" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#111827', margin: 0 }}>
+                    Mobile App Version & Splash Screen Engine
+                  </h3>
+                  <p style={{ fontSize: '12.5px', color: '#64748b', margin: '3px 0 0 0' }}>
+                    Flutter mobile app calls this on splash screen. Changes synchronize instantly to Redis cache.
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', padding: '5px 12px', borderRadius: '20px', backgroundColor: '#e0e7ff', color: '#3730a3' }}>
+                  Active API Version: {appVersionForm.apiVersion}
+                </span>
+                {appVersionForm.forceUpdate && (
+                  <span style={{ fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '20px', backgroundColor: '#fee2e2', color: '#b91c1c' }}>
+                    MANDATORY UPDATE
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Version Form Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '18px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  Backend API Version (e.g. V1, V2)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={appVersionForm.apiVersion}
+                  onChange={(e) => setAppVersionForm({ ...appVersionForm, apiVersion: e.target.value })}
+                  placeholder="V1"
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    color: '#0f172a'
+                  }}
+                />
+                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  Client version is compared against this field.
+                </span>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  App Semantic Version (Semver)
+                </label>
+                <input
+                  type="text"
+                  value={appVersionForm.appVersion}
+                  onChange={(e) => setAppVersionForm({ ...appVersionForm, appVersion: e.target.value })}
+                  placeholder="1.0.0"
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '14px'
+                  }}
+                />
+                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  Flutter <code>pubspec.yaml</code> version name.
+                </span>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  Minimum Supported Version
+                </label>
+                <input
+                  type="text"
+                  value={appVersionForm.minVersion}
+                  onChange={(e) => setAppVersionForm({ ...appVersionForm, minVersion: e.target.value })}
+                  placeholder="V1"
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '14px'
+                  }}
+                />
+                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  Versions below this are forced to update.
+                </span>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  Target Platform Scope
+                </label>
+                <select
+                  value={appVersionForm.platform}
+                  onChange={(e) => setAppVersionForm({ ...appVersionForm, platform: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '14px',
+                    backgroundColor: '#ffffff'
+                  }}
+                >
+                  <option value="all">All Mobile Platforms</option>
+                  <option value="android">Android Only</option>
+                  <option value="ios">iOS Only</option>
+                </select>
+                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  Filter by OS if version differs.
+                </span>
+              </div>
+            </div>
+
+            {/* Force Update Checkbox Card */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 18px',
+                borderRadius: '10px',
+                backgroundColor: appVersionForm.forceUpdate ? '#fef2f2' : '#f8fafc',
+                border: appVersionForm.forceUpdate ? '1px solid #fecaca' : '1px solid #e2e8f0',
+                marginBottom: '18px'
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '13.5px', fontWeight: '700', color: appVersionForm.forceUpdate ? '#991b1b' : '#1e293b' }}>
+                  Enforce Immediate Mandatory Update (Force Update)
+                </div>
+                <div style={{ fontSize: '12px', color: appVersionForm.forceUpdate ? '#b91c1c' : '#64748b', marginTop: '2px' }}>
+                  When enabled, user cannot dismiss the modal on splash screen until updated.
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={appVersionForm.forceUpdate}
+                onChange={(e) => setAppVersionForm({ ...appVersionForm, forceUpdate: e.target.checked })}
+                style={{ width: '22px', height: '22px', accentColor: '#4f46e5', cursor: 'pointer' }}
+              />
+            </div>
+
+            {/* Modal Messaging Inputs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '14px', marginBottom: '20px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  Update Dialog Title
+                </label>
+                <input
+                  type="text"
+                  value={appVersionForm.updateTitle}
+                  onChange={(e) => setAppVersionForm({ ...appVersionForm, updateTitle: e.target.value })}
+                  placeholder="Update Available"
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13.5px'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  Update Notice Message (Shown to User)
+                </label>
+                <textarea
+                  rows={2}
+                  value={appVersionForm.updateMessage}
+                  onChange={(e) => setAppVersionForm({ ...appVersionForm, updateMessage: e.target.value })}
+                  placeholder="A new version of Fixly is available. Please update the app to continue."
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  Play Store / App Store / APK Download URL
+                </label>
+                <input
+                  type="url"
+                  value={appVersionForm.updateUrl}
+                  onChange={(e) => setAppVersionForm({ ...appVersionForm, updateUrl: e.target.value })}
+                  placeholder="https://play.google.com/store/apps/details?id=com.fixly.app"
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="submit"
+                disabled={savingAppVersion}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 22px',
+                  backgroundColor: '#4f46e5',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '13.5px',
+                  fontWeight: '700',
+                  cursor: savingAppVersion ? 'not-allowed' : 'pointer',
+                  opacity: savingAppVersion ? 0.7 : 1,
+                  boxShadow: '0 2px 4px rgba(79, 70, 229, 0.2)'
+                }}
+              >
+                <Save size={16} />
+                <span>{savingAppVersion ? 'Saving & Syncing Redis...' : 'Save App Version & Sync Redis'}</span>
+              </button>
+            </div>
+          </form>
+
+          {/* Card 2: Redis Memory Flush & Purge Controls */}
+          <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+              <div style={{ padding: '10px', borderRadius: '10px', backgroundColor: '#fef3c7' }}>
+                <Database size={22} color="#d97706" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#111827', margin: 0 }}>
+                  Redis Cache Invalidation & Flush Control Center
+                </h3>
+                <p style={{ fontSize: '12.5px', color: '#64748b', margin: '3px 0 0 0' }}>
+                  Purge cached data instantly when modifying records directly in MongoDB or for staging tests.
+                </p>
+              </div>
+            </div>
+
+            {/* Granular Purge Buttons Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '14px', marginTop: '16px' }}>
+              {/* User Cache */}
+              <div style={{ padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                <div style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b', marginBottom: '4px' }}>
+                  User & Auth Cache
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '12px' }}>
+                  Deletes: <code>user:*</code>, <code>session:*</code>, <code>otp:*</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleClearRedisCache('user')}
+                  disabled={clearingRedis}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    color: '#334155',
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: clearingRedis ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <Trash2 size={14} color="#64748b" />
+                  <span>{activeRedisAction === 'user' ? 'Clearing...' : 'Clear User Cache'}</span>
+                </button>
+              </div>
+
+              {/* Booking Cache */}
+              <div style={{ padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                <div style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b', marginBottom: '4px' }}>
+                  Bookings Cache
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '12px' }}>
+                  Deletes: <code>booking:*</code>, <code>scheduled:*</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleClearRedisCache('booking')}
+                  disabled={clearingRedis}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    color: '#334155',
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: clearingRedis ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <Trash2 size={14} color="#64748b" />
+                  <span>{activeRedisAction === 'booking' ? 'Clearing...' : 'Clear Booking Cache'}</span>
+                </button>
+              </div>
+
+              {/* Version Cache */}
+              <div style={{ padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                <div style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b', marginBottom: '4px' }}>
+                  App Version Cache
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '12px' }}>
+                  Deletes: <code>app:version:*</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleClearRedisCache('version')}
+                  disabled={clearingRedis}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    color: '#334155',
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: clearingRedis ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <Trash2 size={14} color="#64748b" />
+                  <span>{activeRedisAction === 'version' ? 'Clearing...' : 'Clear Version Cache'}</span>
+                </button>
+              </div>
+
+              {/* Categories & Catalog */}
+              <div style={{ padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                <div style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b', marginBottom: '4px' }}>
+                  Catalog & Categories
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '12px' }}>
+                  Deletes: <code>app:categories:*</code>, <code>app:home:*</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleClearRedisCache('categories')}
+                  disabled={clearingRedis}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    color: '#334155',
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: clearingRedis ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <Trash2 size={14} color="#64748b" />
+                  <span>{activeRedisAction === 'categories' ? 'Clearing...' : 'Clear Catalog Cache'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Danger: Flushdb */}
+            <div
+              style={{
+                marginTop: '18px',
+                padding: '16px 20px',
+                borderRadius: '12px',
+                backgroundColor: '#fef2f2',
+                border: '1px solid #fee2e2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#991b1b' }}>
+                  Full Redis Reset (FLUSHDB)
+                </div>
+                <div style={{ fontSize: '12px', color: '#b91c1c', marginTop: '2px' }}>
+                  Wipes all keys from the active Redis database. Normal client requests will fetch fresh data from MongoDB.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleClearRedisCache('all')}
+                disabled={clearingRedis}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '9px 18px',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: clearingRedis ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 2px 4px rgba(220, 38, 38, 0.2)'
+                }}
+              >
+                <Zap size={15} />
+                <span>{activeRedisAction === 'all' ? 'Flushing Redis...' : 'Flush Entire Redis Cache'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ========================================================= */}

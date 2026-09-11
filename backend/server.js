@@ -40,6 +40,7 @@ import welfareRoutes from './routes/welfare-routes.js';
 import webrtcRoutes from './routes/webrtc-call-routes.js';
 import agentRoutes from './routes/agent-routes.js';
 import emergencyRoutes from './routes/emergency-routes.js';
+import appVersionRoutes from './routes/app-version-routes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -125,6 +126,8 @@ app.use('/api/welfare', welfareRoutes);
 app.use('/api/webrtc', webrtcRoutes);
 app.use('/api/ai/agent', agentRoutes);
 app.use('/api/agent', agentRoutes);
+app.use('/api/version', appVersionRoutes);
+app.use('/api/app-version', appVersionRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

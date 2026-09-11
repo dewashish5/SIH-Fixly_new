@@ -80,6 +80,8 @@ const workerProfileSchema = new mongoose.Schema({
     badges: [{ type: String }], // e.g., 'Background Checked', 'Top Rated'
 
     // Step 3: Payout & Welfare & Cooperative Society
+    state: { type: String, default: null, trim: true },
+    district: { type: String, default: null, trim: true },
     society: { type: mongoose.Schema.Types.ObjectId, ref: 'CooperativeSociety', default: null },
     societyMemberId: { type: String, default: null }, // Unique Member ID issued by Primary Labour Cooperative Society
     eshramUan: { type: String, default: null },

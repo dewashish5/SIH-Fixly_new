@@ -58,6 +58,11 @@ import {
 
     adminReviewCertificate,
 } from '../controllers/workerCertificateController.js';
+import {
+    getAppVersionAdmin,
+    updateAppVersion,
+    clearRedisCache
+} from '../controllers/appVersionController.js';
 
 import {
     getAllEmergencyContacts,
@@ -209,6 +214,20 @@ router.put('/settings', updateSettings);
 router.get('/settings/languages', getEnabledLanguages);
 router.put('/settings/languages', updateEnabledLanguages);
 
+// Mobile App Version & Force Update Governance
+router.get('/settings/app-version', getAppVersionAdmin);
+router.put('/settings/app-version', updateAppVersion);
+
+// Redis Cache Management & Instant Invalidation
+router.post('/redis/clear', clearRedisCache);
+router.post('/redis/clear/:type', clearRedisCache);
+router.delete('/redis/clear', clearRedisCache);
+router.delete('/redis/clear/:type', clearRedisCache);
+router.post('/redis/flush-all', (req, res) => {
+    req.params.type = 'all';
+    return clearRedisCache(req, res);
+});
+
 // Worker KYC Verification & Certificates
 router.get('/workers/:id/verification', adminGetWorkerVerification);
 router.patch('/workers/:id/verification', adminReviewWorkerVerification);
@@ -233,6 +252,7 @@ router.put('/cooperative/societies/:id', adminUpdateSociety);
 router.post('/cooperative/assign-worker', adminAssignWorkerToSociety);
 router.get('/welfare/summary', adminWelfareSummary);
 router.get('/welfare/resources', getWelfareResourcesAdmin);
+router.post('/welfare/resources/upload', upload.single('file'), uploadAdminFile);
 router.post('/welfare/resources', createWelfareResource);
 router.put('/welfare/resources/:id', updateWelfareResource);
 router.delete('/welfare/resources/:id', deleteWelfareResource);

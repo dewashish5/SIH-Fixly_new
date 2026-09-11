@@ -181,155 +181,302 @@ export default function SupportPage() {
   const agentActiveCount = tickets.filter(t => t.status === 'AGENT_ACTIVE').length;
   const botCount = tickets.filter(t => t.status === 'BOT_ACTIVE').length;
 
+  const resolvedCount = tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length;
+
   return (
-    <div className="h-[calc(100vh-80px)] flex flex-col p-4 md:p-6 gap-4 bg-slate-50 dark:bg-slate-950">
-      {/* Top Bar / Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-            <Headphones className="w-5 h-5" />
+    <div style={{ padding: '0 32px 32px 32px', height: 'calc(100vh - 105px)', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', animation: 'fadeIn 0.2s ease' }}>
+      {/* Top Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '12px',
+              backgroundColor: '#eaf7ee',
+              color: '#15803d',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 6px rgba(21,128,61,0.12)',
+            }}
+          >
+            <Headphones size={22} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              Support Desk & AI Chatbot
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#111827', margin: 0 }}>
+                Support Desk & AI Chatbot
+              </h2>
               {escalatedCount > 0 && (
-                <span className="px-2 py-0.5 text-xs font-semibold bg-amber-500 text-white rounded-full animate-pulse">
-                  {escalatedCount} Escalated
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 9px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    backgroundColor: '#fef3c7',
+                    color: '#b45309',
+                    border: '1px solid #fde68a',
+                    borderRadius: '20px',
+                  }}
+                >
+                  <AlertCircle size={12} /> {escalatedCount} Escalated
                 </span>
               )}
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Real-time customer & worker queries handled by AI with seamless human takeover
+            </div>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '2px 0 0 0' }}>
+              Real-time customer & worker support queries handled by AI with seamless human takeover
             </p>
           </div>
         </div>
 
-        {/* Quick Filter Buttons */}
-        <div className="flex items-center gap-2">
+        {/* Live Counters & Refresh */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b' }}>
+            <span style={{ padding: '4px 10px', borderRadius: '8px', backgroundColor: '#f1f5f9', fontWeight: '600', color: '#334155' }}>
+              Total: {tickets.length}
+            </span>
+            <span style={{ padding: '4px 10px', borderRadius: '8px', backgroundColor: '#ecfdf5', fontWeight: '600', color: '#047857' }}>
+              💬 Live Chat: {agentActiveCount}
+            </span>
+            <span style={{ padding: '4px 10px', borderRadius: '8px', backgroundColor: '#f5f3ff', fontWeight: '600', color: '#6b21a8' }}>
+              🤖 AI Bot: {botCount}
+            </span>
+          </div>
+
           <button
             onClick={() => { setRefreshing(true); fetchTickets(); }}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition"
-            title="Refresh list"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              backgroundColor: '#ffffff',
+              color: '#334155',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+            }}
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
-      {/* Main Split Layout */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
-        {/* LEFT COLUMN: Ticket List (5 Cols on large screens) */}
-        <div className="lg:col-span-4 xl:col-span-4 flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-          {/* Search and Tabs */}
-          <div className="p-3 border-b border-slate-200 dark:border-slate-800 space-y-2.5">
-            {/* Search */}
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* Main Workspace (Two-Pane Layout) */}
+      <div style={{ display: 'flex', gap: '18px', flex: 1, minHeight: 0, width: '100%' }}>
+        {/* LEFT COLUMN: Ticket Queue Sidebar (380px) */}
+        <div
+          style={{
+            width: '380px',
+            minWidth: '340px',
+            maxWidth: '400px',
+            flexShrink: 0,
+            backgroundColor: '#ffffff',
+            borderRadius: '14px',
+            border: '1px solid var(--border-light)',
+            boxShadow: 'var(--shadow-card)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Search & Filters */}
+          <div style={{ padding: '14px', borderBottom: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {/* Search Input */}
+            <div style={{ position: 'relative', width: '100%' }}>
+              <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && fetchTickets()}
                 placeholder="Search ticket #, name, query..."
-                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500 dark:text-white"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  paddingLeft: '34px',
+                  paddingRight: '12px',
+                  paddingTop: '8px',
+                  paddingBottom: '8px',
+                  fontSize: '12.5px',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  outline: 'none',
+                  color: '#1e293b',
+                }}
               />
+              {searchQuery && (
+                <button
+                  onClick={() => { setSearchQuery(''); fetchTickets(); }}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', cursor: 'pointer' }}
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
 
             {/* Status Filter Chips */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 text-xs no-scrollbar">
+            <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', paddingBottom: '2px' }}>
               {[
-                { key: 'ALL', label: 'All' },
+                { key: 'ALL', label: 'All', count: tickets.length },
                 { key: 'ESCALATED', label: '⚠️ Escalated', count: escalatedCount },
                 { key: 'AGENT_ACTIVE', label: '💬 In Chat', count: agentActiveCount },
                 { key: 'BOT_ACTIVE', label: '🤖 AI Bot', count: botCount },
-                { key: 'RESOLVED', label: '✅ Resolved' },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setStatusTab(tab.key)}
-                  className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap font-medium transition flex items-center gap-1 ${
-                    statusTab === tab.key
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  {tab.count !== undefined && tab.count > 0 && (
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      statusTab === tab.key ? 'bg-white text-indigo-700' : 'bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
-                    }`}>
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              ))}
+                { key: 'RESOLVED', label: '✅ Resolved', count: resolvedCount },
+              ].map((tab) => {
+                const isActive = statusTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setStatusTab(tab.key)}
+                    style={{
+                      padding: '5px 9px',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      whiteSpace: 'nowrap',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      backgroundColor: isActive ? 'var(--primary-brand)' : '#f1f5f9',
+                      color: isActive ? '#ffffff' : '#475569',
+                      boxShadow: isActive ? '0 1px 3px rgba(21,128,61,0.2)' : 'none',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>{tab.label}</span>
+                    {tab.count !== undefined && tab.count > 0 && (
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          padding: '1px 5px',
+                          borderRadius: '10px',
+                          fontWeight: '700',
+                          backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                          color: isActive ? '#ffffff' : '#334155',
+                        }}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Role Filter Chips */}
-            <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
-              <span className="text-slate-400 font-medium">Role:</span>
-              {['ALL', 'customer', 'worker'].map((role) => (
-                <button
-                  key={role}
-                  onClick={() => setRoleFilter(role)}
-                  className={`px-2 py-0.5 rounded text-[11px] font-medium uppercase transition ${
-                    roleFilter === role
-                      ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {role === 'ALL' ? 'All Roles' : role}
-                </button>
-              ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '4px', borderTop: '1px solid #f8fafc', fontSize: '11px' }}>
+              <span style={{ color: '#94a3b8', fontWeight: '600' }}>Role:</span>
+              {[
+                { key: 'ALL', label: 'All Roles' },
+                { key: 'customer', label: 'Customers' },
+                { key: 'worker', label: 'Workers' },
+              ].map((role) => {
+                const isActive = roleFilter === role.key;
+                return (
+                  <button
+                    key={role.key}
+                    onClick={() => setRoleFilter(role.key)}
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      border: 'none',
+                      backgroundColor: isActive ? '#1e293b' : 'transparent',
+                      color: isActive ? '#ffffff' : '#64748b',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {role.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Ticket List Scrollable */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+          {/* Ticket Queue List */}
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             {loading ? (
-              <div className="p-8 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
-                <RefreshCw className="w-5 h-5 animate-spin text-indigo-500" />
-                Loading conversations...
+              <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <RefreshCw size={20} style={{ animation: 'spin 1s linear infinite', color: 'var(--primary-brand)' }} />
+                <span>Loading tickets queue...</span>
               </div>
             ) : tickets.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-xs">
-                No tickets matching criteria.
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <MessageSquare size={28} style={{ color: '#cbd5e1' }} />
+                <span style={{ fontWeight: '600', color: '#64748b' }}>No tickets found</span>
+                <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>No conversations match the selected filters.</span>
               </div>
             ) : (
               tickets.map((t) => {
                 const isSelected = t._id === selectedTicketId;
-                const isEscalated = t.status === 'ESCALATED';
                 const lastMsg = t.messages?.[t.messages.length - 1];
                 const senderRole = t.createdBy?.role || t.userRole || 'customer';
+                const isWorker = senderRole === 'worker';
 
                 return (
                   <div
                     key={t._id}
                     onClick={() => setSelectedTicketId(t._id)}
-                    className={`p-3 cursor-pointer transition flex flex-col gap-1.5 ${
-                      isSelected
-                        ? 'bg-indigo-50/70 dark:bg-indigo-950/30 border-l-4 border-indigo-600'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                    }`}
+                    style={{
+                      padding: '12px 14px',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #f1f5f9',
+                      borderLeft: isSelected ? '4px solid var(--primary-brand)' : '4px solid transparent',
+                      backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      transition: 'all 0.12s ease',
+                    }}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                          senderRole === 'worker'
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                            : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                        }`}>
-                          {senderRole === 'worker' ? 'W' : 'C'}
+                    {/* Top row: Avatar + Name + Status */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        <div
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            backgroundColor: isWorker ? '#fef3c7' : '#dbeafe',
+                            color: isWorker ? '#b45309' : '#1e40af',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: '700',
+                            fontSize: '11px',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isWorker ? 'W' : 'C'}
                         </div>
-                        <span className="font-semibold text-xs text-slate-900 dark:text-white truncate">
+                        <span style={{ fontWeight: '700', fontSize: '12.5px', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {t.createdBy?.name || 'User'}
                         </span>
-                        <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium ${
-                          senderRole === 'worker'
-                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
-                        }`}>
+                        <span
+                          style={{
+                            fontSize: '10px',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            backgroundColor: isWorker ? '#fffbeb' : '#eff6ff',
+                            color: isWorker ? '#92400e' : '#1e40af',
+                          }}
+                        >
                           {senderRole}
                         </span>
                       </div>
@@ -338,25 +485,39 @@ export default function SupportPage() {
                     </div>
 
                     {/* Preview of last message */}
-                    <p className="text-[11.5px] text-slate-600 dark:text-slate-400 line-clamp-2">
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: '11.5px',
+                        color: '#475569',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        lineHeight: '1.4',
+                      }}
+                    >
                       {lastMsg?.body || t.description || 'No messages yet'}
                     </p>
 
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
-                      <span>{t.ticketNumber}</span>
-                      <span className="flex items-center gap-1">
+                    {/* Bottom row: Ticket # + Handler + Time */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: '#94a3b8', paddingTop: '2px' }}>
+                      <span style={{ fontFamily: 'monospace', color: '#64748b' }}>{t.ticketNumber}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {t.handledBy === 'BOT' ? (
-                          <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400">
-                            <Bot className="w-3 h-3" /> Bot
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#7c3aed', fontWeight: '600' }}>
+                            <Bot size={11} /> AI Bot
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                            <Headphones className="w-3 h-3" /> Agent
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#15803d', fontWeight: '600' }}>
+                            <Headphones size={11} /> Agent
                           </span>
                         )}
                         <span>•</span>
-                        {new Date(t.lastMessageAt || t.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                        <span>
+                          {new Date(t.lastMessageAt || t.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -365,46 +526,112 @@ export default function SupportPage() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Interactive Conversation View (8 Cols on large screens) */}
-        <div className="lg:col-span-8 xl:col-span-8 flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        {/* RIGHT COLUMN: Interactive Live Chat & Takeover Console */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            backgroundColor: '#ffffff',
+            borderRadius: '14px',
+            border: '1px solid var(--border-light)',
+            boxShadow: 'var(--shadow-card)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
           {!selectedTicket ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
-              <MessageSquare className="w-12 h-12 mb-3 text-slate-300 dark:text-slate-700" />
-              <h3 className="text-base font-semibold text-slate-700 dark:text-slate-300">
-                Select a conversation
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '16px',
+                  backgroundColor: '#f1f5f9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#94a3b8',
+                  marginBottom: '16px',
+                }}
+              >
+                <MessageSquare size={32} />
+              </div>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#334155', margin: '0 0 6px 0' }}>
+                Select a Support Conversation
               </h3>
-              <p className="text-xs text-slate-500 max-w-sm mt-1">
-                Choose any active ticket from the left column to view the chat history, take over from AI, or reply directly.
+              <p style={{ fontSize: '13px', color: '#64748b', maxWidth: '380px', margin: 0, lineHeight: '1.5' }}>
+                Pick any ticket from the left queue to view live AI interactions, take over the conversation, or send direct resolution messages.
               </p>
             </div>
           ) : (
             <>
-              {/* Ticket Top Control Bar */}
-              <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-sm">
+              {/* Console Header Bar */}
+              <div
+                style={{
+                  padding: '14px 20px',
+                  borderBottom: '1px solid #e2e8f0',
+                  backgroundColor: '#f8fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                }}
+              >
+                {/* User Information */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div
+                    style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '50%',
+                      backgroundColor: selectedTicket.userRole === 'worker' ? '#fef3c7' : '#dbeafe',
+                      color: selectedTicket.userRole === 'worker' ? '#b45309' : '#1e40af',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      fontWeight: '700',
+                      flexShrink: 0,
+                    }}
+                  >
                     {selectedTicket.createdBy?.name?.[0] || 'U'}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
                         {selectedTicket.createdBy?.name || 'User'}
-                      </h2>
-                      <span className="text-xs text-slate-400 font-mono">
+                      </h3>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          backgroundColor: selectedTicket.userRole === 'worker' ? '#fffbeb' : '#eff6ff',
+                          color: selectedTicket.userRole === 'worker' ? '#92400e' : '#1e40af',
+                        }}
+                      >
+                        {selectedTicket.userRole || selectedTicket.createdBy?.role || 'user'}
+                      </span>
+                      <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#64748b' }}>
                         {selectedTicket.ticketNumber}
                       </span>
                       <Badge status={selectedTicket.status} />
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: '#64748b', marginTop: '3px' }}>
                       {selectedTicket.createdBy?.phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-slate-400" />
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Phone size={12} style={{ color: '#94a3b8' }} />
                           {selectedTicket.createdBy.phone}
                         </span>
                       )}
                       {selectedTicket.createdBy?.email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3 h-3 text-slate-400" />
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Mail size={12} style={{ color: '#94a3b8' }} />
                           {selectedTicket.createdBy.email}
                         </span>
                       )}
@@ -412,16 +639,30 @@ export default function SupportPage() {
                   </div>
                 </div>
 
-                {/* Actions & Takeover */}
-                <div className="flex items-center gap-2">
-                  {/* Takeover Button if currently bot or escalated */}
+                {/* Status & Takeover Actions */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {/* Take Over Button */}
                   {(selectedTicket.handledBy === 'BOT' || selectedTicket.status === 'ESCALATED') && (
                     <button
                       onClick={handleTakeover}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm transition"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 14px',
+                        backgroundColor: '#15803d',
+                        color: '#ffffff',
+                        borderRadius: '8px',
+                        fontSize: '12.5px',
+                        fontWeight: '600',
+                        border: 'none',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 4px rgba(21,128,61,0.2)',
+                        transition: 'all 0.15s ease',
+                      }}
                     >
-                      <Headphones className="w-3.5 h-3.5" />
-                      Take Over Chat
+                      <Headphones size={14} />
+                      <span>Take Over Chat</span>
                     </button>
                   )}
 
@@ -429,7 +670,17 @@ export default function SupportPage() {
                   <select
                     value={selectedTicket.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
+                    style={{
+                      fontSize: '12.5px',
+                      fontWeight: '600',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      backgroundColor: '#ffffff',
+                      color: '#334155',
+                      outline: 'none',
+                      cursor: 'pointer',
+                    }}
                   >
                     <option value="BOT_ACTIVE">🤖 AI Bot Active</option>
                     <option value="ESCALATED">⚠️ Escalated</option>
@@ -441,28 +692,58 @@ export default function SupportPage() {
                 </div>
               </div>
 
-              {/* Bot / Escalation Info Banner */}
+              {/* Escalation Alert Banner */}
               {selectedTicket.status === 'ESCALATED' && (
-                <div className="px-4 py-2 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-medium">
-                    <AlertCircle className="w-4 h-4 text-amber-600" />
-                    <span>User requested human support or AI could not resolve the issue. Click &quot;Take Over Chat&quot; to assist.</span>
+                <div
+                  style={{
+                    padding: '10px 18px',
+                    backgroundColor: '#fffbeb',
+                    borderBottom: '1px solid #fde68a',
+                    color: '#92400e',
+                    fontSize: '12.5px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
+                    <AlertCircle size={16} style={{ color: '#d97706', flexShrink: 0 }} />
+                    <span>User requested human support or AI could not resolve this query. Click &quot;Take Over Chat&quot; to assist directly.</span>
                   </div>
                   <button
                     onClick={handleTakeover}
-                    className="px-2.5 py-1 text-[11px] font-semibold bg-amber-600 text-white rounded hover:bg-amber-700 transition"
+                    style={{
+                      padding: '4px 10px',
+                      backgroundColor: '#d97706',
+                      color: '#ffffff',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
                   >
                     Take Over
                   </button>
                 </div>
               )}
 
-              {/* Chat Message Stream */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/40 dark:bg-slate-950/30">
+              {/* Live Chat Message Stream */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '20px',
+                  backgroundColor: '#f8fafc',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px',
+                }}
+              >
                 {ticketDetailLoading ? (
-                  <div className="p-8 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
-                    <RefreshCw className="w-5 h-5 animate-spin text-indigo-500" />
-                    Loading conversation...
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', fontSize: '13px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <RefreshCw size={20} style={{ animation: 'spin 1s linear infinite', color: 'var(--primary-brand)' }} />
+                    <span>Loading conversation history...</span>
                   </div>
                 ) : (
                   selectedTicket.messages?.map((msg, index) => {
@@ -473,8 +754,17 @@ export default function SupportPage() {
 
                     if (isSystem) {
                       return (
-                        <div key={index} className="flex justify-center my-2">
-                          <span className="text-[11px] bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-3 py-1 rounded-full font-medium shadow-sm">
+                        <div key={index} style={{ display: 'flex', justifyContent: 'center', margin: '6px 0' }}>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              padding: '4px 14px',
+                              borderRadius: '20px',
+                              backgroundColor: '#e2e8f0',
+                              color: '#475569',
+                              fontWeight: '600',
+                            }}
+                          >
                             {msg.body}
                           </span>
                         </div>
@@ -484,22 +774,27 @@ export default function SupportPage() {
                     return (
                       <div
                         key={index}
-                        className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: isAdmin ? 'flex-end' : 'flex-start',
+                          maxWidth: '100%',
+                        }}
                       >
-                        {/* Sender Label */}
-                        <div className="flex items-center gap-1 text-[10px] text-slate-400 mb-1 px-1">
+                        {/* Sender Label & Timestamp */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#94a3b8', marginBottom: '4px', paddingLeft: '4px', paddingRight: '4px' }}>
                           {isAi && (
-                            <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400 font-semibold">
-                              <Sparkles className="w-3 h-3" /> Fixly AI
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#7c3aed', fontWeight: '700' }}>
+                              <Sparkles size={12} /> Fixly AI
                             </span>
                           )}
                           {isAdmin && (
-                            <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-semibold">
-                              <Headphones className="w-3 h-3" /> You (Support Desk)
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#15803d', fontWeight: '700' }}>
+                              <Headphones size={12} /> Support Admin (You)
                             </span>
                           )}
                           {isUser && (
-                            <span className="font-medium text-slate-600 dark:text-slate-400">
+                            <span style={{ fontWeight: '600', color: '#475569' }}>
                               {msg.senderName || selectedTicket.createdBy?.name || 'User'} ({msg.role})
                             </span>
                           )}
@@ -511,30 +806,44 @@ export default function SupportPage() {
 
                         {/* Message Bubble */}
                         <div
-                          className={`max-w-[80%] md:max-w-[70%] p-3 rounded-2xl text-xs leading-relaxed shadow-sm ${
-                            isAdmin
-                              ? 'bg-indigo-600 text-white rounded-br-none'
-                              : isAi
-                              ? 'bg-purple-50 dark:bg-purple-950/40 text-slate-800 dark:text-slate-200 border border-purple-200 dark:border-purple-800 rounded-bl-none'
-                              : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-bl-none'
-                          }`}
+                          style={{
+                            maxWidth: isAdmin ? '70%' : '76%',
+                            padding: '12px 16px',
+                            borderRadius: isAdmin ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
+                            fontSize: '13px',
+                            lineHeight: '1.5',
+                            backgroundColor: isAdmin ? '#15803d' : isAi ? '#f5f3ff' : '#ffffff',
+                            color: isAdmin ? '#ffffff' : isAi ? '#2e1065' : '#1e293b',
+                            border: isAdmin ? 'none' : isAi ? '1px solid #ddd6fe' : '1px solid #e2e8f0',
+                            boxShadow: isAdmin ? '0 2px 6px rgba(21,128,61,0.2)' : '0 1px 3px rgba(0,0,0,0.04)',
+                          }}
                         >
-                          <p className="whitespace-pre-wrap">{msg.body}</p>
+                          <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{msg.body}</p>
 
                           {/* Quick replies preview if AI provided them */}
                           {msg.quickReplies && msg.quickReplies.length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-purple-200 dark:border-purple-800/60 flex flex-wrap gap-1">
-                              <span className="text-[10px] text-purple-600 dark:text-purple-400 font-medium block w-full">
+                            <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #ede9fe', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ fontSize: '10.5px', color: '#6b21a8', fontWeight: '600' }}>
                                 AI Suggested options given to user:
                               </span>
-                              {msg.quickReplies.map((qr, i) => (
-                                <span
-                                  key={i}
-                                  className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-slate-900 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
-                                >
-                                  {qr}
-                                </span>
-                              ))}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                {msg.quickReplies.map((qr, i) => (
+                                  <span
+                                    key={i}
+                                    style={{
+                                      fontSize: '10.5px',
+                                      padding: '2px 8px',
+                                      borderRadius: '12px',
+                                      backgroundColor: '#ffffff',
+                                      color: '#6b21a8',
+                                      border: '1px solid #ddd6fe',
+                                      fontWeight: '500',
+                                    }}
+                                  >
+                                    {qr}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -546,36 +855,59 @@ export default function SupportPage() {
               </div>
 
               {/* Admin Canned Quick Response Chips */}
-              <div className="p-2 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] no-scrollbar">
-                  <span className="text-slate-400 font-medium text-[10px] whitespace-nowrap pl-1">
-                    Canned Replies:
-                  </span>
-                  {CANNED_RESPONSES.map((snip, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSendMessage(snip)}
-                      className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap border border-slate-200 dark:border-slate-700 transition flex items-center gap-1"
-                    >
-                      <Zap className="w-2.5 h-2.5 text-amber-500" />
-                      <span>{snip.length > 35 ? snip.slice(0, 35) + '...' : snip}</span>
-                    </button>
-                  ))}
-                </div>
+              <div style={{ padding: '8px 16px', borderTop: '1px solid #f1f5f9', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto' }}>
+                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                  Quick Replies:
+                </span>
+                {CANNED_RESPONSES.map((snip, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSendMessage(snip)}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '16px',
+                      backgroundColor: '#f8fafc',
+                      color: '#475569',
+                      fontSize: '11px',
+                      fontWeight: '500',
+                      border: '1px solid #e2e8f0',
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <Zap size={11} style={{ color: '#d97706' }} />
+                    <span>{snip.length > 34 ? snip.slice(0, 34) + '...' : snip}</span>
+                  </button>
+                ))}
               </div>
 
-              {/* Message Input Box */}
-              <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              {/* Chat Input Bar */}
+              <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
                 {selectedTicket.handledBy === 'BOT' && selectedTicket.status !== 'ESCALATED' && (
-                  <div className="text-[11px] text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/30 p-2 rounded-lg mb-2 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <Bot className="w-3.5 h-3.5" />
-                      AI Assistant is currently active. Sending a reply will automatically assign the chat to you.
-                    </span>
+                  <div
+                    style={{
+                      fontSize: '11.5px',
+                      color: '#6b21a8',
+                      backgroundColor: '#f5f3ff',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      marginBottom: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      border: '1px solid #ede9fe',
+                    }}
+                  >
+                    <Bot size={14} />
+                    <span>Fixly AI Assistant is currently active. Sending a reply will automatically switch this chat to Human Support.</span>
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <input
                     type="text"
                     value={messageText}
@@ -586,16 +918,60 @@ export default function SupportPage() {
                         handleSendMessage();
                       }
                     }}
-                    placeholder="Type your support reply (Enter to send)..."
+                    placeholder="Type your response to user... (Press Enter to send)"
                     disabled={sending || selectedTicket.status === 'CLOSED'}
-                    className="flex-1 px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 dark:text-white disabled:opacity-50"
+                    style={{
+                      flex: 1,
+                      padding: '10px 14px',
+                      fontSize: '13px',
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '10px',
+                      outline: 'none',
+                      color: '#1e293b',
+                    }}
                   />
+
+                  {/* Mark as Resolved Quick Action */}
+                  {selectedTicket.status !== 'RESOLVED' && selectedTicket.status !== 'CLOSED' && (
+                    <button
+                      onClick={() => handleStatusChange('RESOLVED')}
+                      style={{
+                        padding: '10px 14px',
+                        backgroundColor: '#f0fdf4',
+                        color: '#15803d',
+                        borderRadius: '10px',
+                        border: '1px solid #bbf7d0',
+                        fontSize: '12.5px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Resolve Ticket
+                    </button>
+                  )}
+
+                  {/* Send Button */}
                   <button
                     onClick={() => handleSendMessage()}
                     disabled={sending || !messageText.trim() || selectedTicket.status === 'CLOSED'}
-                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-medium text-xs flex items-center gap-1.5 shadow-sm transition"
+                    style={{
+                      padding: '10px 18px',
+                      backgroundColor: sending || !messageText.trim() ? '#94a3b8' : 'var(--primary-brand)',
+                      color: '#ffffff',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      border: 'none',
+                      cursor: sending || !messageText.trim() ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 4px rgba(21,128,61,0.2)',
+                    }}
                   >
-                    <Send className="w-3.5 h-3.5" />
+                    <Send size={14} />
                     <span>Send</span>
                   </button>
                 </div>

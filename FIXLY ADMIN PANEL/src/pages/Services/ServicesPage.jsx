@@ -163,36 +163,47 @@ export default function ServicesPage() {
               {/* Card Header */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {s.image ? (
-                    <img
-                      src={s.image}
-                      alt={s.name}
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                      style={{
-                        width: '46px',
-                        height: '46px',
-                        borderRadius: '12px',
-                        objectFit: 'cover',
-                        border: '1px solid #e2e8f0',
-                        flexShrink: 0,
-                      }}
-                    />
-                  ) : (
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '12px',
+                      backgroundColor: '#f1f8f3',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #e2e8f0',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {s.image ? (
+                      <img
+                        src={s.image}
+                        alt={s.name}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          const fallback = e.target.parentElement?.querySelector('.icon-fallback');
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                    ) : null}
                     <div
+                      className="icon-fallback"
                       style={{
-                        width: '46px',
-                        height: '46px',
-                        borderRadius: '12px',
-                        backgroundColor: s.bg || '#f0fdf4',
-                        display: 'flex',
+                        display: s.image ? 'none' : 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        flexShrink: 0,
                       }}
                     >
                       {getServiceIcon(s.icon, s.iconColor)}
                     </div>
-                  )}
+                  </div>
                   <div>
                     <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#111827' }}>
                       {s.name}
