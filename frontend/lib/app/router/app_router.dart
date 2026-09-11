@@ -82,6 +82,7 @@ import '../../features/worker/presentation/pages/worker_welfare_page.dart';
 import '../../features/worker/presentation/pages/worker_wallet_page.dart';
 import '../../core/widgets/customer_main_shell.dart';
 import '../../core/widgets/smooth_branch_switcher.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/widgets/worker_main_shell.dart';
 import 'router_helpers.dart';
 import 'route_names.dart';
@@ -184,7 +185,8 @@ GoRouter createAppRouter() {
               _page(
                 RouteNames.customerAiHelper,
                 (_, s) => CustomerAiHelperPage(
-                  startInLiveMode: s.uri.queryParameters['live'] == '1',
+                  startInLiveMode: AppConstants.voiceAiEnabled &&
+                      s.uri.queryParameters['live'] == '1',
                 ),
               ),
             ],
@@ -400,7 +402,8 @@ GoRouter createAppRouter() {
       _page(
         RouteNames.customerAiChat,
         (_, s) => CustomerAiHelperPage(
-          startInLiveMode: s.uri.queryParameters['live'] == '1',
+          startInLiveMode: AppConstants.voiceAiEnabled &&
+              s.uri.queryParameters['live'] == '1',
         ),
         overlay: true,
       ),

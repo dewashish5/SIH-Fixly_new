@@ -90,7 +90,7 @@ export const notifyUser = async ({
         entityType: resolvedEntityType,
         entityId: resolvedEntityId,
         bookingId: resolvedBookingId,
-        dedupeKey,
+        ...(dedupeKey ? { dedupeKey } : {}),
         channel: resolvedChannel,
         data: payload,
         deliveryStatus: resolvedChannel === 'IN_APP' ? 'SKIPPED' : 'PENDING',

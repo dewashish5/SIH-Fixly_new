@@ -14,6 +14,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/utils/toast_utils.dart';
 import '../../../../core/widgets/core_widgets.dart';
+import '../../../../services/webrtc_call_service.dart';
 import '../../../../shared/models/models.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
@@ -459,6 +460,41 @@ class _RoleAdaptivePartyCard extends StatelessWidget {
     }
   }
 
+  Future<void> _callWorkerViaWebRtc(BuildContext context) async {
+    final bookingId = booking.id;
+    if (bookingId.isEmpty) {
+      ToastUtils.showToast(context: context, message: 'Booking ID not available');
+      return;
+    }
+    final peerName = booking.workerName ?? 'Worker';
+    final peerAvatar = booking.workerAvatar;
+    final serviceTitle = booking.serviceTitle;
+
+    context.push(
+      RouteNames.call,
+      extra: {
+        'bookingId': bookingId,
+        'peerName': peerName,
+        'peerRole': 'worker',
+        'peerAvatar': peerAvatar,
+        'serviceTitle': serviceTitle,
+        'isIncoming': false,
+      },
+    );
+
+    final success = await WebRTCCallService.instance.startCall(
+      bookingId: bookingId,
+      expectedPeerName: peerName,
+      expectedPeerRole: 'worker',
+      expectedPeerAvatar: peerAvatar,
+      expectedServiceTitle: serviceTitle,
+    );
+
+    if (!success && context.mounted) {
+      ToastUtils.showToast(context: context, message: 'Could not connect call');
+    }
+  }
+
   Future<void> _openLocationInMaps(BuildContext context) async {
     if (booking.customerLat != null && booking.customerLng != null) {
       final lat = booking.customerLat;
@@ -775,6 +811,22 @@ class _RoleAdaptivePartyCard extends StatelessWidget {
                         ],
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () => _callWorkerViaWebRtc(context),
+                  icon: const Icon(Icons.call_rounded, size: 16),
+                  label: const Text('Call'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF059669),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    minimumSize: const Size(44, 44),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],

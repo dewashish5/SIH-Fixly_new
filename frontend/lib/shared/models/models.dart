@@ -863,6 +863,8 @@ class OnboardingFormData extends Equatable {
     this.email = '',
     this.dateOfBirth,
     this.gender,
+    this.state = '',
+    this.district = '',
     this.aadhaar = '',
     this.pan = '',
     this.aadhaarFrontPath,
@@ -899,6 +901,8 @@ class OnboardingFormData extends Equatable {
   final String email;
   final DateTime? dateOfBirth;
   final WorkerGender? gender;
+  final String state;
+  final String district;
   final String aadhaar;
   final String pan;
   final String? aadhaarFrontPath;
@@ -959,6 +963,8 @@ class OnboardingFormData extends Equatable {
     String? email,
     Object? dateOfBirth = _unset,
     Object? gender = _unset,
+    String? state,
+    String? district,
     String? aadhaar,
     String? pan,
     Object? aadhaarFrontPath = _unset,
@@ -997,6 +1003,8 @@ class OnboardingFormData extends Equatable {
           ? this.dateOfBirth
           : dateOfBirth as DateTime?,
       gender: identical(gender, _unset) ? this.gender : gender as WorkerGender?,
+      state: state ?? this.state,
+      district: district ?? this.district,
       aadhaar: aadhaar ?? this.aadhaar,
       pan: pan ?? this.pan,
       aadhaarFrontPath: identical(aadhaarFrontPath, _unset)
@@ -1050,6 +1058,8 @@ class OnboardingFormData extends Equatable {
     email,
     dateOfBirth,
     gender,
+    state,
+    district,
     aadhaar,
     pan,
     aadhaarFrontPath,

@@ -8,11 +8,13 @@ import 'core/network/api_client.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/preferences/app_preferences.dart';
 import 'core/services/mock_worker_simulator_service.dart';
+import 'core/utils/app_package_info.dart';
 
 Future<void> main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   await AppPreferences.instance.init();
+  await AppPackageInfo.ensureInitialized();
   try {
     await FirebaseBootstrap.init();
   } catch (e) {

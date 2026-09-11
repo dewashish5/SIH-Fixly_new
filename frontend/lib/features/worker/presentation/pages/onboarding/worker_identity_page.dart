@@ -36,6 +36,8 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
   late final TextEditingController _dobController;
+  late final TextEditingController _stateController;
+  late final TextEditingController _districtController;
   late final TextEditingController _aadhaarController;
   late final TextEditingController _panController;
 
@@ -69,6 +71,8 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
           ? ''
           : DateFormat('dd MMM yyyy').format(data.dateOfBirth!),
     );
+    _stateController = TextEditingController(text: data.state);
+    _districtController = TextEditingController(text: data.district);
     _aadhaarController = TextEditingController(text: data.aadhaar);
     _panController = TextEditingController(text: data.pan);
   }
@@ -79,6 +83,8 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
     _phoneController.dispose();
     _emailController.dispose();
     _dobController.dispose();
+    _stateController.dispose();
+    _districtController.dispose();
     _aadhaarController.dispose();
     _panController.dispose();
     super.dispose();
@@ -117,6 +123,8 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
     cubit
       ..updateFullName(_nameController.text)
       ..updatePhone(_phoneController.text)
+      ..updateState(_stateController.text)
+      ..updateDistrict(_districtController.text)
       ..updateAadhaar(_aadhaarController.text)
       ..updatePan(_panController.text);
 
@@ -271,6 +279,26 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: context.muted,
                                   ),
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _stateController,
+                          label: 'State',
+                          hint: 'e.g. Delhi',
+                          textCapitalization: TextCapitalization.words,
+                          validator: (v) =>
+                              Validators.requiredField(v, label: 'State'),
+                          onChanged: cubit.updateState,
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _districtController,
+                          label: 'District',
+                          hint: 'e.g. South Delhi',
+                          textCapitalization: TextCapitalization.words,
+                          validator: (v) =>
+                              Validators.requiredField(v, label: 'District'),
+                          onChanged: cubit.updateDistrict,
                         ),
                       ],
                     ),

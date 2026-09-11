@@ -175,7 +175,9 @@ class _CustomerHomeViewState extends State<_CustomerHomeView>
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFF080F1E),
-        floatingActionButton: _buildHeyFlexiFab(context),
+        floatingActionButton: AppConstants.voiceAiEnabled
+            ? _buildHeyFlexiFab(context)
+            : null,
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         body: BlocBuilder<CustomerHomeCubit, CustomerHomeState>(
           builder: (context, state) {

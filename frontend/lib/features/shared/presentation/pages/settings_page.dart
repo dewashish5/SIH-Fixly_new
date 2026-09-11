@@ -9,6 +9,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/utils/app_package_info.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/models/models.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
@@ -545,7 +546,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${l10n.appVersion} v1.0.4',
+                      '${l10n.appVersion} ${AppPackageInfo.displayVersion}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: context.muted,
                       ),

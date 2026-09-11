@@ -84,9 +84,25 @@ export const adminLogin = async (req, res) => {
             });
         }
         
-        // 2. DB-based login for federation admins
+        // 2. DB-based login for federation admins (password hashed with bcrypt)
         const adminUser = await User.findOne({ email: normalizedEmail, role: 'admin' }).select('+password');
-        if (adminUser && await bcrypt.compare(password, adminUser.password)) {
+        if (adminUser && adminUser.password && await bcrypt.compare(password, adminUser.password)) {
+            if (adminUser.adminRole === 'federation_admin' && adminUser.federation) {
+                const coop = await Cooperative.findById(adminUser.federation).select('status');
+                if (coop && coop.status === 'suspended') {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Federation is suspended. Contact super admin.',
+                    });
+                }
+                if (coop && coop.status === 'pending') {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Federation awaiting super admin approval.',
+                    });
+                }
+            }
+
             const token = jwt.sign(
                 { id: adminUser._id, role: 'admin', adminRole: adminUser.adminRole, federation: adminUser.federation },
                 process.env.JWT_SECRET,
@@ -135,7 +151,8 @@ export const getAdminProfile = async (req, res) => {
                     _id: 'admin-1',
                     name: 'System Administrator',
                     email: envAdminEmail,
-                    role: 'admin'
+                    role: 'admin',
+                    adminRole: 'super_admin',
                 }
             });
         }
@@ -167,6 +184,7 @@ export const updateAdminMe = async (req, res) => {
                     name: name || 'System Administrator',
                     email: email || process.env.ADMIN_EMAIL,
                     role: 'admin',
+                    adminRole: 'super_admin',
                     avatar
                 },
                 message: 'Admin profile updated successfully',
@@ -1893,6 +1911,170 @@ export const getAllFederations = async (req, res) => {
         const federations = await Cooperative.find().populate('owner', 'name email phone');
         return res.status(200).json({ success: true, data: federations });
     } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/** Super-admin creates federation + federation_admin user (bcrypt via User pre-save). */
+export const createFederation = async (req, res) => {
+    try {
+        if (req.user.adminRole !== 'super_admin') {
+            return res.status(403).json({ success: false, message: 'Super Admin access required' });
+        }
+
+        const {
+            name,
+            federationName,
+            state,
+            district,
+            email,
+            password,
+            phone,
+            registrationNumber,
+        } = req.body;
+
+        if (!name || !email || !password || !state || !district) {
+            return res.status(400).json({
+                success: false,
+                message: 'name, email, password, state, and district are required',
+            });
+        }
+
+        if (String(password).length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters',
+            });
+        }
+
+        const emailNormalized = String(email).toLowerCase().trim();
+        const existingUser = await User.findOne({ email: emailNormalized });
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: 'Email already registered' });
+        }
+
+        const coop = await Cooperative.create({
+            name: String(name).trim(),
+            federationName: federationName ? String(federationName).trim() : String(name).trim(),
+            state: String(state).trim(),
+            district: String(district).trim(),
+            registrationNumber: registrationNumber
+                ? String(registrationNumber).trim()
+                : undefined,
+            email: emailNormalized,
+            phone: phone ? String(phone).trim() : undefined,
+            status: 'approved',
+        });
+
+        const adminUser = await User.create({
+            name: String(name).trim(),
+            email: emailNormalized,
+            password: String(password),
+            phone: phone ? String(phone).trim() : undefined,
+            role: 'admin',
+            adminRole: 'federation_admin',
+            federation: coop._id,
+            isVerified: true,
+            isEmailVerified: true,
+        });
+
+        coop.owner = adminUser._id;
+        await coop.save();
+
+        return res.status(201).json({
+            success: true,
+            message: 'Federation created. Federation admin can log in with this email.',
+            data: {
+                federation: coop,
+                admin: {
+                    id: adminUser._id,
+                    email: adminUser.email,
+                    adminRole: adminUser.adminRole,
+                },
+            },
+        });
+    } catch (error) {
+        console.error('Create Federation Error:', error);
+        if (error?.code === 11000) {
+            return res.status(400).json({ success: false, message: 'Email already registered' });
+        }
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/** Super-admin: mint federation_admin JWT to open their panel in another tab. */
+export const impersonateFederation = async (req, res) => {
+    try {
+        if (req.user.adminRole !== 'super_admin') {
+            return res.status(403).json({ success: false, message: 'Super Admin access required' });
+        }
+
+        const coop = await Cooperative.findById(req.params.id);
+        if (!coop) {
+            return res.status(404).json({ success: false, message: 'Federation not found' });
+        }
+        if (coop.status === 'suspended') {
+            return res.status(403).json({
+                success: false,
+                message: 'Cannot login to a suspended federation',
+            });
+        }
+
+        let adminUser = null;
+        if (coop.owner) {
+            adminUser = await User.findOne({
+                _id: coop.owner,
+                role: 'admin',
+            });
+        }
+        if (!adminUser && coop.email) {
+            adminUser = await User.findOne({
+                email: String(coop.email).toLowerCase().trim(),
+                role: 'admin',
+            });
+        }
+        if (!adminUser) {
+            adminUser = await User.findOne({
+                role: 'admin',
+                federation: coop._id,
+            });
+        }
+        if (!adminUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'No federation admin account linked to this federation',
+            });
+        }
+
+        const token = jwt.sign(
+            {
+                id: adminUser._id,
+                role: 'admin',
+                adminRole: adminUser.adminRole || 'federation_admin',
+                federation: adminUser.federation || coop._id,
+                impersonatedBy: req.user.id,
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_ACCESS_EXPIRY || '1d' }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: 'Federation login ready',
+            token,
+            user: {
+                id: adminUser._id,
+                _id: adminUser._id,
+                name: adminUser.name,
+                email: adminUser.email,
+                role: adminUser.role,
+                adminRole: adminUser.adminRole || 'federation_admin',
+                federation: adminUser.federation || coop._id,
+                impersonation: true,
+            },
+        });
+    } catch (error) {
+        console.error('Impersonate Federation Error:', error);
         return res.status(500).json({ success: false, message: error.message });
     }
 };

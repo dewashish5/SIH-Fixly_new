@@ -9,6 +9,7 @@ import swaggerUi from 'swagger-ui-express';
 import events from 'events';
 
 import connectDB from './config/db.js';
+import { ensureNotificationDedupeIndex } from './models/Notification.js';
 import "./worker/emailWorker.js";
 import "./worker/uploadWorker.js";
 import "./worker/notificationWorker.js";
@@ -142,6 +143,7 @@ app.use((err, req, res, next) => {
 const start = async () => {
     try {
         await connectDB();
+        await ensureNotificationDedupeIndex();
 
         const io = initSocket(httpServer);
         app.set('io', io);

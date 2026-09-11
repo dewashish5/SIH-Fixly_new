@@ -11,7 +11,10 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/constants/map_constants.dart';
 import '../../../../core/constants/map_token_loader.dart';
+import '../../../../core/network/app_version_api.dart';
 import '../../../../core/permissions/app_permissions_service.dart';
+import '../../../../core/utils/app_package_info.dart';
+import '../../../../core/widgets/app_update_dialog.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
 
 class SplashPage extends StatefulWidget {
@@ -76,6 +79,10 @@ class _SplashPageState extends State<SplashPage>
 
     if (!mounted) return;
 
+    // Backend Redis/Mongo version gate — block navigate on force update.
+    final canContinue = await _checkAppVersion();
+    if (!mounted || !canContinue) return;
+
     final cubit = context.read<AppSessionCubit>();
     // Same restore started in App bootstrap — no second refresh-token /me.
     await cubit.restoreSession();
@@ -91,6 +98,28 @@ class _SplashPageState extends State<SplashPage>
       return;
     }
     context.go(RouteNames.login);
+  }
+
+  /// `true` = proceed. Network errors fail open (guide: continue on error).
+  Future<bool> _checkAppVersion() async {
+    try {
+      final check = await AppVersionApi.check();
+      if (!check.isUpdateAvailable) return true;
+      if (!mounted) return false;
+      return await AppUpdateSheet.show(
+        context: context,
+        title: check.updateTitle,
+        message: check.updateMessage,
+        updateUrl: check.updateUrl,
+        isMandatory: check.forceUpdate,
+        currentVersion: check.clientAppVersion.isNotEmpty
+            ? check.clientAppVersion
+            : AppPackageInfo.version,
+        latestVersion: check.latestAppVersion,
+      );
+    } catch (_) {
+      return true;
+    }
   }
 
   Future<void> _initMaps() async {

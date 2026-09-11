@@ -6,6 +6,7 @@ import { AppProvider, useApp } from './context/AppContext';
 
 import Layout from './components/layout/Layout';
 import LoginPage from './pages/Auth/LoginPage';
+import ImpersonatePage from './pages/Auth/ImpersonatePage';
 import DashboardPage from './pages/Dashboard/DashboardPage';
 import BookingsPage from './pages/Bookings/BookingsPage';
 import WorkersPage from './pages/Workers/WorkersPage';
@@ -46,6 +47,7 @@ export default function App() {
             <Routes>
               {/* Public Login Route */}
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/impersonate" element={<ImpersonatePage />} />
 
               {/* Protected Admin Routes */}
               <Route

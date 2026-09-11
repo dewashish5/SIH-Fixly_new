@@ -604,16 +604,18 @@ class _CustomerSearchViewState extends State<_CustomerSearchView> {
                       color: AppColors.accent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.mic_rounded,
+                          AppConstants.voiceAiEnabled
+                              ? Icons.mic_rounded
+                              : Icons.chat_bubble_rounded,
                           size: 14,
                           color: AppColors.accentDark,
                         ),
-                        SizedBox(width: 4),
-                        Text(
+                        const SizedBox(width: 4),
+                        const Text(
                           'Fixly AI',
                           style: TextStyle(
                             fontSize: 11,

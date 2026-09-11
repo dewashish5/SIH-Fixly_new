@@ -11,9 +11,12 @@ class ApiConfig {
   //  Physical device (your WiFi):    http://192.168.1.88:8005  ← your LAN IP
   //  Tunnel / production:            https://your-tunnel-url.com
   //
-  static const String baseUrl = 'http://192.168.1.88:8005';
+  static const String baseUrl =
+      'http://fexily-lb-380632449.ap-south-1.elb.amazonaws.com';
   // ───────────────────────────────────────────────────────────────────────────
 
   /// Notifier in case any widget needs to react to URL changes at runtime.
-  static final ValueNotifier<String> urlNotifier = ValueNotifier<String>(baseUrl);
+  static final ValueNotifier<String> urlNotifier = ValueNotifier<String>(
+    baseUrl,
+  );
 }

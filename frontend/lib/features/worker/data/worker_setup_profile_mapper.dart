@@ -62,6 +62,8 @@ abstract final class WorkerSetupProfileMapper {
       if (panBack != null) 'panBackPhoto': panBack,
       if (workAddress != null) 'workAddress': workAddress,
       if (loc.hasFix) 'location': loc.toGeoJsonPointOrNull(),
+      if (data.state.trim().isNotEmpty) 'state': data.state.trim(),
+      if (data.district.trim().isNotEmpty) 'district': data.district.trim(),
       'payoutMethod': data.payoutMethod.name,
       'bank': {
         'accountHolderName': data.accountHolderName.trim(),

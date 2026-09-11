@@ -1,7 +1,7 @@
 name: fixly
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ^3.12.2
@@ -52,6 +52,7 @@ dependencies:
   fl_chart: ^1.2.0
   web_socket_channel: ^3.0.3
   animated_text_kit: ^4.3.0
+  package_info_plus: ^10.2.1
 
 dev_dependencies:
   flutter_test:

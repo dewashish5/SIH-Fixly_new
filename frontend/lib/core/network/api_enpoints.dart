@@ -110,6 +110,9 @@ abstract final class ApiEndpoints {
   static const String aiServiceDiscovery = '/api/ai/service-discovery';
   static const String aiMatchWorkers = '/api/ai/match-workers';
 
+  // --- App version (public, Redis-backed) ---
+  static const String version = '/api/version';
+
   // --- Upload ---
   static const String upload = '/api/upload';
 
@@ -128,6 +131,7 @@ abstract final class ApiEndpoints {
         path.contains(refreshToken) ||
         path.contains(forgotPassword) ||
         path.contains(resetPassword) ||
-        path.contains(googleLogin);
+        path.contains(googleLogin) ||
+        path.contains(version);
   }
 }

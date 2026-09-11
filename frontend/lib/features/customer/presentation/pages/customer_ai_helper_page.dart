@@ -9,8 +9,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/theme_x.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/l10n/locale_scope.dart';
 import '../../../../core/location/app_location.dart';
+import '../../../../core/navigation/customer_navigation.dart';
 import '../../../../services/gemini_live_service.dart';
 import '../../../../services/speech_service.dart';
 import '../../../ai/data/ai_api_repository.dart';
@@ -18,6 +20,8 @@ import '../../../ai/presentation/widgets/ai_fade_in_text.dart';
 import '../../../ai/presentation/widgets/ai_thinking_dots.dart';
 import '../../../ai/presentation/widgets/siri_glow_frame.dart';
 import '../../../auth/presentation/cubit/app_session_cubit.dart';
+import '../../../bookings/data/bookings_api_repository.dart';
+import '../../../../shared/models/models.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 enum LiveVoiceState { listening, thinking, speaking, paused }
@@ -72,6 +76,7 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
   final _speechService = SpeechService();
   final _liveService = GeminiLiveService();
   final _aiRepo = AiApiRepository();
+  final _bookingsRepo = BookingsApiRepository();
 
   final _messages = <_ChatMessage>[];
   Map<String, dynamic> _conversationState = {};
@@ -90,6 +95,12 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
   String _liveSpokenText = '';
   String _liveAiReplyText = '';
   bool _liveBridgeReady = false;
+
+  /// After AI creates a booking: poll until worker accepts (no auto-track).
+  Timer? _bookingAcceptPoll;
+  String? _polledBookingId;
+  bool _workerAccepted = false;
+  String? _acceptedWorkerName;
 
   static const _langLabels = <String, String>{
     'en': 'EN',
@@ -115,7 +126,7 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
 
     _initConversation();
 
-    if (widget.startInLiveMode) {
+    if (AppConstants.voiceAiEnabled && widget.startInLiveMode) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _startLiveMode();
       });
@@ -181,8 +192,12 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
       _ChatMessage(
         isBot: true,
         text: _selectedLanguage == 'hi'
-            ? 'नमस्ते! मैं फ्लेक्सी एआई हूँ। बताइए घर में क्या समस्या है, या Live Talk दबाएं।$hinglishNote'
-            : 'Hello! I am Flexi AI. Tell me the home issue, or tap Live Talk.$hinglishNote',
+            ? (AppConstants.voiceAiEnabled
+                ? 'नमस्ते! मैं फ्लेक्सी एआई हूँ। बताइए घर में क्या समस्या है, या Live Talk दबाएं।$hinglishNote'
+                : 'नमस्ते! मैं फ्लेक्सी एआई हूँ। चैट में बताइए घर में क्या समस्या है।$hinglishNote')
+            : (AppConstants.voiceAiEnabled
+                ? 'Hello! I am Flexi AI. Tell me the home issue, or tap Live Talk.$hinglishNote'
+                : 'Hello! I am Flexi AI. Tell me the home issue in chat.$hinglishNote'),
         timestamp: DateTime.now(),
         action: 'PROMPT_CATEGORY',
       ),
@@ -214,12 +229,70 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
 
   @override
   void dispose() {
+    _stopBookingAcceptPoll();
     _queryController.dispose();
     _scrollController.dispose();
     _speechService.stopListening();
     _speechService.stopSpeaking();
     _liveService.disconnect();
     super.dispose();
+  }
+
+  void _stopBookingAcceptPoll() {
+    _bookingAcceptPoll?.cancel();
+    _bookingAcceptPoll = null;
+  }
+
+  void _startBookingAcceptPoll(String bookingId) {
+    final id = bookingId.trim();
+    if (id.isEmpty) return;
+    _stopBookingAcceptPoll();
+    setState(() {
+      _polledBookingId = id;
+      _workerAccepted = false;
+      _acceptedWorkerName = null;
+    });
+    _pollBookingAccept();
+    _bookingAcceptPoll = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _pollBookingAccept(),
+    );
+  }
+
+  Future<void> _pollBookingAccept() async {
+    final id = _polledBookingId;
+    if (id == null || !mounted || _workerAccepted) return;
+    try {
+      final booking = await _bookingsRepo.getById(id);
+      if (!mounted || _workerAccepted) return;
+      final accepted = booking.status.index >= BookingStatus.accepted.index;
+      if (!accepted) return;
+      _stopBookingAcceptPoll();
+      setState(() {
+        _workerAccepted = true;
+        _acceptedWorkerName = booking.workerName;
+        _messages.add(
+          _ChatMessage(
+            isBot: true,
+            text: _selectedLanguage == 'hi'
+                ? 'वर्कर ने बुकिंग स्वीकार कर ली${booking.workerName != null ? ' (${booking.workerName})' : ''}। अब आप लाइव ट्रैक कर सकते हैं।'
+                : 'A worker accepted your booking${booking.workerName != null ? ' (${booking.workerName})' : ''}. You can track them live now.',
+            timestamp: DateTime.now(),
+          ),
+        );
+      });
+      _scrollToBottom();
+    } catch (_) {
+      // Keep polling; transient network errors are OK.
+    }
+  }
+
+  void _onBookingCreatedFromAi(Map<String, dynamic>? booking) {
+    final bookingId =
+        (booking?['bookingId'] ?? booking?['_id'] ?? booking?['id'])
+            ?.toString();
+    if (bookingId == null || bookingId.isEmpty) return;
+    _startBookingAcceptPoll(bookingId);
   }
 
   void _scrollToBottom() {
@@ -372,38 +445,22 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
               : _generateFallbackSuggestions(res.action, res.reply, _selectedLanguage);
         });
 
-        // Live mode: speak reply then ALWAYS re-listen (unless booking created).
+        // Live mode: speak reply then re-listen (stay in chat after booking).
         if (_isLiveMode) {
           _speakLiveAiReply(
             res.reply,
             onComplete: () {
               if (!mounted || !_isLiveMode) return;
               if (res.action == 'BOOKING_CREATED') {
-                final bookingId =
-                    res.booking?['bookingId'] ?? res.booking?['_id'];
                 _closeLiveMode();
-                if (bookingId != null) {
-                  context.push(
-                    '${RouteNames.customerTracking}?bookingId=$bookingId',
-                  );
-                } else {
-                  context.push(RouteNames.customerTracking);
-                }
+                _onBookingCreatedFromAi(res.booking);
               } else {
                 _listenInLiveMode();
               }
             },
           );
         } else if (res.action == 'BOOKING_CREATED') {
-          final bookingId = res.booking?['bookingId'] ?? res.booking?['_id'];
-          Future.delayed(const Duration(milliseconds: 1200), () {
-            if (!mounted) return;
-            if (bookingId != null) {
-              context.push('${RouteNames.customerTracking}?bookingId=$bookingId');
-            } else {
-              context.push(RouteNames.customerTracking);
-            }
-          });
+          _onBookingCreatedFromAi(res.booking);
         }
       }
     } catch (e) {
@@ -873,30 +930,31 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
           _buildLanguageTogglePill(),
           const SizedBox(width: 4),
 
-          // Live Talk Launcher Button
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: FilledButton.tonalIcon(
-              onPressed: _startLiveMode,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                backgroundColor: context.scheme.primaryContainer.withValues(alpha: 0.8),
-              ),
-              icon: Icon(
-                Icons.graphic_eq_rounded,
-                size: 16,
-                color: context.scheme.primary,
-              ),
-              label: Text(
-                _selectedLanguage == 'hi' ? 'लाइव टॉक' : 'Live Talk',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
+          // Live Talk Launcher Button (hidden while voiceAiEnabled is false)
+          if (AppConstants.voiceAiEnabled)
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: FilledButton.tonalIcon(
+                onPressed: _startLiveMode,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  backgroundColor: context.scheme.primaryContainer.withValues(alpha: 0.8),
+                ),
+                icon: Icon(
+                  Icons.graphic_eq_rounded,
+                  size: 16,
                   color: context.scheme.primary,
+                ),
+                label: Text(
+                  _selectedLanguage == 'hi' ? 'लाइव टॉक' : 'Live Talk',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: context.scheme.primary,
+                  ),
                 ),
               ),
             ),
-          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (val) {
@@ -1618,8 +1676,16 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
 
   // --- Booking Created Rich Card ---
   Widget _buildBookingCreatedCard(Map<String, dynamic> booking) {
-    final bookingId = booking['bookingId'] ?? '#BK-CONFIRMED';
+    final bookingId =
+        (booking['bookingId'] ?? booking['_id'] ?? booking['id'] ?? '#BK-CONFIRMED')
+            .toString();
     final totalAmount = booking['invoice']?['totalAmount'] ?? 200;
+    final isThisPolled = _polledBookingId != null &&
+        (_polledBookingId == bookingId ||
+            _polledBookingId == booking['_id']?.toString() ||
+            _polledBookingId == booking['id']?.toString());
+    final accepted = isThisPolled && _workerAccepted;
+    final waiting = isThisPolled && !_workerAccepted;
 
     return Container(
       margin: const EdgeInsets.only(top: 8),
@@ -1636,43 +1702,97 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.check_circle_rounded,
-                color: Color(0xFF10B981),
+              Icon(
+                accepted
+                    ? Icons.check_circle_rounded
+                    : Icons.hourglass_top_rounded,
+                color: accepted
+                    ? const Color(0xFF10B981)
+                    : context.scheme.primary,
                 size: 18,
               ),
               const SizedBox(width: 6),
-              Text(
-                'Booking Confirmed ($bookingId)',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: Color(0xFF10B981),
+              Expanded(
+                child: Text(
+                  accepted
+                      ? 'Worker accepted ($bookingId)'
+                      : 'Booking placed ($bookingId)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: accepted
+                        ? const Color(0xFF10B981)
+                        : context.scheme.primary,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            'Estimated Fee: ₹$totalAmount • Verified worker will be assigned shortly.',
+            accepted
+                ? 'Estimated Fee: ₹$totalAmount • ${_acceptedWorkerName ?? 'Worker'} is on the way soon.'
+                : waiting
+                    ? 'Estimated Fee: ₹$totalAmount • Waiting for a worker to accept…'
+                    : 'Estimated Fee: ₹$totalAmount • Verified worker will be assigned shortly.',
             style: TextStyle(
               fontSize: 12,
               color: context.scheme.onSurface.withValues(alpha: 0.8),
             ),
           ),
+          if (waiting) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: context.scheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _selectedLanguage == 'hi'
+                        ? 'वर्कर के स्वीकार करने की प्रतीक्षा…'
+                        : 'Waiting for worker to accept…',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: context.scheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: FilledButton.tonal(
-                  onPressed: () => context.push(RouteNames.customerOrders),
+                  onPressed: () {
+                    // Switch bottom-nav Bookings tab (index 3), don't push overlay.
+                    if (context.canPop() &&
+                        GoRouterState.of(context)
+                            .uri
+                            .path
+                            .contains('ai-chat')) {
+                      context.pop();
+                    }
+                    context.goCustomerTab(3);
+                  },
                   style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 44),
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.18),
+                    backgroundColor:
+                        const Color(0xFF10B981).withValues(alpha: 0.18),
                   ),
-                  child: const Text(
-                    'View My Bookings',
-                    style: TextStyle(
+                  child: Text(
+                    _selectedLanguage == 'hi' ? 'बुकिंग्स देखें' : 'Go to Bookings',
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF047857),
@@ -1680,18 +1800,29 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: () => context.push(RouteNames.customerTracking),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  backgroundColor: const Color(0xFF10B981),
+              if (accepted) ...[
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: () {
+                    final id = _polledBookingId ?? bookingId;
+                    context.push(
+                      '${RouteNames.customerTracking}?bookingId=$id',
+                    );
+                  },
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 44),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    backgroundColor: const Color(0xFF10B981),
+                  ),
+                  child: const Text(
+                    'Track Live',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
                 ),
-                child: const Text(
-                  'Track Live',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-              ),
+              ],
             ],
           ),
         ],
@@ -1857,28 +1988,29 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
               ),
             ),
 
-            // Live Voice Launcher Button
-            IconButton(
-              onPressed: _startLiveMode,
-              tooltip: 'Live Talking Mode',
-              icon: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      context.scheme.primary,
-                      context.scheme.tertiary,
-                    ],
+            // Live Voice Launcher Button (hidden while voiceAiEnabled is false)
+            if (AppConstants.voiceAiEnabled)
+              IconButton(
+                onPressed: _startLiveMode,
+                tooltip: 'Live Talking Mode',
+                icon: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        context.scheme.primary,
+                        context.scheme.tertiary,
+                      ],
+                    ),
+                    shape: BoxShape.circle,
                   ),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.graphic_eq_rounded,
-                  size: 17,
-                  color: Colors.white,
+                  child: const Icon(
+                    Icons.graphic_eq_rounded,
+                    size: 17,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-            ),
 
             // Text Input Field
             Expanded(
@@ -1896,11 +2028,15 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
                   textInputAction: TextInputAction.send,
                   onSubmitted: (val) => _sendMessage(val),
                   decoration: InputDecoration(
-                    hintText: _isDictating
+                    hintText: AppConstants.voiceAiEnabled && _isDictating
                         ? (_selectedLanguage == 'hi' ? 'सुन रहा हूँ...' : 'Listening...')
                         : (_selectedLanguage == 'hi'
-                            ? 'समस्या बताएं या Live Talk दबाएं...'
-                            : 'Ask AI anything or tap Live Talk...'),
+                            ? (AppConstants.voiceAiEnabled
+                                ? 'समस्या बताएं या Live Talk दबाएं...'
+                                : 'समस्या चैट में लिखें...')
+                            : (AppConstants.voiceAiEnabled
+                                ? 'Ask AI anything or tap Live Talk...'
+                                : 'Ask AI anything...')),
                     hintStyle: TextStyle(
                       fontSize: 13.5,
                       color: context.scheme.onSurface.withValues(alpha: 0.5),
@@ -1910,16 +2046,21 @@ class _CustomerAiHelperPageState extends State<CustomerAiHelperPage> {
                       vertical: 10,
                     ),
                     border: InputBorder.none,
-                    suffixIcon: IconButton(
-                      onPressed: _toggleDictation,
-                      icon: Icon(
-                        _isDictating ? Icons.mic_rounded : Icons.mic_none_rounded,
-                        color: _isDictating
-                            ? Colors.redAccent
-                            : context.scheme.onSurface.withValues(alpha: 0.6),
-                        size: 20,
-                      ),
-                    ),
+                    suffixIcon: AppConstants.voiceAiEnabled
+                        ? IconButton(
+                            onPressed: _toggleDictation,
+                            icon: Icon(
+                              _isDictating
+                                  ? Icons.mic_rounded
+                                  : Icons.mic_none_rounded,
+                              color: _isDictating
+                                  ? Colors.redAccent
+                                  : context.scheme.onSurface
+                                      .withValues(alpha: 0.6),
+                              size: 20,
+                            ),
+                          )
+                        : null,
                   ),
                 ),
               ),

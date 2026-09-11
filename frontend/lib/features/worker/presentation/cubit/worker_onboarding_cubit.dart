@@ -73,6 +73,14 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
     _emitForm(state.formData.copyWith(gender: value));
   }
 
+  void updateState(String value) {
+    _emitForm(state.formData.copyWith(state: value));
+  }
+
+  void updateDistrict(String value) {
+    _emitForm(state.formData.copyWith(district: value));
+  }
+
   void updateAadhaar(String value) {
     _emitForm(state.formData.copyWith(aadhaar: value));
   }
@@ -323,6 +331,8 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
             Validators.phone(data.phone) ??
             (data.dateOfBirth == null ? 'Date of birth is required' : null) ??
             (data.gender == null ? 'Please select gender' : null) ??
+            Validators.requiredField(data.state, label: 'State') ??
+            Validators.requiredField(data.district, label: 'District') ??
             Validators.aadhaar(data.aadhaar) ??
             (data.hasAadhaarPhotos
                 ? null

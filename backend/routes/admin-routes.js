@@ -43,6 +43,8 @@ import {
     getEnabledLanguages,
     updateEnabledLanguages,
     getAllFederations,
+    createFederation,
+    impersonateFederation,
     getFederationDetails,
     approveFederation,
     suspendFederation,
@@ -141,12 +143,20 @@ router.use(adminProtect);
 
 import { federationScope } from '../middleware/federationMiddleware.js';
 
+/** Super-admin-only gate (after adminProtect). */
+export const requireSuperAdmin = (req, res, next) => {
+    if (req.user?.adminRole !== 'super_admin') {
+        return res.status(403).json({ success: false, message: 'Super Admin access required' });
+    }
+    next();
+};
+
 // Profile & Dashboard
 router.get('/me', getAdminProfile);
 router.put('/me', updateAdminMe);
 
 // Mount federationScope for data routes
-router.use(['/dashboard', '/customers', '/workers', '/bookings', '/analytics', '/reports'], federationScope);
+router.use(['/dashboard', '/customers', '/workers', '/bookings', '/analytics', '/reports', '/payments', '/reviews', '/support'], federationScope);
 
 router.get('/dashboard', getDashboardStats);
 
@@ -267,11 +277,11 @@ router.delete('/banners/:id', adminDeleteBanner);
 
 // Federation Management
 router.get('/federations', getAllFederations);
+router.post('/federations', requireSuperAdmin, createFederation);
+router.post('/federations/:id/impersonate', requireSuperAdmin, impersonateFederation);
 router.get('/federations/:id', getFederationDetails);
 router.patch('/federations/:id/approve', approveFederation);
 router.patch('/federations/:id/suspend', suspendFederation);
-
-// Emergency Contacts
 
 // Emergency Contacts
 router.get('/emergency/contacts', getAllEmergencyContacts);

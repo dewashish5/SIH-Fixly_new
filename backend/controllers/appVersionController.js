@@ -91,16 +91,54 @@ export const checkAppVersion = async (req, res) => {
         const currentAppVersion = versionDoc.appVersion || '';
         const minSupportedVersion = versionDoc.minVersion || currentApiVersion;
 
+        const clientAppVersion = (
+            req.query.appVersion ||
+            req.headers['x-app-version'] ||
+            ''
+        ).toString().trim();
+
         let isMatch = null;
         let isUpdateAvailable = false;
-        let isForceUpdate = Boolean(versionDoc.forceUpdate);
+        let isForceUpdate = false;
 
-        if (clientVersion) {
+        const compareParts = (a, b) => {
+            const pa = String(a || '').replace(/^v/i, '').split(/[.+-]/).map((x) => parseInt(x, 10) || 0);
+            const pb = String(b || '').replace(/^v/i, '').split(/[.+-]/).map((x) => parseInt(x, 10) || 0);
+            const len = Math.max(pa.length, pb.length);
+            for (let i = 0; i < len; i += 1) {
+                const da = pa[i] || 0;
+                const db = pb[i] || 0;
+                if (da < db) return -1;
+                if (da > db) return 1;
+            }
+            return 0;
+        };
+
+        const looksSemver = (v) => /^\d+(\.\d+)*/.test(String(v || '').replace(/^v/i, ''));
+
+        if (clientAppVersion && currentAppVersion && looksSemver(clientAppVersion) && looksSemver(currentAppVersion)) {
+            const cmp = compareParts(clientAppVersion, currentAppVersion);
+            isMatch = cmp === 0;
+            isUpdateAvailable = cmp < 0;
+            isForceUpdate = isUpdateAvailable && Boolean(versionDoc.forceUpdate);
+            if (
+                looksSemver(minSupportedVersion) &&
+                compareParts(clientAppVersion, minSupportedVersion) < 0
+            ) {
+                isForceUpdate = true;
+                isUpdateAvailable = true;
+            }
+        } else if (clientVersion) {
+            // Legacy API-version string compare (V1 / V2)
             isMatch = clientVersion.toLowerCase() === currentApiVersion.toLowerCase();
             isUpdateAvailable = !isMatch;
-
-            if (minSupportedVersion && clientVersion.toLowerCase() !== minSupportedVersion.toLowerCase()) {
-                isForceUpdate = Boolean(versionDoc.forceUpdate) || true;
+            isForceUpdate = isUpdateAvailable && Boolean(versionDoc.forceUpdate);
+            if (
+                minSupportedVersion &&
+                clientVersion.toLowerCase() !== String(minSupportedVersion).toLowerCase() &&
+                !looksSemver(minSupportedVersion)
+            ) {
+                isForceUpdate = Boolean(versionDoc.forceUpdate) || isUpdateAvailable;
             }
         }
 
@@ -113,6 +151,7 @@ export const checkAppVersion = async (req, res) => {
             isUpdateAvailable,
             isMatch,
             clientVersion: clientVersion || null,
+            clientAppVersion: clientAppVersion || null,
             updateTitle: versionDoc.updateTitle || 'Update Available',
             updateMessage: versionDoc.updateMessage || '',
             updateUrl: versionDoc.updateUrl || '',

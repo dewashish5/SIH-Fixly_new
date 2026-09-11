@@ -4,11 +4,16 @@ import '../../app/theme/app_colors.dart';
 
 abstract final class AppConstants {
   static const appName = 'Fixly';
+  /// Client API version sent to `GET /api/version` (must match backend `apiVersion`).
+  static const apiVersion = 'V1';
   static const homeCategoryPreviewCount = 4;
   static const mockOtp = '123456';
   static const mockDelayMs = 200;
   static const onboardingTotalSteps = 3;
   static const transitionDurationMs = 250;
+
+  /// Flip true to show Live Talk / mic / Hey Flexi voice entry points again.
+  static const voiceAiEnabled = false;
 }
 
 abstract final class AppImages {

@@ -280,6 +280,14 @@ export const api = {
     const res = await adminApi.get('/federations');
     return res.data;
   },
+  createFederation: async (federationData) => {
+    const res = await adminApi.post('/federations', federationData);
+    return res.data;
+  },
+  impersonateFederation: async (id) => {
+    const res = await adminApi.post(`/federations/${id}/impersonate`);
+    return res.data;
+  },
   getFederationDetails: async (id) => {
     const res = await adminApi.get(`/federations/${id}`);
     return res.data;

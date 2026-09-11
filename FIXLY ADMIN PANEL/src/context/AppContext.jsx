@@ -604,7 +604,11 @@ export function AppProvider({ children }) {
       value={{
         token,
         adminUser,
-        adminRole: adminUser?.role || 'super_admin',
+        adminRole:
+          adminUser?.adminRole ||
+          (adminUser?.id === 'admin-1' || adminUser?._id === 'admin-1'
+            ? 'super_admin'
+            : null),
         setAdminUser,
         updateAdminProfile,
         isAuthenticated: !!token,

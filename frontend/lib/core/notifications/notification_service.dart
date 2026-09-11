@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import '../firebase/firebase_bootstrap.dart';
 import '../network/api_client.dart';
 import '../preferences/app_preferences.dart';
+import '../utils/app_package_info.dart';
 import '../../services/webrtc_call_service.dart';
 import '../../app/router/app_router.dart';
 import 'notification_channels.dart';
@@ -246,7 +247,7 @@ class NotificationService {
         platform: defaultTargetPlatform == TargetPlatform.iOS
             ? 'ios'
             : 'android',
-        appVersion: '0.1.0',
+        appVersion: AppPackageInfo.version,
         locale: locale ?? AppPreferences.instance.locale,
       );
     } catch (error) {

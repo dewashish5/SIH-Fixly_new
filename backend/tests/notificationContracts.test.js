@@ -28,7 +28,9 @@ test('Notification stores event and delivery orchestration metadata', () => {
         assert.ok(Notification.schema.path(path), `missing ${path}`);
     }
     assert.ok(Notification.schema.indexes().some(([fields, options]) =>
-        fields.dedupeKey === 1 && options?.unique === true));
+        fields.dedupeKey === 1 &&
+        options?.unique === true &&
+        options?.partialFilterExpression?.dedupeKey?.$type === 'string'));
 });
 
 test('notification templates resolve English and Hindi copy', async () => {
