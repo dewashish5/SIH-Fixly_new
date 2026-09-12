@@ -1,0 +1,40 @@
+# Keep free Render (and HF) ML services warm — ping every 10 min (Render sleeps ~15).
+name: ML keep-alive
+
+on:
+  schedule:
+    # Render free sleeps after ~5–15 min idle — ping before that window
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping ML health endpoints
+        env:
+          # Comma-separated full health URLs, e.g.
+          # https://fixly-service-discovery.onrender.com/health,https://fixly-identity-verification.onrender.com/health
+          ML_KEEPALIVE_URLS: ${{ secrets.ML_KEEPALIVE_URLS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ML_KEEPALIVE_URLS:-}" ]; then
+            echo "Missing secret ML_KEEPALIVE_URLS — add comma-separated /health URLs"
+            exit 1
+          fi
+          IFS=',' read -ra URLS <<< "$ML_KEEPALIVE_URLS"
+          fail=0
+          for url in "${URLS[@]}"; do
+            url="$(echo "$url" | xargs)"
+            [ -z "$url" ] && continue
+            echo "GET $url"
+            code=$(curl -sS -o /tmp/keepalive_body -w "%{http_code}" --max-time 90 "$url" || echo "000")
+            echo "  -> HTTP $code"
+            head -c 200 /tmp/keepalive_body || true
+            echo
+            if [ "$code" != "200" ] && [ "$code" != "503" ]; then
+              # 503 during cold start still wakes the service
+              fail=1
+            fi
+          done
+          exit 0

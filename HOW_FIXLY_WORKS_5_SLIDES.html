@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Fixly Works — Presentation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+  @page {
+    size: 1920px 1080px;
+    margin: 0;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #070B14;
+    color: #F8FAFC;
+    margin: 0;
+    padding: 0;
+  }
+
+  .slide {
+    width: 1920px;
+    height: 1080px;
+    page-break-after: always;
+    page-break-inside: avoid;
+    position: relative;
+    overflow: hidden;
+    padding: 52px 76px 44px 76px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background-color: #070B14;
+  }
+
+  /* Distinct slide gradient backgrounds (NO box-shadow or backdrop-filter to guarantee 100% vector-clean PDF rendering) */
+  .slide-1 {
+    background: radial-gradient(circle at 50% 50%, #0D1B36 0%, #070B14 75%);
+  }
+  .slide-2 {
+    background: radial-gradient(circle at 20% 30%, #0E203B 0%, #070B14 70%);
+  }
+  .slide-3 {
+    background: radial-gradient(circle at 75% 30%, #0A261D 0%, #070B14 70%);
+  }
+  .slide-4 {
+    background: radial-gradient(circle at 50% 30%, #121D38 0%, #070B14 75%);
+  }
+  .slide-5 {
+    background: radial-gradient(circle at 70% 30%, #1D1236 0%, #070B14 75%);
+  }
+
+  /* Header */
+  .slide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .header-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .badge-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .pill-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: #131D33;
+    border: 1px solid #233559;
+    color: #94A3B8;
+  }
+
+  .pill-badge.blue {
+    background: #11254A;
+    border-color: #2563EB;
+    color: #93C5FD;
+  }
+  .pill-badge.green {
+    background: #0E3326;
+    border-color: #10B981;
+    color: #6EE7B7;
+  }
+  .pill-badge.amber {
+    background: #3B2A0F;
+    border-color: #F59E0B;
+    color: #FDE68A;
+  }
+  .pill-badge.purple {
+    background: #2E1952;
+    border-color: #8B5CF6;
+    color: #DDD6FE;
+  }
+
+  .slide-title {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #FFFFFF;
+    line-height: 1.15;
+  }
+
+  .slide-subtitle {
+    font-size: 18px;
+    color: #94A3B8;
+    font-weight: 500;
+    max-width: 1200px;
+    line-height: 1.4;
+  }
+
+  .page-indicator {
+    background: #111A2E;
+    border: 1px solid #1E2D4A;
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #CBD5E1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .indicator-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* Body */
+  .slide-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Footer */
+  .slide-footer {
+    height: 48px;
+    border-top: 1px solid #1A2640;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 14px;
+    font-size: 14px;
+    color: #64748B;
+  }
+
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .fixly-logo-text {
+    font-weight: 800;
+    color: #F8FAFC;
+    font-size: 17px;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-square {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #2563EB, #06B6D4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 11px;
+    font-weight: 900;
+  }
+
+  .footer-takeaway {
+    color: #CBD5E1;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14.5px;
+  }
+
+  .footer-takeaway span.highlight {
+    color: #38BDF8;
+    font-weight: 700;
+  }
+
+  .icon-box {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .icon-blue { background: #13274F; color: #60A5FA; border: 1px solid #1E3A8A; }
+  .icon-green { background: #0E3524; color: #34D399; border: 1px solid #065F46; }
+  .icon-amber { background: #38270B; color: #FBBF24; border: 1px solid #78350F; }
+  .icon-purple { background: #2A174A; color: #A78BFA; border: 1px solid #581C87; }
+  .icon-cyan { background: #0F3342; color: #22D3EE; border: 1px solid #155E75; }
+
+  /* =====================================================================
+     SLIDE 1: ECOSYSTEM MAP
+     ===================================================================== */
+  .s1-container {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    height: 610px;
+  }
+
+  .s1-diagram {
+    display: grid;
+    grid-template-columns: 1fr 380px 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 24px;
+    flex: 1;
+    align-items: center;
+  }
+
+  .s1-center-box {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    height: 100%;
+    background: #0F1A30;
+    border: 2px solid #3B82F6;
+    border-radius: 24px;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    text-align: center;
+    position: relative;
+  }
+
+  .hub-badge {
+    background: #172D52;
+    color: #93C5FD;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: 1px solid #3B82F6;
+  }
+
+  .hub-icon-large {
+    width: 76px;
+    height: 76px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #2563EB, #06B6D4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin: 12px 0 6px 0;
+  }
+
+  .hub-heading {
+    font-size: 24px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 4px;
+  }
+
+  .hub-sub {
+    font-size: 13px;
+    color: #38BDF8;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .hub-specs-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .hub-spec-item {
+    background: #08101E;
+    border: 1px solid #1B2C47;
+    border-radius: 12px;
+    padding: 11px 14px;
+    font-size: 13px;
+    color: #E2E8F0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+  }
+
+  .hub-spec-item strong {
+    color: #FFFFFF;
+  }
+
+  .s1-pillar {
+    background: #0C1524;
+    border: 1px solid #1B283E;
+    border-radius: 20px;
+    padding: 24px 26px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+  }
+
+  .s1-pillar.pillar-blue { border-left: 5px solid #3B82F6; }
+  .s1-pillar.pillar-amber { border-right: 5px solid #F59E0B; }
+  .s1-pillar.pillar-green { border-left: 5px solid #10B981; }
+  .s1-pillar.pillar-purple { border-right: 5px solid #8B5CF6; }
+
+  .pillar-top {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+
+  .pillar-title-wrap h3 {
+    font-size: 21px;
+    font-weight: 800;
+    color: #FFFFFF;
+  }
+
+  .pillar-title-wrap span {
+    font-size: 13px;
+    color: #94A3B8;
+    font-weight: 500;
+  }
+
+  .pillar-points {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .pillar-point {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    color: #CBD5E1;
+    line-height: 1.4;
+  }
+
+  .point-check {
+    color: #38BDF8;
+    font-weight: 800;
+    margin-top: 1px;
+    font-size: 14px;
+  }
+
+  .pillar-connector-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-top: 14px;
+  }
+  .label-blue { background: #112345; color: #93C5FD; border: 1px solid #1D3F7A; }
+  .label-amber { background: #2E1F08; color: #FDE68A; border: 1px solid #5C3D10; }
+  .label-green { background: #0B261B; color: #6EE7B7; border: 1px solid #14593C; }
+  .label-purple { background: #251342; color: #DDD6FE; border: 1px solid #492385; }
+
+  /* Bottom Analogy Row */
+  .analogy-strip {
+    background: #0C1524;
+    border: 1px solid #1B283E;
+    border-radius: 16px;
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .analogy-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #60A5FA;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .analogy-chain {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .analogy-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14.5px;
+    color: #F1F5F9;
+  }
+
+  .analogy-item span.term {
+    color: #94A3B8;
+    font-weight: 500;
+  }
+
+  .analogy-item strong {
+    color: #38BDF8;
+  }
+
+  .analogy-arrow {
+    color: #475569;
+    font-size: 16px;
+  }
+
+  /* =====================================================================
+     SLIDE 2: THE REAL-WORLD JOURNEY
+     ===================================================================== */
+  .s2-container {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    height: 610px;
+  }
+
+  .s2-journey-flow {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    flex: 1;
+    position: relative;
+  }
+
+  .flow-card {
+    background: #0C1524;
+    border: 1px solid #1B283E;
+    border-radius: 20px;
+    padding: 22px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 395px;
+    position: relative;
+  }
+
+  .flow-number {
+    font-size: 36px;
+    font-weight: 900;
+    color: #17243B;
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    line-height: 1;
+  }
+
+  .flow-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin-bottom: 16px;
+  }
+
+  .flow-title {
+    font-size: 19px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 8px;
+    line-height: 1.25;
+  }
+
+  .flow-desc {
+    font-size: 13.5px;
+    color: #94A3B8;
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+
+  .mock-preview {
+    background: #060A13;
+    border: 1px solid #162236;
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .mock-tag {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 700;
+  }
+
+  .tag-customer { color: #60A5FA; }
+  .tag-worker { color: #FBBF24; }
+  .tag-system { color: #34D399; }
+
+  .mock-sub {
+    color: #94A3B8;
+    font-size: 11.5px;
+  }
+
+  .flow-arrow-badge {
+    position: absolute;
+    top: 48%;
+    right: -13px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #172642;
+    border: 2px solid #3B82F6;
+    color: #93C5FD;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 900;
+    z-index: 10;
+    transform: translateY(-50%);
+  }
+
+  .s2-guarantees-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+
+  .guarantee-card {
+    background: #0C1524;
+    border: 1px solid #1B283E;
+    border-radius: 16px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .guarantee-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+
+  .guarantee-info h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin-bottom: 3px;
+  }
+
+  .guarantee-info p {
+    font-size: 13px;
+    color: #94A3B8;
+  }
+
+  /* =====================================================================
+     SLIDE 3: COOPERATIVE GOVERNANCE
+     ===================================================================== */
+  .s3-container {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    gap: 28px;
+    height: 610px;
+  }
+
+  .s3-left-card {
+    background: #0C1524;
+    border: 1px solid #1C2B42;
+    border-radius: 24px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .s3-left-card h3 {
+    font-size: 26px;
+    font-weight: 800;
+    color: #FFFFFF;
+    line-height: 1.25;
+    margin-top: 10px;
+  }
+
+  .s3-comparison-table {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 20px 0;
+  }
+
+  .compare-row {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 14px;
+    background: #070D18;
+    border: 1px solid #152338;
+    border-radius: 14px;
+    padding: 12px 16px;
+  }
+
+  .side-predatory {
+    border-right: 1px solid #18283E;
+    padding-right: 10px;
+  }
+
+  .side-predatory .sub-lbl {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #F87171;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .side-predatory .text-val {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #CBD5E1;
+  }
+
+  .side-fixly .sub-lbl {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #34D399;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .side-fixly .text-val {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #FFFFFF;
+  }
+
+  .quote-box {
+    background: #082117;
+    border: 1px solid #10593C;
+    border-radius: 14px;
+    padding: 14px 18px;
+    font-size: 14px;
+    color: #A7F3D0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .s3-pillars-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+    justify-content: space-between;
+  }
+
+  .gov-row-card {
+    background: #0C1524;
+    border: 1px solid #1B2940;
+    border-radius: 20px;
+    padding: 22px 26px;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .gov-row-card.border-green { border-left: 5px solid #10B981; }
+  .gov-row-card.border-blue { border-left: 5px solid #3B82F6; }
+  .gov-row-card.border-amber { border-left: 5px solid #F59E0B; }
+
+  .gov-row-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .gov-row-title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .gov-row-title-bar h4 {
+    font-size: 19px;
+    font-weight: 800;
+    color: #FFFFFF;
+  }
+
+  .gov-badge-sm {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    text-transform: uppercase;
+  }
+
+  .gov-row-desc {
+    font-size: 14px;
+    color: #94A3B8;
+    line-height: 1.45;
+  }
+
+  .gov-pill-tags {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .tag-item {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #131E30;
+    border: 1px solid #20314C;
+    color: #CBD5E1;
+  }
+
+  /* =====================================================================
+     SLIDE 4: UNDER THE HOOD / ARCHITECTURE
+     ===================================================================== */
+  .s4-container {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    height: 610px;
+  }
+
+  .s4-highway-diagram {
+    background: #0C1524;
+    border: 1px solid #1B2940;
+    border-radius: 24px;
+    padding: 24px 30px;
+    display: grid;
+    grid-template-columns: 260px 40px 320px 40px 1fr;
+    align-items: center;
+    gap: 0;
+  }
+
+  .hw-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .hw-box {
+    background: #070D18;
+    border: 1px solid #1A2A42;
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+
+  .hw-box h5 {
+    font-size: 15px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hw-box p {
+    font-size: 12.5px;
+    color: #94A3B8;
+    line-height: 1.4;
+  }
+
+  .hw-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #38BDF8;
+    font-weight: 800;
+  }
+
+  .hw-dual-store {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .s4-features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    flex: 1;
+  }
+
+  .arch-feature-card {
+    background: #0C1524;
+    border: 1px solid #1B2940;
+    border-radius: 20px;
+    padding: 24px 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .arch-card-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+
+  .arch-card-top h4 {
+    font-size: 19px;
+    font-weight: 800;
+    color: #FFFFFF;
+  }
+
+  .arch-card-body {
+    font-size: 14px;
+    color: #94A3B8;
+    line-height: 1.5;
+  }
+
+  .arch-card-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #16243A;
+  }
+
+  /* =====================================================================
+     SLIDE 5: FLEXI AI
+     ===================================================================== */
+  .s5-container {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    height: 610px;
+  }
+
+  .s5-triad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+    flex: 1;
+  }
+
+  .ai-column-card {
+    background: #0C1524;
+    border: 1px solid #1C2B42;
+    border-radius: 24px;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+  }
+
+  .ai-column-card.c-blue { border-top: 5px solid #3B82F6; }
+  .ai-column-card.c-purple { border-top: 5px solid #8B5CF6; }
+  .ai-column-card.c-green { border-top: 5px solid #10B981; }
+
+  .ai-badge-top {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    width: fit-content;
+    margin-bottom: 16px;
+  }
+
+  .ai-col-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+
+  .ai-col-desc {
+    font-size: 14px;
+    color: #94A3B8;
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+
+  .ai-visual-widget {
+    background: #070D18;
+    border: 1px solid #162438;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .speech-bubble {
+    background: #111D33;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    color: #E2E8F0;
+    line-height: 1.4;
+  }
+
+  .speech-author {
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+    display: block;
+  }
+
+  .audio-wave-visual {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  .wave-bar {
+    width: 3px;
+    border-radius: 2px;
+    background: #38BDF8;
+  }
+
+  .vision-box-target {
+    border: 2px dashed #8B5CF6;
+    border-radius: 10px;
+    padding: 10px;
+    background: rgba(139, 92, 246, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .vision-tag {
+    background: #8B5CF6;
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    width: fit-content;
+    text-transform: uppercase;
+  }
+
+  .booking-pill-preview {
+    background: #0A1C16;
+    border: 1px solid #10593C;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .btn-confirm-mock {
+    background: #10B981;
+    color: #062419;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-align: center;
+    margin-top: 4px;
+    letter-spacing: 0.04em;
+  }
+
+  .s5-guardrail-strip {
+    background: #0C1524;
+    border: 1px solid #1C2B42;
+    border-radius: 20px;
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .guardrail-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .guardrail-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #2A174A;
+    border: 1px solid #581C87;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #C4B5FD;
+  }
+
+  .guardrail-info h4 {
+    font-size: 16px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 2px;
+  }
+
+  .guardrail-info p {
+    font-size: 13px;
+    color: #94A3B8;
+  }
+
+  .guardrail-chain {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .gc-step {
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: #070D18;
+    border: 1px solid #1A283E;
+    font-size: 13px;
+    font-weight: 700;
+    color: #CBD5E1;
+  }
+
+  .gc-arrow {
+    color: #8B5CF6;
+    font-weight: 800;
+  }
+
+</style>
+</head>
+<body>
+
+  <!-- =====================================================================
+       SLIDE 1: THE BIG PICTURE
+       ===================================================================== -->
+  <div class="slide slide-1">
+    <div class="slide-header">
+      <div class="header-titles">
+        <div class="badge-row">
+          <div class="pill-badge blue">Fixly Overview</div>
+          <div class="pill-badge">Slide 1 of 5</div>
+        </div>
+        <h1 class="slide-title">How Fixly Works: The Connected Ecosystem</h1>
+        <p class="slide-subtitle">
+          Fixly is a cooperative home-services platform. It unites customers, workers, and cooperative federations through an intelligent real-time coordination engine.
+        </p>
+      </div>
+      <div class="page-indicator">
+        <span class="indicator-dot" style="background: #3B82F6;"></span>
+        <span>Architecture Map</span>
+      </div>
+    </div>
+
+    <div class="slide-body">
+      <div class="s1-container">
+        
+        <div class="s1-diagram">
+          
+          <!-- Pillar 1: Customer App -->
+          <div class="s1-pillar pillar-blue">
+            <div>
+              <div class="pillar-top">
+                <div class="icon-box icon-blue">📱</div>
+                <div class="pillar-title-wrap">
+                  <h3>Customer App</h3>
+                  <span>iOS & Android (Flutter)</span>
+                </div>
+              </div>
+              <div class="pillar-points">
+                <div class="pillar-point">
+                  <span class="point-check">✓</span>
+                  <span><strong>Voice & 1-Tap Booking:</strong> Speak in Hindi/English or choose service.</span>
+                </div>
+                <div class="pillar-point">
+                  <span class="point-check">✓</span>
+                  <span><strong>Upfront Fair Pricing:</strong> Transparent rates without surprise surge markups.</span>
+                </div>
+                <div class="pillar-point">
+                  <span class="point-check">✓</span>
+                  <span><strong>Live GPS & In-App Call:</strong> Track worker arrival without revealing phone numbers.</span>
+                </div>
+              </div>
+            </div>
+            <div class="pillar-connector-label label-blue">
+              <span>➔ Streams request & coordinates via Sockets</span>
+            </div>
+          </div>
+
+          <!-- Center Engine Hub -->
+          <div class="s1-center-box">
+            <div class="hub-badge">The Central Engine</div>
+            <div class="hub-icon-large">⚡</div>
+            <div>
+              <div class="hub-heading">Fixly Core Engine</div>
+              <div class="hub-sub">Real-Time Coordination Hub</div>
+            </div>
+            
+            <div class="hub-specs-list">
+              <div class="hub-spec-item">
+                <span>🎯</span>
+                <span><strong>Smart Dispatch:</strong> Matches nearest certified worker</span>
+              </div>
+              <div class="hub-spec-item">
+                <span>📍</span>
+                <span><strong>Live Sockets:</strong> 1-second map GPS streaming</span>
+              </div>
+              <div class="hub-spec-item">
+                <span>🔐</span>
+                <span><strong>OTP Verification:</strong> Job locked until arrival</span>
+              </div>
+              <div class="hub-spec-item">
+                <span>💳</span>
+                <span><strong>Direct Payout:</strong> Instant worker wallet credit</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pillar 2: Worker App -->
+          <div class="s1-pillar pillar-amber">
+            <div>
+              <div class="pillar-top">
+                <div class="icon-box icon-amber">🛠️</div>
+                <div class="pillar-title-wrap">
+                  <h3>Worker App</h3>
+                  <span>iOS & Android (Flutter)</span>
+                </div>
+              </div>
+              <div class="pillar-points">
+                <div class="pillar-point">
+                  <span class="point-check" style="color:#FBBF24;">✓</span>
+                  <span><strong>1-Tap Job Acceptance:</strong> See clear pay, address, and job scope immediately.</span>
+                </div>
+                <div class="pillar-point">
+                  <span class="point-check" style="color:#FBBF24;">✓</span>
+                  <span><strong>Guaranteed Wage Floor:</strong> Union-backed rates protect workers from bidding wars.</span>
+                </div>
+                <div class="pillar-point">
+                  <span class="point-check" style="color:#FBBF24;">✓</span>
+                  <span><strong>Immediate Cashout:</strong> Earnings hit wallet directly upon job completion.</span>
+                </div>
+              </div>
+            </div>
+            <div class="pillar-connector-label label-amber">
+              <span>➔ Receives jobs & updates live status</span>
+            </div>
+          </div>
+
+          <!-- Pillar 3: Federation & Admin -->
+          <div class="s1-pillar pillar-green">
+            <div>
+              <div class="pillar-top">
+                <div class="icon-box icon-green">🏛️</div>
+                <div class="pillar-title-wrap">
+                  <h3>Federation & Admin</h3>
+                  <span>Web Control Room (React)</span>
+                </div>
+              </div>
+              <div class="pillar-points">
+                <div class="pillar-point">
+                  <span class="point-check" style="color:#34D399;">✓</span>
+                  <span><strong>Co-op Governance:</strong> Unions configure regional minimum wage standards.</span>
+                </div>
+                <div class="pillar-point">
+                  <span class="point-check" style="color:#34D399;">✓</span>
+                  <span><strong>Welfare Safety Net:</strong> Micro-insurance, tool grants, emergency funds.</span>
+                </div>
+                <div class="pillar-point">
+                  <span class="point-check" style="color:#34D399;">✓</span>
+                  <span><strong>Safety & SOS Radar:</strong> Instant escalation to resolve disputes.</span>
+                </div>
+              </div>
+            </div>
+            <div class="pillar-connector-label label-green">
+              <span>➔ Enforces wage rules & worker welfare</span>
+            </div>
+          </div>
+
+          <!-- Pillar 4: Flexi AI Brain -->
+          <div class="s1-pillar pillar-purple">
+            <div>
+              <div class="pillar-top">
+                <div class="icon-box icon-purple">🤖</div>
+                <div class="pillar-title-wrap">
+                  <h3>Flexi AI Brain</h3>
+                  <span>Voice & Vision Agent</span>
+                </div>
+              </div>
+              <div class="pillar-points">
+                <div class="pillar-point">
+                  <span class="point-check" style="color:#A78BFA;">✓</span>
+                  <span><strong>Multilingual Voice:</strong> Speaks and understands Hindi & English fluently.</span>
+                </div>
+                <div class="pillar-point">
+                  <span class="point-check" style="color:#A78BFA;">✓</span>
+                  <span><strong>Photo Diagnostics:</strong> Identifies broken parts from customer pictures.</span>
+                </div>
+                <div class="pillar-point">
+                  <span class="point-check" style="color:#A78BFA;">✓</span>
+                  <span><strong>Autonomous Helper:</strong> Gathers details and builds the booking effortlessly.</span>
+                </div>
+              </div>
+            </div>
+            <div class="pillar-connector-label label-purple">
+              <span>➔ Feeds structured intent to booking engine</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Analogy Strip -->
+        <div class="analogy-strip">
+          <div class="analogy-badge">
+            <span>💡</span>
+            <span>Simple Metaphors:</span>
+          </div>
+          <div class="analogy-chain">
+            <div class="analogy-item">
+              <span class="term">Mobile Apps:</span>
+              <strong>Handheld Remotes</strong>
+            </div>
+            <div class="analogy-arrow">➔</div>
+            <div class="analogy-item">
+              <span class="term">Node Backend:</span>
+              <strong>Central Kitchen</strong>
+            </div>
+            <div class="analogy-arrow">➔</div>
+            <div class="analogy-item">
+              <span class="term">Database:</span>
+              <strong>Filing Cabinet of Truth</strong>
+            </div>
+            <div class="analogy-arrow">➔</div>
+            <div class="analogy-item">
+              <span class="term">Flexi AI:</span>
+              <strong>Smart 24/7 Concierge</strong>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <div class="footer-left">
+        <div class="fixly-logo-text">
+          <div class="logo-square">F</div>
+          <span>Fixly</span>
+        </div>
+        <span>Cooperative Home Services Platform</span>
+      </div>
+      <div class="footer-takeaway">
+        Takeaway: <span class="highlight">All four components connect to one unified real-time engine.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       SLIDE 2: THE REAL-WORLD JOURNEY
+       ===================================================================== -->
+  <div class="slide slide-2">
+    <div class="slide-header">
+      <div class="header-titles">
+        <div class="badge-row">
+          <div class="pill-badge blue">User Flow</div>
+          <div class="pill-badge">Slide 2 of 5</div>
+        </div>
+        <h1 class="slide-title">From Problem to Fixed: The Real-World Journey</h1>
+        <p class="slide-subtitle">
+          How a customer with a home problem is matched with a certified cooperative worker — from initial voice request to safe completion and immediate payout.
+        </p>
+      </div>
+      <div class="page-indicator">
+        <span class="indicator-dot" style="background: #F59E0B;"></span>
+        <span>5-Step Workflow</span>
+      </div>
+    </div>
+
+    <div class="slide-body">
+      <div class="s2-container">
+        
+        <!-- 5 Steps Flow -->
+        <div class="s2-journey-flow">
+          
+          <!-- Step 1 -->
+          <div class="flow-card">
+            <div class="flow-number">01</div>
+            <div>
+              <div class="flow-icon icon-blue">🎙️</div>
+              <div class="flow-title">Speak or Tap Request</div>
+              <div class="flow-desc">
+                Customer taps service or simply talks to <strong>Flexi AI</strong> in their preferred language. AI categorizes the problem and calculates estimated price upfront.
+              </div>
+            </div>
+            
+            <div class="mock-preview">
+              <div class="mock-tag tag-customer">
+                <span>Customer Input</span>
+                <span>Voice / Tap</span>
+              </div>
+              <div class="mock-sub">"Bhaiya sink ka tap leak ho raha hai"</div>
+            </div>
+            <div class="flow-arrow-badge">➔</div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="flow-card">
+            <div class="flow-number">02</div>
+            <div>
+              <div class="flow-icon icon-green">⚡</div>
+              <div class="flow-title">Fair Match & Dispatch</div>
+              <div class="flow-desc">
+                Backend locates nearby certified co-op workers. The job is dispatched with clear payout, exact location, and zero price penalty if rejected.
+              </div>
+            </div>
+            
+            <div class="mock-preview">
+              <div class="mock-tag tag-worker">
+                <span>Worker Notification</span>
+                <span>₹350 Direct</span>
+              </div>
+              <div class="mock-sub">Plumbing • 1.2 km away • 1-Tap Accept</div>
+            </div>
+            <div class="flow-arrow-badge">➔</div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="flow-card">
+            <div class="flow-number">03</div>
+            <div>
+              <div class="flow-icon icon-cyan">📍</div>
+              <div class="flow-title">Live GPS & Safe Calling</div>
+              <div class="flow-desc">
+                Customer watches the worker moving live on map (1-second socket updates). In-app WebRTC audio allows direct talk with 100% phone number privacy.
+              </div>
+            </div>
+            
+            <div class="mock-preview">
+              <div class="mock-tag tag-system">
+                <span>Real-Time Map</span>
+                <span>3 mins away</span>
+              </div>
+              <div class="mock-sub">Encrypted in-app call • No personal # leaked</div>
+            </div>
+            <div class="flow-arrow-badge">➔</div>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="flow-card">
+            <div class="flow-number">04</div>
+            <div>
+              <div class="flow-icon icon-amber">🔐</div>
+              <div class="flow-title">Secure OTP Job Lock</div>
+              <div class="flow-desc">
+                Worker reaches the customer doorstep. Work officially starts only after customer shares their unique 4-digit OTP. Eliminates fake visits.
+              </div>
+            </div>
+            
+            <div class="mock-preview">
+              <div class="mock-tag tag-customer">
+                <span>Start Verification</span>
+                <span style="letter-spacing: 2px; color: #FBBF24;">OTP 8419</span>
+              </div>
+              <div class="mock-sub">Job timer & safety checklist activated</div>
+            </div>
+            <div class="flow-arrow-badge">➔</div>
+          </div>
+
+          <!-- Step 5 -->
+          <div class="flow-card">
+            <div class="flow-number">05</div>
+            <div>
+              <div class="flow-icon icon-purple">💳</div>
+              <div class="flow-title">Finish & Instant Cashout</div>
+              <div class="flow-desc">
+                Job completed. Customer pays via UPI or Card. Earnings credit immediately into the worker's cooperative wallet with zero delayed settlement.
+              </div>
+            </div>
+            
+            <div class="mock-preview">
+              <div class="mock-tag tag-worker">
+                <span>Wallet Credited</span>
+                <span style="color: #34D399;">+ ₹350.00</span>
+              </div>
+              <div class="mock-sub">5★ Rating given • Instant bank transfer ready</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Guarantees Row -->
+        <div class="s2-guarantees-row">
+          <div class="guarantee-card">
+            <div class="guarantee-icon">🛡️</div>
+            <div class="guarantee-info">
+              <h4>100% Background-Verified Workers</h4>
+              <p>Every professional holds verified government KYC and trade validation through local cooperatives.</p>
+            </div>
+          </div>
+
+          <div class="guarantee-card">
+            <div class="guarantee-icon">🔒</div>
+            <div class="guarantee-info">
+              <h4>Encrypted In-App Audio (WebRTC)</h4>
+              <p>Customers and workers talk seamlessly inside the app. Personal phone numbers remain strictly confidential.</p>
+            </div>
+          </div>
+
+          <div class="guarantee-card">
+            <div class="guarantee-icon">⚖️</div>
+            <div class="guarantee-info">
+              <h4>Guaranteed Fair Minimum Wage Floor</h4>
+              <p>No predatory surge pricing or bidding wars. Honest prices for customers; living wages for workers.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <div class="footer-left">
+        <div class="fixly-logo-text">
+          <div class="logo-square">F</div>
+          <span>Fixly</span>
+        </div>
+        <span>Core Transaction Pipeline</span>
+      </div>
+      <div class="footer-takeaway">
+        Takeaway: <span class="highlight">Effortless for customers; transparent, safe, and instant for workers.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       SLIDE 3: COOPERATIVE GOVERNANCE
+       ===================================================================== -->
+  <div class="slide slide-3">
+    <div class="slide-header">
+      <div class="header-titles">
+        <div class="badge-row">
+          <div class="pill-badge green">Governance Model</div>
+          <div class="pill-badge">Slide 3 of 5</div>
+        </div>
+        <h1 class="slide-title">Cooperative Governance: Empowering Workers</h1>
+        <p class="slide-subtitle">
+          Fixly is owned and governed by worker federations. Unlike gig monopolies, workers are cooperative members with voice, welfare, and wage guarantees.
+        </p>
+      </div>
+      <div class="page-indicator">
+        <span class="indicator-dot" style="background: #10B981;"></span>
+        <span>Co-op Advantage</span>
+      </div>
+    </div>
+
+    <div class="slide-body">
+      <div class="s3-container">
+        
+        <!-- Left: Contrast Box -->
+        <div class="s3-left-card">
+          <div>
+            <div class="badge-row">
+              <span class="pill-badge green">Why Fixly Wins</span>
+            </div>
+            <h3>
+              Predatory Gig Monopolies vs.<br>
+              <span style="color: #34D399;">The Fixly Cooperative</span>
+            </h3>
+            
+            <div class="s3-comparison-table">
+              <div class="compare-row">
+                <div class="side-predatory">
+                  <span class="sub-lbl">Others</span>
+                  <div class="text-val">25% – 35% commission cut taken from worker</div>
+                </div>
+                <div class="side-fixly">
+                  <span class="sub-lbl">Fixly</span>
+                  <div class="text-val">Minimal ~5-8% platform fee; rest stays with worker</div>
+                </div>
+              </div>
+
+              <div class="compare-row">
+                <div class="side-predatory">
+                  <span class="sub-lbl">Others</span>
+                  <div class="text-val">Arbitrary algorithmic bans without right to speak</div>
+                </div>
+                <div class="side-fixly">
+                  <span class="sub-lbl">Fixly</span>
+                  <div class="text-val">Human peer review council & transparent scoring</div>
+                </div>
+              </div>
+
+              <div class="compare-row">
+                <div class="side-predatory">
+                  <span class="sub-lbl">Others</span>
+                  <div class="text-val">Zero safety net, medical care, or tool financing</div>
+                </div>
+                <div class="side-fixly">
+                  <span class="sub-lbl">Fixly</span>
+                  <div class="text-val">Federation Welfare Fund: healthcare, tools & loans</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="quote-box">
+            <span style="font-size: 22px;">🤝</span>
+            <span>"When workers are treated with dignity, service quality rises and dispute rates plummet."</span>
+          </div>
+        </div>
+
+        <!-- Right: 3 Pillars of Federation Stack -->
+        <div class="s3-pillars-container">
+          
+          <div class="gov-row-card border-green">
+            <div class="icon-box icon-green">🏛️</div>
+            <div class="gov-row-body">
+              <div class="gov-row-title-bar">
+                <h4>Federation Admins (Union Leadership)</h4>
+                <span class="gov-badge-sm" style="background: #0E3524; color: #6EE7B7;">Regional Control</span>
+              </div>
+              <div class="gov-row-desc">
+                Elected cooperative representatives configure local minimum wage floors based on actual living expenses, verify trade credentials, and oversee onboarding.
+              </div>
+              <div class="gov-pill-tags">
+                <span class="tag-item">Living Wage Floors</span>
+                <span class="tag-item">Skill Certifications</span>
+                <span class="tag-item">Democratic Representation</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="gov-row-card border-blue">
+            <div class="icon-box icon-blue">💰</div>
+            <div class="gov-row-body">
+              <div class="gov-row-title-bar">
+                <h4>Welfare & Solidarity Fund</h4>
+                <span class="gov-badge-sm" style="background: #11254A; color: #93C5FD;">Social Security</span>
+              </div>
+              <div class="gov-row-desc">
+                A tiny percentage of platform volume pools into collective benefits: accident coverage, micro-health insurance, equipment purchase grants, and interest-free emergency loans.
+              </div>
+              <div class="gov-pill-tags">
+                <span class="tag-item">Medical & Accident Shield</span>
+                <span class="tag-item">Tool Upgrade Grants</span>
+                <span class="tag-item">Instant Micro-Loans</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="gov-row-card border-amber">
+            <div class="icon-box icon-amber">🚨</div>
+            <div class="gov-row-body">
+              <div class="gov-row-title-bar">
+                <h4>Safety SOS & Fair Reliability</h4>
+                <span class="gov-badge-sm" style="background: #38270B; color: #FDE68A;">Safety First</span>
+              </div>
+              <div class="gov-row-desc">
+                Workers and customers have 1-tap SOS that connects directly to local emergency response (112/108) and federation desks. Reliability scores reflect true performance, not unfair cancellations.
+              </div>
+              <div class="gov-pill-tags">
+                <span class="tag-item">1-Tap SOS Dispatch</span>
+                <span class="tag-item">Dispute Mediation</span>
+                <span class="tag-item">No Malicious Penalties</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <div class="footer-left">
+        <div class="fixly-logo-text">
+          <div class="logo-square">F</div>
+          <span>Fixly</span>
+        </div>
+        <span>Cooperative Philosophy</span>
+      </div>
+      <div class="footer-takeaway">
+        Takeaway: <span class="highlight">Fixly transforms gig workers from disposable cogs into empowered co-owners.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       SLIDE 4: UNDER THE HOOD / ARCHITECTURE
+       ===================================================================== */
+  -->
+  <div class="slide slide-4">
+    <div class="slide-header">
+      <div class="header-titles">
+        <div class="badge-row">
+          <div class="pill-badge blue">System Engine</div>
+          <div class="pill-badge">Slide 4 of 5</div>
+        </div>
+        <h1 class="slide-title">Under the Hood: How Data Flows Without Breaking</h1>
+        <p class="slide-subtitle">
+          How Fixly handles thousands of concurrent requests, live GPS updates, and financial transactions with sub-second response times and zero data loss.
+        </p>
+      </div>
+      <div class="page-indicator">
+        <span class="indicator-dot" style="background: #3B82F6;"></span>
+        <span>Architecture Flow</span>
+      </div>
+    </div>
+
+    <div class="slide-body">
+      <div class="s4-container">
+        
+        <!-- Full System Highway -->
+        <div class="s4-highway-diagram">
+          
+          <!-- Column 1: Frontends -->
+          <div class="hw-col">
+            <div class="hw-box" style="border-color: #2563EB;">
+              <h5><span>📱</span> 1. The Clients</h5>
+              <p>
+                <strong>Flutter Mobile App:</strong> iOS & Android apps for customers & workers.<br>
+                <strong>React Dashboard:</strong> Browser portal for federation managers.
+              </p>
+            </div>
+          </div>
+
+          <div class="hw-arrow">➔</div>
+
+          <!-- Column 2: Engine -->
+          <div class="hw-col">
+            <div class="hw-box" style="border-color: #06B6D4;">
+              <h5><span>⚡</span> 2. Real-Time Engine</h5>
+              <p>
+                <strong>Node.js + WebSockets:</strong> Live two-way highway. Coordinates matching, live GPS broadcasting, and auth verification.
+              </p>
+            </div>
+          </div>
+
+          <div class="hw-arrow">➔</div>
+
+          <!-- Column 3: Dual Storage Split -->
+          <div class="hw-col">
+            <div class="hw-dual-store">
+              <div class="hw-box" style="border-color: #F59E0B;">
+                <h5><span>⚡</span> Redis Cache</h5>
+                <p>
+                  Sub-second live GPS, active voice AI session state, rapid job lock timers.
+                </p>
+              </div>
+              <div class="hw-box" style="border-color: #10B981;">
+                <h5><span>🗄️</span> MongoDB Vault</h5>
+                <p>
+                  Permanent truth: verified KYC, payment ledgers, bookings & audit trail.
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 3 Architecture Feature Highlights -->
+        <div class="s4-features-grid">
+          
+          <div class="arch-feature-card">
+            <div>
+              <div class="arch-card-top">
+                <div class="icon-box icon-blue">🔄</div>
+                <h4>Zero-Loss Job Queues</h4>
+              </div>
+              <div class="arch-card-body">
+                Background worker queues handle SMS alerts, push notifications (FCM), and invoice receipts asynchronously. Even if a worker passes through a network dead zone, events retry safely until acknowledged.
+              </div>
+            </div>
+            <div class="arch-card-footer" style="color: #93C5FD;">
+              <span>🛡️</span>
+              <span>Resilient against spotty mobile connectivity</span>
+            </div>
+          </div>
+
+          <div class="arch-feature-card">
+            <div>
+              <div class="arch-card-top">
+                <div class="icon-box icon-green">🔒</div>
+                <h4>Tamper-Proof Ledger</h4>
+              </div>
+              <div class="arch-card-body">
+                Every fee deduction, tip, and wallet balance credit executes with strict database consistency. Money cannot be credited twice or lost, and payouts reflect instantly upon OTP customer confirmation.
+              </div>
+            </div>
+            <div class="arch-card-footer" style="color: #6EE7B7;">
+              <span>⚖️</span>
+              <span>Audited balance for every single rupee</span>
+            </div>
+          </div>
+
+          <div class="arch-feature-card">
+            <div>
+              <div class="arch-card-top">
+                <div class="icon-box icon-purple">📞</div>
+                <h4>Private WebRTC Calling</h4>
+              </div>
+              <div class="arch-card-body">
+                Calls between customers and workers run peer-to-peer over encrypted WebRTC voice channels. Neither party ever sees the other's real phone number, preventing harassment and spam.
+              </div>
+            </div>
+            <div class="arch-card-footer" style="color: #DDD6FE;">
+              <span>🔐</span>
+              <span>100% privacy & zero telecom number leak</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <div class="footer-left">
+        <div class="fixly-logo-text">
+          <div class="logo-square">F</div>
+          <span>Fixly</span>
+        </div>
+        <span>Scalable Infrastructure</span>
+      </div>
+      <div class="footer-takeaway">
+        Takeaway: <span class="highlight">Redis handles live speed; MongoDB guarantees permanent financial truth.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       SLIDE 5: FLEXI AI (VOICE, VISION, GUARDRAILS)
+       ===================================================================== */
+  -->
+  <div class="slide slide-5">
+    <div class="slide-header">
+      <div class="header-titles">
+        <div class="badge-row">
+          <div class="pill-badge purple">AI Intelligence</div>
+          <div class="pill-badge">Slide 5 of 5</div>
+        </div>
+        <h1 class="slide-title">Flexi AI: Real-Time Voice, Vision & Guardrails</h1>
+        <p class="slide-subtitle">
+          How practical, grounded artificial intelligence removes booking friction, bridges language barriers, and ensures 100% financial accuracy.
+        </p>
+      </div>
+      <div class="page-indicator">
+        <span class="indicator-dot" style="background: #8B5CF6;"></span>
+        <span>AI Capabilities</span>
+      </div>
+    </div>
+
+    <div class="slide-body">
+      <div class="s5-container">
+        
+        <!-- 3 Pillars Grid -->
+        <div class="s5-triad-grid">
+          
+          <!-- Column 1: Voice -->
+          <div class="ai-column-card c-blue">
+            <div>
+              <div class="ai-badge-top" style="background: #11254A; color: #93C5FD;">
+                <span>🗣️</span> Gemini Live Voice
+              </div>
+              <div class="ai-col-title">Talk Naturally in Hindi or English</div>
+              <div class="ai-col-desc">
+                No complicated menus or typing. Customers simply press the mic and explain their issue in conversational Hindi or English. Flexi talks back like an expert human concierge.
+              </div>
+            </div>
+
+            <div class="ai-visual-widget">
+              <div class="speech-bubble">
+                <span class="speech-author" style="color: #93C5FD;">User Speaks:</span>
+                "Bhaiya geyser se ajeeb aawaz aa rahi hai aur paani garam nahi ho raha."
+              </div>
+              <div class="speech-bubble" style="background: #132442;">
+                <span class="speech-author" style="color: #60A5FA;">Flexi AI Speaks:</span>
+                "Got it! Sounds like a heating element issue. 3 electricians nearby at ₹299."
+              </div>
+              <div class="audio-wave-visual">
+                <div class="wave-bar" style="height: 10px;"></div>
+                <div class="wave-bar" style="height: 18px;"></div>
+                <div class="wave-bar" style="height: 24px;"></div>
+                <div class="wave-bar" style="height: 14px;"></div>
+                <div class="wave-bar" style="height: 20px;"></div>
+                <div class="wave-bar" style="height: 8px;"></div>
+                <span style="font-size: 11px; color: #38BDF8; margin-left: 6px; font-weight: 700;">Live Audio Stream</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: Vision -->
+          <div class="ai-column-card c-purple">
+            <div>
+              <div class="ai-badge-top" style="background: #2E1952; color: #DDD6FE;">
+                <span>📷</span> Multimodal Vision
+              </div>
+              <div class="ai-col-title">Snap a Photo of the Problem</div>
+              <div class="ai-col-desc">
+                Don't know what's broken? Customers take a quick photo of a leaking valve, broken motor, or spark. Vision AI analyzes the defect, estimates the parts needed, and tags the right specialist.
+              </div>
+            </div>
+
+            <div class="ai-visual-widget">
+              <div class="vision-box-target">
+                <span class="vision-tag">AI Vision Detection</span>
+                <span style="font-size: 12px; font-weight: 700; color: #FFFFFF;">Defect: Corroded 1/2" Brass Valve</span>
+                <span style="font-size: 11px; color: #C4B5FD;">Confidence: 97.8% • Match: Certified Plumber</span>
+              </div>
+              <div style="font-size: 11.5px; color: #94A3B8; margin-top: 4px;">
+                Auto-advises worker on required replacement tools before dispatch.
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 3: Autonomous Agent -->
+          <div class="ai-column-card c-green">
+            <div>
+              <div class="ai-badge-top" style="background: #0E3524; color: #6EE7B7;">
+                <span>🧠</span> LangGraph Agent
+              </div>
+              <div class="ai-col-title">Effortless Pre-Filled Bookings</div>
+              <div class="ai-col-desc">
+                The AI remembers user context, maps the address, schedules preferred time slots, and creates a ready-to-book card. The customer just reviews and taps once.
+              </div>
+            </div>
+
+            <div class="ai-visual-widget">
+              <div class="booking-pill-preview">
+                <span style="font-size: 11px; font-weight: 800; color: #34D399; text-transform: uppercase;">Ready to Confirm</span>
+                <span style="font-size: 12.5px; font-weight: 700; color: #FFFFFF;">Geyser Heating Repair</span>
+                <span style="font-size: 11px; color: #94A3B8;">Today, 3:30 PM • ₹299 Fair Wage Base</span>
+                <div class="btn-confirm-mock">1-Tap Confirm Booking ➔</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Guardrail Strip -->
+        <div class="s5-guardrail-strip">
+          <div class="guardrail-info">
+            <div class="guardrail-icon">🛡️</div>
+            <div>
+              <h4>Zero-Hallucination Principle: AI Proposes, Humans Confirm</h4>
+              <p>AI acts strictly as an assistant. No accidental bookings, phantom charges, or unverified actions can reach the database.</p>
+            </div>
+          </div>
+
+          <div class="guardrail-chain">
+            <div class="gc-step">1. AI Understands</div>
+            <div class="gc-arrow">➔</div>
+            <div class="gc-step">2. Customer Confirms</div>
+            <div class="gc-arrow">➔</div>
+            <div class="gc-step">3. Backend Validates</div>
+            <div class="gc-arrow">➔</div>
+            <div class="gc-step" style="border-color: #10B981; color: #34D399; background: #082117;">4. Locked in DB</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <div class="footer-left">
+        <div class="fixly-logo-text">
+          <div class="logo-square">F</div>
+          <span>Fixly</span>
+        </div>
+        <span>Safe & Responsible AI</span>
+      </div>
+      <div class="footer-takeaway">
+        Takeaway: <span class="highlight">AI provides human-level convenience with bank-grade financial guardrails.</span>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

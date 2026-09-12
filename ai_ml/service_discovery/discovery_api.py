@@ -28,8 +28,9 @@ class DiscoveryRequest(BaseModel):
 
 
 @app.get("/")
+@app.get("/health")
 def health_check():
-    return {"status": "Service Discovery API running"}
+    return {"status": "ok", "service": "service-discovery"}
 
 
 @app.post("/discover")

@@ -84,9 +84,9 @@ export const serviceDiscovery = async (req, res) => {
         
         let aiResult = null;
         try {
-            // Attempt to call the canonical Python AI service
-            const aiDiscoveryUrl = process.env.AI_DISCOVERY_URL || 'http://127.0.0.1:8002/discover';
-            const response = await fetch(aiDiscoveryUrl, {
+            const rawUrl = process.env.SERVICE_DISCOVERY_URL || process.env.AI_DISCOVERY_URL || 'http://127.0.0.1:8002';
+            const discoveryUrl = rawUrl.replace(/\/discover\/?$/, '').replace(/\/$/, '');
+            const response = await fetch(`${discoveryUrl}/discover`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text })
