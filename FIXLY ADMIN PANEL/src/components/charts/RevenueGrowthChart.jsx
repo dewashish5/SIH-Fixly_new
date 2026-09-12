@@ -13,13 +13,13 @@ import { useApp } from '../../context/AppContext';
 export default function RevenueGrowthChart({ customData }) {
   const { dashboardStats } = useApp();
 
-  const totalRev = dashboardStats?.totalRevenue || 10598;
+  const totalRev = Number(dashboardStats?.totalRevenue || 0);
 
   const defaultData = [
-    { period: 'Jan', revenue: Math.round(totalRev * 0.2), payout: Math.round(totalRev * 0.19), welfare: Math.round(totalRev * 0.01) },
-    { period: 'Feb', revenue: Math.round(totalRev * 0.4), payout: Math.round(totalRev * 0.38), welfare: Math.round(totalRev * 0.02) },
-    { period: 'Mar', revenue: Math.round(totalRev * 0.6), payout: Math.round(totalRev * 0.57), welfare: Math.round(totalRev * 0.03) },
-    { period: 'Apr', revenue: Math.round(totalRev * 0.8), payout: Math.round(totalRev * 0.76), welfare: Math.round(totalRev * 0.04) },
+    { period: 'Jan', revenue: Math.round(totalRev * 0.1), payout: Math.round(totalRev * 0.095), welfare: Math.round(totalRev * 0.005) },
+    { period: 'Feb', revenue: Math.round(totalRev * 0.25), payout: Math.round(totalRev * 0.237), welfare: Math.round(totalRev * 0.013) },
+    { period: 'Mar', revenue: Math.round(totalRev * 0.5), payout: Math.round(totalRev * 0.475), welfare: Math.round(totalRev * 0.025) },
+    { period: 'Apr', revenue: Math.round(totalRev * 0.75), payout: Math.round(totalRev * 0.712), welfare: Math.round(totalRev * 0.038) },
     { period: 'May', revenue: totalRev, payout: Math.round(totalRev * 0.95), welfare: Math.round(totalRev * 0.05) },
   ];
 

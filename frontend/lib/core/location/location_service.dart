@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'app_location.dart';
 import 'location_permission_dialogs.dart';
+import '../notifications/notification_service.dart';
 
 /// Asks location permission (themed) + refreshes GPS once per app open.
 class LocationService {
@@ -57,6 +58,7 @@ class LocationService {
     if (!await _ensurePermission(context)) {
       return _finishWithOptionalDebugFallback('signup permission denied');
     }
+    await NotificationService.instance.requestPermissionsAndSync();
     return refreshCurrentPosition();
   }
 
@@ -81,18 +83,7 @@ class LocationService {
         ),
       );
 
-      String? address;
-      try {
-        final places = await _geocoder.placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-        if (places.isNotEmpty) {
-          address = _formatPlacemark(places.first);
-        }
-      } catch (e) {
-        debugPrint('LocationService: reverse geocode failed: $e');
-      }
+      final address = await reverseGeocode(position.latitude, position.longitude);
 
       AppLocation.instance.update(
         latitude: position.latitude,
@@ -104,6 +95,55 @@ class LocationService {
       debugPrint('LocationService: position failed: $e');
       return _finishWithOptionalDebugFallback('position error: $e');
     }
+  }
+
+  /// Reverse geocode arbitrary lat/lng coordinates to a readable address.
+  Future<String?> reverseGeocode(double lat, double lng) async {
+    try {
+      final places = await _geocoder.placemarkFromCoordinates(lat, lng);
+      if (places.isNotEmpty) {
+        return _formatPlacemark(places.first);
+      }
+    } catch (e) {
+      debugPrint('LocationService: reverse geocode failed: $e');
+    }
+    return null;
+  }
+
+  /// Search places by address or landmark query.
+  Future<List<PlaceSearchResult>> searchPlaces(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.length < 2) return const [];
+    try {
+      final locations = await _geocoder.locationFromAddress(trimmed);
+      final results = <PlaceSearchResult>[];
+      for (final loc in locations.take(5)) {
+        final addr = await reverseGeocode(loc.latitude, loc.longitude);
+        results.add(
+          PlaceSearchResult(
+            name: trimmed,
+            address: addr ?? '$trimmed (${loc.latitude.toStringAsFixed(3)}, ${loc.longitude.toStringAsFixed(3)})',
+            lat: loc.latitude,
+            lng: loc.longitude,
+          ),
+        );
+      }
+      return results;
+    } catch (e) {
+      debugPrint('LocationService: searchPlaces error: $e');
+      return const [];
+    }
+  }
+
+  /// Update AppLocation with new coordinates and automatically reverse geocode.
+  Future<String?> updatePosition(double latitude, double longitude) async {
+    final address = await reverseGeocode(latitude, longitude);
+    AppLocation.instance.update(
+      latitude: latitude,
+      longitude: longitude,
+      address: address,
+    );
+    return address;
   }
 
   /// Debug-only: seed Delhi so API/maps work without simulator GPS.
@@ -135,27 +175,38 @@ class LocationService {
 
     var status = await Permission.locationWhenInUse.status;
 
-    if (status.isGranted) return true;
+    if (status.isGranted) {
+      AppLocation.instance.permissionGranted = true;
+      return true;
+    }
 
+    // Splash already ran permission_handler. Only re-prompt / settings here
+    // when still missing (denied forever or never granted).
     if (status.isPermanentlyDenied) {
       if (!context.mounted) return false;
       await LocationPermissionDialogs.showOpenSettings(context);
       status = await Permission.locationWhenInUse.status;
-      return status.isGranted;
+      final granted = status.isGranted;
+      AppLocation.instance.permissionGranted = granted;
+      return granted;
     }
 
     if (!context.mounted) return false;
-    final proceed = await LocationPermissionDialogs.showRationale(context);
-    if (!proceed) return false;
-
-    status = await Permission.locationWhenInUse.request();
+    try {
+      status = await Permission.locationWhenInUse.request();
+    } catch (e) {
+      debugPrint('Location permission request error: $e');
+      status = await Permission.locationWhenInUse.status;
+    }
 
     if (status.isPermanentlyDenied && context.mounted) {
       await LocationPermissionDialogs.showOpenSettings(context);
       status = await Permission.locationWhenInUse.status;
     }
 
-    return status.isGranted;
+    final granted = status.isGranted;
+    AppLocation.instance.permissionGranted = granted;
+    return granted;
   }
 
   static String _formatPlacemark(Placemark p) {
@@ -176,4 +227,18 @@ class LocationService {
     }
     return parts.join(', ');
   }
+}
+
+class PlaceSearchResult {
+  const PlaceSearchResult({
+    required this.name,
+    required this.address,
+    required this.lat,
+    required this.lng,
+  });
+
+  final String name;
+  final String address;
+  final double lat;
+  final double lng;
 }

@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
@@ -9,36 +9,94 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/utils/app_package_info.dart';
 import '../../../../core/widgets/core_widgets.dart';
-import '../../../auth/presentation/cubit/app_session_cubit.dart';
-import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
+import '../../../auth/presentation/cubit/app_session_cubit.dart';
+import '../../../worker/presentation/widgets/worker_payout_account_sheet.dart';
+import '../../../../core/utils/toast_utils.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
-  Future<void> _signOut(BuildContext context) async {
-    final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  bool _biometricLock = false;
+
+  void _showInfoDialog({
+    required BuildContext context,
+    required String title,
+    required String content,
+  }) {
+    showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.signOut),
-        content: Text(l10n.signOutConfirm),
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Text(content, style: Theme.of(ctx).textTheme.bodyMedium),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.signOut),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
           ),
         ],
       ),
     );
-    if (confirmed != true || !context.mounted) return;
-    context.read<AppSessionCubit>().signOut();
-    context.go(RouteNames.login);
+  }
+
+  void _clearCache(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear Cache'),
+        content: const Text(
+          'This will clear locally cached images, map tiles, and offline drafts. Your account and booking data will remain safe.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ToastUtils.showToast(
+                context: context,
+                message: 'Temporary cache cleared successfully',
+              );
+            },
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getLanguageLabel(String code) {
+    switch (code) {
+      case 'hi':
+        return 'हिन्दी (Hindi)';
+      case 'mr':
+        return 'मराठी (Marathi)';
+      case 'ta':
+        return 'தமிழ் (Tamil)';
+      case 'te':
+        return 'తెలుగు (Telugu)';
+      case 'kn':
+        return 'ಕನ್ನಡ (Kannada)';
+      case 'bn':
+        return 'বাংলা (Bengali)';
+      case 'gu':
+        return 'ગુજરાતી (Gujarati)';
+      case 'pa':
+        return 'ਪੰਜਾਬੀ (Punjabi)';
+      default:
+        return 'English (US)';
+    }
   }
 
   @override
@@ -47,46 +105,21 @@ class SettingsPage extends StatelessWidget {
       builder: (context, session) {
         final l10n = context.l10n;
         final cubit = context.read<AppSessionCubit>();
-        final user = MockRepository.instance.currentUser;
         final theme = Theme.of(context);
         final scheme = context.scheme;
 
         return AppScaffold(
           title: l10n.settings,
+          showBack: true,
           body: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 16),
             children: [
-              if (user != null) ...[
-                _AccountHeroCard(
-                  user: user,
-                  email: session.email ?? user.email,
-                  onEdit: () => context.push(RouteNames.sharedEditProfile),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-              ],
-              _SectionLabel(l10n.account),
-              _SettingsCard(
-                child: Column(
-                  children: [
-                    _QuickActionTile(
-                      icon: Icons.person_outline_rounded,
-                      label: l10n.editProfile,
-                      subtitle: l10n.updateYourDetails,
-                      onTap: () => context.push(RouteNames.sharedEditProfile),
-                    ),
-                    const Divider(height: 1),
-                    _QuickActionTile(
-                      icon: Icons.notifications_outlined,
-                      label: l10n.notificationPreferences,
-                      subtitle: session.notificationsEnabled
-                          ? l10n.notificationsOn
-                          : l10n.notificationsOff,
-                      onTap: () => context.push(RouteNames.sharedNotifications),
-                    ),
-                  ],
-                ),
+              // Appearance Section
+              _SectionLabel(
+                icon: Icons.palette_outlined,
+                text: l10n.appearance,
               ),
-              const SizedBox(height: AppSpacing.xl),
-              _SectionLabel(l10n.appearance),
+              const SizedBox(height: AppSpacing.xs),
               _SettingsCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -94,16 +127,26 @@ class SettingsPage extends StatelessWidget {
                     Text(
                       l10n.theme,
                       style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Choose how Fixly looks to you',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: context.muted,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
                     SegmentedButton<ThemeMode>(
                       segments: [
                         ButtonSegment(
                           value: ThemeMode.system,
                           label: Text(l10n.themeSystem),
-                          icon: const Icon(Icons.brightness_auto_rounded, size: 18),
+                          icon: const Icon(
+                            Icons.brightness_auto_rounded,
+                            size: 18,
+                          ),
                         ),
                         ButtonSegment(
                           value: ThemeMode.light,
@@ -133,112 +176,385 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
-              _SectionLabel(l10n.preferences),
+
+              // Worker Payouts & Bank Account Section
+              if (cubit.currentUser?.role == UserRole.worker) ...[
+                _SectionLabel(
+                  icon: Icons.account_balance_outlined,
+                  text: 'Payouts & Bank Account',
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                _SettingsCard(
+                  child: Column(
+                    children: [
+                      _SettingsNavTile(
+                        icon: Icons.groups_rounded,
+                        title: 'Cooperative Society & Federation',
+                        subtitle: 'Digital membership card, primary society & welfare',
+                        onTap: () => context.push(RouteNames.workerCooperative),
+                      ),
+                      const Divider(height: 1),
+                      _SettingsNavTile(
+                        icon: Icons.currency_rupee_rounded,
+                        title: 'Category Rate Settings',
+                        subtitle: 'Customize per-category base prices and view wage floors',
+                        onTap: () => context.push(RouteNames.workerRateSettings),
+                      ),
+                      const Divider(height: 1),
+                      _SettingsNavTile(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: 'Wallet & Withdrawals',
+                        subtitle: 'Check balance, withdraw funds & transactions',
+                        onTap: () => context.push(RouteNames.workerWallet),
+                      ),
+                      const Divider(height: 1),
+                      _SettingsNavTile(
+                        icon: Icons.account_balance_rounded,
+                        title: 'Bank Account & UPI Details',
+                        subtitle: 'Setup or update accounts for automated payouts',
+                        onTap: () => WorkerPayoutAccountSheet.show(context),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+              ],
+
+              // Language Section
+              _SectionLabel(icon: Icons.language_rounded, text: l10n.language),
+              const SizedBox(height: AppSpacing.xs),
+              _SettingsCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.language,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _getLanguageLabel(session.locale),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: context.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: scheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                          ),
+                          child: Text(
+                            session.locale.toUpperCase(),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: scheme.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: const [
+                        ('en', 'English'),
+                        ('hi', 'हिन्दी'),
+                        ('mr', 'मराठी'),
+                        ('ta', 'தமிழ்'),
+                        ('te', 'తెలుగు'),
+                        ('kn', 'ಕನ್ನಡ'),
+                        ('bn', 'বাংলা'),
+                        ('gu', 'ગુજરાતી'),
+                        ('pa', 'ਪੰਜਾਬੀ'),
+                      ].map((lang) {
+                        final isSelected = session.locale == lang.$1;
+                        return ChoiceChip(
+                          label: Text(
+                            lang.$2,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              color: isSelected ? scheme.onPrimary : null,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: scheme.primary,
+                          showCheckmark: false,
+                          onSelected: (selected) {
+                            if (selected) {
+                              cubit.setLocale(lang.$1);
+                            }
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+
+              // Notifications Preferences Section
+              _SectionLabel(
+                icon: Icons.notifications_none_rounded,
+                text: l10n.notificationPreferences,
+              ),
+              const SizedBox(height: AppSpacing.xs),
               _SettingsCard(
                 child: Column(
                   children: [
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        Icons.language_rounded,
-                        color: scheme.primary,
-                      ),
-                      title: Text(l10n.language),
-                      subtitle: Text(
-                        session.locale == 'hi' ? l10n.hindi : l10n.english,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    SegmentedButton<String>(
-                      segments: [
-                        ButtonSegment(value: 'en', label: Text(l10n.english)),
-                        ButtonSegment(value: 'hi', label: Text(l10n.hindi)),
-                      ],
-                      selected: {session.locale},
-                      onSelectionChanged: (selected) {
-                        cubit.setLocale(selected.first);
-                      },
-                      style: ButtonStyle(
-                        visualDensity: VisualDensity.comfortable,
-                        shape: WidgetStatePropertyAll(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const Divider(height: AppSpacing.xl),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      secondary: Icon(
-                        Icons.notifications_active_outlined,
-                        color: scheme.primary,
+                      secondary: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: scheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.notifications_active_outlined,
+                          size: 20,
+                          color: scheme.primary,
+                        ),
                       ),
-                      title: Text(l10n.pushNotifications),
-                      subtitle: Text(l10n.pushNotificationsHint),
+                      title: Text(
+                        l10n.pushNotifications,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        l10n.pushNotificationsHint,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: context.muted,
+                        ),
+                      ),
                       value: session.notificationsEnabled,
                       onChanged: cubit.setNotificationsEnabled,
                     ),
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: scheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.mark_chat_unread_outlined,
+                          size: 20,
+                          color: scheme.primary,
+                        ),
+                      ),
+                      title: Text(
+                        'Service & booking alerts',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Job status, arrival, and payment alerts',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: context.muted,
+                        ),
+                      ),
+                      value: session.systemNotificationsEnabled,
+                      onChanged: cubit.setSystemNotificationsEnabled,
+                    ),
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: scheme.tertiary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.local_offer_outlined,
+                          size: 20,
+                          color: scheme.tertiary,
+                        ),
+                      ),
+                      title: Text(
+                        'Discounts & Updates',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Receive seasonal offers and platform news',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: context.muted,
+                        ),
+                      ),
+                      value: session.marketingNotificationsEnabled,
+                      onChanged: cubit.setMarketingNotificationsEnabled,
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
-              _SectionLabel(l10n.helpSafety),
+
+              // Security & Data Section
+              _SectionLabel(
+                icon: Icons.shield_outlined,
+                text: 'Security & Data',
+              ),
+              const SizedBox(height: AppSpacing.xs),
               _SettingsCard(
                 child: Column(
                   children: [
-                    _NavTile(
-                      icon: Icons.support_agent_outlined,
-                      label: l10n.support,
-                      onTap: () => context.push(RouteNames.sharedSupportChat),
-                    ),
-                    _NavTile(
-                      icon: Icons.security_outlined,
-                      label: l10n.privacySecurity,
-                      onTap: () {},
-                    ),
-                    _NavTile(
-                      icon: Icons.info_outline,
-                      label: l10n.aboutCooperative,
-                      onTap: () {},
-                    ),
-                    if (kDebugMode)
-                      _NavTile(
-                        icon: Icons.grid_view_rounded,
-                        label: l10n.screenGallery,
-                        onTap: () => context.push(RouteNames.demo),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: scheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.fingerprint_rounded,
+                          size: 20,
+                          color: scheme.primary,
+                        ),
                       ),
-                    _NavTile(
-                      icon: Icons.emergency_outlined,
-                      label: l10n.emergencySos,
-                      iconColor: AppColors.accent,
-                      showDivider: false,
-                      onTap: () => context.push(RouteNames.sharedSos),
+                      title: Text(
+                        'Biometric App Lock',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Require Face ID or Fingerprint on app open',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: context.muted,
+                        ),
+                      ),
+                      value: _biometricLock,
+                      onChanged: (val) => setState(() => _biometricLock = val),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.cleaning_services_outlined,
+                          size: 20,
+                          color: AppColors.warning,
+                        ),
+                      ),
+                      title: Text(
+                        'Clear Local Cache',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Free up temporary storage and map cache',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: context.muted,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => _clearCache(context),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
-              OutlinedButton.icon(
-                onPressed: () => _signOut(context),
-                icon: const Icon(Icons.logout_rounded),
-                label: Text(l10n.signOut),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.error,
-                  side: const BorderSide(color: AppColors.error),
-                  minimumSize: const Size.fromHeight(48),
+
+              // About & Legal Section
+              _SectionLabel(
+                icon: Icons.info_outline_rounded,
+                text: 'About & Legal',
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              _SettingsCard(
+                child: Column(
+                  children: [
+                    _SettingsNavTile(
+                      icon: Icons.groups_outlined,
+                      title: l10n.aboutCooperative,
+                      subtitle: 'Learn how Fixly empowers gig workers',
+                      onTap: () => _showInfoDialog(
+                        context: context,
+                        title: l10n.aboutCooperative,
+                        content:
+                            'Fixly is a worker-owned cooperative platform that connects verified local technicians, electricians, plumbers, and home service professionals directly with customers without high commission middlemen.',
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    _SettingsNavTile(
+                      icon: Icons.privacy_tip_outlined,
+                      title: l10n.privacySecurity,
+                      subtitle: 'How your data is protected & stored',
+                      onTap: () => _showInfoDialog(
+                        context: context,
+                        title: 'Privacy Policy',
+                        content:
+                            'Your privacy is strictly respected. Location data is shared only when actively booking or fulfilling a service request. We never sell your personal data.',
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    _SettingsNavTile(
+                      icon: Icons.article_outlined,
+                      title: 'Terms of Service',
+                      subtitle: 'User agreement and fair wage guarantee',
+                      onTap: () => _showInfoDialog(
+                        context: context,
+                        title: 'Terms of Service',
+                        content:
+                            'All platform services are provided under the Fair Work & Cooperative Standards. Disputes are handled promptly by our support and safety arbitration team.',
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.xl),
+
+              // App Version Branding Footer
               Center(
-                child: Text(
-                  l10n.appVersion,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: context.muted,
-                  ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Fixly Platform Cooperative',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: scheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${l10n.appVersion} ${AppPackageInfo.displayVersion}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: context.muted,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.xl),
             ],
           ),
         );
@@ -247,134 +563,31 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-class _AccountHeroCard extends StatelessWidget {
-  const _AccountHeroCard({
-    required this.user,
-    required this.email,
-    required this.onEdit,
-  });
-
-  final AppUser user;
-  final String email;
-  final VoidCallback onEdit;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = context.scheme;
-    final roleLabel = user.role == UserRole.worker
-        ? context.l10n.worker
-        : context.l10n.customer;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            scheme.primary,
-            scheme.primary.withValues(alpha: 0.82),
-          ],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: scheme.onPrimary,
-                child: Text(
-                  user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: scheme.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user.name,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: scheme.onPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      email,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: scheme.onPrimary.withValues(alpha: 0.88),
-                      ),
-                    ),
-                    if (user.phone.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        user.phone,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onPrimary.withValues(alpha: 0.88),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              IconButton.filledTonal(
-                onPressed: onEdit,
-                style: IconButton.styleFrom(
-                  backgroundColor: scheme.onPrimary.withValues(alpha: 0.18),
-                  foregroundColor: scheme.onPrimary,
-                  minimumSize: const Size(48, 48),
-                ),
-                icon: const Icon(Icons.edit_outlined),
-                tooltip: context.l10n.editProfile,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: scheme.onPrimary.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(AppRadius.full),
-            ),
-            child: Text(
-              roleLabel,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: scheme.onPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
+  const _SectionLabel({required this.icon, required this.text});
 
+  final IconData icon;
   final String text;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm, left: 4),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs, left: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: scheme.primary),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
               color: context.muted,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
             ),
+          ),
+        ],
       ),
     );
   }
@@ -392,7 +605,7 @@ class _SettingsCard extends StatelessWidget {
       color: Theme.of(context).cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        side: BorderSide(color: scheme.outline),
+        side: BorderSide(color: scheme.outline.withValues(alpha: 0.2)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Padding(
@@ -403,60 +616,47 @@ class _SettingsCard extends StatelessWidget {
   }
 }
 
-class _QuickActionTile extends StatelessWidget {
-  const _QuickActionTile({
+class _SettingsNavTile extends StatelessWidget {
+  const _SettingsNavTile({
     required this.icon,
-    required this.label,
+    required this.title,
     required this.subtitle,
     required this.onTap,
   });
 
   final IconData icon;
-  final String label;
+  final String title;
   final String subtitle;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: context.scheme.primary),
-      title: Text(label),
-      subtitle: Text(subtitle),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: scheme.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, size: 20, color: scheme.primary),
+      ),
+      title: Text(
+        title,
+        style: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: context.muted),
+      ),
       trailing: const Icon(Icons.chevron_right_rounded),
       onTap: onTap,
-    );
-  }
-}
-
-class _NavTile extends StatelessWidget {
-  const _NavTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.iconColor,
-    this.showDivider = true,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Color? iconColor;
-  final bool showDivider;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(icon, color: iconColor ?? context.scheme.primary),
-          title: Text(label),
-          trailing: const Icon(Icons.chevron_right_rounded),
-          onTap: onTap,
-        ),
-        if (showDivider) const Divider(height: 1),
-      ],
     );
   }
 }

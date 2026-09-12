@@ -79,7 +79,7 @@ export default function LoginPage() {
             <ShieldCheck size={30} />
           </div>
           <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px 0' }}>
-            GigConnect Admin
+            Fixly Admin Panel
           </h2>
           <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
             Sign in to access operational dashboard & control panel
@@ -125,9 +125,6 @@ export default function LoginPage() {
                 type="email"
                 required
                 autoComplete="off"
-                onCopy={(e) => e.preventDefault()}
-                onPaste={(e) => e.preventDefault()}
-                onCut={(e) => e.preventDefault()}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter admin email..."
@@ -164,9 +161,6 @@ export default function LoginPage() {
                 type="password"
                 required
                 autoComplete="new-password"
-                onCopy={(e) => e.preventDefault()}
-                onPaste={(e) => e.preventDefault()}
-                onCut={(e) => e.preventDefault()}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter admin password..."
@@ -210,7 +204,7 @@ export default function LoginPage() {
         </form>
 
         <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>
-          Configured single admin user session • GigConnect Backend
+          Configured single admin user session • Fixly Backend
         </div>
       </div>
     </div>

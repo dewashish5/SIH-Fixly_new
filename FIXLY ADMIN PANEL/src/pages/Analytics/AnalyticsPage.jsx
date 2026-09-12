@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   TrendingUp,
   Clock,
@@ -8,15 +8,53 @@ import {
   Target,
   ArrowUpRight,
   ShieldCheck,
-  RotateCcw
+  RotateCcw,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import BookingsOverviewChart from '../../components/charts/BookingsOverviewChart';
 import RevenueGrowthChart from '../../components/charts/RevenueGrowthChart';
 import TopServicesCard from '../../components/TopServicesCard';
-import { analyticsData } from '../../data/analytics';
+import { useApp } from '../../context/AppContext';
 
 export default function AnalyticsPage() {
-  const [selectedRange, setSelectedRange] = useState('This Week');
+  const { workers = [], bookings = [], customers = [], dashboardStats, reviews = [] } = useApp();
+
+  // Compute live analytics from real DB data
+  const totalWorkers = workers.length;
+  const verifiedWorkers = workers.filter((w) => w.isVerified || w.verification === 'Verified').length;
+  const workerVerificationRate = totalWorkers > 0 ? `${Math.round((verifiedWorkers / totalWorkers) * 100)}%` : '100%';
+
+  const totalBookings = bookings.length;
+  const completedBookings = bookings.filter((b) => (b.status || '').toUpperCase() === 'COMPLETED').length;
+  const cancelledBookings = bookings.filter((b) => (b.status || '').toUpperCase() === 'CANCELLED').length;
+  
+  const completionRate = totalBookings > 0 ? `${Math.round((completedBookings / totalBookings) * 100)}%` : '0%';
+  const cancellationRate = totalBookings > 0 ? `${((cancelledBookings / totalBookings) * 100).toFixed(1)}%` : '0.0%';
+
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((acc, r) => acc + (r.rating || 5), 0) / reviews.length).toFixed(1)
+    : '5.0';
+
+  // Group workers by actual city
+  const cityClusterMap = {};
+  workers.forEach((w) => {
+    const city = w.city || 'Delhi NCR';
+    if (!cityClusterMap[city]) {
+      cityClusterMap[city] = { city, workers: 0, bookings: 0 };
+    }
+    cityClusterMap[city].workers += 1;
+  });
+
+  // Assign bookings to cities if present
+  bookings.forEach((b) => {
+    const city = b.city || 'Delhi NCR';
+    if (cityClusterMap[city]) {
+      cityClusterMap[city].bookings += 1;
+    }
+  });
+
+  const cityList = Object.values(cityClusterMap);
 
   return (
     <div style={{ padding: '0 32px 32px 32px', animation: 'fadeIn 0.2s ease', display: 'flex', flexDirection: 'column', gap: '22px' }}>
@@ -32,10 +70,10 @@ export default function AnalyticsPage() {
       >
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#111827' }}>
-            Advanced Platform Analytics & KPIs
+            Live Platform Analytics & KPIs
           </h2>
           <p style={{ fontSize: '13px', color: '#64748b' }}>
-            Real-time fulfillment metrics, worker retention, customer NPS satisfaction, and geographic demand
+            Real-time fulfillment metrics, worker verification, task completion, and regional distribution
           </p>
         </div>
       </div>
@@ -43,42 +81,42 @@ export default function AnalyticsPage() {
       {/* 4 Performance Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
         <div style={{ backgroundColor: '#ffffff', padding: '18px 20px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>Avg. Response & Arrival Time</div>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>Fulfillment Completion Rate</div>
           <div style={{ fontSize: '22px', fontWeight: '800', color: '#111827', marginTop: '3px' }}>
-            {analyticsData.kpis.avgResponseTime}
+            {completionRate}
           </div>
           <div style={{ fontSize: '12px', color: '#15803d', fontWeight: '600', marginTop: '2px' }}>
-            ⚡ {analyticsData.kpis.responseTimeTrend}
+            {completedBookings} of {totalBookings} tasks done
           </div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', padding: '18px 20px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>Worker 30-Day Retention</div>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>Worker Verification Ratio</div>
           <div style={{ fontSize: '22px', fontWeight: '800', color: '#15803d', marginTop: '3px' }}>
-            {analyticsData.kpis.workerRetention}
+            {workerVerificationRate}
           </div>
           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-            Fair revenue share guarantee
+            {verifiedWorkers} active verified members
           </div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', padding: '18px 20px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
           <div style={{ fontSize: '12px', color: '#64748b' }}>Order Cancellation Rate</div>
           <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', marginTop: '3px' }}>
-            {analyticsData.kpis.cancellationRate}
+            {cancellationRate}
           </div>
           <div style={{ fontSize: '12px', color: '#15803d', fontWeight: '600', marginTop: '2px' }}>
-            Industry lowest (~7% benchmark)
+            {cancelledBookings} cancelled orders
           </div>
         </div>
 
         <div style={{ backgroundColor: '#ffffff', padding: '18px 20px', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>Customer NPS Score</div>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>Customer Satisfaction Score</div>
           <div style={{ fontSize: '22px', fontWeight: '800', color: '#15803d', marginTop: '3px' }}>
-            {analyticsData.kpis.npsScore}
+            ★ {avgRating} / 5
           </div>
           <div style={{ fontSize: '12px', color: '#ca8a04', fontWeight: '600', marginTop: '2px' }}>
-            ★ 4.6/5 average rating
+            Based on {reviews.length} customer reviews
           </div>
         </div>
       </div>
@@ -106,32 +144,38 @@ export default function AnalyticsPage() {
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {analyticsData.cityDemand.map((city) => (
-              <div
-                key={city.city}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '10px 14px',
-                  backgroundColor: '#f8faf9',
-                  borderRadius: '10px',
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: '700', fontSize: '13.5px', color: '#1e293b' }}>
-                    {city.city}
-                  </div>
-                  <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                    {city.workers.toLocaleString()} Field Workers • {city.bookings.toLocaleString()} Bookings
-                  </div>
-                </div>
-
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#15803d', backgroundColor: '#eaf8ef', padding: '3px 8px', borderRadius: '6px' }}>
-                  {city.growth}
-                </span>
+            {cityList.length === 0 ? (
+              <div style={{ padding: '24px 0', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                No regional worker data available yet.
               </div>
-            ))}
+            ) : (
+              cityList.map((city) => (
+                <div
+                  key={city.city}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    backgroundColor: '#f8faf9',
+                    borderRadius: '10px',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: '700', fontSize: '13.5px', color: '#1e293b' }}>
+                      {city.city}
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                      {city.workers.toLocaleString()} Field Workers • {city.bookings.toLocaleString()} Bookings
+                    </div>
+                  </div>
+
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#15803d', backgroundColor: '#eaf8ef', padding: '3px 8px', borderRadius: '6px' }}>
+                    Active
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

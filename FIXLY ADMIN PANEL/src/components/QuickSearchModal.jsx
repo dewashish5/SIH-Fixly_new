@@ -3,21 +3,25 @@ import {
   Search,
   X,
   User,
-  Wrench,
   CalendarCheck,
   ArrowRight,
-  ShieldAlert
 } from 'lucide-react';
-import { recentBookingsData, liveWorkers, topServicesData } from '../data/mockData';
+import { useApp } from '../context/AppContext';
 
 export default function QuickSearchModal({ isOpen, onClose, onSelectBooking, onSelectWorker, onNavigateTab }) {
+  const { recentBookings = [], workers = [], fetchWorkers, fetchBookings } = useApp();
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchWorkers({ page: 1, limit: 50, isVerified: 'true' });
+    fetchBookings({ page: 1, limit: 50 });
+  }, [isOpen, fetchWorkers, fetchBookings]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        // Toggle or handled in parent
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -26,16 +30,27 @@ export default function QuickSearchModal({ isOpen, onClose, onSelectBooking, onS
 
   if (!isOpen) return null;
 
-  const filteredBookings = recentBookingsData.filter((b) =>
-    b.id.toLowerCase().includes(query.toLowerCase()) ||
-    b.customer.toLowerCase().includes(query.toLowerCase()) ||
-    b.service.toLowerCase().includes(query.toLowerCase())
-  );
+  const q = query.toLowerCase().trim();
 
-  const filteredWorkers = liveWorkers.filter((w) =>
-    w.name.toLowerCase().includes(query.toLowerCase()) ||
-    w.service.toLowerCase().includes(query.toLowerCase())
-  );
+  const filteredBookings = (recentBookings || []).filter((b) => {
+    if (!q) return true;
+    const id = String(b.bookingId || b._id || '');
+    const customer = b.customer?.name || b.customer || '';
+    const service = b.service?.title || b.service || '';
+    return (
+      id.toLowerCase().includes(q) ||
+      String(customer).toLowerCase().includes(q) ||
+      String(service).toLowerCase().includes(q)
+    );
+  }).slice(0, 8);
+
+  const filteredWorkers = (workers || []).filter((w) => {
+    if (!q) return true;
+    return (
+      (w.name || '').toLowerCase().includes(q) ||
+      (w.category || w.service || '').toLowerCase().includes(q)
+    );
+  }).slice(0, 8);
 
   return (
     <div
@@ -51,7 +66,6 @@ export default function QuickSearchModal({ isOpen, onClose, onSelectBooking, onS
         paddingTop: '10vh',
         paddingLeft: '20px',
         paddingRight: '20px',
-        animation: 'fadeIn 0.15s ease',
       }}
       onClick={onClose}
     >
@@ -68,7 +82,6 @@ export default function QuickSearchModal({ isOpen, onClose, onSelectBooking, onS
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Search input header */}
         <div
           style={{
             display: 'flex',
@@ -78,151 +91,96 @@ export default function QuickSearchModal({ isOpen, onClose, onSelectBooking, onS
             borderBottom: '1px solid #f1f5f9',
           }}
         >
-          <Search size={18} color="#1e7e45" />
+          <Search size={18} color="#94a3b8" />
           <input
             autoFocus
-            type="text"
-            placeholder="Type booking ID, worker name, customer, or service..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            style={{
-              border: 'none',
-              outline: 'none',
-              width: '100%',
-              fontSize: '15px',
-              color: '#0f172a',
-              backgroundColor: 'transparent',
-            }}
+            placeholder="Search bookings or verified workers…"
+            style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15 }}
           />
-          <button
-            onClick={onClose}
-            style={{
-              padding: '4px',
-              borderRadius: '6px',
-              color: '#94a3b8',
-              backgroundColor: '#f1f5f9',
-            }}
-          >
-            <X size={16} />
+          <button type="button" onClick={onClose} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>
+            <X size={18} color="#64748b" />
           </button>
         </div>
 
-        {/* Results */}
-        <div style={{ maxHeight: '380px', overflowY: 'auto', padding: '12px 16px' }}>
-          {/* Quick Nav Links */}
-          <div style={{ marginBottom: '14px' }}>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>
-              Quick Navigation
-            </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {['Bookings', 'Workers', 'Services', 'Payments', 'Analytics'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => {
-                    onNavigateTab(tab.toLowerCase());
-                    onClose();
-                  }}
-                  style={{
-                    fontSize: '12px',
-                    padding: '5px 10px',
-                    backgroundColor: '#f1f5f9',
-                    borderRadius: '6px',
-                    color: '#334155',
-                    fontWeight: '500',
-                  }}
-                >
-                  Go to {tab} →
-                </button>
-              ))}
-            </div>
+        <div style={{ maxHeight: '50vh', overflowY: 'auto', padding: '8px 0' }}>
+          <div style={{ padding: '8px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>
+            Bookings
           </div>
-
-          {/* Bookings Match */}
-          {filteredBookings.length > 0 && (
-            <div style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>
-                Bookings
-              </div>
-              {filteredBookings.map((b) => (
-                <div
-                  key={b.id}
+          {filteredBookings.length === 0 ? (
+            <div style={{ padding: '8px 20px', fontSize: 13, color: '#94a3b8' }}>No bookings match</div>
+          ) : (
+            filteredBookings.map((b) => {
+              const id = b.bookingId || b._id;
+              const customer = b.customer?.name || b.customer || 'Customer';
+              const service = b.service?.title || b.service || 'Service';
+              return (
+                <button
+                  key={id}
+                  type="button"
                   onClick={() => {
-                    onSelectBooking(b);
+                    onSelectBooking?.(b);
                     onClose();
                   }}
                   style={{
+                    width: '100%',
+                    textAlign: 'left',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    borderRadius: '8px',
+                    gap: 10,
+                    padding: '10px 20px',
+                    border: 'none',
+                    background: 'transparent',
                     cursor: 'pointer',
-                    transition: 'background 0.15s ease',
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <CalendarCheck size={16} color="#1e7e45" />
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>
-                        {b.id} • {b.customer}
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                        {b.service} ({b.worker})
-                      </div>
-                    </div>
+                  <CalendarCheck size={16} color="#15803d" />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{id}</div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>{customer} · {service}</div>
                   </div>
-                  <span style={{ fontSize: '11px', color: '#15803d', fontWeight: '600', backgroundColor: '#eaf8ef', padding: '2px 6px', borderRadius: '4px' }}>
-                    {b.status}
-                  </span>
-                </div>
-              ))}
-            </div>
+                  <ArrowRight size={14} color="#cbd5e1" />
+                </button>
+              );
+            })
           )}
 
-          {/* Workers Match */}
-          {filteredWorkers.length > 0 && (
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>
-                Active Workers
-              </div>
-              {filteredWorkers.map((w) => (
-                <div
-                  key={w.id}
-                  onClick={() => {
-                    if (onSelectWorker) onSelectWorker(w);
-                    onClose();
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'background 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <User size={16} color="#0284c7" />
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>
-                        {w.name}
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                        {w.service} • ⭐ {w.rating}
-                      </div>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '11px', color: '#475569', fontWeight: '500' }}>
-                    {w.status}
-                  </span>
+          <div style={{ padding: '12px 20px 8px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>
+            Workers
+          </div>
+          {filteredWorkers.length === 0 ? (
+            <div style={{ padding: '8px 20px', fontSize: 13, color: '#94a3b8' }}>No verified workers match</div>
+          ) : (
+            filteredWorkers.map((w) => (
+              <button
+                key={w.id}
+                type="button"
+                onClick={() => {
+                  onSelectWorker?.(w);
+                  onNavigateTab?.('workers');
+                  onClose();
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                }}
+              >
+                <User size={16} color="#15803d" />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{w.name}</div>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>{w.category || w.service || '—'}</div>
                 </div>
-              ))}
-            </div>
+                <ArrowRight size={14} color="#cbd5e1" />
+              </button>
+            ))
           )}
         </div>
       </div>

@@ -21,8 +21,21 @@ class ApiException implements Exception {
     if (lower.contains('socketexception') ||
         lower.contains('connection refused') ||
         lower.contains('network is unreachable') ||
-        lower.contains('failed host lookup')) {
-      return 'No internet connection. Check your network and try again.';
+        lower.contains('failed host lookup') ||
+        lower.contains('connection error') ||
+        lower.contains('connection timed out') ||
+        lower.contains('connection errored') ||
+        lower.contains('no internet') ||
+        lower.contains('cannot reach api') ||
+        lower.contains('cannot reach server')) {
+      // Prefer already-enriched ApiClient message when present.
+      if (trimmed.toLowerCase().startsWith('cannot reach api')) {
+        return trimmed;
+      }
+      return 'Cannot reach server. Check internet and API URL, then retry.';
+    }
+    if (lower.contains('cloudflare tunnel')) {
+      return 'API tunnel is down. Restart cloudflared on the host machine.';
     }
     if (trimmed.length > 140) {
       return 'Something went wrong. Please try again.';

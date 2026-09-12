@@ -1,7 +1,7 @@
 name: fixly
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ^3.12.2
@@ -25,15 +25,34 @@ dependencies:
   intl: ^0.20.3
   mapbox_maps_flutter: ^2.29.1
   shared_preferences: ^2.5.5
+  shimmer: ^3.0.0
+  speech_to_text: ^7.4.0
+  flutter_tts: ^3.8.2
   transit_kit: ^1.0.0
   flutter_native_splash: ^2.4.8
   permission_handler: ^13.0.1
   geocoding: ^5.0.0
   razorpay_flutter: ^1.4.0
   firebase_core: ^4.14.0
+  firebase_messaging: ^16.1.2
+  flutter_local_notifications: ^19.5.0
   google_sign_in: ^7.2.0
   image_picker: ^1.2.3
   file_picker: ^12.2.0
+  socket_io_client: ^3.1.6
+  url_launcher: ^6.3.2
+  toastification: ^3.2.0
+  flutter_webrtc: ^1.6.1
+  flutter_callkit_incoming: ^3.1.5
+  http: ^1.6.0
+  video_player: ^2.14.0
+  pdf: ^3.11.0
+  printing: ^5.13.1
+  share_plus: ^13.3.0
+  fl_chart: ^1.2.0
+  web_socket_channel: ^3.0.3
+  animated_text_kit: ^4.3.0
+  package_info_plus: ^10.2.1
 
 dev_dependencies:
   flutter_test:
@@ -44,9 +63,11 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/app_icon.png
+  image_path: assets/app_icon_padded.png
   min_sdk_android: 21
   remove_alpha_ios: true
+  adaptive_icon_background: "#F8FAFB"
+  adaptive_icon_foreground: assets/app_icon_adaptive_foreground.png
 
 flutter_native_splash:
   color: "#F8FAFB"
@@ -57,10 +78,10 @@ flutter_native_splash:
   ios_content_mode: scaleAspectFit
   android_12:
     color: "#F8FAFB"
-    image: assets/app_icon.png
+    image: assets/android12_splash_icon.png
     icon_background_color: "#F8FAFB"
     color_dark: "#F8FAFB"
-    image_dark: assets/app_icon.png
+    image_dark: assets/android12_splash_icon.png
     icon_background_color_dark: "#F8FAFB"
   android: true
   ios: true
@@ -78,3 +99,7 @@ flutter:
     - assets/splash_wordmark.png
     - assets/icons/google.svg
     - assets/icons/facebook.svg
+    - assets/icons/start.png
+    - assets/icons/stop.png
+    - assets/icons/bike_marker.png
+    - assets/ai/siri_orb.gif

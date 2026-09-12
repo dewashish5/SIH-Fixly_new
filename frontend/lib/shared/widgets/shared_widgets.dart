@@ -40,6 +40,7 @@ class JobListTile extends StatelessWidget {
     required this.pay,
     required this.distanceKm,
     this.onTap,
+    this.bottomSlot,
     super.key,
   });
 
@@ -48,6 +49,7 @@ class JobListTile extends StatelessWidget {
   final double pay;
   final double distanceKm;
   final VoidCallback? onTap;
+  final Widget? bottomSlot;
 
   @override
   Widget build(BuildContext context) {
@@ -57,11 +59,14 @@ class JobListTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title, style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 4),
@@ -83,6 +88,12 @@ class JobListTile extends StatelessWidget {
               ),
             ],
           ),
+          if (bottomSlot != null) ...[
+            const SizedBox(height: 12),
+            bottomSlot!,
+          ],
+        ],
+      ),
         ),
       ),
     );

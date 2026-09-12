@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useApp } from '../../context/AppContext';
+import Avatar from '../common/Avatar';
 
 export default function Header({ onOpenMobileMenu }) {
   const navigate = useNavigate();
@@ -149,16 +150,6 @@ export default function Header({ onOpenMobileMenu }) {
           >
             {t('welcomeBack')} <span style={{ fontSize: '22px' }}>👋</span>
           </h1>
-          <p
-            style={{
-              fontSize: '13px',
-              color: 'var(--text-secondary)',
-              fontWeight: '500',
-              marginTop: '1px',
-            }}
-          >
-            {t('tagline')}
-          </p>
         </div>
       </div>
 
@@ -382,7 +373,7 @@ export default function Header({ onOpenMobileMenu }) {
             }}
           >
             <Globe size={14} color="#1e7e45" />
-            <span>{language === 'en' ? 'English' : language === 'hi' ? 'हिंदी' : 'मराठी'}</span>
+            <span>{language === 'en' ? 'English' : 'हिंदी'}</span>
             <ChevronDown size={13} color="#64748b" />
           </button>
 
@@ -404,7 +395,6 @@ export default function Header({ onOpenMobileMenu }) {
               {[
                 { code: 'en', label: 'English' },
                 { code: 'hi', label: 'हिंदी (Hindi)' },
-                { code: 'mr', label: 'मराठी (Marathi)' },
               ].map((l) => (
                 <button
                   key={l.code}
@@ -636,27 +626,23 @@ export default function Header({ onOpenMobileMenu }) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
-              padding: '4px 10px 4px 4px',
+              gap: '9px',
+              padding: '4px 12px 4px 4px',
               backgroundColor: '#ffffff',
               border: '1px solid var(--border-light)',
               borderRadius: 'var(--radius-pill)',
               boxShadow: 'var(--shadow-card)',
+              cursor: 'pointer',
             }}
           >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"
-              alt="Admin Profile"
-              style={{
-                width: '30px',
-                height: '30px',
-                borderRadius: '50%',
-                objectFit: 'cover',
-                border: '1.5px solid #22c55e',
-              }}
+            <Avatar
+              src={adminUser?.avatar}
+              name={adminUser?.name || 'Admin'}
+              size={30}
+              alt={adminUser?.name || 'Admin'}
             />
             <span style={{ fontSize: '13px', fontWeight: '600', color: '#1f2937' }}>
-              Admin
+              {adminUser?.name || 'Admin'}
             </span>
             <ChevronDown size={13} color="#64748b" />
           </button>
@@ -671,22 +657,55 @@ export default function Header({ onOpenMobileMenu }) {
                 borderRadius: '12px',
                 border: '1px solid var(--border-light)',
                 boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                width: '210px',
+                width: '230px',
                 padding: '6px',
                 zIndex: 50,
                 animation: 'fadeIn 0.15s ease',
               }}
             >
-              <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', marginBottom: '4px' }}>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>
-                  Super Administrator
+              <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Avatar
+                  src={adminUser?.avatar}
+                  name={adminUser?.name || 'Admin'}
+                  size={36}
+                />
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {adminUser?.name || 'Administrator'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {adminUser?.email || ''}
+                  </div>
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>admin@cooperative.org</div>
               </div>
 
               <button
                 onClick={() => {
-                  navigate('/settings');
+                  navigate('/settings?tab=profile');
+                  setIsProfileOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12.5px',
+                  color: '#15803d',
+                  fontWeight: '600',
+                  textAlign: 'left',
+                  backgroundColor: '#f0fdf4',
+                  marginBottom: '2px',
+                }}
+              >
+                <User size={14} color="#15803d" />
+                <span>Admin Profile</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  navigate('/settings?tab=platform');
                   setIsProfileOpen(false);
                 }}
                 style={{

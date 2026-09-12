@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/admin';
 
 const adminApi = axios.create({
   baseURL: API_BASE_URL,
@@ -9,12 +9,15 @@ const adminApi = axios.create({
   }
 });
 
-// Request Interceptor: Attach JWT Token
+// Request Interceptor: Attach JWT Token & Auto-handle FormData
 adminApi.interceptors.request.use(
   (config) => {
     const token = sessionStorage.getItem('adminToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
     }
     return config;
   },
@@ -47,6 +50,10 @@ export const api = {
   },
   getProfile: async () => {
     const res = await adminApi.get('/me');
+    return res.data;
+  },
+  updateProfile: async (data) => {
+    const res = await adminApi.put('/me', data);
     return res.data;
   },
 
@@ -196,15 +203,195 @@ export const api = {
     return res.data;
   },
 
-  // Image Upload (Cloudinary / File)
+  // Cooperative Federation Governance
+  getCooperative: async () => {
+    const res = await adminApi.get('/cooperative');
+    return res.data;
+  },
+  updateCooperative: async (coopData) => {
+    const res = await adminApi.put('/cooperative', coopData);
+    return res.data;
+  },
+
+  // Primary Cooperative Societies
+  getSocieties: async (params = {}) => {
+    const res = await adminApi.get('/cooperative/societies', { params });
+    return res.data;
+  },
+  createSociety: async (societyData) => {
+    const res = await adminApi.post('/cooperative/societies', societyData);
+    return res.data;
+  },
+  getSocietyById: async (id) => {
+    const res = await adminApi.get(`/cooperative/societies/${id}`);
+    return res.data;
+  },
+  updateSociety: async (id, societyData) => {
+    const res = await adminApi.put(`/cooperative/societies/${id}`, societyData);
+    return res.data;
+  },
+  assignWorkerToSociety: async (data) => {
+    const res = await adminApi.post('/cooperative/assign-worker', data);
+    return res.data;
+  },
+
+  // Promotional Coupon Banners
+  getBanners: async () => {
+    const res = await adminApi.get('/banners');
+    return res.data;
+  },
+  createBanner: async (bannerData) => {
+    const res = await adminApi.post('/banners', bannerData);
+    return res.data;
+  },
+  updateBanner: async (id, bannerData) => {
+    const res = await adminApi.put(`/banners/${id}`, bannerData);
+    return res.data;
+  },
+  deleteBanner: async (id) => {
+    const res = await adminApi.delete(`/banners/${id}`);
+    return res.data;
+  },
+
+  // Support Desk & AI Chatbot
+  getSupportTickets: async (params) => {
+    const res = await adminApi.get('/support/tickets', { params });
+    return res.data;
+  },
+  getSupportTicketById: async (id) => {
+    const res = await adminApi.get(`/support/tickets/${id}`);
+    return res.data;
+  },
+  sendSupportMessage: async (id, message) => {
+    const res = await adminApi.post(`/support/tickets/${id}/messages`, { body: message });
+    return res.data;
+  },
+  takeoverSupportTicket: async (id) => {
+    const res = await adminApi.post(`/support/tickets/${id}/takeover`);
+    return res.data;
+  },
+  updateSupportTicketStatus: async (id, statusData) => {
+    const res = await adminApi.patch(`/support/tickets/${id}`, statusData);
+    return res.data;
+  },
+
+  // Federations
+  getAllFederations: async () => {
+    const res = await adminApi.get('/federations');
+    return res.data;
+  },
+  createFederation: async (federationData) => {
+    const res = await adminApi.post('/federations', federationData);
+    return res.data;
+  },
+  impersonateFederation: async (id) => {
+    const res = await adminApi.post(`/federations/${id}/impersonate`);
+    return res.data;
+  },
+  getFederationDetails: async (id) => {
+    const res = await adminApi.get(`/federations/${id}`);
+    return res.data;
+  },
+  approveFederation: async (id) => {
+    const res = await adminApi.patch(`/federations/${id}/approve`);
+    return res.data;
+  },
+  suspendFederation: async (id) => {
+    const res = await adminApi.patch(`/federations/${id}/suspend`);
+    return res.data;
+  },
+
+  // Languages
+  getEnabledLanguages: async () => {
+    const res = await adminApi.get('/settings/languages');
+    return res.data;
+  },
+  updateEnabledLanguages: async (languages) => {
+    const res = await adminApi.put('/settings/languages', { languages });
+    return res.data;
+  },
+
+  // Platform Governance Settings
+  getSettings: async () => {
+    const res = await adminApi.get('/settings');
+    return res.data;
+  },
+  updateSettings: async (settingsData) => {
+    const res = await adminApi.put('/settings', settingsData);
+    return res.data;
+  },
+
+  // Mobile App Version & Force Update Governance
+  getAppVersion: async () => {
+    const res = await adminApi.get('/settings/app-version');
+    return res.data;
+  },
+  updateAppVersion: async (versionData) => {
+    const res = await adminApi.put('/settings/app-version', versionData);
+    return res.data;
+  },
+
+  // Redis Cache Flush & Memory Management
+  clearRedisCache: async (type = 'all') => {
+    const res = await adminApi.post(`/redis/clear/${type}`);
+    return res.data;
+  },
+
+  // Image & File Upload
   uploadImage: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await adminApi.post('/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    const res = await adminApi.post('/upload', formData);
+    return res.data;
+  },
+
+  // Welfare Resources & e-Shram Guides
+  getWelfareResources: async () => {
+    const res = await adminApi.get('/welfare/resources');
+    return res.data;
+  },
+  createWelfareResource: async (data) => {
+    const res = await adminApi.post('/welfare/resources', data);
+    return res.data;
+  },
+  updateWelfareResource: async (id, data) => {
+    const res = await adminApi.put(`/welfare/resources/${id}`, data);
+    return res.data;
+  },
+  deleteWelfareResource: async (id) => {
+    const res = await adminApi.delete(`/welfare/resources/${id}`);
+    return res.data;
+  },
+  uploadWelfareResourcePdf: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', 'insurance_welfare');
+    formData.append('type', 'welfare');
+    const res = await adminApi.post('/welfare/resources/upload', formData);
+    return res.data;
+  },
+
+  // Emergency Contacts
+  getEmergencyContacts: async () => {
+    const res = await adminApi.get('/admin/emergency/contacts');
+    return res.data;
+  },
+  createEmergencyContact: async (data) => {
+    const res = await adminApi.post('/admin/emergency/contacts', data);
+    return res.data;
+  },
+  updateEmergencyContact: async (id, data) => {
+    const res = await adminApi.put(`/admin/emergency/contacts/${id}`, data);
+    return res.data;
+  },
+  deleteEmergencyContact: async (id) => {
+    const res = await adminApi.delete(`/admin/emergency/contacts/${id}`);
+    return res.data;
+  },
+
+  // Demand Forecast
+  getDemandForecast: async () => {
+    const res = await adminApi.get('/ai/demand-forecast');
     return res.data;
   }
 };

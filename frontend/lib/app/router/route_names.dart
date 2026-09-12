@@ -2,6 +2,7 @@ abstract final class RouteNames {
   static const splash = '/';
   static const language = '/language';
   static const cooperative = '/cooperative';
+  static const federationPicker = '/federation-picker';
   static const role = '/role';
   static const login = '/login';
   static const signup = '/signup';
@@ -16,6 +17,10 @@ abstract final class RouteNames {
   static String customerCategorySearchPath(String categoryId) =>
       '/customer/home/category-search/$categoryId';
   static const customerOrders = '/customer/orders';
+  static const bookingDetail = '/booking/:id';
+
+  static String bookingDetailPath(String bookingId) => '/booking/$bookingId';
+
   static const customerProfileTab = '/customer/profile';
   static const customerCategories = '/customer/home/categories';
   static const customerService = '/customer/service/:id';
@@ -26,15 +31,21 @@ abstract final class RouteNames {
   static const customerTracking = '/customer/tracking';
   static const customerWorkStarted = '/customer/work-started';
   static const customerPayment = '/customer/payment';
+  static const customerPayments = '/customer/payments';
   static const customerRating = '/customer/rating';
   static const customerHomeBooking = '/customer/home-booking';
   static const customerAiHelper = '/customer/ai-helper';
+  static const customerAiChat = '/customer/ai-chat';
   static const customerAiDiscovery = '/customer/ai-discovery';
   static const customerAiWorkers = '/customer/ai-workers';
   static const customerWorkers = '/customer/workers';
   static const customerWorkerProfile = '/customer/worker/:id';
-  static const customerAddParts = '/customer/add-parts';
   static const customerBookingConfirmation = '/customer/booking-confirmation';
+  static const customerInvoice = '/customer/invoice/:id';
+
+  static const workerRateSettings = '/worker/rate-settings';
+  static const workerPriceEstimation = '/worker/price-estimation';
+  static const customerEstimationReview = '/customer/estimation-review';
 
   static const workerOnboardingIdentity = '/worker/onboarding/identity';
   static const workerOnboardingWork = '/worker/onboarding/work';
@@ -47,6 +58,9 @@ abstract final class RouteNames {
   static const workerProfileTab = '/worker/profile-tab';
   static const workerIncoming = '/worker/incoming';
   static const workerJobDetail = '/worker/job/:id';
+
+  static String workerJobDetailPath(String bookingId) =>
+      '/worker/job/$bookingId';
   static const workerActiveJob = '/worker/active-job';
   static const workerNavigation = '/worker/navigation';
   static const workerAvailability = '/worker/availability';
@@ -54,6 +68,14 @@ abstract final class RouteNames {
   static const workerWallet = '/worker/wallet';
   static const workerProfile = '/worker/profile';
   static const workerReliability = '/worker/reliability';
+  static const workerWelfare = '/worker/welfare';
+  static const workerCooperative = '/worker/cooperative';
+  static const workerFaq = '/worker/faq';
+  static const workerOtpEntry = '/worker/otp-entry';
+  static const workerAddParts = '/worker/add-parts';
+  static const workerRating = '/worker/rating';
+
+  static const customerWorkerArrived = '/customer/worker-arrived';
 
   static const sharedProfile = '/shared/profile';
   static const sharedEditProfile = '/shared/edit-profile';
@@ -65,4 +87,5 @@ abstract final class RouteNames {
   static const sharedSupportTicket = '/shared/support-ticket';
 
   static const systemState = '/system/:type';
+  static const call = '/call';
 }

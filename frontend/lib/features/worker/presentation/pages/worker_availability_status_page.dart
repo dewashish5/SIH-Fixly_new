@@ -28,72 +28,76 @@ class _WorkerAvailabilityStatusPageState
       builder: (context, state) {
         return AppScaffold(
           title: context.l10n.availabilityStatus,
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppCard(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: state.isAvailable
-                            ? AppColors.success
-                            : AppColors.outline,
+          body: AppRefreshIndicator(
+            onRefresh: () => context.read<WorkerDashboardCubit>().load(),
+            child: ListView(
+              physics: appRefreshScrollPhysics,
+              padding: const EdgeInsets.all(16),
+              children: [
+                AppCard(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: state.isAvailable
+                              ? AppColors.success
+                              : AppColors.outline,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            state.isAvailable ? 'Online' : 'Offline',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          Text(
-                            state.isAvailable
-                                ? 'Receiving nearby job requests'
-                                : 'Not receiving job requests',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              state.isAvailable ? 'Online' : 'Offline',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Text(
+                              state.isAvailable
+                                  ? 'Receiving nearby job requests'
+                                  : 'Not receiving job requests',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Switch(
-                      value: state.isAvailable,
-                      activeTrackColor: AppColors.success.withValues(alpha: 0.4),
-                      thumbColor: WidgetStateProperty.resolveWith(
-                        (states) => states.contains(WidgetState.selected)
-                            ? AppColors.success
-                            : null,
+                      Switch(
+                        value: state.isAvailable,
+                        activeTrackColor: AppColors.success.withValues(alpha: 0.4),
+                        thumbColor: WidgetStateProperty.resolveWith(
+                          (states) => states.contains(WidgetState.selected)
+                              ? AppColors.success
+                              : null,
+                        ),
+                        onChanged: (_) => context
+                            .read<WorkerDashboardCubit>()
+                            .toggleAvailability(),
                       ),
-                      onChanged: (_) => context
-                          .read<WorkerDashboardCubit>()
-                          .toggleAvailability(),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Schedule',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              const AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Mon–Fri: 9 AM – 6 PM'),
-                    SizedBox(height: 8),
-                    Text('Sat–Sun: 10 AM – 4 PM'),
-                  ],
+                const SizedBox(height: 16),
+                Text(
+                  'Schedule',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                const AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Mon–Fri: 9 AM – 6 PM'),
+                      SizedBox(height: 8),
+                      Text('Sat–Sun: 10 AM – 4 PM'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

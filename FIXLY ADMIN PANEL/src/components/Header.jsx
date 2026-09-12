@@ -313,7 +313,7 @@ export default function Header({
                   Super Administrator
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b' }}>
-                  admin@cooperative.org
+                  Administrator
                 </div>
               </div>
 

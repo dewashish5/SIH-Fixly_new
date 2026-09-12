@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -18,11 +18,11 @@ import {
   ExternalLink,
   ShieldCheck,
   CalendarCheck,
-  BrainCircuit,
   Radio,
   Clock
 } from 'lucide-react';
 
+import WorkersLeafletMap from '../../components/map/WorkersLeafletMap';
 import BookingsOverviewChart from '../../components/charts/BookingsOverviewChart';
 import TopServicesCard from '../../components/TopServicesCard';
 import Badge from '../../components/common/Badge';
@@ -34,7 +34,15 @@ import EmergencyDispatchModal from '../../components/modals/EmergencyDispatchMod
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { dashboardStats, recentBookings, workers, bookings, services, notifications } = useApp();
+  const {
+    dashboardStats,
+    recentBookings,
+    workers,
+    customers,
+    bookings,
+    services,
+    notifications,
+  } = useApp();
 
   // Modal controls
   const [isAddWorkerOpen, setIsAddWorkerOpen] = useState(false);
@@ -45,7 +53,7 @@ export default function DashboardPage() {
   const totalBookingsVal = dashboardStats?.totalBookings !== undefined ? dashboardStats.totalBookings.toLocaleString() : (bookings?.length || 0).toLocaleString();
   const totalRevenueVal = dashboardStats?.totalRevenue !== undefined ? `₹${dashboardStats.totalRevenue.toLocaleString('en-IN')}` : '₹0';
   const totalWorkersVal = dashboardStats?.totalWorkers !== undefined ? dashboardStats.totalWorkers.toLocaleString() : (workers?.length || 0).toLocaleString();
-  const totalCustomersVal = dashboardStats?.totalCustomers !== undefined ? dashboardStats.totalCustomers.toLocaleString() : '0';
+  const totalCustomersVal = dashboardStats?.totalCustomers !== undefined ? dashboardStats.totalCustomers.toLocaleString() : (customers?.length || 0).toLocaleString();
 
   // Top stats matching backend API
   const statCards = [
@@ -53,41 +61,54 @@ export default function DashboardPage() {
       id: 'bookings',
       title: 'Total Bookings',
       value: totalBookingsVal,
-      trend: '+0%',
+      trend: 'Real-time',
       icon: User,
     },
     {
       id: 'revenue',
       title: 'Total Revenue',
       value: totalRevenueVal,
-      trend: '+0%',
+      trend: 'Gross Value',
       icon: IndianRupee,
     },
     {
       id: 'workers',
       title: 'Active Workers',
       value: totalWorkersVal,
-      trend: '+0%',
+      trend: 'Onboarded',
       icon: IdCard,
     },
     {
       id: 'customers',
       title: 'Total Customers',
       value: totalCustomersVal,
-      trend: '+0%',
+      trend: 'Registered',
       icon: Users,
     },
   ];
 
-  const displayRecentBookings = recentBookings && recentBookings.length > 0 
-    ? recentBookings.slice(0, 5).map(b => ({
-        id: b.bookingId || b._id,
-        customer: b.customer?.name || 'Customer',
-        service: b.service?.title || 'Gig Service',
-        worker: b.worker?.name || 'Unassigned',
-        status: b.status || 'SEARCHING'
-      })) 
-    : bookings.slice(0, 5);
+  const displayRecentBookings = (recentBookings || []).slice(0, 5).map((b) => ({
+    id: b.bookingId || b._id,
+    customer: b.customer?.name || 'Customer',
+    service: b.service?.title || 'Gig Service',
+    worker: b.worker?.name || 'Unassigned',
+    status: b.status || 'SEARCHING',
+  }));
+
+
+  const [sosAlerts, setSosAlerts] = useState([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.socket) {
+      const handleSos = (data) => {
+        setSosAlerts((prev) => [...prev, data]);
+      };
+      window.socket.on('sos:alert', handleSos);
+      return () => {
+        window.socket.off('sos:alert', handleSos);
+      };
+    }
+  }, []);
 
   const activeEmergency = bookings.find((b) => b.status === 'Emergency');
 
@@ -412,31 +433,29 @@ export default function DashboardPage() {
                   backgroundColor: '#15803d',
                 }}
               />
-              <span>{totalWorkersVal} Online</span>
+              <span>
+                {workers.filter((w) => Array.isArray(w.coordinates) && w.coordinates.length === 2).length}{' '}
+                with live GPS
+              </span>
             </div>
           </div>
 
           <div
             style={{
               position: 'absolute',
-              right: '-10px',
-              bottom: '-15px',
+              right: '0',
+              bottom: '0',
               top: '0',
               width: '60%',
-              pointerEvents: 'none',
               zIndex: 1,
             }}
           >
-            <img
-              src="/worker-illustration.svg"
-              alt="Workers on Duty"
-              style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'bottom right' }}
-            />
+            <WorkersLeafletMap workers={workers} sosAlerts={sosAlerts} height="100%" />
           </div>
 
           <div style={{ position: 'relative', zIndex: 2, marginTop: '20px' }}>
             <button
-              onClick={() => navigate('/workers')}
+              onClick={() => navigate('/workers?map=1')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -457,129 +476,79 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 4. Quick Actions + AI Demand Ticker Section */}
+      {/* 4. Quick Actions */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: '1.65fr 1fr',
-          gap: '20px',
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          border: '1px solid var(--border-light)',
+          padding: '20px 24px',
+          boxShadow: 'var(--shadow-card)',
         }}
       >
-        {/* Quick Actions Card */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '16px',
-            border: '1px solid var(--border-light)',
-            padding: '20px 24px',
-            boxShadow: 'var(--shadow-card)',
-          }}
-        >
-          <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#111827', marginBottom: '14px' }}>
-            ⚡ Fast Platform Operations
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-            <button
-              onClick={() => setIsAddWorkerOpen(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 12px',
-                borderRadius: '10px',
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                fontSize: '12.5px',
-                fontWeight: '600',
-                color: '#334155',
-                textAlign: 'left',
-              }}
-            >
-              <Plus size={15} color="#1e7e45" />
-              <span>Add New Worker</span>
-            </button>
+        <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#111827', marginBottom: '14px' }}>
+          ⚡ Fast Platform Operations
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+          <button
+            onClick={() => setIsAddWorkerOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              fontSize: '12.5px',
+              fontWeight: '600',
+              color: '#334155',
+              textAlign: 'left',
+            }}
+          >
+            <Plus size={15} color="#1e7e45" />
+            <span>Add New Worker</span>
+          </button>
 
-            <button
-              onClick={() => setIsAddServiceOpen(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 12px',
-                borderRadius: '10px',
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                fontSize: '12.5px',
-                fontWeight: '600',
-                color: '#334155',
-                textAlign: 'left',
-              }}
-            >
-              <Zap size={15} color="#1e7e45" />
-              <span>Add Service</span>
-            </button>
+          <button
+            onClick={() => setIsAddServiceOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              fontSize: '12.5px',
+              fontWeight: '600',
+              color: '#334155',
+              textAlign: 'left',
+            }}
+          >
+            <Zap size={15} color="#1e7e45" />
+            <span>Add Service</span>
+          </button>
 
-            <button
-              onClick={() => setIsSendNotifOpen(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 12px',
-                borderRadius: '10px',
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                fontSize: '12.5px',
-                fontWeight: '600',
-                color: '#334155',
-                textAlign: 'left',
-              }}
-            >
-              <Bell size={15} color="#1e7e45" />
-              <span>Broadcast Alert</span>
-            </button>
-          </div>
-        </div>
-
-        {/* AI Forecast Ticker Card */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '16px',
-            border: '1.5px solid #bbf7d0',
-            padding: '20px 24px',
-            boxShadow: 'var(--shadow-card)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: '#15803d' }}>
-                <BrainCircuit size={16} />
-                <span>AI Workforce Allocation Forecast</span>
-              </div>
-              <button
-                onClick={() => navigate('/ai-insights')}
-                style={{ fontSize: '11.5px', color: 'var(--text-link)', fontWeight: '600' }}
-              >
-                Full Intel →
-              </button>
-            </div>
-            <p style={{ fontSize: '12px', color: '#4b5e52', marginTop: '8px', lineHeight: '1.4' }}>
-              "High probability of +28% AC repair surge this afternoon. Pre-route technicians to Sector 18."
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-            <span style={{ fontSize: '11px', backgroundColor: '#eaf8ef', color: '#15803d', padding: '2px 8px', borderRadius: '4px', fontWeight: '600' }}>
-              94.8% AI Confidence
-            </span>
-            <span style={{ fontSize: '11px', backgroundColor: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: '4px', fontWeight: '600' }}>
-              Fair Queue Active
-            </span>
-          </div>
+          <button
+            onClick={() => setIsSendNotifOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              fontSize: '12.5px',
+              fontWeight: '600',
+              color: '#334155',
+              textAlign: 'left',
+            }}
+          >
+            <Bell size={15} color="#1e7e45" />
+            <span>Broadcast Alert</span>
+          </button>
         </div>
       </div>
 

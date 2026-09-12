@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/network/customer_realtime_service.dart';
 import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../../../bookings/data/bookings_api_repository.dart';
@@ -16,53 +18,131 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
     BookingsApiRepository? bookingsRepository,
     PaymentsApiRepository? paymentsRepository,
     RazorpayCheckoutService? razorpayCheckout,
-  })  : _repo = repository ?? MockRepository.instance,
-        _bookings = bookingsRepository ?? BookingsApiRepository(),
-        _payments = paymentsRepository ?? PaymentsApiRepository(),
-        _razorpay = razorpayCheckout ?? RazorpayCheckoutService(),
-        super(const BookingFlowState());
+  }) : _repo = repository ?? MockRepository.instance,
+       _bookings = bookingsRepository ?? BookingsApiRepository(),
+       _payments = paymentsRepository ?? PaymentsApiRepository(),
+       _razorpay = razorpayCheckout ?? RazorpayCheckoutService(),
+       super(const BookingFlowState());
 
   final MockRepository _repo;
   final BookingsApiRepository _bookings;
   final PaymentsApiRepository _payments;
   final RazorpayCheckoutService _razorpay;
 
+  Timer? _statusPollTimer;
+  StreamSubscription<Map<String, dynamic>>? _statusSubscription;
+  String? _listeningBookingId;
+
   void selectService(ServiceItem service) {
     emit(state.copyWith(service: service, step: BookingStatus.draft));
   }
 
+  /// Load an existing booking into state (e.g. from order history tap).
+  void loadFromBooking(Booking booking) {
+    _repo.activeBooking = booking;
+    emit(state.copyWith(
+      booking: booking,
+      step: booking.status,
+      clearError: true,
+    ));
+    listenToSocketUpdates(booking.id);
+  }
+
+  /// Start polling booking status every 5s (for finding-worker / accepted screens).
+  void startStatusPolling(String bookingId) {
+    _statusPollTimer?.cancel();
+    _statusPollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      await refreshBooking();
+    });
+  }
+
+  void stopStatusPolling() {
+    _statusPollTimer?.cancel();
+    _statusPollTimer = null;
+  }
+
+  /// Connect to socket and listen for real-time booking_status_update events.
+  void listenToSocketUpdates(String bookingId) {
+    if (bookingId.isEmpty) return;
+    if (_listeningBookingId == bookingId && _statusSubscription != null) return;
+    _listeningBookingId = bookingId;
+    CustomerRealtimeService.instance.trackBooking(bookingId);
+
+    _statusSubscription?.cancel();
+    _statusSubscription = CustomerRealtimeService.instance.bookingStatusStream.listen((map) async {
+      final eventBookingId = map['bookingId']?.toString();
+      final canonicalId = map['canonicalBookingId']?.toString();
+      final current = state.booking;
+      if (current != null &&
+          eventBookingId != null &&
+          eventBookingId != current.id &&
+          canonicalId != current.id &&
+          eventBookingId != bookingId) {
+        return;
+      }
+
+      final newStatus = map['status']?.toString();
+      final paymentStatus = map['paymentStatus']?.toString();
+
+      // Instant UI from socket payload, then hydrate via API.
+      if (current != null && (newStatus != null || paymentStatus != null)) {
+        final mapped = BookingsApiRepository.mapStatus(newStatus ?? current.rawStatus);
+        emit(
+          state.copyWith(
+            booking: current.copyWith(
+              status: paymentStatus == 'PAID' ? BookingStatus.paid : mapped,
+              rawStatus: paymentStatus == 'PAID'
+                  ? 'COMPLETED'
+                  : (newStatus ?? current.rawStatus),
+              paymentStatus: paymentStatus ?? current.paymentStatus,
+            ),
+            step: paymentStatus == 'PAID' ? BookingStatus.paid : mapped,
+          ),
+        );
+      }
+      await refreshBooking(bookingId);
+    });
+
+    // Polling as fallback when socket drops
+    startStatusPolling(bookingId);
+  }
+
   Future<void> submitBookingDetails({
     required String address,
-    required DateTime scheduledAt,
+    DateTime? scheduledAt,
+    required String problemDescription,
+    String? workerId,
+    List<String> photoPaths = const [],
+    List<String> videoPaths = const [],
   }) async {
-    if (state.service == null) return;
+    final service = state.service;
+    if (service == null) {
+      emit(state.copyWith(errorMessage: 'Please select a service first'));
+      return;
+    }
     emit(state.copyWith(isLoading: true, clearError: true));
     try {
-      final estimate = await _bookings.estimate(serviceId: state.service!.id);
       final booking = await _bookings.create(
-        serviceId: state.service!.id,
+        serviceId: service.id,
         addressLine: address,
-        problemDescription: state.service!.title,
+        problemDescription: problemDescription,
+        workerId: workerId,
         scheduledTime: scheduledAt,
-        serviceTitle: state.service!.title,
+        serviceTitle: service.title,
+        photoPaths: photoPaths,
+        videoPaths: videoPaths,
       );
-      final priced = booking.copyWith(
-        estimatedPrice: estimate.maxTotal > 0
-            ? estimate.maxTotal
-            : booking.estimatedPrice,
-      );
-      _repo.activeBooking = priced;
+      _repo.activeBooking = booking;
       emit(
         state.copyWith(
-          booking: priced,
+          booking: booking,
           address: address,
           scheduledAt: scheduledAt,
-          priceEstimate: estimate,
-          estimatedPrice: estimate.maxTotal,
           step: BookingStatus.searching,
           isLoading: false,
         ),
       );
+      listenToSocketUpdates(booking.id);
     } on ApiException catch (e) {
       emit(state.copyWith(isLoading: false, errorMessage: e.message));
     } catch (e) {
@@ -77,11 +157,13 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
   Future<void> searchWorker() async {
     emit(state.copyWith(isLoading: true, step: BookingStatus.searching));
     await Future<void>.delayed(const Duration(seconds: 1));
-    emit(state.copyWith(
-      isLoading: false,
-      step: BookingStatus.searching,
-      booking: state.booking,
-    ));
+    emit(
+      state.copyWith(
+        isLoading: false,
+        step: BookingStatus.searching,
+        booking: state.booking,
+      ),
+    );
   }
 
   Future<void> workerAccepted() async {
@@ -94,56 +176,49 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
         serviceTitle: booking.serviceTitle,
       );
       _repo.activeBooking = updated;
-      emit(state.copyWith(
-        isLoading: false,
-        step: updated.workerId != null
-            ? BookingStatus.accepted
-            : BookingStatus.searching,
-        booking: updated,
-      ));
-    } on ApiException catch (e) {
-      emit(state.copyWith(isLoading: false, errorMessage: e.message));
-    }
-  }
-
-  Future<void> startWork() async {
-    final booking = state.booking;
-    if (booking == null) return;
-    emit(state.copyWith(isLoading: true, clearError: true));
-    try {
-      final updated = await _bookings.verifyArrivalOtp(
-        bookingId: booking.id,
-        otp: '8492',
-        serviceTitle: booking.serviceTitle,
+      emit(
+        state.copyWith(
+          isLoading: false,
+          step: updated.workerId != null
+              ? BookingStatus.accepted
+              : BookingStatus.searching,
+          booking: updated,
+        ),
       );
-      _repo.activeBooking = updated;
-      emit(state.copyWith(
-        isLoading: false,
-        step: BookingStatus.inProgress,
-        booking: updated.copyWith(status: BookingStatus.inProgress),
-      ));
     } on ApiException catch (e) {
       emit(state.copyWith(isLoading: false, errorMessage: e.message));
     }
   }
 
-  Future<void> refreshBooking() async {
-    final booking = state.booking;
-    if (booking == null) return;
+  Future<void> refreshBooking([String? bookingId]) async {
+    final idToFetch = bookingId ?? state.booking?.id;
+    if (idToFetch == null) return;
     try {
       final updated = await _bookings.getById(
-        booking.id,
-        serviceTitle: booking.serviceTitle,
+        idToFetch,
+        serviceTitle: state.booking?.serviceTitle ?? 'Fixly Service',
       );
       _repo.activeBooking = updated;
-      emit(state.copyWith(booking: updated, clearError: true));
+      emit(state.copyWith(booking: updated, step: updated.status, clearError: true));
+      // Keep socket joined for live status without manual reload.
+      listenToSocketUpdates(updated.id);
     } on ApiException catch (e) {
       emit(state.copyWith(errorMessage: e.message));
     }
   }
 
-  double _payableAmount() {
-    final booking = state.booking;
+  double _payableAmount([Booking? targetBooking]) {
+    final booking = targetBooking ?? state.booking;
+    if (booking?.totalAmount != null && booking!.totalAmount! > 0) {
+      return booking.totalAmount!;
+    }
+    if (booking?.invoice?.totalAmount != null && booking!.invoice!.totalAmount > 0) {
+      return booking.invoice!.totalAmount;
+    }
+    final totalPrice = booking?.totalPrice;
+    if (totalPrice != null && totalPrice > 0) {
+      return totalPrice;
+    }
     if (booking != null && booking.estimatedPrice > 0) {
       return booking.estimatedPrice;
     }
@@ -154,17 +229,22 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
   }
 
   Future<bool> payWithRazorpay({
+    String? bookingId,
+    double? amountOverride,
     String? customerName,
     String? email,
     String? phone,
   }) async {
-    final booking = state.booking;
-    if (booking == null) return false;
+    final targetBookingId = bookingId ?? state.booking?.id;
+    if (targetBookingId == null) return false;
     emit(state.copyWith(isLoading: true, clearError: true));
     try {
-      await refreshBooking();
-      final current = state.booking ?? booking;
-      final amount = _payableAmount();
+      await refreshBooking(targetBookingId);
+      final current = state.booking;
+      if (current == null) {
+        throw ApiException('Booking details not found');
+      }
+      final amount = amountOverride ?? _payableAmount(current);
       if (amount <= 0) {
         throw ApiException('Invalid payment amount');
       }
@@ -193,38 +273,20 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
         throw ApiException('Payment verification failed');
       }
 
-      final paid = current.copyWith(status: BookingStatus.paid);
-      _repo.activeBooking = paid;
-      emit(state.copyWith(
-        isLoading: false,
-        step: BookingStatus.paid,
-        booking: paid,
-      ));
-      return true;
-    } on ApiException catch (e) {
-      emit(state.copyWith(isLoading: false, errorMessage: e.message));
-      return false;
-    } catch (e) {
-      emit(state.copyWith(isLoading: false, errorMessage: e.toString()));
-      return false;
-    }
-  }
-
-  Future<bool> completeCashPayment() async {
-    final booking = state.booking;
-    if (booking == null) return false;
-    emit(state.copyWith(isLoading: true, clearError: true));
-    try {
-      await refreshBooking();
-      final current = state.booking ?? booking;
-      await _bookings.complete(current.id);
-      final completed = current.copyWith(status: BookingStatus.completed);
-      _repo.activeBooking = completed;
-      emit(state.copyWith(
-        isLoading: false,
-        step: BookingStatus.completed,
-        booking: completed,
-      ));
+      await refreshBooking(current.id);
+      final updated = state.booking ??
+          current.copyWith(
+            status: BookingStatus.paid,
+            paymentStatus: 'PAID',
+          );
+      _repo.activeBooking = updated;
+      emit(
+        state.copyWith(
+          isLoading: false,
+          step: BookingStatus.rating,
+          booking: updated,
+        ),
+      );
       return true;
     } on ApiException catch (e) {
       emit(state.copyWith(isLoading: false, errorMessage: e.message));
@@ -236,6 +298,10 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
   }
 
   void reset() {
+    _statusPollTimer?.cancel();
+    _statusSubscription?.cancel();
+    CustomerRealtimeService.instance.untrackBooking();
+    _listeningBookingId = null;
     _razorpay.dispose();
     _repo.activeBooking = null;
     emit(const BookingFlowState());
@@ -243,6 +309,9 @@ class BookingFlowCubit extends Cubit<BookingFlowState> {
 
   @override
   Future<void> close() {
+    _statusPollTimer?.cancel();
+    _statusSubscription?.cancel();
+    CustomerRealtimeService.instance.untrackBooking();
     _razorpay.dispose();
     return super.close();
   }

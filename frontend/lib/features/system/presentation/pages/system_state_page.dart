@@ -8,6 +8,7 @@ import '../../../../shared/data/mock/mock_repository.dart';
 import '../../../../shared/models/models.dart';
 import '../system_state_type.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/utils/toast_utils.dart';
 
 class SystemStatePage extends StatelessWidget {
   const SystemStatePage({required this.typeParam, super.key});
@@ -94,9 +95,7 @@ class SystemStatePage extends StatelessWidget {
         context.pop();
       case SystemStateType.gpsDenied:
       case SystemStateType.cameraDenied:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Open device settings (mock)')),
-        );
+        ToastUtils.showToast(context: context, message: 'Open device settings (mock)');
       case SystemStateType.kycFailed:
         context.go(RouteNames.workerOnboardingIdentity);
       case SystemStateType.sessionExpired:

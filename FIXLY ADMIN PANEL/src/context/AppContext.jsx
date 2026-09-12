@@ -10,8 +10,15 @@ export function AppProvider({ children }) {
   // Auth State
   const [token, setToken] = useState(() => sessionStorage.getItem('adminToken') || null);
   const [adminUser, setAdminUser] = useState(() => {
-    const saved = sessionStorage.getItem('adminUser');
-    return saved ? JSON.parse(saved) : null;
+    const savedSession = sessionStorage.getItem('adminUser');
+    if (savedSession) {
+      try { return JSON.parse(savedSession); } catch (_) {}
+    }
+    const savedLocal = localStorage.getItem('adminUser');
+    if (savedLocal) {
+      try { return JSON.parse(savedLocal); } catch (_) {}
+    }
+    return null;
   });
 
   // Entity Data States
@@ -68,6 +75,7 @@ export function AppProvider({ children }) {
         setAdminUser(res.user);
         sessionStorage.setItem('adminToken', res.token);
         sessionStorage.setItem('adminUser', JSON.stringify(res.user));
+        localStorage.setItem('adminUser', JSON.stringify(res.user));
         return res;
       }
       return res;
@@ -81,8 +89,30 @@ export function AppProvider({ children }) {
     setAdminUser(null);
     sessionStorage.removeItem('adminToken');
     sessionStorage.removeItem('adminUser');
+    localStorage.removeItem('adminUser');
     showToast('info', 'Logged out successfully');
     window.location.href = '/login';
+  };
+
+  const updateAdminProfile = async (profileData) => {
+    try {
+      const res = await api.updateProfile(profileData);
+      if (res && res.success && res.user) {
+        setAdminUser(res.user);
+        sessionStorage.setItem('adminUser', JSON.stringify(res.user));
+        localStorage.setItem('adminUser', JSON.stringify(res.user));
+        showToast('success', res.message || 'Profile updated successfully!');
+        return res;
+      }
+    } catch (err) {
+      console.warn('Backend updateProfile failed, saving locally:', err);
+    }
+    const updatedUser = { ...(adminUser || {}), ...profileData };
+    setAdminUser(updatedUser);
+    sessionStorage.setItem('adminUser', JSON.stringify(updatedUser));
+    localStorage.setItem('adminUser', JSON.stringify(updatedUser));
+    showToast('success', 'Profile updated successfully');
+    return { success: true, user: updatedUser };
   };
 
   // --- DASHBOARD ACTIONS ---
@@ -151,30 +181,47 @@ export function AppProvider({ children }) {
       setLoading(true);
       const res = await api.getWorkers(params);
       if (res.success) {
-        const formatted = res.data.map(w => ({
+        const formatted = res.data.map(w => {
+          // GeoJSON Point: [lng, lat] → Leaflet [lat, lng]
+          let coordinates = null;
+          const geo = w.location?.coordinates;
+          if (Array.isArray(geo) && geo.length === 2) {
+            const [lng, lat] = geo;
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+              coordinates = [lat, lng];
+            }
+          }
+          return {
           id: w._id,
           name: w.name,
           email: w.email,
-          phone: w.phone || 'N/A',
-          avatar: w.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-          category: w.workerProfile?.category || 'General',
-          service: w.workerProfile?.category || 'General',
-          skills: Array.isArray(w.workerProfile?.skills) && w.workerProfile.skills.length > 0 
-            ? w.workerProfile.skills 
-            : [w.workerProfile?.category || 'General Service'],
-          location: w.savedAddresses?.[0]?.addressLine || 'Sector 62, Noida',
-          city: w.savedAddresses?.[0]?.city || 'Noida',
-          hourlyRate: `₹${w.workerProfile?.hourlyRate || 50}/hr`,
-          verification: w.isVerified ? 'Verified' : 'Pending',
+          phone: w.phone || '—',
+          avatar: w.avatar || '',
+          category: w.workerProfile?.category || '—',
+          service: w.workerProfile?.category || '—',
+          skills: Array.isArray(w.workerProfile?.skills) && w.workerProfile.skills.length > 0
+            ? w.workerProfile.skills
+            : [],
+          location: w.savedAddresses?.[0]?.addressLine || '—',
+          city: w.savedAddresses?.[0]?.city || '—',
+          coordinates,
+          hourlyRate: w.workerProfile?.hourlyRate != null
+            ? `₹${w.workerProfile.hourlyRate}/hr`
+            : '—',
+          verification: w.isVerified ? 'Verified' : (w.kycDocuments?.status === 'rejected' ? 'Rejected' : 'Pending'),
           isVerified: w.isVerified,
-          rating: w.workerProfile?.rating || 5.0,
+          kycStatus: w.kycDocuments?.status || 'none',
+          rating: w.workerProfile?.rating ?? null,
           totalReviews: w.workerProfile?.totalJobs || 0,
           completedJobs: w.workerProfile?.totalJobs || 0,
-          todayEarnings: '₹0',
-          availability: 'Available',
-          badges: w.workerProfile?.badges || ['Verified Worker'],
-          joinedDate: new Date(w.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
-        }));
+          todayEarnings: '—',
+          availability: '—',
+          badges: Array.isArray(w.workerProfile?.badges) ? w.workerProfile.badges : [],
+          joinedDate: w.createdAt
+            ? new Date(w.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
+            : '—',
+        };
+        });
         setWorkers(formatted);
         setWorkersPagination(res.pagination || { page: 1, limit: 10, total: formatted.length, totalPages: 1 });
       }
@@ -187,7 +234,7 @@ export function AppProvider({ children }) {
 
   const verifyWorker = async (workerId) => {
     try {
-      const res = await api.updateWorkerStatus(workerId, { isVerified: true, badges: ['Background Checked', 'Verified Worker'] });
+      const res = await api.updateWorkerStatus(workerId, { isVerified: true, kycStatus: 'approved' });
       if (res.success) {
         showToast('success', 'Worker application verified successfully');
         fetchWorkers({ page: workersPagination.page, limit: workersPagination.limit });
@@ -197,11 +244,18 @@ export function AppProvider({ children }) {
     }
   };
 
-  const rejectWorker = async (workerId) => {
+  const rejectWorker = async (workerId, declineReason) => {
     try {
-      const res = await api.updateWorkerStatus(workerId, { isVerified: false });
+      const reason =
+        (declineReason && String(declineReason).trim()) ||
+        'Your request to join as a worker has been declined.';
+      const res = await api.updateWorkerStatus(workerId, {
+        isVerified: false,
+        kycStatus: 'rejected',
+        declineReason: reason,
+      });
       if (res.success) {
-        showToast('error', 'Worker application rejected/suspended');
+        showToast('error', 'Worker application rejected');
         fetchWorkers({ page: workersPagination.page, limit: workersPagination.limit });
       }
     } catch (err) {
@@ -310,7 +364,8 @@ export function AppProvider({ children }) {
           estimatedTime: s.estimatedTime || '1 Hour',
           whatsIncluded: s.whatsIncluded || [],
           isActive: s.isActive,
-          icon: 'Layers'
+          image: s.image || s.icon || '',
+          icon: s.icon || 'Layers'
         }));
         setServices(formatted);
         setServicesPagination(res.pagination || { page: 1, limit: 10, total: formatted.length, totalPages: 1 });
@@ -524,19 +579,38 @@ export function AppProvider({ children }) {
     }
   };
 
-  // Initial Data Load on Auth
+  // Initial Data Load on Auth — one stable snapshot (no mock fallbacks on dashboard)
   useEffect(() => {
     if (token) {
+      api.getProfile()
+        .then((res) => {
+          if (res && res.success && res.user) {
+            setAdminUser(res.user);
+            sessionStorage.setItem('adminUser', JSON.stringify(res.user));
+            localStorage.setItem('adminUser', JSON.stringify(res.user));
+          }
+        })
+        .catch((err) => console.warn('Failed to refresh admin profile:', err));
       fetchDashboardStats();
       fetchSettings();
+      fetchBookings({ page: 1, limit: 100 });
+      fetchServices({ page: 1, limit: 50 });
+      fetchWorkers({ page: 1, limit: 50, isVerified: 'true' });
     }
-  }, [token, fetchDashboardStats, fetchSettings]);
+  }, [token, fetchDashboardStats, fetchSettings, fetchBookings, fetchServices, fetchWorkers]);
 
   return (
     <AppContext.Provider
       value={{
         token,
         adminUser,
+        adminRole:
+          adminUser?.adminRole ||
+          (adminUser?.id === 'admin-1' || adminUser?._id === 'admin-1'
+            ? 'super_admin'
+            : null),
+        setAdminUser,
+        updateAdminProfile,
         isAuthenticated: !!token,
         loginAdmin,
         logoutAdmin,

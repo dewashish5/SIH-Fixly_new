@@ -7,7 +7,7 @@ import 'app_spacing.dart';
 import 'app_text_styles.dart';
 
 abstract final class AppTheme {
-  static final ThemeData light = _build(
+  static ThemeData get light => _build(
         brightness: Brightness.light,
         colorScheme: ColorScheme.light(
           primary: AppColors.primary,
@@ -47,7 +47,7 @@ abstract final class AppTheme {
         navUnselected: AppColors.textMuted,
       );
 
-  static final ThemeData dark = _build(
+  static ThemeData get dark => _build(
         brightness: Brightness.dark,
         colorScheme: ColorScheme.dark(
           primary: AppColors.primary400,
@@ -166,7 +166,7 @@ abstract final class AppTheme {
           foregroundColor: Colors.white,
           disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.4),
           disabledForegroundColor: Colors.white.withValues(alpha: 0.8),
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size(0, 52),
           elevation: 0,
           shadowColor: AppColors.primary.withValues(alpha: 0.2),
           shape: RoundedRectangleBorder(
@@ -178,7 +178,7 @@ abstract final class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size(0, 52),
           side: BorderSide(color: colorScheme.primary),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
@@ -218,7 +218,7 @@ abstract final class AppTheme {
         activeTrackColor: AppColors.primary,
         inactiveTrackColor: sliderInactive,
         thumbColor: AppColors.primary,
-        overlayColor: const Color(0x1A01668F),
+        overlayColor: const Color(0x1A2563EB),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.primary,

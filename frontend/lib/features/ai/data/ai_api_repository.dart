@@ -1,5 +1,11 @@
+import 'package:dio/dio.dart';
+
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_enpoints.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../models/ai_agent_response.dart';
+
+export '../../../models/ai_agent_response.dart';
 
 class AiAnalysis {
   const AiAnalysis({
@@ -7,12 +13,14 @@ class AiAnalysis {
     required this.estimatedHours,
     required this.aiNote,
     this.suggestedService,
+    this.issueImageUrl,
   });
 
   final String category;
   final double estimatedHours;
   final String aiNote;
   final String? suggestedService;
+  final String? issueImageUrl;
 }
 
 class AiApiRepository {
@@ -20,10 +28,101 @@ class AiApiRepository {
 
   final ApiClient _api;
 
-  Future<AiAnalysis> analyzeIssue(String problemDescription) async {
-    final res = await _api.post('/api/ai/analyze-issue', data: {
-      'problemDescription': problemDescription,
-    });
+  Future<AiAgentResponse> chatWithAgent({
+    required String message,
+    Map<String, dynamic>? conversationState,
+    String? language,
+    List<double>? coordinates,
+    String? addressLine,
+  }) async {
+    final payload = <String, dynamic>{
+      'message': message,
+      'conversationState': conversationState ?? <String, dynamic>{},
+    };
+    if (language != null && language.isNotEmpty) {
+      payload['language'] = language;
+    }
+    if (coordinates != null && coordinates.length >= 2) {
+      payload['coordinates'] = coordinates;
+    }
+    if (addressLine != null && addressLine.isNotEmpty) {
+      payload['addressLine'] = addressLine;
+    }
+
+    final res = await _api.post(
+      ApiEndpoints.aiAgentChat,
+      data: payload,
+    );
+
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'AI agent failed');
+    }
+
+    return AiAgentResponse.fromJson(res);
+  }
+
+  Future<Map<String, dynamic>> mintLiveToken({String? language}) async {
+    final res = await _api.post(
+      ApiEndpoints.aiAgentLiveToken,
+      data: {
+        if (language != null && language.isNotEmpty) 'language': language,
+      },
+    );
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Live token failed');
+    }
+    return Map<String, dynamic>.from(res);
+  }
+
+  Future<AiAgentResponse> liveToolBridge({
+    required String utterance,
+    Map<String, dynamic>? conversationState,
+    String? language,
+    List<double>? coordinates,
+    String? addressLine,
+  }) async {
+    final payload = <String, dynamic>{
+      'utterance': utterance,
+      'conversationState': conversationState ?? <String, dynamic>{},
+    };
+    if (language != null && language.isNotEmpty) {
+      payload['language'] = language;
+    }
+    if (coordinates != null && coordinates.length >= 2) {
+      payload['coordinates'] = coordinates;
+    }
+    if (addressLine != null && addressLine.isNotEmpty) {
+      payload['addressLine'] = addressLine;
+    }
+
+    final res = await _api.post(
+      ApiEndpoints.aiAgentLiveTool,
+      data: payload,
+    );
+    if (res['success'] != true) {
+      throw ApiException(res['message']?.toString() ?? 'Live tool failed');
+    }
+    return AiAgentResponse.fromJson(res);
+  }
+
+  Future<AiAnalysis> analyzeIssue(
+    String problemDescription, {
+    String? imagePath,
+  }) async {
+    final Object data;
+    if (imagePath == null || imagePath.isEmpty) {
+      data = {'problemDescription': problemDescription};
+    } else {
+      data = FormData.fromMap({
+        'problemDescription': problemDescription,
+        'issueImage': await MultipartFile.fromFile(
+          imagePath,
+          filename: imagePath.split(RegExp(r'[/\\]')).last,
+        ),
+      });
+    }
+
+    final res = await _api.post(ApiEndpoints.aiAnalyzeIssue, data: data);
     if (res['success'] != true) {
       throw ApiException(res['message']?.toString() ?? 'AI failed');
     }
@@ -33,6 +132,7 @@ class AiApiRepository {
       estimatedHours: (a['estimatedHours'] as num?)?.toDouble() ?? 1,
       aiNote: (a['aiNote'] as String?) ?? '',
       suggestedService: a['suggestedService']?.toString(),
+      issueImageUrl: a['issueImageUrl'] as String?,
     );
   }
 }

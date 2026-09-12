@@ -21,6 +21,7 @@ import '../../../../auth/presentation/cubit/app_session_cubit.dart';
 import '../../cubit/worker_onboarding_cubit.dart';
 import 'worker_identity_photo_widgets.dart';
 import 'worker_onboarding_layout.dart';
+import '../../../../../core/utils/toast_utils.dart';
 
 class WorkerIdentityPage extends StatefulWidget {
   const WorkerIdentityPage({super.key});
@@ -35,6 +36,8 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
   late final TextEditingController _dobController;
+  late final TextEditingController _stateController;
+  late final TextEditingController _districtController;
   late final TextEditingController _aadhaarController;
   late final TextEditingController _panController;
 
@@ -68,6 +71,8 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
           ? ''
           : DateFormat('dd MMM yyyy').format(data.dateOfBirth!),
     );
+    _stateController = TextEditingController(text: data.state);
+    _districtController = TextEditingController(text: data.district);
     _aadhaarController = TextEditingController(text: data.aadhaar);
     _panController = TextEditingController(text: data.pan);
   }
@@ -78,6 +83,8 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
     _phoneController.dispose();
     _emailController.dispose();
     _dobController.dispose();
+    _stateController.dispose();
+    _districtController.dispose();
     _aadhaarController.dispose();
     _panController.dispose();
     super.dispose();
@@ -111,11 +118,13 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
     cubit.captureSelfie(imageUrl: file.path);
   }
 
-  void _continue() {
+  Future<void> _continue() async {
     final cubit = context.read<WorkerOnboardingCubit>();
     cubit
       ..updateFullName(_nameController.text)
       ..updatePhone(_phoneController.text)
+      ..updateState(_stateController.text)
+      ..updateDistrict(_districtController.text)
       ..updateAadhaar(_aadhaarController.text)
       ..updatePan(_panController.text);
 
@@ -123,18 +132,16 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
 
     final error = cubit.validateStep(1);
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ApiException.userFacingMessage(error)),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      ToastUtils.showError(context: context, message: ApiException.userFacingMessage(error));
       return;
     }
 
+    final success = await cubit.submitIdentity();
+    if (!success) return;
+
     HapticFeedback.lightImpact();
     cubit.setStep(1);
-    context.push(RouteNames.workerOnboardingWork);
+    if (mounted) context.push(RouteNames.workerOnboardingWork);
   }
 
   Widget _stagger(Widget child, int index) {
@@ -179,6 +186,32 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
                   ),
                   0,
                 ),
+                if (state.errorMessage == 'DUPLICATE_DOCUMENT')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.error),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: AppColors.error),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'This Aadhaar or PAN is already linked to another account.',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 _stagger(
                   OnboardingSection(
@@ -246,6 +279,26 @@ class _WorkerIdentityPageState extends State<WorkerIdentityPage> {
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: context.muted,
                                   ),
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _stateController,
+                          label: 'State',
+                          hint: 'e.g. Delhi',
+                          textCapitalization: TextCapitalization.words,
+                          validator: (v) =>
+                              Validators.requiredField(v, label: 'State'),
+                          onChanged: cubit.updateState,
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _districtController,
+                          label: 'District',
+                          hint: 'e.g. South Delhi',
+                          textCapitalization: TextCapitalization.words,
+                          validator: (v) =>
+                              Validators.requiredField(v, label: 'District'),
+                          onChanged: cubit.updateDistrict,
                         ),
                       ],
                     ),

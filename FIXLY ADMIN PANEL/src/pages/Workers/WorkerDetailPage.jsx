@@ -30,6 +30,8 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import Badge from '../../components/common/Badge';
+import Modal from '../../components/common/Modal';
+import Avatar from '../../components/common/Avatar';
 
 export default function WorkerDetailPage() {
   const { id } = useParams();
@@ -241,15 +243,12 @@ export default function WorkerDetailPage() {
           }}
         >
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-            <img
-              src={currentWorker.avatar || `https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150&auto=format&fit=crop&q=80`}
-              alt={formState.name}
+            <Avatar
+              src={formState.avatar || currentWorker.avatar}
+              name={formState.name}
+              size={80}
+              border={`3.5px solid ${currentVerified ? '#15803d' : '#94a3b8'}`}
               style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                objectFit: 'cover',
-                border: `3.5px solid ${currentVerified ? '#15803d' : '#94a3b8'}`,
                 boxShadow: currentVerified ? '0 4px 12px rgba(21, 128, 61, 0.25)' : 'none',
               }}
             />

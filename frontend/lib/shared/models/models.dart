@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 
 enum UserRole { customer, worker }
 
-enum KycReviewStatus { submitted, inReview, approved }
+enum KycReviewStatus { submitted, inReview, approved, rejected }
 
 class AppUser extends Equatable {
   const AppUser({
@@ -16,6 +16,23 @@ class AppUser extends Equatable {
     this.insured = false,
     this.isVerified = false,
     this.hasWorkerProfile = false,
+    this.bio,
+    this.workAddress,
+    this.category,
+    this.categories = const [],
+    this.skills = const [],
+    this.hourlyRate = 0,
+    this.experienceYears = 0,
+    this.gender,
+    this.upiId,
+    this.emergencyName,
+    this.emergencyPhone,
+    this.emergencyRelation,
+    this.homeCity,
+    this.homePincode,
+    this.marketingNotifications,
+    this.systemNotifications,
+    this.pushNotifications,
   });
 
   final String id;
@@ -27,22 +44,57 @@ class AppUser extends Equatable {
   final String? eshramUan;
   final bool insured;
   final bool isVerified;
+
   /// True when API returned a non-empty workerProfile (onboarding submitted).
   final bool hasWorkerProfile;
+  final String? bio;
+  final String? workAddress;
+  final String? category;
+  final List<String> categories;
+  final List<String> skills;
+  final double hourlyRate;
+  final int experienceYears;
+  final String? gender;
+  final String? upiId;
+  final String? emergencyName;
+  final String? emergencyPhone;
+  final String? emergencyRelation;
+  final String? homeCity;
+  final String? homePincode;
+  final bool? marketingNotifications;
+  final bool? systemNotifications;
+  final bool? pushNotifications;
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        phone,
-        email,
-        role,
-        avatar,
-        eshramUan,
-        insured,
-        isVerified,
-        hasWorkerProfile,
-      ];
+    id,
+    name,
+    phone,
+    email,
+    role,
+    avatar,
+    eshramUan,
+    insured,
+    isVerified,
+    hasWorkerProfile,
+    bio,
+    workAddress,
+    category,
+    categories,
+    skills,
+    hourlyRate,
+    experienceYears,
+    gender,
+    upiId,
+    emergencyName,
+    emergencyPhone,
+    emergencyRelation,
+    homeCity,
+    homePincode,
+    marketingNotifications,
+    systemNotifications,
+    pushNotifications,
+  ];
 }
 
 class WorkerProfile extends Equatable {
@@ -55,6 +107,32 @@ class WorkerProfile extends Equatable {
     required this.reliabilityScore,
     this.avatarUrl,
     this.insured = false,
+    this.category,
+    this.categories = const [],
+    this.title,
+    this.hourlyRate,
+    this.minimumCharge,
+    this.rateFormatted,
+    this.distanceKm,
+    this.distanceFormatted,
+    this.isOnline = false,
+    this.isAvailable = false,
+    this.reviewCount = 0,
+    this.reviews = const [],
+    this.onTimeArrival,
+    this.completionRate,
+    this.customerFeedback,
+    this.cancellationRate,
+    this.serviceRadiusKm,
+    this.kycStatus,
+    this.isEmailVerified = false,
+    this.bio,
+    this.experienceYears,
+    this.isVerified = true,
+    this.federationId,
+    this.federationName,
+    this.includedTasks = const [],
+    this.excludedTasks = const [],
   });
 
   final String id;
@@ -65,10 +143,82 @@ class WorkerProfile extends Equatable {
   final int reliabilityScore;
   final String? avatarUrl;
   final bool insured;
+  final String? category;
+  final List<String> categories;
+  final String? title;
+  final double? hourlyRate;
+  final double? minimumCharge;
+  final String? rateFormatted;
+  final double? distanceKm;
+  final String? distanceFormatted;
+  final bool isOnline;
+  final bool isAvailable;
+  final int reviewCount;
+  final List<WorkerReview> reviews;
+  final double? onTimeArrival;
+  final double? completionRate;
+  final double? customerFeedback;
+  final double? cancellationRate;
+  final double? serviceRadiusKm;
+  final String? kycStatus;
+  final bool isEmailVerified;
+  final String? bio;
+  final int? experienceYears;
+  final bool isVerified;
+  final String? federationId;
+  final String? federationName;
+  final List<String> includedTasks;
+  final List<String> excludedTasks;
 
   @override
-  List<Object?> get props =>
-      [id, name, skills, rating, jobsCompleted, reliabilityScore, insured];
+  List<Object?> get props => [
+    id,
+    name,
+    skills,
+    rating,
+    jobsCompleted,
+    reliabilityScore,
+    insured,
+    category,
+    categories,
+    title,
+    hourlyRate,
+    minimumCharge,
+    rateFormatted,
+    distanceKm,
+    distanceFormatted,
+    isOnline,
+    isAvailable,
+    reviewCount,
+    reviews,
+    onTimeArrival,
+    completionRate,
+    customerFeedback,
+    cancellationRate,
+    serviceRadiusKm,
+    kycStatus,
+    isEmailVerified,
+    bio,
+    experienceYears,
+    isVerified,
+  ];
+}
+
+class WorkerReview extends Equatable {
+  const WorkerReview({
+    required this.reviewerName,
+    required this.rating,
+    required this.comment,
+    this.createdAt,
+  });
+
+  final String reviewerName;
+  final double rating;
+  final String comment;
+  final DateTime? createdAt;
+
+  @override
+  List<Object?> get props => [reviewerName, rating, comment, createdAt];
 }
 
 class ServiceItem extends Equatable {
@@ -81,6 +231,10 @@ class ServiceItem extends Equatable {
     required this.rating,
     this.titleHi,
     this.descriptionHi,
+    this.imageUrl,
+    this.estimatedTime,
+    this.whatsIncluded = const [],
+    this.isActive = true,
   });
 
   final String id;
@@ -91,6 +245,10 @@ class ServiceItem extends Equatable {
   final String? descriptionHi;
   final double priceFrom;
   final double rating;
+  final String? imageUrl;
+  final String? estimatedTime;
+  final List<String> whatsIncluded;
+  final bool isActive;
 
   String titleFor(String locale) =>
       locale == 'hi' && titleHi != null ? titleHi! : title;
@@ -99,16 +257,28 @@ class ServiceItem extends Equatable {
       locale == 'hi' && descriptionHi != null ? descriptionHi! : description;
 
   @override
-  List<Object?> get props => [id, categoryId, title, priceFrom, rating];
+  List<Object?> get props => [
+    id,
+    categoryId,
+    title,
+    priceFrom,
+    rating,
+    imageUrl,
+    estimatedTime,
+    whatsIncluded,
+    isActive,
+  ];
 }
 
 enum BookingStatus {
   draft,
   searching,
   accepted,
+  arrived,
   inProgress,
   completed,
   paid,
+  rating,
 }
 
 class BookingAddOn extends Equatable {
@@ -126,6 +296,78 @@ class BookingAddOn extends Equatable {
   List<Object?> get props => [title, price, quantity];
 }
 
+class BookingInvoice extends Equatable {
+  const BookingInvoice({
+    required this.bookingId,
+    required this.serviceName,
+    required this.status,
+    required this.baseServiceFee,
+    required this.extraPartsTotal,
+    required this.platformFee,
+    required this.totalAmount,
+    this.paymentStatus,
+    this.paymentMethod,
+    this.transactionId,
+    this.customerName,
+    this.customerPhone,
+    this.workerName,
+    this.workerPhone,
+    this.addOns = const [],
+    this.jobStartedAt,
+    this.jobCompletedAt,
+  });
+
+  final String bookingId;
+  final String serviceName;
+  final String status;
+  final double baseServiceFee;
+  final double extraPartsTotal;
+  final double platformFee;
+  final double totalAmount;
+  final String? paymentStatus;
+  final String? paymentMethod;
+  final String? transactionId;
+  final String? customerName;
+  final String? customerPhone;
+  final String? workerName;
+  final String? workerPhone;
+  final List<BookingAddOn> addOns;
+  final DateTime? jobStartedAt;
+  final DateTime? jobCompletedAt;
+
+  factory BookingInvoice.fromJson(Map<String, dynamic> json) {
+    return BookingInvoice(
+      bookingId: json['bookingId']?.toString() ?? '',
+      serviceName: json['serviceName']?.toString() ?? 'Service',
+      status: json['status']?.toString() ?? 'PENDING',
+      baseServiceFee: (json['baseServiceFee'] as num?)?.toDouble() ?? 0,
+      extraPartsTotal: (json['extraPartsTotal'] as num?)?.toDouble() ?? 0,
+      platformFee: (json['platformFee'] as num?)?.toDouble() ?? 0,
+      totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
+      paymentStatus: json['paymentStatus']?.toString(),
+      paymentMethod: json['paymentMethod']?.toString(),
+      transactionId: json['transactionId']?.toString(),
+      customerName: json['customerName']?.toString(),
+      customerPhone: json['customerPhone']?.toString(),
+      workerName: json['workerName']?.toString(),
+      workerPhone: json['workerPhone']?.toString(),
+      addOns: (json['addOns'] as List?)
+              ?.map((e) => BookingAddOn(
+                    title: e['title']?.toString() ?? '',
+                    price: (e['price'] as num?)?.toDouble() ?? 0,
+                    quantity: (e['quantity'] as num?)?.toInt() ?? 1,
+                  ))
+              .toList() ??
+          const [],
+      jobStartedAt: json['jobStartedAt'] != null ? DateTime.tryParse(json['jobStartedAt'].toString()) : null,
+      jobCompletedAt: json['jobCompletedAt'] != null ? DateTime.tryParse(json['jobCompletedAt'].toString()) : null,
+    );
+  }
+
+  @override
+  List<Object?> get props => [bookingId, totalAmount, paymentStatus, addOns];
+}
+
 class Booking extends Equatable {
   const Booking({
     required this.id,
@@ -141,6 +383,35 @@ class Booking extends Equatable {
     this.baseServiceFee,
     this.platformFee,
     this.extraPartsTotal,
+    this.displayId,
+    this.serviceCategory,
+    this.serviceImage,
+    this.estimatedTime,
+    this.whatsIncluded = const [],
+    this.problemDescription,
+    this.problemPhotos = const [],
+    this.problemVideos = const [],
+    this.paymentMethod,
+    this.paymentStatus,
+    this.transactionId,
+    this.arrivalOtp,
+    this.createdAt,
+    this.jobStartedAt,
+    this.jobCompletedAt,
+    this.isReviewed = false,
+    this.workerAvatar,
+    this.customerName,
+    this.customerPhone,
+    this.customerAvatar,
+    this.customerLat,
+    this.customerLng,
+    this.rawStatus,
+    this.bookingType,
+    this.isEmergency = false,
+    this.urgentFee,
+    this.timeSlot,
+    this.totalAmount,
+    this.invoice,
   });
 
   final String id;
@@ -156,6 +427,75 @@ class Booking extends Equatable {
   final double? baseServiceFee;
   final double? platformFee;
   final double? extraPartsTotal;
+  final String? displayId;
+  final String? serviceCategory;
+  final String? serviceImage;
+  final String? estimatedTime;
+  final List<String> whatsIncluded;
+  final String? problemDescription;
+  final List<String> problemPhotos;
+  final List<String> problemVideos;
+  final String? paymentMethod;
+  final String? paymentStatus;
+  final String? transactionId;
+  final String? arrivalOtp;
+  final DateTime? createdAt;
+  final DateTime? jobStartedAt;
+  final DateTime? jobCompletedAt;
+  final bool isReviewed;
+  final String? workerAvatar;
+  final String? customerName;
+  final String? customerPhone;
+  final String? customerAvatar;
+  final double? customerLat;
+  final double? customerLng;
+  final String? rawStatus;
+  final String? bookingType;
+  final bool isEmergency;
+  final double? urgentFee;
+  final String? timeSlot;
+  final double? totalAmount;
+  final BookingInvoice? invoice;
+
+  double get totalPrice {
+    // 1. Authoritative backend values: DO NOT recalculate or add extra parts on top!
+    if (totalAmount != null && totalAmount! > 0) {
+      return totalAmount!;
+    }
+    if (invoice != null && invoice!.totalAmount > 0) {
+      return invoice!.totalAmount;
+    }
+
+    // 2. Pre-invoice initial estimate calculation:
+    final extra = (extraPartsTotal != null && extraPartsTotal! > 0)
+        ? extraPartsTotal!
+        : addOns.fold<double>(0.0, (sum, a) => sum + (a.price * a.quantity));
+    final platform = platformFee ?? 0.0;
+    final urgent = urgentFee ?? 0.0;
+
+    // Only add extra parts if baseServiceFee is explicitly specified.
+    // If baseServiceFee is null, estimatedPrice already reflects the full total — NEVER add extra on top!
+    if (baseServiceFee != null && baseServiceFee! > 0) {
+      return baseServiceFee! + extra + platform + urgent;
+    }
+
+    return estimatedPrice + urgent;
+  }
+
+  bool get isSosBooking =>
+      isEmergency ||
+      (bookingType ?? '').toUpperCase() == 'EMERGENCY_SOS' ||
+      (bookingType ?? '').toUpperCase() == 'SOS' ||
+      (bookingType ?? '').toUpperCase() == 'EMERGENCY';
+
+  bool get isScheduledBooking =>
+      (bookingType ?? '').toUpperCase() == 'SCHEDULED' || scheduledAt != null;
+
+  String get jobTypeLabel {
+    if (isSosBooking) return 'EMERGENCY SOS';
+    if (isScheduledBooking) return 'SCHEDULED';
+    return 'STANDARD';
+  }
 
   Booking copyWith({
     BookingStatus? status,
@@ -166,6 +506,10 @@ class Booking extends Equatable {
     double? baseServiceFee,
     double? platformFee,
     double? extraPartsTotal,
+    String? rawStatus,
+    String? paymentStatus,
+    double? totalAmount,
+    BookingInvoice? invoice,
   }) {
     return Booking(
       id: id,
@@ -181,19 +525,55 @@ class Booking extends Equatable {
       baseServiceFee: baseServiceFee ?? this.baseServiceFee,
       platformFee: platformFee ?? this.platformFee,
       extraPartsTotal: extraPartsTotal ?? this.extraPartsTotal,
+      displayId: displayId,
+      serviceCategory: serviceCategory,
+      serviceImage: serviceImage,
+      estimatedTime: estimatedTime,
+      whatsIncluded: whatsIncluded,
+      problemDescription: problemDescription,
+      problemPhotos: problemPhotos,
+      problemVideos: problemVideos,
+      paymentMethod: paymentMethod,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      transactionId: transactionId,
+      arrivalOtp: arrivalOtp,
+      createdAt: createdAt,
+      jobStartedAt: jobStartedAt,
+      jobCompletedAt: jobCompletedAt,
+      isReviewed: isReviewed,
+      workerAvatar: workerAvatar,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      customerAvatar: customerAvatar,
+      customerLat: customerLat,
+      customerLng: customerLng,
+      rawStatus: rawStatus ?? this.rawStatus,
+      bookingType: bookingType,
+      isEmergency: isEmergency,
+      urgentFee: urgentFee,
+      timeSlot: timeSlot,
+      totalAmount: totalAmount ?? this.totalAmount,
+      invoice: invoice ?? this.invoice,
     );
   }
 
   @override
   List<Object?> get props => [
-        id,
-        serviceId,
-        serviceTitle,
-        status,
-        estimatedPrice,
-        workerId,
-        addOns,
-      ];
+    id,
+    serviceId,
+    serviceTitle,
+    status,
+    estimatedPrice,
+    workerId,
+    addOns,
+    displayId,
+    problemDescription,
+    paymentStatus,
+    createdAt,
+    customerName,
+    totalAmount,
+    invoice,
+  ];
 }
 
 enum JobStatus { incoming, active, completed }
@@ -207,6 +587,27 @@ class WorkerJob extends Equatable {
     required this.pay,
     required this.status,
     required this.distanceKm,
+    this.customerLat,
+    this.customerLng,
+    this.customerPhone,
+    this.customerAvatar,
+    this.problemDescription,
+    this.problemPhotos = const [],
+    this.problemVideos = const [],
+    this.serviceCategory,
+    this.serviceImage,
+    this.arrivalOtp,
+    this.baseServiceFee,
+    this.platformFee,
+    this.extraPartsTotal,
+    this.addOns = const [],
+    this.jobStartedAt,
+    this.jobCompletedAt,
+    this.rawStatus,
+    this.invoice,
+    this.scheduledAt,
+    this.bookingType,
+    this.isEmergency = false,
   });
 
   final String id;
@@ -216,21 +617,160 @@ class WorkerJob extends Equatable {
   final double pay;
   final JobStatus status;
   final double distanceKm;
+  final double? customerLat;
+  final double? customerLng;
+  final String? customerPhone;
+  final String? customerAvatar;
+  final String? problemDescription;
+  final List<String> problemPhotos;
+  final List<String> problemVideos;
+  final String? serviceCategory;
+  final String? serviceImage;
+  final String? arrivalOtp;
+  final double? baseServiceFee;
+  final double? platformFee;
+  final double? extraPartsTotal;
+  final List<BookingAddOn> addOns;
+  final DateTime? jobStartedAt;
+  final DateTime? jobCompletedAt;
 
-  WorkerJob copyWith({JobStatus? status}) {
+  /// Raw backend status string e.g. 'APPROVED', 'ARRIVED', 'IN_PROGRESS'
+  final String? rawStatus;
+  final BookingInvoice? invoice;
+
+  final DateTime? scheduledAt;
+  final String? bookingType;
+  final bool isEmergency;
+
+  String get bookingId => id;
+
+  bool get isSosBooking =>
+      isEmergency ||
+      (bookingType ?? '').toUpperCase() == 'EMERGENCY_SOS' ||
+      (bookingType ?? '').toUpperCase() == 'SOS' ||
+      (bookingType ?? '').toUpperCase() == 'EMERGENCY';
+
+  bool get isScheduledBooking =>
+      (bookingType ?? '').toUpperCase() == 'SCHEDULED' || scheduledAt != null;
+
+  String get jobTypeLabel {
+    if (isSosBooking) return 'EMERGENCY SOS';
+    if (isScheduledBooking) return 'SCHEDULED';
+    return 'STANDARD';
+  }
+
+  WorkerJob copyWith({
+    String? id,
+    String? title,
+    String? customerName,
+    String? address,
+    double? pay,
+    JobStatus? status,
+    double? distanceKm,
+    double? customerLat,
+    double? customerLng,
+    String? customerPhone,
+    String? customerAvatar,
+    String? problemDescription,
+    List<String>? problemPhotos,
+    String? serviceCategory,
+    String? serviceImage,
+    String? arrivalOtp,
+    double? baseServiceFee,
+    double? platformFee,
+    double? extraPartsTotal,
+    List<BookingAddOn>? addOns,
+    DateTime? jobStartedAt,
+    DateTime? jobCompletedAt,
+    String? rawStatus,
+    BookingInvoice? invoice,
+    DateTime? scheduledAt,
+    String? bookingType,
+  }) {
     return WorkerJob(
-      id: id,
-      title: title,
-      customerName: customerName,
-      address: address,
-      pay: pay,
+      id: id ?? this.id,
+      title: title ?? this.title,
+      customerName: customerName ?? this.customerName,
+      address: address ?? this.address,
+      pay: pay ?? this.pay,
       status: status ?? this.status,
-      distanceKm: distanceKm,
+      distanceKm: distanceKm ?? this.distanceKm,
+      customerLat: customerLat ?? this.customerLat,
+      customerLng: customerLng ?? this.customerLng,
+      customerPhone: customerPhone ?? this.customerPhone,
+      customerAvatar: customerAvatar ?? this.customerAvatar,
+      problemDescription: problemDescription ?? this.problemDescription,
+      problemPhotos: problemPhotos ?? this.problemPhotos,
+      serviceCategory: serviceCategory ?? this.serviceCategory,
+      serviceImage: serviceImage ?? this.serviceImage,
+      arrivalOtp: arrivalOtp ?? this.arrivalOtp,
+      baseServiceFee: baseServiceFee ?? this.baseServiceFee,
+      platformFee: platformFee ?? this.platformFee,
+      extraPartsTotal: extraPartsTotal ?? this.extraPartsTotal,
+      addOns: addOns ?? this.addOns,
+      jobStartedAt: jobStartedAt ?? this.jobStartedAt,
+      jobCompletedAt: jobCompletedAt ?? this.jobCompletedAt,
+      rawStatus: rawStatus ?? this.rawStatus,
+      invoice: invoice ?? this.invoice,
+      scheduledAt: scheduledAt ?? this.scheduledAt,
+      bookingType: bookingType ?? this.bookingType,
     );
   }
 
   @override
-  List<Object?> get props => [id, title, pay, status];
+  List<Object?> get props => [
+    id,
+    title,
+    customerName,
+    address,
+    pay,
+    status,
+    distanceKm,
+    customerLat,
+    customerLng,
+    customerPhone,
+    customerAvatar,
+    problemDescription,
+    problemPhotos,
+    serviceCategory,
+    serviceImage,
+    arrivalOtp,
+    baseServiceFee,
+    platformFee,
+    extraPartsTotal,
+    addOns,
+    jobStartedAt,
+    jobCompletedAt,
+    rawStatus,
+    invoice,
+    scheduledAt,
+    bookingType,
+  ];
+}
+
+class WalletTransaction extends Equatable {
+  const WalletTransaction({
+    required this.id,
+    required this.label,
+    required this.amount,
+    required this.isCredit,
+    this.date,
+    this.transactionId,
+    this.status,
+    this.type,
+  });
+
+  final String id;
+  final String label;
+  final double amount;
+  final bool isCredit;
+  final DateTime? date;
+  final String? transactionId;
+  final String? status;
+  final String? type;
+
+  @override
+  List<Object?> get props => [id, label, amount, isCredit, date, transactionId, status, type];
 }
 
 class NotificationItem extends Equatable {
@@ -240,26 +780,78 @@ class NotificationItem extends Equatable {
     required this.body,
     required this.time,
     this.read = false,
+    this.category,
+    this.eventType,
+    this.entityType,
+    this.entityId,
+    this.bookingId,
+    this.action,
+    this.data = const {},
   });
+
+  factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    final rawDate = json['createdAt'] ?? json['time'];
+    return NotificationItem(
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      body: (json['body'] ?? json['message'])?.toString() ?? '',
+      time: DateTime.tryParse(rawDate?.toString() ?? '') ?? DateTime.now(),
+      read: json['isRead'] == true || json['read'] == true,
+      category: json['category']?.toString(),
+      eventType: json['eventType']?.toString(),
+      entityType: json['entityType']?.toString(),
+      entityId: json['entityId']?.toString(),
+      bookingId: json['bookingId']?.toString() ??
+          (json['data'] is Map ? json['data']['bookingId']?.toString() : null) ??
+          (json['entityType'] == 'booking' ? json['entityId']?.toString() : null),
+      action:
+          (json['action'] ??
+                  (json['data'] is Map ? json['data']['action'] : null))
+              ?.toString(),
+      data: json['data'] is Map
+          ? Map<String, dynamic>.from(json['data'] as Map)
+          : const {},
+    );
+  }
 
   final String id;
   final String title;
   final String body;
   final DateTime time;
   final bool read;
+  final String? category;
+  final String? eventType;
+  final String? entityType;
+  final String? entityId;
+  final String? bookingId;
+  final String? action;
+  final Map<String, dynamic> data;
 
   @override
-  List<Object?> get props => [id, title, body, time, read];
+  List<Object?> get props => [
+    id,
+    title,
+    body,
+    time,
+    read,
+    category,
+    eventType,
+    entityType,
+    entityId,
+    bookingId,
+    action,
+    data,
+  ];
 }
 
 enum WorkerGender { male, female, other }
 
 extension WorkerGenderX on WorkerGender {
   String get label => switch (this) {
-        WorkerGender.male => 'Male',
-        WorkerGender.female => 'Female',
-        WorkerGender.other => 'Other',
-      };
+    WorkerGender.male => 'Male',
+    WorkerGender.female => 'Female',
+    WorkerGender.other => 'Other',
+  };
 }
 
 class OnboardingFormData extends Equatable {
@@ -271,6 +863,8 @@ class OnboardingFormData extends Equatable {
     this.email = '',
     this.dateOfBirth,
     this.gender,
+    this.state = '',
+    this.district = '',
     this.aadhaar = '',
     this.pan = '',
     this.aadhaarFrontPath,
@@ -296,6 +890,10 @@ class OnboardingFormData extends Equatable {
     this.certificateFileName,
     this.selfieVerified = false,
     this.selfieImageUrl,
+    this.federationId,
+    this.federationName,
+    this.includedTasks = const {},
+    this.excludedTasks = const {},
   });
 
   final String fullName;
@@ -303,6 +901,8 @@ class OnboardingFormData extends Equatable {
   final String email;
   final DateTime? dateOfBirth;
   final WorkerGender? gender;
+  final String state;
+  final String district;
   final String aadhaar;
   final String pan;
   final String? aadhaarFrontPath;
@@ -310,6 +910,7 @@ class OnboardingFormData extends Equatable {
   final String? panFrontPath;
   final String? panBackPath;
   final List<String> skills;
+
   /// Hourly rate (₹) per skill/category id.
   final Map<String, int> categoryRates;
   final int experienceYears;
@@ -329,14 +930,17 @@ class OnboardingFormData extends Equatable {
   final String? certificateFileName;
   final bool selfieVerified;
   final String? selfieImageUrl;
+  final String? federationId;
+  final String? federationName;
+  final Map<String, List<String>> includedTasks;
+  final Map<String, List<String>> excludedTasks;
 
   bool get hasAadhaarPhotos =>
       (aadhaarFrontPath?.isNotEmpty ?? false) &&
       (aadhaarBackPath?.isNotEmpty ?? false);
 
   bool get hasPanPhotos =>
-      (panFrontPath?.isNotEmpty ?? false) &&
-      (panBackPath?.isNotEmpty ?? false);
+      (panFrontPath?.isNotEmpty ?? false) && (panBackPath?.isNotEmpty ?? false);
 
   /// Primary rate for API `rate` / `hourlyRate` — first selected skill with a rate.
   int get primaryRate {
@@ -350,12 +954,7 @@ class OnboardingFormData extends Equatable {
   /// API-shaped rows: `{ category, rate }`.
   List<Map<String, dynamic>> get categoryRatesPayload => skills
       .where((id) => (categoryRates[id] ?? 0) > 0)
-      .map(
-        (id) => {
-          'category': id,
-          'rate': categoryRates[id],
-        },
-      )
+      .map((id) => {'category': id, 'rate': categoryRates[id]})
       .toList();
 
   OnboardingFormData copyWith({
@@ -364,6 +963,8 @@ class OnboardingFormData extends Equatable {
     String? email,
     Object? dateOfBirth = _unset,
     Object? gender = _unset,
+    String? state,
+    String? district,
     String? aadhaar,
     String? pan,
     Object? aadhaarFrontPath = _unset,
@@ -389,6 +990,10 @@ class OnboardingFormData extends Equatable {
     Object? certificateFileName = _unset,
     bool? selfieVerified,
     Object? selfieImageUrl = _unset,
+    String? federationId,
+    String? federationName,
+    Map<String, List<String>>? includedTasks,
+    Map<String, List<String>>? excludedTasks,
   }) {
     return OnboardingFormData(
       fullName: fullName ?? this.fullName,
@@ -398,6 +1003,8 @@ class OnboardingFormData extends Equatable {
           ? this.dateOfBirth
           : dateOfBirth as DateTime?,
       gender: identical(gender, _unset) ? this.gender : gender as WorkerGender?,
+      state: state ?? this.state,
+      district: district ?? this.district,
       aadhaar: aadhaar ?? this.aadhaar,
       pan: pan ?? this.pan,
       aadhaarFrontPath: identical(aadhaarFrontPath, _unset)
@@ -437,42 +1044,115 @@ class OnboardingFormData extends Equatable {
       selfieImageUrl: identical(selfieImageUrl, _unset)
           ? this.selfieImageUrl
           : selfieImageUrl as String?,
+      federationId: federationId ?? this.federationId,
+      federationName: federationName ?? this.federationName,
+      includedTasks: includedTasks ?? this.includedTasks,
+      excludedTasks: excludedTasks ?? this.excludedTasks,
     );
   }
 
   @override
   List<Object?> get props => [
-        fullName,
-        phone,
-        email,
-        dateOfBirth,
-        gender,
-        aadhaar,
-        pan,
-        aadhaarFrontPath,
-        aadhaarBackPath,
-        panFrontPath,
-        panBackPath,
-        skills,
-        categoryRates,
-        experienceYears,
-        bio,
-        serviceRadiusKm,
-        hasEshram,
-        eshramUan,
-        payoutMethod,
-        accountHolderName,
-        bankAccount,
-        ifscCode,
-        upiId,
-        bankVerified,
-        upiVerified,
-        certificateUploaded,
-        certificatePath,
-        certificateFileName,
-        selfieVerified,
-        selfieImageUrl,
-      ];
+    fullName,
+    phone,
+    email,
+    dateOfBirth,
+    gender,
+    state,
+    district,
+    aadhaar,
+    pan,
+    aadhaarFrontPath,
+    aadhaarBackPath,
+    panFrontPath,
+    panBackPath,
+    skills,
+    categoryRates,
+    experienceYears,
+    bio,
+    serviceRadiusKm,
+    hasEshram,
+    eshramUan,
+    payoutMethod,
+    accountHolderName,
+    bankAccount,
+    ifscCode,
+    upiId,
+    bankVerified,
+    upiVerified,
+    certificateUploaded,
+    certificatePath,
+    certificateFileName,
+    selfieVerified,
+    selfieImageUrl,
+  ];
 }
 
 enum PayoutMethod { bank, upi }
+
+class CouponBanner extends Equatable {
+  const CouponBanner({
+    required this.id,
+    required this.title,
+    required this.code,
+    required this.discount,
+    this.description = '',
+    this.imageUrl = '',
+    this.gradientColors = const ['#1E3A8A', '#3B82F6'],
+    this.category = 'all',
+    this.targetUserRole = 'all',
+    this.minOrderValue = 0,
+    this.maxDiscount = 500,
+    this.validUntil,
+    this.isActive = true,
+  });
+
+  final String id;
+  final String title;
+  final String code;
+  final String discount;
+  final String description;
+  final String imageUrl;
+  final List<String> gradientColors;
+  final String category;
+  final String targetUserRole;
+  final double minOrderValue;
+  final double maxDiscount;
+  final DateTime? validUntil;
+  final bool isActive;
+
+  factory CouponBanner.fromJson(Map<String, dynamic> json) {
+    return CouponBanner(
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      code: json['code']?.toString() ?? '',
+      discount: json['discount']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      imageUrl: json['imageUrl']?.toString() ?? '',
+      gradientColors: (json['gradient'] as List?)?.map((e) => e.toString()).toList() ??
+          const ['#1E3A8A', '#3B82F6'],
+      category: json['category']?.toString() ?? 'all',
+      targetUserRole: json['targetUserRole']?.toString() ?? 'all',
+      minOrderValue: (json['minOrderValue'] as num?)?.toDouble() ?? 0,
+      maxDiscount: (json['maxDiscount'] as num?)?.toDouble() ?? 500,
+      validUntil: json['validUntil'] != null
+          ? DateTime.tryParse(json['validUntil'].toString())
+          : null,
+      isActive: json['isActive'] != false,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        id,
+        title,
+        code,
+        discount,
+        description,
+        imageUrl,
+        gradientColors,
+        category,
+        validUntil,
+        isActive,
+      ];
+}

@@ -29,12 +29,20 @@ export default function AddServiceModal({ isOpen, onClose }) {
     try {
       setUploadingImage(true);
       const res = await api.uploadImage(file);
-      if (res && res.url) {
-        setFormData((prev) => ({ ...prev, image: res.url }));
+      if (res && (res.url || res.fileUrl)) {
+        setFormData((prev) => ({ ...prev, image: res.url || res.fileUrl }));
+        setErrors((prev) => ({ ...prev, image: undefined }));
+      } else {
+        throw new Error('No URL returned from server');
       }
     } catch (err) {
-      console.error('File upload failed:', err);
-      alert('Failed to upload image. Please try again.');
+      console.warn('Server upload failed, falling back to local base64:', err.message);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFormData((prev) => ({ ...prev, image: reader.result }));
+        setErrors((prev) => ({ ...prev, image: undefined }));
+      };
+      reader.readAsDataURL(file);
     } finally {
       setUploadingImage(false);
     }
@@ -42,9 +50,15 @@ export default function AddServiceModal({ isOpen, onClose }) {
 
   const validate = () => {
     const errs = {};
-    if (!formData.name.trim()) errs.name = 'Service name is required';
+    if (!formData.name.trim()) errs.name = 'Service title is required';
+    if (!formData.category || !formData.category.trim()) errs.category = 'Service category is required';
     if (!formData.description.trim()) errs.description = 'Description is required';
-    if (!formData.basePrice.trim()) errs.basePrice = 'Base price is required';
+    if (!formData.basePrice.trim() || parseInt(formData.basePrice.replace(/\D/g, ''), 10) <= 0) {
+      errs.basePrice = 'Valid base rate is required';
+    }
+    if (!formData.image || !formData.image.trim()) {
+      errs.image = 'Service icon/image is strictly mandatory. Please upload an icon for the app.';
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -57,7 +71,7 @@ export default function AddServiceModal({ isOpen, onClose }) {
       await addService({
         title: formData.name,
         category: formData.category || 'Plumbing',
-        image: formData.image || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500&auto=format&fit=crop&q=80',
+        image: formData.image || '',
         basePrice: parseInt(formData.basePrice.replace(/\D/g, ''), 10) || 100,
         estimatedTime: '1 Hour',
         whatsIncluded: formData.description ? [formData.description] : ['Professional Service'],
@@ -180,16 +194,16 @@ export default function AddServiceModal({ isOpen, onClose }) {
         </div>
 
         <div>
-          <label style={{ fontSize: '12px', fontWeight: '600', color: '#334155', display: 'block', marginBottom: '6px' }}>
-            Service Banner / Icon Image Upload *
+          <label style={{ fontSize: '12px', fontWeight: '600', color: errors.image ? '#ef4444' : '#334155', display: 'block', marginBottom: '6px' }}>
+            Service App Icon / Image * <span style={{ color: '#ef4444', fontWeight: 'bold' }}>(Mandatory)</span>
           </label>
           <div
             style={{
-              border: '2px dashed #cbd5e1',
+              border: errors.image ? '2px dashed #ef4444' : '2px dashed #cbd5e1',
               borderRadius: '10px',
               padding: '16px',
               textAlign: 'center',
-              backgroundColor: '#f8fafc',
+              backgroundColor: errors.image ? '#fef2f2' : '#f8fafc',
               position: 'relative',
               cursor: 'pointer'
             }}
@@ -203,7 +217,7 @@ export default function AddServiceModal({ isOpen, onClose }) {
                 />
                 <div style={{ textAlign: 'left', flex: 1 }}>
                   <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#15803d', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <CheckCircle2 size={14} /> Image Uploaded Successfully!
+                    <CheckCircle2 size={14} /> Icon Uploaded Successfully!
                   </div>
                   <div style={{ fontSize: '11px', color: '#64748b', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '240px' }}>
                     {formData.image.startsWith('data:') ? 'Image selected from desktop' : formData.image}
@@ -219,12 +233,12 @@ export default function AddServiceModal({ isOpen, onClose }) {
               </div>
             ) : (
               <div>
-                <Upload size={22} color="#64748b" style={{ marginBottom: '4px' }} />
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>
-                  {uploadingImage ? 'Uploading image from desktop...' : 'Click to select image file from Desktop'}
+                <Upload size={22} color={errors.image ? '#ef4444' : '#64748b'} style={{ marginBottom: '4px' }} />
+                <div style={{ fontSize: '13px', fontWeight: '600', color: errors.image ? '#b91c1c' : '#334155' }}>
+                  {uploadingImage ? 'Uploading icon from desktop...' : 'Click to select icon image from Desktop'}
                 </div>
-                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-                  Supports PNG, JPG, WEBP up to 5MB
+                <div style={{ fontSize: '11px', color: errors.image ? '#ef4444' : '#94a3b8', marginTop: '2px' }}>
+                  Supports PNG, JPG, WEBP (Required for mobile app display)
                 </div>
                 <input
                   type="file"
@@ -244,6 +258,11 @@ export default function AddServiceModal({ isOpen, onClose }) {
               </div>
             )}
           </div>
+          {errors.image && (
+            <span style={{ fontSize: '12px', color: '#ef4444', fontWeight: '600', display: 'block', marginTop: '4px' }}>
+              {errors.image}
+            </span>
+          )}
         </div>
 
         <div>

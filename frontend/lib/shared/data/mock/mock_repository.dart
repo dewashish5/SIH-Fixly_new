@@ -19,28 +19,7 @@ class MockRepository {
   bool isAvailable = true;
   Booking? activeBooking;
 
-  final List<Booking> orderHistory = [
-    Booking(
-      id: 'b100',
-      serviceId: 's1',
-      serviceTitle: 'Switch & Socket Repair',
-      status: BookingStatus.completed,
-      estimatedPrice: 450,
-      workerName: 'You',
-      address: 'Previous job',
-      scheduledAt: DateTime.now().subtract(const Duration(days: 3)),
-    ),
-    Booking(
-      id: 'b101',
-      serviceId: 's2',
-      serviceTitle: 'Tap & Pipe Leak Fix',
-      status: BookingStatus.paid,
-      estimatedPrice: 650,
-      workerName: 'You',
-      address: 'Completed order',
-      scheduledAt: DateTime.now().subtract(const Duration(days: 7)),
-    ),
-  ];
+  final List<Booking> orderHistory = const [];
 
   final List<WalletTransaction> walletTransactions = [
     WalletTransaction(
@@ -271,6 +250,7 @@ class MockRepository {
       KycReviewStatus.submitted => KycReviewStatus.inReview,
       KycReviewStatus.inReview => KycReviewStatus.approved,
       KycReviewStatus.approved => KycReviewStatus.approved,
+      KycReviewStatus.rejected => KycReviewStatus.rejected,
     };
     return kycReviewStatus;
   }
@@ -308,25 +288,6 @@ class MockRepository {
       ),
     );
   }
-}
-
-class WalletTransaction extends Equatable {
-  const WalletTransaction({
-    required this.id,
-    required this.label,
-    required this.amount,
-    required this.isCredit,
-    this.date,
-  });
-
-  final String id;
-  final String label;
-  final double amount;
-  final bool isCredit;
-  final DateTime? date;
-
-  @override
-  List<Object?> get props => [id, label, amount, isCredit, date];
 }
 
 class SupportMessage extends Equatable {

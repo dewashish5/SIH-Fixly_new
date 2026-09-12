@@ -1,15 +1,11 @@
 """
 SIH26089 — Start ALL AI/ML Services (Single Command)
 ---------------------------------------------------------
-Starts all 5 AI/ML features with ONE command, each on its own port,
-exactly as they already work individually. This does not change any
-teammate's code — it just launches everything together instead of you
-having to open 5 separate terminals.
+Starts AI/ML features with ONE command, each on its own port,
+exactly as they already work individually.
 
 Why not combine them into one single port?
-Two of the modules (service_discovery, worker_matching) are built with
-FastAPI. The other three (worker_Reliability_Score,
-fairPriceEstimation_AI_model, support_chatbot) are built with Python's
+Some modules are built with FastAPI. The other ones are built with Python's
 built-in http.server, which is a different, incompatible technology —
 it cannot be merged into a FastAPI app without rewriting their internal
 routing. Running them as separate processes (started together, from one
@@ -40,28 +36,22 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Each entry: (display name, folder name, command to run, port, url to show)
 SERVICES = [
     {
+        "name": "Identity Verification",
+        "folder": "identity_verification",
+        "cmd": [sys.executable, "-m", "uvicorn", "app:app", "--port", "8004"],
+        "url": "http://127.0.0.1:8004/docs",
+    },
+    {
         "name": "Service Discovery",
         "folder": "service_discovery",
         "cmd": [sys.executable, "-m", "uvicorn", "discovery_api:app", "--port", "8002"],
         "url": "http://127.0.0.1:8002/docs",
     },
     {
-        "name": "Worker Matching",
-        "folder": "worker_matching",
-        "cmd": [sys.executable, "-m", "uvicorn", "matching_api:app", "--port", "8003"],
-        "url": "http://127.0.0.1:8003/docs",
-    },
-    {
         "name": "Worker Reliability Score",
         "folder": "worker_Reliability_Score",
         "cmd": [sys.executable, "run_server.py", "--port", "8082"],
         "url": "http://127.0.0.1:8082/demo/index.html",
-    },
-    {
-        "name": "Fair Price Estimation",
-        "folder": "fairPriceEstimation_AI_model",
-        "cmd": [sys.executable, "run_server.py", "--port", "8081"],
-        "url": "http://127.0.0.1:8081/demo/index.html",
     },
     {
         "name": "Support Chatbot",

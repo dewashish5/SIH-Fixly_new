@@ -10,6 +10,18 @@ class LocaleScope extends InheritedWidget {
 
   final String locale;
 
+  static const supportedLocales = [
+    'en',
+    'hi',
+    'ta',
+    'te',
+    'kn',
+    'bn',
+    'mr',
+    'gu',
+    'pa',
+  ];
+
   static LocaleScope of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<LocaleScope>();
     assert(scope != null, 'LocaleScope not found. Wrap app with LocaleScope.');

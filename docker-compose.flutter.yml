@@ -1,0 +1,32 @@
+services:
+  flutter:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fixly_flutter
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - flutter_pub_cache:/root/.pub-cache
+      - flutter_gradle_cache:/root/.gradle
+    environment:
+      - CI=true
+    command: >
+      bash -c "
+        echo '===> [1/3] Checking Flutter Environment...' &&
+        flutter doctor &&
+        echo '===> [2/3] Getting Flutter Dependencies...' &&
+        flutter pub get &&
+        echo '===> [3/3] Building Android Debug APK...' &&
+        flutter build apk --debug &&
+        echo '' &&
+        echo '=====================================================' &&
+        echo ' SUCCESS: Android APK built inside Docker!' &&
+        echo ' Host APK output path:' &&
+        echo ' frontend/build/app/outputs/flutter-apk/app-debug.apk' &&
+        echo '====================================================='
+      "
+
+volumes:
+  flutter_pub_cache:
+  flutter_gradle_cache:

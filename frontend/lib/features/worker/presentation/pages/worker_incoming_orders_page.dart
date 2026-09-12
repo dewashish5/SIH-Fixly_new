@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../core/widgets/app_motion.dart';
 import '../../../../core/widgets/core_widgets.dart';
 import '../../../../shared/widgets/shared_widgets.dart';
 import '../../../../shared/models/models.dart';
@@ -36,20 +37,23 @@ class _WorkerIncomingOrdersPageState extends State<WorkerIncomingOrdersPage> {
           title: context.l10n.incomingOrders,
           body: state.status == JobFeedStatus.loading
               ? const Center(child: CircularProgressIndicator())
-              : Column(
-                  children: [
-                    if (incoming.isEmpty)
-                      Expanded(
-                        child: Center(
-                          child: Text(
-                            'No incoming orders',
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child: ListView.separated(
+              : AppRefreshIndicator(
+                  onRefresh: () => context.read<JobFeedCubit>().load(),
+                  child: incoming.isEmpty
+                      ? ListView(
+                          physics: appRefreshScrollPhysics,
+                          children: [
+                            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                            Center(
+                              child: Text(
+                                'No incoming orders',
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          physics: appRefreshScrollPhysics,
                           itemCount: incoming.length,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 12),
@@ -64,11 +68,13 @@ class _WorkerIncomingOrdersPageState extends State<WorkerIncomingOrdersPage> {
                                 RouteNames.workerJobDetail
                                     .replaceFirst(':id', job.id),
                               ),
+                            ).appListEnter(
+                              context,
+                              index: index,
+                              id: job.id,
                             );
                           },
                         ),
-                      ),
-                  ],
                 ),
         );
       },

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import Badge from '../../components/common/Badge';
 import Pagination from '../../components/common/Pagination';
+import Avatar from '../../components/common/Avatar';
 
 export default function CustomersPage() {
   const navigate = useNavigate();
@@ -184,13 +185,18 @@ export default function CustomersPage() {
             {paginated.map((c) => (
               <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f3', fontSize: '13px' }}>
                 <td style={{ padding: '14px 18px' }}>
-                  <div
-                    onClick={() => navigate(`/customers/${c.id}`)}
-                    style={{ fontWeight: '700', color: 'var(--text-link)', cursor: 'pointer' }}
-                  >
-                    {c.name}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Avatar src={c.avatar} name={c.name} size={34} />
+                    <div>
+                      <div
+                        onClick={() => navigate(`/customers/${c.id}`)}
+                        style={{ fontWeight: '700', color: 'var(--text-link)', cursor: 'pointer' }}
+                      >
+                        {c.name}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>{c.id} • Since {c.memberSince}</div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>{c.id} • Since {c.memberSince}</div>
                 </td>
 
                 <td style={{ padding: '14px 18px' }}>

@@ -73,6 +73,14 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
     _emitForm(state.formData.copyWith(gender: value));
   }
 
+  void updateState(String value) {
+    _emitForm(state.formData.copyWith(state: value));
+  }
+
+  void updateDistrict(String value) {
+    _emitForm(state.formData.copyWith(district: value));
+  }
+
   void updateAadhaar(String value) {
     _emitForm(state.formData.copyWith(aadhaar: value));
   }
@@ -188,6 +196,47 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
     _emitForm(state.formData.copyWith(bio: value));
   }
 
+  void updateFederation({required String id, required String name}) {
+    _emitForm(
+      state.formData.copyWith(
+        federationId: id,
+        federationName: name,
+      ),
+    );
+  }
+
+  void toggleIncludedTask(String category, String task) {
+    final currentMap = Map<String, List<String>>.from(state.formData.includedTasks);
+    final list = List<String>.from(currentMap[category] ?? []);
+    if (list.contains(task)) {
+      list.remove(task);
+    } else {
+      list.add(task);
+    }
+    currentMap[category] = list;
+    _emitForm(state.formData.copyWith(includedTasks: currentMap));
+  }
+
+  void toggleExcludedTask(String category, String task) {
+    final currentMap = Map<String, List<String>>.from(state.formData.excludedTasks);
+    final list = List<String>.from(currentMap[category] ?? []);
+    if (list.contains(task)) {
+      list.remove(task);
+    } else {
+      list.add(task);
+    }
+    currentMap[category] = list;
+    _emitForm(state.formData.copyWith(excludedTasks: currentMap));
+  }
+
+  void setScopeTasksForCategory(String category, {required List<String> included, required List<String> excluded}) {
+    final incMap = Map<String, List<String>>.from(state.formData.includedTasks);
+    final excMap = Map<String, List<String>>.from(state.formData.excludedTasks);
+    incMap[category] = List<String>.from(included);
+    excMap[category] = List<String>.from(excluded);
+    _emitForm(state.formData.copyWith(includedTasks: incMap, excludedTasks: excMap));
+  }
+
   void updateServiceRadius(double km) {
     _emitForm(state.formData.copyWith(serviceRadiusKm: km));
   }
@@ -282,6 +331,8 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
             Validators.phone(data.phone) ??
             (data.dateOfBirth == null ? 'Date of birth is required' : null) ??
             (data.gender == null ? 'Please select gender' : null) ??
+            Validators.requiredField(data.state, label: 'State') ??
+            Validators.requiredField(data.district, label: 'District') ??
             Validators.aadhaar(data.aadhaar) ??
             (data.hasAadhaarPhotos
                 ? null
@@ -298,7 +349,7 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
         for (final skill in data.skills) {
           final rate = data.categoryRates[skill] ?? 0;
           if (rate <= 0) {
-            return 'Enter an hourly rate for each selected skill';
+            return 'Enter a base price for each selected skill';
           }
         }
         if (data.experienceYears < 0 || data.experienceYears > 50) {
@@ -323,6 +374,70 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
   }
 
   bool canProceedFromStep(int step) => validateStep(step) == null;
+
+  Future<bool> submitIdentity() async {
+    emit(state.copyWith(status: WorkerOnboardingStatus.loading));
+    try {
+      // Simulate API verification
+      await Future.delayed(const Duration(milliseconds: 300));
+      emit(state.copyWith(
+        status: WorkerOnboardingStatus.loaded,
+        errorMessage: null,
+      ));
+      return true;
+    } on ApiException catch (e) {
+      if (e.message == 'DUPLICATE_DOCUMENT' || e.statusCode == 409) {
+        emit(state.copyWith(
+          status: WorkerOnboardingStatus.failure,
+          errorMessage: 'DUPLICATE_DOCUMENT',
+        ));
+      } else {
+        emit(state.copyWith(
+          status: WorkerOnboardingStatus.failure,
+          errorMessage: e.message,
+        ));
+      }
+      return false;
+    } catch (e) {
+      emit(state.copyWith(
+        status: WorkerOnboardingStatus.failure,
+        errorMessage: ApiException.fromError(e),
+      ));
+      return false;
+    }
+  }
+
+  Future<bool> submitWorkProfile() async {
+    emit(state.copyWith(status: WorkerOnboardingStatus.loading));
+    try {
+      // Simulate API verification
+      await Future.delayed(const Duration(milliseconds: 300));
+      emit(state.copyWith(
+        status: WorkerOnboardingStatus.loaded,
+        errorMessage: null,
+      ));
+      return true;
+    } on ApiException catch (e) {
+      if (e.message == 'NAME_MISMATCH' || e.statusCode == 400) {
+        emit(state.copyWith(
+          status: WorkerOnboardingStatus.failure,
+          errorMessage: 'NAME_MISMATCH',
+        ));
+      } else {
+        emit(state.copyWith(
+          status: WorkerOnboardingStatus.failure,
+          errorMessage: e.message,
+        ));
+      }
+      return false;
+    } catch (e) {
+      emit(state.copyWith(
+        status: WorkerOnboardingStatus.failure,
+        errorMessage: ApiException.fromError(e),
+      ));
+      return false;
+    }
+  }
 
   Future<bool> submitOnboarding() async {
     emit(state.copyWith(status: WorkerOnboardingStatus.loading));
@@ -362,6 +477,7 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
     try {
       final userJson = await _authApi.fetchMeUserJson();
       final next = AuthApiRepository.mapKycStatus(userJson);
+      final decline = AuthApiRepository.mapDeclineReason(userJson);
       final mapped = AuthApiRepository.mapUser(userJson);
       _repo.kycReviewStatus = next;
       _repo.currentUser = mapped;
@@ -369,6 +485,8 @@ class WorkerOnboardingCubit extends Cubit<WorkerOnboardingState> {
         state.copyWith(
           status: WorkerOnboardingStatus.loaded,
           kycStatus: next,
+          declineReason: decline,
+          clearDeclineReason: decline == null,
           errorMessage: null,
         ),
       );

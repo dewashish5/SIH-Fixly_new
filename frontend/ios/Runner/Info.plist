@@ -67,6 +67,10 @@
 		<string>Fixly needs photo library access so you can upload Aadhaar and PAN images.</string>
 		<key>NSPhotoLibraryAddUsageDescription</key>
 		<string>Fixly may save captured KYC photos to your library when needed.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Fixly needs microphone access for Hey Flexi voice assistant and calling workers.</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>Fixly needs speech recognition access to convert your voice to text for booking services.</string>
 		<key>MBXAccessToken</key>
 		<string>pk.eyJ1IjoiZGV3YXNoaXNoIiwiYSI6ImNtbmQydmlybjE1bTMyd3BqNzB5NzBtbWYifQ.1pPZzeZwPl3IWciYjWL_-g</string>
 		<key>UISupportedInterfaceOrientations~ipad</key>
@@ -76,23 +80,28 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
-	<key>UIStatusBarHidden</key>
-	<false/>
-	<!-- GOOGLE_SIGN_IN_URL_SCHEME -->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta</string>
-			</array>
-		</dict>
-	</array>
-	<key>GIDClientID</key>
-	<string>343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta.apps.googleusercontent.com</string>
-	<key>GIDServerClientID</key>
-	<string>343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta.apps.googleusercontent.com</string>
+		<key>UIStatusBarHidden</key>
+		<false/>
+		<!-- GOOGLE_SIGN_IN_URL_SCHEME -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>com.googleusercontent.apps.343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta</string>
+				</array>
+			</dict>
+		</array>
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>remote-notification</string>
+			<string>fetch</string>
+		</array>
+		<key>GIDClientID</key>
+		<string>343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta.apps.googleusercontent.com</string>
+		<key>GIDServerClientID</key>
+		<string>343135068849-gc1bm9au4lbpllb012rhs5hvin0ak5ta.apps.googleusercontent.com</string>
 	</dict>
 </plist>

@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  identity-verification:
+    build: .
+    container_name: fixly-identity-verification
+    restart: always
+    ports:
+      - "8004:8004"
+    environment:
+      - PYTHONUNBUFFERED=1

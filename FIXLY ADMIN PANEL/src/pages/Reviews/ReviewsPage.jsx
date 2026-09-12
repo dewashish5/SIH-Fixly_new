@@ -13,7 +13,7 @@ import {
 import Badge from '../../components/common/Badge';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Pagination from '../../components/common/Pagination';
-import { reviewSummary as mockReviewSummary } from '../../data/reviews';
+import Avatar from '../../components/common/Avatar';
 
 export default function ReviewsPage() {
   const { reviews = [], reviewsPagination, ratingStats, fetchReviews, deleteReview } = useApp();
@@ -46,9 +46,26 @@ export default function ReviewsPage() {
     });
   }
 
-  const totalReviewsCount = ratingStats?.totalReviews || reviewsPagination?.total || reviewsList.length || 0;
-  const avgRatingScore = ratingStats?.averageRating || 4.8;
-  const starPercents = ratingStats?.percents || { 5: 80, 4: 20, 3: 0, 2: 0, 1: 0 };
+  const totalReviewsCount = ratingStats?.count ?? ratingStats?.totalReviews ?? reviewsPagination?.total ?? reviewsList.length;
+  const avgRatingScore = ratingStats?.avgRating
+    ? Number(ratingStats.avgRating).toFixed(1)
+    : reviewsList.length > 0
+    ? (reviewsList.reduce((acc, r) => acc + (r.rating || 5), 0) / reviewsList.length).toFixed(1)
+    : '5.0';
+
+  const starCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  reviewsList.forEach((r) => {
+    const star = Math.min(5, Math.max(1, Math.round(r.rating || 5)));
+    starCounts[star] = (starCounts[star] || 0) + 1;
+  });
+  const totalInList = reviewsList.length || 1;
+  const starPercents = {
+    5: Math.round((starCounts[5] / totalInList) * 100),
+    4: Math.round((starCounts[4] / totalInList) * 100),
+    3: Math.round((starCounts[3] / totalInList) * 100),
+    2: Math.round((starCounts[2] / totalInList) * 100),
+    1: Math.round((starCounts[1] / totalInList) * 100),
+  };
 
   return (
     <div style={{ padding: '0 32px 32px 32px', animation: 'fadeIn 0.2s ease' }}>
@@ -188,9 +205,14 @@ export default function ReviewsPage() {
             ) : (
               filtered.map((r) => (
                 <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f3', fontSize: '13px' }}>
-                  <td style={{ padding: '14px 18px', fontWeight: '700', color: '#1e293b' }}>
-                    {r.customer || r.customerName || 'Customer'}
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>Order: {r.bookingId || 'Booking'}</div>
+                  <td style={{ padding: '14px 18px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Avatar src={r.customerAvatar} name={r.customer || r.customerName} size={30} />
+                      <div>
+                        <div style={{ fontWeight: '700', color: '#1e293b' }}>{r.customer || r.customerName || 'Customer'}</div>
+                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>Order: {r.bookingId || 'Booking'}</div>
+                      </div>
+                    </div>
                   </td>
 
                   <td style={{ padding: '14px 18px' }}>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Modal from '../common/Modal';
+import Avatar from '../common/Avatar';
 import { useApp } from '../../context/AppContext';
 import { MapPin, Star, UserCheck, Phone } from 'lucide-react';
 
@@ -82,16 +83,10 @@ export default function AssignWorkerModal({ booking, isOpen, onClose }) {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <img
+              <Avatar
                 src={w.avatar}
-                alt={w.name}
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '1.5px solid #22c55e',
-                }}
+                name={w.name}
+                size={42}
               />
               <div>
                 <div style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b' }}>

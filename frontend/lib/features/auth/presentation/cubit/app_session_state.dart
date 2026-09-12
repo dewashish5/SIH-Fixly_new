@@ -10,11 +10,14 @@ class AppSessionState extends Equatable {
     this.themeMode = ThemeMode.system,
     this.languageSelected = false,
     this.notificationsEnabled = true,
+    this.systemNotificationsEnabled = true,
+    this.marketingNotificationsEnabled = false,
     this.role = 'customer',
     this.phone,
     this.email,
     this.pendingSignupName,
     this.pendingSignupPassword,
+    this.federationId,
     this.status = AppSessionStatus.initial,
     this.authFlow = AuthFlow.login,
     this.errorMessage,
@@ -24,11 +27,14 @@ class AppSessionState extends Equatable {
   final ThemeMode themeMode;
   final bool languageSelected;
   final bool notificationsEnabled;
+  final bool systemNotificationsEnabled;
+  final bool marketingNotificationsEnabled;
   final String role;
   final String? phone;
   final String? email;
   final String? pendingSignupName;
   final String? pendingSignupPassword;
+  final String? federationId;
   final AppSessionStatus status;
   final AuthFlow authFlow;
   final String? errorMessage;
@@ -38,11 +44,14 @@ class AppSessionState extends Equatable {
     ThemeMode? themeMode,
     bool? languageSelected,
     bool? notificationsEnabled,
+    bool? systemNotificationsEnabled,
+    bool? marketingNotificationsEnabled,
     String? role,
     String? phone,
     String? email,
     String? pendingSignupName,
     String? pendingSignupPassword,
+    String? federationId,
     AppSessionStatus? status,
     AuthFlow? authFlow,
     String? errorMessage,
@@ -54,12 +63,17 @@ class AppSessionState extends Equatable {
       languageSelected: languageSelected ?? this.languageSelected,
       notificationsEnabled:
           notificationsEnabled ?? this.notificationsEnabled,
+      systemNotificationsEnabled:
+          systemNotificationsEnabled ?? this.systemNotificationsEnabled,
+      marketingNotificationsEnabled:
+          marketingNotificationsEnabled ?? this.marketingNotificationsEnabled,
       role: role ?? this.role,
       phone: phone ?? this.phone,
       email: email ?? this.email,
       pendingSignupName: pendingSignupName ?? this.pendingSignupName,
       pendingSignupPassword:
           pendingSignupPassword ?? this.pendingSignupPassword,
+      federationId: federationId ?? this.federationId,
       status: status ?? this.status,
       authFlow: authFlow ?? this.authFlow,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
@@ -72,11 +86,14 @@ class AppSessionState extends Equatable {
         themeMode,
         languageSelected,
         notificationsEnabled,
+        systemNotificationsEnabled,
+        marketingNotificationsEnabled,
         role,
         phone,
         email,
         pendingSignupName,
         pendingSignupPassword,
+        federationId,
         status,
         authFlow,
         errorMessage,
