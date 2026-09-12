@@ -1,7 +1,113 @@
+# === Fixly .gitignore ===
+# Ignore junk / secrets / AI tooling. Do NOT ignore app source, locks, or Firebase client configs.
 
-# graphify local knowledge graph (never commit)
+# --- AI / local agent (judges must not see) ---
+.cursor/
+**/.cursor/
+doc/
+HOW_FIXLY_WORKS_5_SLIDES.html
+HOW_FIXLY_WORKS_5_SLIDES.pdf
+
+# --- Secrets / env ---
+.env
+.env.*
+!.env.example
+!**/.env.example
+backend/.env
+**/.env.bak*
+**/*.pem
+**/*.p12
+**/*.key
+**/serviceAccount*.json
+**/key.properties
+**/*.jks
+**/*.keystore
+
+# --- OS / IDE ---
+.DS_Store
+**/.DS_Store
+Thumbs.db
+.idea/
+*.iml
+*.swp
+*~
+.vscode/
+**/.vscode/
+
+# --- Node ---
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# --- Flutter / Dart ---
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.packages
+frontend/.pub-cache/
+frontend/.pub/
+frontend/build/
+frontend/**/build/
+frontend/.widget_preview/
+frontend/scratch/
+frontend/ios/Pods/
+frontend/ios/.symlinks/
+frontend/ios/Flutter/Flutter.framework
+frontend/ios/Flutter/Flutter.podspec
+frontend/ios/Flutter/Generated.xcconfig
+frontend/ios/Flutter/ephemeral/
+frontend/ios/Runner.xcworkspace/xcuserdata/
+frontend/ios/Runner.xcodeproj/xcuserdata/
+frontend/ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/app/build/
+frontend/android/build/
+**/coverage/
+*.apk
+*.aab
+*.ipa
+*.app.*.symbols
+*.app.*.map.json
+
+# --- Python ---
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# --- Build / deploy artifacts ---
+FIXLY ADMIN PANEL/dist/
+**/dist/
+!FIXLY ADMIN PANEL/public/
+*.log
+*.tmp
+tmp/
+temp/
+
+# --- Duplicate / unused asset dumps (app uses frontend/assets/) ---
+Assets
+Assets_folder/
+
+# --- One-off patch / local test scripts (not part of runtime) ---
+patch_*.py
+patch_*.js
+FIXLY ADMIN PANEL/patch_api.js
+test_groq_direct.js
+simple_groq_test.js
+test_export.js
+update_ip.sh
+FIXLY ADMIN PANEL/modify_*.py
+FIXLY ADMIN PANEL/preview.html
+FIXLY ADMIN PANEL/.env.bak.tunnel
+
+# --- Local tooling / graphs ---
 graphify-out/
 graphify/
 *.zip
-.DS_Store
 
+# --- Large private docs (kept locally under doc/) ---
+*.pdf
+backend/*.pdf

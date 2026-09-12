@@ -27,7 +27,7 @@ SPACES = [
             ("discovery_api.py", "discovery_api.py"),
             ("service_classifier.pkl", "service_classifier.pkl"),
             ("vectorizer.pkl", "vectorizer.pkl"),
-            ("README_HF.md", "README.md"),
+            (ROOT / "doc" / "ai_ml" / "service_discovery" / "README_HF.md", "README.md"),
         ],
     },
     {
@@ -37,7 +37,7 @@ SPACES = [
             ("Dockerfile", "Dockerfile"),
             ("requirements.txt", "requirements.txt"),
             ("app.py", "app.py"),
-            ("README_HF.md", "README.md"),
+            (ROOT / "doc" / "ai_ml" / "identity_verification" / "README_HF.md", "README.md"),
         ],
     },
 ]
@@ -65,7 +65,7 @@ def deploy(space: dict) -> str:
         raise
     folder = space["folder"]
     for src_name, dest_name in space["files"]:
-        path = folder / src_name
+        path = Path(src_name) if isinstance(src_name, Path) else folder / src_name
         if not path.exists():
             raise FileNotFoundError(path)
         api.upload_file(
