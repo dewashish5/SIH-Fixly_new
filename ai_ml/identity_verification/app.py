@@ -126,5 +126,11 @@ async def verify_identity(req: VerificationRequest):
 async def health():
     return {"status": "ok", "service": "identity-verification", "version": "2.0"}
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "identity-verification", "version": "2.0"}
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8004)
+    import os
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "8004")))

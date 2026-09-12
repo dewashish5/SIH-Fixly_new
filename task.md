@@ -49,7 +49,10 @@
 - [x] 16. Fix Socket Disconnections & Enable Persistent Socket on Customer + Worker Screens <!-- id: 52 -->
   - [x] 16.1 Remove aggressive 4s failover timer in `WorkerRealtimeService` causing socket close loop <!-- id: 53 -->
   - [x] 16.2 Create persistent `CustomerRealtimeService` for customer app screens <!-- id: 54 -->
-  - [x] 16.3 Hook customer socket into `CustomerMainShell` & `BookingFlowCubit` <!-- id: 55 -->
-  - [x] 16.4 Enhance `LiveTrackingSocket` reconnection params & add customer room listeners to backend <!-- id: 56 -->
-  - [x] 16.5 Verify via `flutter analyze` <!-- id: 57 -->
+- [x] 17. Revamp HOW_FIXLY_WORKS_5_SLIDES.pdf into highly visual presentation <!-- id: 58 -->
+  - [x] 17.1 Draft implementation plan for 5 visually stunning, simple, interconnected slides <!-- id: 59 -->
+  - [x] 17.2 Build modern HTML/CSS slide deck with diagrams, icons, journey flows, analogies <!-- id: 60 -->
+  - [x] 17.3 Render to PDF via Headless Chrome and convert pages to PNG <!-- id: 61 -->
+  - [x] 17.4 Visually inspect generated slides with view_file and refine until presentation-ready <!-- id: 62 -->
+
 

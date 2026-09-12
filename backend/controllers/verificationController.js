@@ -66,7 +66,8 @@ export const submitVerification = async (req, res) => {
 
         let aiResult = null;
         try {
-            const aiRes = await fetch('http://127.0.0.1:8004/verify', {
+            const verifyUrl = (process.env.IDENTITY_VERIFY_URL || 'http://127.0.0.1:8004').replace(/\/$/, '');
+            const aiRes = await fetch(`${verifyUrl}/verify`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ documentUrl: governmentIdFrontUrl, selfieUrl: selfieImageUrl })
