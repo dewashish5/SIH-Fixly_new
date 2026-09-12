@@ -66,7 +66,7 @@ export const getNearbyWorkers = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 code: 'VALIDATION_ERROR',
-                message: 'Coordinates (lng, lat) mandatory hain'
+                message: 'Coordinates (lng, lat) are required.'
             });
         }
 
@@ -238,7 +238,7 @@ export const getNearbyWorkers = async (req, res) => {
             return res.status(200).json({
                 success: false,
                 code: 'NO_WORKERS_FOUND',
-                message: `Aapke ${searchRadius} km ke daayre mein koi uplabdh worker nahi mila. Kripya thodi der baad refresh karein ya category badlein.`,
+                message: `No available professionals found within ${searchRadius} km. Please try again shortly or select a different category.`,
                 count: 0,
                 totalWorkers: 0,
                 hasMore: false,
@@ -286,7 +286,7 @@ export const getWorkerProfile = async (req, res) => {
             .lean();
 
         if (!worker || !worker.workerProfile) {
-            return res.status(404).json({ success: false, message: 'Worker profile nahi milaa' });
+            return res.status(404).json({ success: false, message: 'Worker profile not found.' });
         }
 
         const [completed, cancelled, reviews] = await Promise.all([

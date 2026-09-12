@@ -206,7 +206,7 @@ export const createBooking = async (req, res) => {
                 return res.status(400).json({
                     success: false,
                     code: 'WORKER_BUSY',
-                    message: 'Yeh worker abhi doosre customer ke kaam par vyast hai. Kripya doosra worker chunein ya unke kaam poora hone ka intezaar karein.'
+                    message: 'This professional is currently busy with another client. Please select another worker or wait until their current job is completed.'
                 });
             }
 
@@ -225,7 +225,7 @@ export const createBooking = async (req, res) => {
                 return res.status(400).json({
                     success: false,
                     code: 'NO_WORKERS_AVAILABLE',
-                    message: 'Aapke kshetra me is samay koi satyaprit worker uplabdh nahi hai. Kripya kch der baad koshish karein ya aage ka samay schedule karein.'
+                    message: 'No verified professionals are currently available in your area. Please try again shortly or schedule for later.'
                 });
             }
         }

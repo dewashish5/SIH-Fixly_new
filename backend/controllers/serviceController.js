@@ -9,11 +9,11 @@ export const createService = async (req, res) => {
         const { title, category, basePrice, estimatedTime, whatsIncluded } = req.body;
 
         if (!title || !category || !basePrice) {
-            return res.status(400).json({ success: false, message: 'Title, category aur basePrice required hain' });
+            return res.status(400).json({ success: false, message: 'Title, category, and base price are required.' });
         }
 
         if (!req.file) {
-            return res.status(400).json({ success: false, message: 'Service image file upload karna mandatory hai' });
+            return res.status(400).json({ success: false, message: 'Service image upload is required.' });
         }
 
         // Upload to Cloudinary using utility helper

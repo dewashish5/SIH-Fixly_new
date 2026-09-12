@@ -130,11 +130,11 @@ export const createCategory = async (req, res) => {
         const { title, category, basePrice, estimatedTime, whatsIncluded } = req.body;
 
         if (!title || !category || !basePrice) {
-            return res.status(400).json({ success: false, message: 'Title, category aur basePrice required hain' });
+            return res.status(400).json({ success: false, message: 'Title, category, and base price are required.' });
         }
 
         if (!req.file) {
-            return res.status(400).json({ success: false, message: 'Category image file required hai' });
+            return res.status(400).json({ success: false, message: 'Category image file is required.' });
         }
 
         // Upload image buffer to Cloudinary

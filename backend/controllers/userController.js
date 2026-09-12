@@ -157,7 +157,7 @@ export const updateLanguage = async (req, res) => {
         return ok(res, {
             data: { preferredLanguage: user.preferredLanguage },
             preferredLanguage: user.preferredLanguage,
-            message: normalized === 'hi' ? 'भाषा सफलतापूर्वक हिंदी में सेट की गई।' : 'Language successfully updated to English.'
+            message: 'Language preference updated successfully.'
         });
     } catch (error) {
         return fail(res, 500, 'INTERNAL_ERROR', error.message);

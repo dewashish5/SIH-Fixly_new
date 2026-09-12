@@ -78,7 +78,7 @@ export const registerWebRTCSocketHandlers = (io) => {
                 if (requesterId !== customerId && requesterId !== workerId) {
                     return socket.emit('webrtc:error', {
                         errorCode: 'UNAUTHORIZED_CALL_PARTICIPANT',
-                        message: 'Sirf is booking ke customer aur assigned worker hi call room me shamil ho sakte hain.'
+                        message: 'Only the customer and assigned professional for this booking can join the call room.'
                     });
                 }
 
@@ -121,7 +121,7 @@ export const registerWebRTCSocketHandlers = (io) => {
                 console.error('[WebRTC] join-room error:', err.message);
                 socket.emit('webrtc:error', {
                     errorCode: 'ROOM_JOIN_FAILED',
-                    message: 'Call room join karne me dikkat aayi'
+                    message: 'Failed to join the call room.'
                 });
             }
         });
@@ -306,7 +306,7 @@ export const registerWebRTCSocketHandlers = (io) => {
                     // Send explicit instructions for Wi-Fi Firewall block
                     const firewallError = {
                         errorCode: 'FIREWALL_BLOCKED_WIFI_RESTRICTION',
-                        message: 'Aapke Wi-Fi network ya router firewall ne audio call ports block kar diye hain. Kripya apna Wi-Fi band karke mobile data (personal internet) chalu karein aur call dobara lagayein.',
+                        message: 'Your Wi-Fi or router firewall has restricted voice call traffic. Please switch to mobile data and try placing the call again.',
                         suggestion: 'SWITCH_TO_MOBILE_DATA',
                         networkType: 'wifi',
                         bookingId
@@ -318,7 +318,7 @@ export const registerWebRTCSocketHandlers = (io) => {
                     // Notify counterpart so they know why the call couldn't connect
                     socket.to(targetRooms).emit('webrtc:peer-network-issue', {
                         bookingId,
-                        message: 'Doosre user ka Wi-Fi firewall connection ko block kar raha hai. Switch ki pratiksha kar rahe hain.',
+                        message: 'The counterpart firewall is restricting voice traffic. Waiting for network switch.',
                         suggestion: 'WAIT_FOR_PEER_NETWORK_SWITCH'
                     });
 
@@ -352,7 +352,7 @@ export const registerWebRTCSocketHandlers = (io) => {
                     // Generic connection issue
                     socket.emit('webrtc:error', {
                         errorCode: 'WEBRTC_ICE_FAILED',
-                        message: 'Audio call connection establish nahi ho paya. Kripya internet signal check karein.',
+                        message: 'Unable to establish a voice connection. Please check your internet signal and try again.',
                         suggestion: 'CHECK_INTERNET_CONNECTION',
                         networkType: networkType || 'unknown'
                     });

@@ -9,7 +9,7 @@ export const analyzeIssue = async (req, res) => {
     try {
         const { problemDescription } = req.body;
         if (!problemDescription) {
-            return res.status(400).json({ success: false, message: 'Problem description required hai' });
+            return res.status(400).json({ success: false, message: 'Problem description is required.' });
         }
 
         let issueImageUrl = null;
@@ -80,12 +80,13 @@ export const analyzeIssue = async (req, res) => {
 export const serviceDiscovery = async (req, res) => {
     try {
         const text = String(req.body.text || req.body.problemDescription || '').toLowerCase();
-        if (!text) return res.status(400).json({ success: false, code: 'VALIDATION_ERROR', message: 'text required' });
+        if (!text) return res.status(400).json({ success: false, code: 'VALIDATION_ERROR', message: 'Text is required.' });
         
         let aiResult = null;
         try {
             // Attempt to call the canonical Python AI service
-            const response = await fetch('http://127.0.0.1:8002/discover', {
+            const aiDiscoveryUrl = process.env.AI_DISCOVERY_URL || 'http://127.0.0.1:8002/discover';
+            const response = await fetch(aiDiscoveryUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text })
@@ -143,7 +144,7 @@ export const matchWorkers = async (req, res) => {
     try {
         const { serviceId, latitude, longitude } = req.body || {};
         if (latitude == null || longitude == null) {
-            return res.status(400).json({ success: false, code: 'VALIDATION_ERROR', message: 'latitude and longitude required' });
+            return res.status(400).json({ success: false, code: 'VALIDATION_ERROR', message: 'Latitude and longitude are required.' });
         }
         const workers = await User.find({
             role: 'worker',

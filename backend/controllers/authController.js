@@ -880,7 +880,7 @@ export const forgotPassword = async (req, res) => {
         const emailNormalized = email.toLowerCase().trim();
         const user = await User.findOne({ email: emailNormalized });
 
-        if (!user) return res.status(404).json({ success: false, message: 'Is email se koi account nahi milaa' });
+        if (!user) return res.status(404).json({ success: false, message: 'No account found with this email address.' });
         if (user.authProvider === 'google') return res.status(400).json({ success: false, message: 'Google accounts cannot reset password here' });
 
         const otp = generateOTP();
@@ -906,7 +906,7 @@ export const resetPassword = async (req, res) => {
         const { email, otp, newPassword } = req.body;
 
         if (!email || !otp || !newPassword) {
-            return res.status(400).json({ success: false, message: 'Email, OTP aur Naya Password required hain' });
+            return res.status(400).json({ success: false, message: 'Email, OTP, and new password are required.' });
         }
 
         const emailNormalized = email.toLowerCase().trim();

@@ -35,7 +35,7 @@ export const acceptBooking = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 code: 'WORKER_ALREADY_BUSY',
-                message: 'Aap pehle se ek doosre customer ke active kaam par vyast hain. Kripya pehle use poora karein.'
+                message: 'You already have an ongoing active job. Please complete your current job first.'
             });
         }
 
@@ -46,7 +46,7 @@ export const acceptBooking = async (req, res) => {
                 return res.status(409).json({
                     success: false,
                     code: 'BOOKING_ALREADY_CLAIMED',
-                    message: 'Yeh booking kisi doosre worker ne pehle hi accept kar li hai.'
+                    message: 'This booking has already been accepted by another professional.'
                 });
             }
             lockAcquired = true;
@@ -74,7 +74,7 @@ export const acceptBooking = async (req, res) => {
             return res.status(409).json({
                 success: false,
                 code: 'BOOKING_ALREADY_CLAIMED',
-                message: 'Yeh booking kisi doosre worker ne pehle hi accept kar li hai.'
+                message: 'This booking has already been accepted by another professional.'
             });
         }
 

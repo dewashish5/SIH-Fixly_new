@@ -235,7 +235,7 @@ export const reportNetworkDiagnostics = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 errorCode: 'FIREWALL_BLOCKED_WIFI_RESTRICTION',
-                message: 'Aapke Wi-Fi network ya router firewall ne audio call ports block kar diye hain. Kripya apna Wi-Fi band karke mobile data (personal internet) chalu karein aur call dobara lagayein.',
+                message: 'Your Wi-Fi or router firewall has restricted voice call traffic. Please switch to mobile data and try placing the call again.',
                 suggestion: 'SWITCH_TO_MOBILE_DATA',
                 networkType: 'wifi',
                 retryable: true
@@ -246,7 +246,7 @@ export const reportNetworkDiagnostics = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 errorCode: 'WEBRTC_ICE_CONNECTION_FAILED',
-                message: 'Network connection establish nahi ho saka. Kripya internet connection check karein.',
+                message: 'Unable to establish a reliable voice connection. Please check your internet connection and try again.',
                 suggestion: 'CHECK_INTERNET_CONNECTION',
                 networkType: networkType || 'unknown',
                 retryable: true
